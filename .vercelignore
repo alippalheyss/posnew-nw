@@ -1,0 +1,5 @@
+# Build Configuration
+# This file tells Vercel how to build the project
+buildCommand = "npm run build"
+outputDirectory = "dist"
+framework = "vite"

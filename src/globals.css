@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%; /* Very light blue */
+    --foreground: 222.2 84% 4.9%; /* Dark text */
+
+    --card: 210 40% 98%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 210 40% 98%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 210 100% 50%; /* Vibrant blue for primary actions */
+    --primary-foreground: 210 20% 98%; /* Light text for contrast on primary */
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 84% 4.9%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 84% 4.9%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 210 100% 50%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 210 40% 96.1%; /* Light blue for sidebar */
+    --sidebar-foreground: 222.2 84% 4.9%; /* Dark text for sidebar */
+    --sidebar-primary: 210 100% 50%; /* Vibrant blue for active sidebar item */
+    --sidebar-primary-foreground: 210 20% 98%; /* Light text for active sidebar item */
+    --sidebar-accent: 210 40% 96.1%; /* Light blue for sidebar hover */
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 210 100% 50%;
+  }
+
+  .dark {
+    /* Dark theme for 'dark' mode */
+    --background: 220 20% 10%; /* Dark gray */
+    --foreground: 210 40% 98%; /* Light text for contrast */
+
+    --card: 220 20% 10%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 220 20% 10%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 100% 50%; /* Vibrant blue for primary actions */
+    --primary-foreground: 210 20% 98%; /* Light text for contrast on primary */
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 84% 4.9%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 84% 4.9%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 210 100% 50%;
+
+    /* Sidebar colors for the dark theme */
+    --sidebar-background: 220 20% 10%; /* Dark gray sidebar */
+    --sidebar-foreground: 210 40% 98%; /* Light text */
+    --sidebar-primary: 210 100% 50%; /* Vibrant blue for active state */
+    --sidebar-primary-foreground: 210 20% 98%; /* Light text for active state */
+    --sidebar-accent: 220 20% 15%; /* Dark gray for sidebar hover */
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 210 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom font for Dhivehi */
+@font-face {
+  font-family: 'Faruma';
+  src: url('/fonts/Faruma.woff2') format('woff2'),
+       url('/fonts/Faruma.woff') format('woff'),
+       url('/fonts/Faruma.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Modern UI enhancements */
+@layer utilities {
+  /* Add subtle shadows for cards */
+  .card {
+    @apply shadow-sm hover:shadow-md transition-shadow duration-200;
+  }
+
+  /* Modern button styling */
+  .btn {
+    @apply transition-all duration-200;
+  }
+
+  .btn:hover {
+    @apply transform translate-y-[-1px];
+  }
+
+  .btn:active {
+    @apply transform translate-y-[0px];
+  }
+
+  /* Smooth transitions for interactive elements */
+  .transition-all-smooth {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  /* Modern input styling */
+  .input {
+    @apply focus:ring-2 focus:ring-primary focus:ring-opacity-50;
+  }
+
+  /* Modern card hover effect */
+  .card-hover {
+    @apply transition-all duration-200 hover:scale-[1.01] hover:shadow-lg;
+  }
+}

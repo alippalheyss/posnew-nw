@@ -1,0 +1,6 @@
+Product Name (Dhivehi),Product Name (English),Item Code,Barcode,Category,Selling Price,Cost Price,Shop Stock,Godown Stock,Is Tax Exempt
+ކޮފީ,Coffee,ITM001,1234567890123,Beverages,50,30,100,200,NO
+ޗާ,Tea,ITM002,1234567890124,Beverages,25,15,150,300,NO
+ބިސްކިޓް,Biscuits,ITM003,1234567890125,Snacks,15,10,200,400,YES
+ޝޭމްޕޫ,Shampoo,ITM004,1234567890126,Personal Care,75,50,50,100,NO
+ސޯޕް,Soap,ITM005,1234567890127,Personal Care,20,12,80,150,YES

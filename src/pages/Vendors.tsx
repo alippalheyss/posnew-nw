@@ -55,7 +55,7 @@ const Vendors = () => {
     };
 
     const handleAddVendor = async () => {
-        if (!vendorForm.name_en || !vendorForm.phone) {
+        if (!vendorForm.name_en || !vendorForm.name_dv || !vendorForm.phone) {
             showError(t('fill_all_fields_error'));
             return;
         }
@@ -74,7 +74,7 @@ const Vendors = () => {
 
     const handleEditVendor = async () => {
         if (!selectedVendor) return;
-        if (!vendorForm.name_en || !vendorForm.phone) {
+        if (!vendorForm.name_en || !vendorForm.name_dv || !vendorForm.phone) {
             showError(t('fill_all_fields_error'));
             return;
         }

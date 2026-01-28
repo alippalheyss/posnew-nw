@@ -444,26 +444,19 @@ const POS = () => {
 
     const newSale = {
       id: `sale-${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toISOString(),
       customer: activeCart.customer,
       items: activeCart.items,
       grandTotal: grandTotal,
       paymentMethod: 'cash' as const,
-      paidAmount: paidAmount,
+      paidAmount: Number(paidAmount) || grandTotal,
       balance: balance,
     };
     await createSale(newSale);
 
-    // Loyalty Logic
-    if (activeCart.customer) {
-      if (pointsToRedeem > 0) {
-        redeemLoyaltyPoints(activeCart.customer.id, pointsToRedeem);
-      }
-      const pointsEarned = Math.floor(grandTotal / 100); // 1 point per 100 spent
-      if (pointsEarned > 0) {
-        awardLoyaltyPoints(activeCart.customer.id, pointsEarned);
-        showSuccess(t('loyalty_points_earned', { count: pointsEarned }));
-      }
+    // Points Redemption Logic (Awarding is already inside createSale)
+    if (activeCart.customer && pointsToRedeem > 0) {
+      redeemLoyaltyPoints(activeCart.customer.id, pointsToRedeem);
     }
 
     showSuccess(t('cash_payment_successful'));
@@ -499,28 +492,19 @@ const POS = () => {
 
     const newSale = {
       id: `sale-${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toISOString(),
       customer: activeCart.customer!,
       items: activeCart.items,
       grandTotal: grandTotal,
       paymentMethod: 'credit' as const,
+      paidAmount: 0,
+      balance: -grandTotal
     };
     await createSale(newSale);
 
-    // Loyalty Logic
-    if (activeCart.customer) {
-      if (pointsToRedeem > 0) {
-        redeemLoyaltyPoints(activeCart.customer.id, pointsToRedeem);
-      }
-
-      // Update Customer Outstanding Balance
-      updateCustomerBalance(activeCart.customer.id, grandTotal);
-
-      const pointsEarned = Math.floor(grandTotal / 100);
-      if (pointsEarned > 0) {
-        awardLoyaltyPoints(activeCart.customer.id, pointsEarned);
-        showSuccess(t('loyalty_points_earned', { count: pointsEarned }));
-      }
+    // Loyalty Logic (Points Awarding + Balance update is already inside createSale)
+    if (activeCart.customer && pointsToRedeem > 0) {
+      redeemLoyaltyPoints(activeCart.customer.id, pointsToRedeem);
     }
 
     showSuccess(t('credit_sale_successful'));
@@ -556,20 +540,18 @@ const POS = () => {
       const entry = splitEntries[i];
       const customer = customers.find(c => c.id === entry.customerId);
 
-      // Update customer balance for each credit split
-      if (customer) {
-        await updateCustomerBalance(customer.id, entry.amount);
-      }
-
       const splitSale = {
         id: `sale-${Date.now()}-${i}`,
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toISOString(),
         customer: customer || null,
         items: activeCart.items,
         grandTotal: entry.amount,
         paymentMethod: 'credit' as const,
+        paidAmount: 0,
+        balance: -entry.amount
       };
-      await createSale(splitSale);
+      // Only decrement stock for the VERY FIRST part of the split sale
+      await createSale(splitSale, i > 0);
     }
     showSuccess(t('credit_sale_successful'));
 
@@ -787,7 +769,7 @@ const POS = () => {
                                 type="number"
                                 value={item.qty}
                                 onChange={(e) => {
-                                  const val = parseInt(e.target.value) || 0;
+                                  const val = parseFloat(e.target.value) || 0;
                                   if (val >= 0) {
                                     updateActiveCart(prev => ({
                                       ...prev,

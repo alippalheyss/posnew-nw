@@ -228,7 +228,7 @@ interface AppContextType {
   getNextVendorCode: () => string;
   updateProductCostPrice: (productId: string, newCost: number, purchaseDate: string) => void;
   calculateProfitMargin: (product: Product) => number;
-  createSale: (sale: Sale) => Promise<void>;
+  createSale: (sale: Sale, skipStockUpdate?: boolean) => Promise<void>;
   loading: boolean;
   refreshData: () => Promise<void>;
 }
@@ -525,12 +525,14 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const updateProduct = async (updatedProduct: Product) => {
     try {
-      await productService.update(updatedProduct.id, updatedProduct as any);
+      const { id, ...updates } = updatedProduct;
+      await productService.update(id, updates as any);
       setProducts(prev => prev.map(p =>
-        p.id === updatedProduct.id ? updatedProduct : p
+        p.id === id ? updatedProduct : p
       ));
       showSuccess('Product updated successfully');
     } catch (error) {
+      console.error('Error updating product:', error);
       showError('Failed to update product');
     }
   };
@@ -569,7 +571,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
-  const createSale = async (sale: Sale) => {
+  const createSale = async (sale: Sale, skipStockUpdate: boolean = false) => {
     try {
       const { customer, id, grandTotal, paymentMethod, paidAmount, balance, ...rest } = sale;
 
@@ -603,11 +605,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       setSales(prev => [...prev, { ...sale, id: createdSale.id }]);
 
       // 2. Update stock for each item
-      for (const item of sale.items) {
-        const product = products.find(p => p.id === item.id);
-        if (product) {
-          const newStock = product.stock_shop - (item.qty * (item.unit_conversion || 1));
-          await updateStock(item.id, newStock);
+      if (!skipStockUpdate) {
+        for (const item of sale.items) {
+          const product = products.find(p => p.id === item.id);
+          if (product) {
+            const newStock = product.stock_shop - (item.qty * (item.unit_conversion || 1));
+            await updateStock(item.id, newStock);
+          }
         }
       }
 
@@ -646,6 +650,10 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const addVendor = async (vendor: Vendor) => {
     try {
+      if (!vendor.name_dv) {
+        showError('Dhivehi name is required for vendor');
+        return;
+      }
       const { id, ...dbVendor } = vendor;
       const newVendor = await vendorService.create(dbVendor as any);
       setVendors(prev => [...prev, newVendor as any]);
@@ -658,10 +666,16 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const updateVendor = async (vendor: Vendor) => {
     try {
-      await vendorService.update(vendor.id, vendor as any);
-      setVendors(prev => prev.map(v => v.id === vendor.id ? vendor : v));
+      if (!vendor.name_dv) {
+        showError('Dhivehi name is required for vendor');
+        return;
+      }
+      const { id, ...updates } = vendor;
+      await vendorService.update(id, updates as any);
+      setVendors(prev => prev.map(v => v.id === id ? vendor : v));
       showSuccess('Vendor updated successfully');
     } catch (error) {
+      console.error('Error updating vendor:', error);
       showError('Failed to update vendor');
     }
   };

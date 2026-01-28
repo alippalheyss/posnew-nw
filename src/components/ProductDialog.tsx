@@ -72,7 +72,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
 
         const finalProduct: Product = {
             ...editedProduct,
-            image: imagePreviewUrl || generatePlaceholderImage(editedProduct.name_en || editedProduct.name_dv, editedProduct.item_code),
+            image: imagePreviewUrl || editedProduct.image || generatePlaceholderImage(editedProduct.name_en || editedProduct.name_dv, editedProduct.item_code),
             expiry_date: expiryDate ? format(expiryDate, 'yyyy-MM-dd') : undefined,
         };
 

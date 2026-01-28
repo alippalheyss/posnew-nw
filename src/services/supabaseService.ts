@@ -53,11 +53,24 @@ export const customerService = {
     async getAll() {
         const { data, error } = await supabase
             .from('customers')
-            .select('*')
+            .select(`
+                *,
+                settlements (
+                    id,
+                    amount_paid,
+                    date,
+                    previous_outstanding,
+                    new_outstanding
+                )
+            `)
             .order('name_en', { ascending: true });
 
         if (error) throw error;
-        return data;
+        // Map settlements to settlement_history
+        return data.map(c => ({
+            ...c,
+            settlement_history: (c as any).settlements || []
+        }));
     },
 
     async create(customer: Tables['customers']['Insert']) {

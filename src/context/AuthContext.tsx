@@ -145,6 +145,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Load auth state on mount
     useEffect(() => {
+        let subscription: any = null;
+
         const initAuth = async () => {
             try {
                 // Check for existing session
@@ -154,27 +156,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     const userData = await fetchUserData(session.user.id);
                     if (userData && userData.isActive) {
                         setCurrentUser(userData);
+                    } else if (userData && !userData.isActive) {
+                        await supabase.auth.signOut();
                     }
                 }
 
                 // Listen for auth changes
-                const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-                    if (event === 'SIGNED_IN' && session?.user) {
+                const { data: { subscription: sub } } = supabase.auth.onAuthStateChange(async (event, session) => {
+                    console.log('Auth event:', event);
+                    if ((event === 'SIGNED_IN' || (event as any) === 'INITIAL_SESSION') && session?.user) {
                         const userData = await fetchUserData(session.user.id);
                         if (userData && userData.isActive) {
                             setCurrentUser(userData);
+                        } else if (userData && !userData.isActive) {
+                            await supabase.auth.signOut();
                         }
                     } else if (event === 'SIGNED_OUT') {
                         setCurrentUser(null);
                     }
                 });
 
-                // Fetch all users for admin panel
-                await fetchAllUsers();
+                subscription = sub;
 
-                return () => {
-                    subscription.unsubscribe();
-                };
+                // Fetch all users for admin panel if admin
+                await fetchAllUsers();
             } catch (error) {
                 console.error('Error initializing auth:', error);
             } finally {
@@ -183,6 +188,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
 
         initAuth();
+
+        return () => {
+            if (subscription) {
+                subscription.unsubscribe();
+            }
+        };
     }, []);
 
     // Fetch all users from database

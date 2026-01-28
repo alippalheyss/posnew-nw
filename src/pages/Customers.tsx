@@ -108,7 +108,14 @@ const Customers = () => {
                     </div>
                     <p className="text-xs text-gray-600 dark:text-gray-400 break-words">Code: {customer.code}</p>
                     <p className="text-xs text-gray-600 dark:text-gray-400 break-words">Phone: {customer.phone}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 break-words">Credit Limit: {settings.shop.currency} {customer.credit_limit.toFixed(2)}</p>
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-[10px] uppercase font-bold text-gray-500">Credit Limit</span>
+                      <span className="text-xs font-mono">{settings.shop.currency} {customer.credit_limit.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center mt-0.5">
+                      <span className="text-[10px] uppercase font-bold text-red-600">Outstanding</span>
+                      <span className="text-xs font-mono font-bold text-red-700">{settings.shop.currency} {(customer.outstanding_balance || 0).toFixed(2)}</span>
+                    </div>
                     <div className="mt-2 pt-2 border-t flex justify-between items-center text-xs">
                       <span className="font-bold text-blue-600 dark:text-blue-400 uppercase tracking-tight">{t('loyalty_points')}</span>
                       <span className="font-black text-blue-700 dark:text-blue-300">{(customer.loyalty_points || 0).toFixed(0)}</span>

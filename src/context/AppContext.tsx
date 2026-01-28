@@ -325,25 +325,50 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     // Logic as before
   };
 
-  const updateStock = (productId: string, newStock: number) => {
-    setProducts(prev => prev.map(p =>
-      p.id === productId ? { ...p, stock_shop: newStock } : p
-    ));
+  const updateStock = async (productId: string, newStock: number) => {
+    try {
+      await productService.update(productId, { stock_shop: newStock });
+      setProducts(prev => prev.map(p =>
+        p.id === productId ? { ...p, stock_shop: newStock } : p
+      ));
+    } catch (error) {
+      console.error('Error updating stock:', error);
+      showError('Failed to update stock in database');
+    }
   };
 
-  const transferStock = (productId: string, from: 'shop' | 'godown', to: 'shop' | 'godown', amount: number) => {
-    setProducts(prev => prev.map(p => {
-      if (p.id !== productId) return p;
+  const transferStock = async (productId: string, from: 'shop' | 'godown', to: 'shop' | 'godown', amount: number) => {
+    const p = products.find(prod => prod.id === productId);
+    if (!p) return;
 
-      const sourceStock = from === 'shop' ? p.stock_shop : p.stock_godown;
-      if (sourceStock < amount) return p; // Prevent negative stock transfer
+    const sourceStock = from === 'shop' ? p.stock_shop : p.stock_godown;
+    if (sourceStock < amount) {
+      showError('Insufficient stock for transfer');
+      return;
+    }
 
-      return {
-        ...p,
-        stock_shop: from === 'shop' ? p.stock_shop - amount : p.stock_shop + amount,
-        stock_godown: from === 'godown' ? p.stock_godown - amount : p.stock_godown + amount
-      };
-    }));
+    const newShopStock = from === 'shop' ? p.stock_shop - amount : p.stock_shop + amount;
+    const newGodownStock = from === 'godown' ? p.stock_godown - amount : p.stock_godown + amount;
+
+    try {
+      await productService.update(productId, {
+        stock_shop: newShopStock,
+        stock_godown: newGodownStock
+      });
+
+      setProducts(prev => prev.map(prod => {
+        if (prod.id !== productId) return prod;
+        return {
+          ...prod,
+          stock_shop: newShopStock,
+          stock_godown: newGodownStock
+        };
+      }));
+      showSuccess('Stock transferred successfully');
+    } catch (error) {
+      console.error('Error transferring stock:', error);
+      showError('Failed to transfer stock in database');
+    }
   };
 
   const awardLoyaltyPoints = async (customerId: string, points: number) => {
@@ -546,24 +571,47 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const createSale = async (sale: Sale) => {
     try {
-      const { customer, id, ...dbSale } = sale;
-      const createdSale = await saleService.create({
-        ...dbSale,
+      const { customer, id, grandTotal, paymentMethod, paidAmount, balance, ...rest } = sale;
+
+      const saleData = {
+        ...rest,
         customer_id: customer?.id || null,
+        grand_total: grandTotal,
+        payment_method: paymentMethod,
+        paid_amount: paidAmount || 0,
+        balance: balance || 0,
         items: sale.items as any,
-        date: new Date().toISOString() // Use current time
-      } as any);
+        date: new Date().toISOString()
+      };
+
+      const createdSale = await saleService.create(saleData as any);
+
+      // 1. Update Customer Balance and Loyalty Points if credit or loyalty enabled
+      if (customer) {
+        if (paymentMethod === 'credit') {
+          await updateCustomerBalance(customer.id, grandTotal);
+        }
+
+        if (settings.general.enableLoyaltyProgram) {
+          const points = Math.floor(grandTotal * settings.general.loyaltyPointsRate);
+          if (points > 0) {
+            await awardLoyaltyPoints(customer.id, points);
+          }
+        }
+      }
 
       setSales(prev => [...prev, { ...sale, id: createdSale.id }]);
 
-      // Update stock for each item
+      // 2. Update stock for each item
       for (const item of sale.items) {
         const product = products.find(p => p.id === item.id);
         if (product) {
-          const newStock = product.stock_shop - item.qty;
+          const newStock = product.stock_shop - (item.qty * (item.unit_conversion || 1));
           await updateStock(item.id, newStock);
         }
       }
+
+      showSuccess('Sale recorded successfully');
     } catch (error) {
       console.error('Error creating sale:', error);
       showError('Failed to record sale to database');

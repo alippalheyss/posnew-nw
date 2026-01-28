@@ -8,6 +8,12 @@ export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 // Initialize with dummy values if missing to prevent throw on load
 const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || '';
 
+if (supabaseServiceKey && supabaseServiceKey !== 'placeholder') {
+    console.log('Supabase Admin Client: Service key loaded (starts with:', supabaseServiceKey.substring(0, 5), '...)');
+} else {
+    console.warn('Supabase Admin Client: Service key NOT found in environment variables.');
+}
+
 export const supabase = createClient(
     supabaseUrl || 'https://placeholder.supabase.co',
     supabaseAnonKey || 'placeholder',

@@ -295,6 +295,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 ? userData.username
                 : `${userData.username}@hadiyapos.local`;
 
+            console.log('DEBUG: Attempting admin user creation...');
+            console.log('DEBUG: Email:', email);
+            console.log('DEBUG: Admin Client Configured:', !!supabaseAdmin);
+
+            // Hacky check for key length if possible
+            const clientKey = (supabaseAdmin as any).supabaseKey;
+            console.log('DEBUG: Admin Client Key Length:', clientKey ? clientKey.length : 'MISSING');
+
             // Create auth user using supabaseAdmin (Admin API)
             const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
                 email: email,

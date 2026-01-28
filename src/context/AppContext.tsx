@@ -362,7 +362,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const addCustomer = async (customer: Customer) => {
     try {
-      const { settlement_history, ...dbCustomer } = customer;
+      const { settlement_history, id, ...dbCustomer } = customer;
       const newCustomer = await customerService.create(dbCustomer as any);
       setCustomers(prev => [...prev, newCustomer as any]);
       showSuccess('Customer added successfully');
@@ -512,10 +512,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const addProduct = async (product: Product) => {
     try {
-      const newProduct = await productService.create(product as any);
+      const { id, ...dbProduct } = product;
+      const newProduct = await productService.create(dbProduct as any);
       setProducts(prev => [...prev, newProduct as any]);
       showSuccess('Product added successfully');
     } catch (error) {
+      console.error('Error adding product:', error);
       showError('Failed to add product');
     }
   };
@@ -544,7 +546,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const createSale = async (sale: Sale) => {
     try {
-      const { customer, ...dbSale } = sale;
+      const { customer, id, ...dbSale } = sale;
       const createdSale = await saleService.create({
         ...dbSale,
         customer_id: customer?.id || null,
@@ -571,26 +573,37 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const addPurchase = async (purchase: Purchase) => {
     try {
-      // In a real app we'd post to purchases table too
+      // Record to database
+      const { id, ...dbPurchase } = purchase;
+      const createdPurchase = await supabase.from('purchases').insert({
+        ...dbPurchase,
+        date: purchase.date || new Date().toISOString()
+      }).select().single();
+
+      if (createdPurchase.error) throw createdPurchase.error;
+
       // Update cost prices for products in the purchase
       if (purchase.items && purchase.items.length > 0) {
         for (const item of purchase.items) {
           await updateProductCostPrice(item.product_id, item.unit_price, purchase.date);
         }
       }
-      setPurchases(prev => [...prev, purchase]);
+      setPurchases(prev => [...prev, createdPurchase.data as any]);
       showSuccess('Purchase recorded');
     } catch (error) {
+      console.error('Error adding purchase:', error);
       showError('Failed to record purchase');
     }
   };
 
   const addVendor = async (vendor: Vendor) => {
     try {
-      const newVendor = await vendorService.create(vendor as any);
+      const { id, ...dbVendor } = vendor;
+      const newVendor = await vendorService.create(dbVendor as any);
       setVendors(prev => [...prev, newVendor as any]);
       showSuccess('Vendor added successfully');
     } catch (error) {
+      console.error('Error adding vendor:', error);
       showError('Failed to add vendor');
     }
   };

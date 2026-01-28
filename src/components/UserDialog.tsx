@@ -74,7 +74,7 @@ const UserDialog: React.FC<UserDialogProps> = ({ open, onOpenChange, user, onSav
         }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (user) {
@@ -87,13 +87,13 @@ const UserDialog: React.FC<UserDialogProps> = ({ open, onOpenChange, user, onSav
                 permissions: formData.permissions,
             };
             if (formData.password) {
-                updates.password = formData.password;
+                (updates as any).password = formData.password;
             }
-            updateUser(user.id, updates);
+            await updateUser(user.id, updates);
             showSuccess(t('user_updated'));
         } else {
             // Add new user
-            addUser({
+            await addUser({
                 username: formData.username,
                 password: formData.password,
                 name_en: formData.name_en,
@@ -102,6 +102,7 @@ const UserDialog: React.FC<UserDialogProps> = ({ open, onOpenChange, user, onSav
                 isActive: formData.isActive,
                 permissions: formData.permissions,
             });
+            // showSuccess is handled inside addUser or should be called after await
             showSuccess(t('user_created'));
         }
 

@@ -71,7 +71,7 @@ export interface Sale {
   customer: Customer | null;
   items: CartItem[];
   grandTotal: number;
-  paymentMethod: 'cash' | 'credit' | 'card' | 'mobile';
+  paymentMethod: 'cash' | 'credit' | 'card' | 'mobile' | string;
   paidAmount?: number;
   balance?: number;
 }
@@ -221,6 +221,7 @@ interface AppContextType {
   addSettlement: (customerId: string, settlement: Settlement) => Promise<void>;
   purchases: Purchase[];
   addPurchase: (purchase: Purchase) => void;
+  deletePurchase: (id: string) => Promise<void>;
   addCustomer: (customer: Customer) => Promise<void>;
   updateCustomer: (customer: Customer) => Promise<void>;
   deleteCustomer: (customerId: string) => Promise<void>;
@@ -237,6 +238,7 @@ interface AppContextType {
   updateProductCostPrice: (productId: string, newCost: number, purchaseDate: string) => void;
   calculateProfitMargin: (product: Product) => number;
   createSale: (sale: Sale, skipStockUpdate?: boolean) => Promise<void>;
+  deleteSale: (id: string) => Promise<void>;
   loading: boolean;
   refreshData: () => Promise<void>;
 }
@@ -332,7 +334,14 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   }, [currentUser]);
 
   const clearCart = (cartId: string) => {
-    // Logic as before
+    setOpenCarts(prev => {
+      const newCarts = new Map(prev);
+      const cart = newCarts.get(cartId);
+      if (cart) {
+        newCarts.set(cartId, { ...cart, customer: null, items: [] });
+      }
+      return newCarts;
+    });
   };
 
   const updateStock = async (productId: string, newStock: number) => {
@@ -459,7 +468,6 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const addSettlement = async (customerId: string, settlement: Settlement) => {
     try {
-      // 1. Create settlement record in DB
       await settlementService.create({
         customer_id: customerId,
         amount_paid: settlement.amount_paid,
@@ -468,10 +476,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         new_outstanding: settlement.new_outstanding
       });
 
-      // 2. Update customer balance in DB
       await updateCustomerBalance(customerId, -settlement.amount_paid);
 
-      // 3. Update local state
       setCustomers(prev => prev.map(c =>
         c.id === customerId ? {
           ...c,
@@ -515,7 +521,6 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const getNextProductCode = () => {
     const lastItemCode = products.reduce((maxCode, product) => {
-      // Extract number from code like PROD001, C001, P001, etc.
       const match = product.item_code.match(/\d+/);
       const codeNum = match ? parseInt(match[0], 10) : 0;
       return isNaN(codeNum) ? maxCode : Math.max(maxCode, codeNum);
@@ -523,25 +528,19 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     return `PROD${String(lastItemCode + 1).padStart(3, '0')}`;
   };
 
-  // Helper function to get top N products by sales count
   const getTopProducts = (limit: number): Product[] => {
-    // Calculate sales count for each product
     const productSalesCount = new Map<string, number>();
-
     sales.forEach(sale => {
       sale.items.forEach(item => {
         const currentCount = productSalesCount.get(item.id) || 0;
         productSalesCount.set(item.id, currentCount + item.qty);
       });
     });
-
-    // Sort products by sales count (descending) and limit to top N
     const sortedProducts = [...products].sort((a, b) => {
       const aCount = productSalesCount.get(a.id) || 0;
       const bCount = productSalesCount.get(b.id) || 0;
-      return bCount - aCount; // Descending order
+      return bCount - aCount;
     });
-
     return sortedProducts.slice(0, limit);
   };
 
@@ -582,13 +581,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
-  const bulkAddProducts = async (products: Product[]) => {
+  const bulkAddProducts = async (productsToAdd: Product[]) => {
     try {
-      // Logic for bulk insert (will need to wrap in productService)
-      const { data, error } = await supabase.from('products').insert(products as any).select();
+      const { data, error } = await supabase.from('products').insert(productsToAdd as any).select();
       if (error) throw error;
       setProducts(prev => [...prev, ...data as any]);
-      showSuccess(`${products.length} products imported successfully`);
+      showSuccess(`${productsToAdd.length} products imported successfully`);
     } catch (error) {
       showError('Failed to import products');
     }
@@ -596,7 +594,6 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const createSale = async (sale: Sale, skipStockUpdate: boolean = false) => {
     try {
-      // Map to strict service structure
       const saleToCreate = {
         date: new Date().toISOString(),
         customer_id: sale.customer?.id || null,
@@ -609,12 +606,10 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
       const createdSale = await saleService.create(saleToCreate);
 
-      // 1. Update Customer Balance and Loyalty Points if credit or loyalty enabled
       if (sale.customer) {
         if (sale.paymentMethod === 'credit') {
           await updateCustomerBalance(sale.customer.id, sale.grandTotal);
         }
-
         if (settings.general.enableLoyaltyProgram) {
           const points = Math.floor(sale.grandTotal * settings.general.loyaltyPointsRate);
           if (points > 0) {
@@ -625,7 +620,6 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
       setSales(prev => [{ ...sale, id: createdSale.id }, ...prev]);
 
-      // 2. Update stock for each item
       if (!skipStockUpdate) {
         for (const item of sale.items) {
           const product = products.find(p => p.id === item.id);
@@ -644,9 +638,19 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
+  const deleteSale = async (id: string) => {
+    try {
+      await saleService.delete(id);
+      setSales(prev => prev.filter(s => s.id !== id));
+      showSuccess('Sale deleted successfully');
+    } catch (error) {
+      console.error('Error deleting sale:', error);
+      showError('Failed to delete sale');
+    }
+  };
+
   const addPurchase = async (purchase: Purchase) => {
     try {
-      // Strictly map for service
       const purchaseToCreate = {
         date: purchase.date || new Date().toISOString(),
         vendorId: purchase.vendorId || null,
@@ -660,7 +664,6 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
       const createdPurchase = await purchaseService.create(purchaseToCreate);
 
-      // Update cost prices for products in the purchase
       if (purchase.items && purchase.items.length > 0) {
         for (const item of purchase.items) {
           await updateProductCostPrice(item.product_id, item.unit_price, purchase.date);
@@ -671,6 +674,17 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     } catch (error) {
       console.error('Error adding purchase:', error);
       showError('Failed to record purchase');
+    }
+  };
+
+  const deletePurchase = async (id: string) => {
+    try {
+      await purchaseService.delete(id);
+      setPurchases(prev => prev.filter(p => p.id !== id));
+      showSuccess('Purchase deleted successfully');
+    } catch (error) {
+      console.error('Error deleting purchase:', error);
+      showError('Failed to delete purchase');
     }
   };
 
@@ -729,16 +743,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   const updateProductCostPrice = async (productId: string, newCost: number, purchaseDate: string) => {
     const p = products.find(prod => prod.id === productId);
     if (!p) return;
-
     const shouldUpdate = !p.cost_price || newCost !== p.cost_price;
     if (!shouldUpdate) return;
-
     try {
       await productService.update(productId, {
         cost_price: newCost,
         last_purchase_date: purchaseDate
       });
-
       setProducts(prev => prev.map(prod => {
         if (prod.id !== productId) return prod;
         return {
@@ -747,8 +758,6 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           last_purchase_date: purchaseDate
         };
       }));
-
-      // Check if selling price is below minimum margin (20%)
       const minSellingPrice = newCost * 1.2;
       if (p.price < minSellingPrice) {
         showError(`${p.name_en}: Selling price is below minimum recommended price.`);
@@ -781,34 +790,36 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       clearCart,
       updateStock,
       updateProduct,
-      openCarts,
-      setOpenCarts,
-      activeCartId,
-      setActiveCartId,
+      deleteProduct,
+      addProduct,
+      bulkAddProducts,
+      transferStock,
       awardLoyaltyPoints,
       redeemLoyaltyPoints,
+      addCustomer,
+      updateCustomer,
+      deleteCustomer,
       updateCustomerBalance,
       addSettlement,
-      transferStock,
-      purchases,
-      addPurchase,
       vendors,
       setVendors,
+      purchases,
+      addPurchase,
+      deletePurchase,
       addVendor,
       updateVendor,
       deleteVendor,
       getNextVendorCode,
       updateProductCostPrice,
       calculateProfitMargin,
-      addCustomer,
-      updateCustomer,
-      deleteCustomer,
-      addProduct,
-      deleteProduct,
-      bulkAddProducts,
-      createSale,
       loading,
-      refreshData
+      createSale,
+      deleteSale,
+      refreshData,
+      openCarts,
+      setOpenCarts,
+      activeCartId,
+      setActiveCartId,
     }}>
       {children}
     </AppContext.Provider>

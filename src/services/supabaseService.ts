@@ -180,6 +180,15 @@ export const saleService = {
         if (error) throw error;
         return data;
     },
+
+    async delete(id: string) {
+        const { error } = await supabase
+            .from('sales')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+    }
 };
 
 // Service for Purchases
@@ -223,7 +232,28 @@ export const purchaseService = {
             .single();
 
         if (error) throw error;
-        return data;
+
+        // Return mapped object to prevent UI crash
+        return {
+            id: data.id,
+            date: data.date,
+            vendorId: data.vendor_id,
+            billNumber: data.bill_number,
+            amount: safeNum(data.amount),
+            gstAmount: safeNum(data.gst_amount),
+            description: data.description,
+            items: data.items,
+            subtotal: safeNum(data.subtotal)
+        };
+    },
+
+    async delete(id: string) {
+        const { error } = await supabase
+            .from('purchases')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
     }
 };
 

@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Download, PlusCircle, Receipt, Building2, Calculator, ArrowUpRight, ArrowDownLeft, Landmark, X, ShoppingCart, Archive, Play, Trash2, Save, Package } from 'lucide-react';
 import { useAppContext, Purchase, Vendor, PurchaseItem, Product } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
@@ -19,7 +20,9 @@ import ProductPickerDialog from '@/components/ProductPickerDialog';
 
 const GSTReports = () => {
     const { t } = useTranslation();
-    const { sales, purchases, addPurchase, settings, vendors, products } = useAppContext();
+    const { sales, purchases, addPurchase, deletePurchase, settings, vendors, products } = useAppContext();
+    const { currentUser } = useAuth();
+    const isAdmin = currentUser?.role === 'admin';
     const [isAddPurchaseDialogOpen, setIsAddPurchaseDialogOpen] = useState(false);
     const [timeRange, setTimeRange] = useState('this_month');
 
@@ -337,6 +340,12 @@ const GSTReports = () => {
         showSuccess(t('purchase_added_successfully'));
     };
 
+    const handleDeletePurchase = async (id: string) => {
+        if (window.confirm(t('confirm_delete_purchase'))) {
+            await deletePurchase(id);
+        }
+    };
+
     const getQuarterName = (q: string) => {
         const quarterMap: { [key: string]: string } = {
             'q1': 'Q1 (Jan-Mar)',
@@ -537,6 +546,7 @@ const GSTReports = () => {
                                         <TableHead className="text-right font-bold">{t('bill_number')}</TableHead>
                                         <TableHead className="text-right font-bold">{t('amount')}</TableHead>
                                         <TableHead className="text-right font-bold">{t('gst_amount')}</TableHead>
+                                        {isAdmin && <TableHead className="text-right font-bold w-12">{t('actions')}</TableHead>}
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -552,6 +562,13 @@ const GSTReports = () => {
                                                 <TableCell className="text-right text-xs opacity-60">{purchase.billNumber || '-'}</TableCell>
                                                 <TableCell className="text-right font-mono">{purchase.amount.toFixed(2)}</TableCell>
                                                 <TableCell className="text-right font-mono font-bold text-blue-600">{purchase.gstAmount.toFixed(2)}</TableCell>
+                                                {isAdmin && (
+                                                    <TableCell className="text-right">
+                                                        <Button variant="ghost" size="sm" onClick={() => handleDeletePurchase(purchase.id)} className="h-8 w-8 p-0">
+                                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                                        </Button>
+                                                    </TableCell>
+                                                )}
                                             </TableRow>
                                         ))
                                     )}

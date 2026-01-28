@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { Printer, FileText } from 'lucide-react';
+import { Printer, FileText, Trash2 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 import { useAppContext, Sale } from '@/context/AppContext';
 import SaleEditDialog from '@/components/SaleEditDialog';
 import { PencilLine } from 'lucide-react';
@@ -11,7 +12,9 @@ import { showSuccess } from '@/utils/toast';
 
 const CreditInvoices = () => {
   const { t } = useTranslation();
-  const { sales, setSales, settings } = useAppContext();
+  const { sales, setSales, settings, deleteSale } = useAppContext();
+  const { currentUser } = useAuth();
+  const isAdmin = currentUser?.role === 'admin';
   const [isEditSaleDialogOpen, setIsEditSaleDialogOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
 
@@ -27,6 +30,12 @@ const CreditInvoices = () => {
     // showSuccess is handled in the dialog
     setIsEditSaleDialogOpen(false);
     setEditingSale(null);
+  };
+
+  const handleDeleteSale = async (id: string) => {
+    if (window.confirm(t('confirm_delete_sale'))) {
+      await deleteSale(id);
+    }
   };
 
   const handlePrintInvoice = (sale: Sale) => {
@@ -251,6 +260,11 @@ const CreditInvoices = () => {
                         <Button variant="ghost" size="sm" onClick={() => handleEditClick(sale)} className="h-8 w-8 p-0">
                           <PencilLine className="h-4 w-4 text-blue-500" />
                         </Button>
+                        {isAdmin && (
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteSale(sale.id)} className="h-8 w-8 p-0">
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        )}
                         <Button variant="outline" size="sm" onClick={() => handlePrintInvoice(sale)} className="h-8 text-xs gap-2">
                           <Printer className="h-3.5 w-3.5" /> {renderBoth('print_receipt')}
                         </Button>

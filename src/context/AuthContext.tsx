@@ -164,7 +164,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 // Listen for auth changes
                 const { data: { subscription: sub } } = supabase.auth.onAuthStateChange(async (event, session) => {
                     console.log('Auth event:', event);
-                    if ((event === 'SIGNED_IN' || (event as any) === 'INITIAL_SESSION') && session?.user) {
+                    if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') && session?.user) {
                         const userData = await fetchUserData(session.user.id);
                         if (userData && userData.isActive) {
                             setCurrentUser(userData);
@@ -289,16 +289,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const addUser = async (userData: Omit<User, 'id' | 'createdAt'> & { password: string }) => {
         try {
-            // Create auth user
-            const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+            // Create auth user using signUp (since admin API is restricted on client)
+            const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: userData.username,
                 password: userData.password,
-                email_confirm: true,
-                user_metadata: {
-                    name_en: userData.name_en,
-                    name_dv: userData.name_dv,
-                    role: userData.role,
-                    permissions: userData.permissions,
+                options: {
+                    data: {
+                        name_en: userData.name_en,
+                        name_dv: userData.name_dv,
+                        role: userData.role,
+                        permissions: userData.permissions,
+                    }
                 }
             });
 

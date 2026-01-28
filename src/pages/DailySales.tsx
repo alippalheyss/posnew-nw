@@ -10,11 +10,14 @@ import { PencilLine } from 'lucide-react';
 import { useAppContext, Product, Customer, CartItem, Sale } from '@/context/AppContext';
 import SaleEditDialog from '@/components/SaleEditDialog'; // Import the new dialog
 import { showSuccess } from '@/utils/toast';
-import { Printer } from 'lucide-react';
+import { Printer, Trash2 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 const DailySales = () => {
   const { t } = useTranslation();
-  const { sales, setSales, settings } = useAppContext();
+  const { sales, setSales, settings, deleteSale } = useAppContext();
+  const { currentUser } = useAuth();
+  const isAdmin = currentUser?.role === 'admin';
   const [isEditSaleDialogOpen, setIsEditSaleDialogOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'last30'>('today');
@@ -131,6 +134,12 @@ const DailySales = () => {
     setEditingSale(null);
   };
 
+  const handleDeleteSale = async (id: string) => {
+    if (window.confirm(t('confirm_delete_sale'))) {
+      await deleteSale(id);
+    }
+  };
+
   const renderBoth = (key: string, options?: any) => (
     <>
       {t(key, options)} ({t(key, { ...options, lng: 'en' })})
@@ -228,6 +237,11 @@ const DailySales = () => {
                               <Button variant="ghost" size="sm" onClick={() => handleEditClick(sale)} className="h-8 w-8 p-0">
                                 <PencilLine className="h-4 w-4 text-blue-500" />
                               </Button>
+                              {isAdmin && (
+                                <Button variant="ghost" size="sm" onClick={() => handleDeleteSale(sale.id)} className="h-8 w-8 p-0">
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              )}
                             </div>
                             <div className="text-xs font-semibold text-gray-600">
                               {sale.items.length} {renderBoth('items')}

@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, History, DollarSign, ShoppingBag, PlusCircle, Download } from 'lucide-react';
+import { Search, History, DollarSign, ShoppingBag, PlusCircle, Download, Trash2 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -60,7 +61,9 @@ interface NewCreditSale {
 
 const CreditOutstanding = () => {
   const { t } = useTranslation();
-  const { customers, sales, setSales, settings, addSettlement, updateCustomerBalance } = useAppContext();
+  const { customers, sales, setSales, settings, addSettlement, updateCustomerBalance, deleteSale } = useAppContext();
+  const { currentUser } = useAuth();
+  const isAdmin = currentUser?.role === 'admin';
   const [searchTerm, setSearchTerm] = useState('');
   const [isOutstandingVisible, setIsOutstandingVisible] = useState(false);
 
@@ -118,6 +121,12 @@ const CreditOutstanding = () => {
     showSuccess(t('credit_sale_added_successfully'));
   };
 
+  const handleDeleteSale = async (id: string) => {
+    if (window.confirm(t('confirm_delete_sale'))) {
+      await deleteSale(id);
+    }
+  };
+
   const processSettlement = () => {
     if (selectedCustomerForAction && typeof paymentAmount === 'number' && paymentAmount > 0) {
       const previousOutstanding = selectedCustomerForAction.outstanding_balance;
@@ -129,8 +138,6 @@ const CreditOutstanding = () => {
         previous_outstanding: previousOutstanding,
         new_outstanding: newOutstanding,
       };
-
-      addSettlement(selectedCustomerForAction.id, settlement);
 
       addSettlement(selectedCustomerForAction.id, settlement);
 
@@ -660,6 +667,7 @@ const CreditOutstanding = () => {
                               <th className="py-2">Qty</th>
                               <th className="py-2">Price</th>
                               <th className="py-2">Total</th>
+                              {isAdmin && <th className="py-2 w-10"></th>}
                             </tr>
                           </thead>
                           <tbody>
@@ -670,10 +678,18 @@ const CreditOutstanding = () => {
                                 <td className="py-2 font-bold">{item.qty}</td>
                                 <td className="py-2">{item.price.toFixed(2)}</td>
                                 <td className="py-2 font-bold">{(item.qty * item.price).toFixed(2)}</td>
+                                {isAdmin && <td className="py-2"></td>}
                               </tr>
                             ))}
                           </tbody>
                         </table>
+                        {isAdmin && (
+                          <div className="mt-2 pt-2 border-t flex justify-end">
+                            <Button variant="ghost" size="sm" onClick={() => handleDeleteSale(transaction.id)} className="h-8 w-8 p-0">
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     ))}
 

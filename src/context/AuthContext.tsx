@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { supabase, isSupabaseConfigured, supabaseAdmin } from '@/lib/supabase';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import SupabaseError from '@/components/SupabaseError';
+import { showSuccess, showError } from '@/utils/toast';
 
 // User Permissions Interface
 export interface UserPermissions {
@@ -289,9 +290,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const addUser = async (userData: Omit<User, 'id' | 'createdAt'> & { password: string }) => {
         try {
+            // Ensure username is a valid email format for Supabase Auth
+            const email = userData.username.includes('@')
+                ? userData.username
+                : `${userData.username}@hadiyapos.local`;
+
             // Create auth user using supabaseAdmin (Admin API)
             const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-                email: userData.username,
+                email: email,
                 password: userData.password,
                 email_confirm: true, // Auto-confirm email
                 user_metadata: {
@@ -303,14 +309,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             });
 
             if (authError) {
-                console.error('Error creating auth user:', authError);
+                console.error('CRITICAL: Supabase Admin CreateUser error:', authError);
+                showError(`Failed to create user: ${authError.message}`);
                 throw authError;
             }
 
+            console.log('User created in Auth successfully:', authData.user?.id);
+
             // The trigger in Supabase will automatically create the user in the users table
             await fetchAllUsers();
-        } catch (error) {
-            console.error('Error adding user:', error);
+        } catch (error: any) {
+            console.error('CRITICAL: Error in addUser function:', error);
+            showError(error.message || 'System error while adding user');
             throw error;
         }
     };

@@ -22,6 +22,12 @@ const UserDialog: React.FC<UserDialogProps> = ({ open, onOpenChange, user, onSav
     const { t } = useTranslation();
     const { addUser, updateUser } = useAuth();
 
+    const renderBoth = (key: string, options?: any) => (
+        <>
+            {t(key, options)} ({t(key, { ...options, lng: 'en' })})
+        </>
+    );
+
     const [formData, setFormData] = useState({
         username: user?.username || '',
         password: '',
@@ -155,7 +161,7 @@ const UserDialog: React.FC<UserDialogProps> = ({ open, onOpenChange, user, onSav
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Username */}
                     <div className="space-y-2">
-                        <Label htmlFor="username">{t('username')}</Label>
+                        <Label htmlFor="username">{renderBoth('username')}</Label>
                         <Input
                             id="username"
                             value={formData.username}
@@ -164,6 +170,7 @@ const UserDialog: React.FC<UserDialogProps> = ({ open, onOpenChange, user, onSav
                             disabled={!!user}
                             className="text-right"
                         />
+                        {!user && <p className="text-[10px] text-muted-foreground mt-1 text-right italic">Will be normalized to an identifier (e.g. name@hadiyapos.local)</p>}
                     </div>
 
                     {/* Password */}

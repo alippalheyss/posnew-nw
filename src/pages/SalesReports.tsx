@@ -20,7 +20,7 @@ const SalesReports = () => {
       return false;
     });
 
-    const total = filtered.reduce((sum, sale) => sum + sale.grandTotal, 0);
+    const total = filtered.reduce((sum, sale) => sum + (parseFloat(sale.grandTotal as any) || 0), 0);
     return { total, count: filtered.length, items: filtered };
   };
 
@@ -34,13 +34,15 @@ const SalesReports = () => {
     filtered.forEach(sale => {
       sale.items.forEach(item => {
         const product = products.find(p => p.id === item.id);
-        if (product) {
-          const revenue = item.price * item.qty;
-          const cost = (product.cost_price || 0) * item.qty;
+        const price = parseFloat(item.price as any) || 0;
+        const qty = parseFloat(item.qty as any) || 0;
+        const productCost = parseFloat(product?.cost_price as any) || 0;
 
-          totalRevenue += revenue;
-          totalCost += cost;
-        }
+        const revenue = price * qty;
+        const cost = productCost * qty;
+
+        totalRevenue += revenue;
+        totalCost += cost;
       });
     });
 

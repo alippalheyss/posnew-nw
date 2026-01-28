@@ -48,6 +48,12 @@ export const productService = {
     }
 };
 
+// Helper to safely parse numbers
+const safeNum = (val: any): number => {
+    const num = parseFloat(val);
+    return isNaN(num) ? 0 : num;
+};
+
 // Service for Customers
 export const customerService = {
     async getAll() {
@@ -66,17 +72,32 @@ export const customerService = {
             .order('name_en', { ascending: true });
 
         if (error) throw error;
-        // Map settlements to settlement_history
+        // Map settlements to settlement_history and ensure numbers are clean
         return data.map(c => ({
             ...c,
-            settlement_history: (c as any).settlements || []
+            outstanding_balance: safeNum(c.outstanding_balance),
+            credit_limit: safeNum(c.credit_limit),
+            loyalty_points: safeNum(c.loyalty_points),
+            settlement_history: (c as any).settlements?.map((s: any) => ({
+                id: s.id,
+                amount_paid: safeNum(s.amount_paid),
+                date: s.date,
+                previous_outstanding: safeNum(s.previous_outstanding),
+                new_outstanding: safeNum(s.new_outstanding)
+            })) || []
         }));
     },
 
-    async create(customer: Tables['customers']['Insert']) {
+    async create(customer: any) {
+        const dbCustomer = {
+            ...customer,
+            outstanding_balance: safeNum(customer.outstanding_balance),
+            credit_limit: safeNum(customer.credit_limit),
+            loyalty_points: safeNum(customer.loyalty_points)
+        };
         const { data, error } = await supabase
             .from('customers')
-            .insert(customer)
+            .insert(dbCustomer)
             .select()
             .single();
 
@@ -84,10 +105,15 @@ export const customerService = {
         return data;
     },
 
-    async update(id: string, updates: Tables['customers']['Update']) {
+    async update(id: string, updates: any) {
+        const dbUpdates = { ...updates };
+        if (updates.outstanding_balance !== undefined) dbUpdates.outstanding_balance = safeNum(updates.outstanding_balance);
+        if (updates.credit_limit !== undefined) dbUpdates.credit_limit = safeNum(updates.credit_limit);
+        if (updates.loyalty_points !== undefined) dbUpdates.loyalty_points = safeNum(updates.loyalty_points);
+
         const { data, error } = await supabase
             .from('customers')
-            .update(updates)
+            .update(dbUpdates)
             .eq('id', id)
             .select()
             .single();
@@ -115,13 +141,84 @@ export const saleService = {
             .order('date', { ascending: false });
 
         if (error) throw error;
-        return data;
+        // Map snake_case from DB to camelCase for App
+        return data.map(s => ({
+            id: s.id,
+            date: s.date,
+            customer_id: s.customer_id,
+            customer: s.customers ? {
+                ...s.customers,
+                outstanding_balance: safeNum(s.customers.outstanding_balance),
+                settlement_history: []
+            } : null,
+            items: s.items as any,
+            grandTotal: safeNum(s.grand_total),
+            paymentMethod: s.payment_method,
+            paidAmount: safeNum(s.paid_amount),
+            balance: safeNum(s.balance)
+        }));
     },
 
-    async create(sale: Tables['sales']['Insert']) {
+    async create(sale: any) {
+        // Map from camelCase to snake_case for DB
+        const dbSale = {
+            date: sale.date || new Date().toISOString(),
+            customer_id: sale.customer_id || sale.customer?.id || null,
+            items: sale.items,
+            grand_total: safeNum(sale.grandTotal !== undefined ? sale.grandTotal : (sale.grand_total || 0)),
+            payment_method: sale.paymentMethod || sale.payment_method || 'cash',
+            paid_amount: safeNum(sale.paidAmount !== undefined ? sale.paidAmount : (sale.paid_amount || 0)),
+            balance: safeNum(sale.balance !== undefined ? sale.balance : (sale.balance || 0))
+        };
+
         const { data, error } = await supabase
             .from('sales')
-            .insert(sale)
+            .insert(dbSale)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+};
+
+// Service for Purchases
+export const purchaseService = {
+    async getAll() {
+        const { data, error } = await supabase
+            .from('purchases')
+            .select('*')
+            .order('date', { ascending: false });
+
+        if (error) throw error;
+        return data.map(p => ({
+            id: p.id,
+            date: p.date,
+            vendorId: p.vendor_id,
+            billNumber: p.bill_number,
+            amount: safeNum(p.amount),
+            gstAmount: safeNum(p.gst_amount),
+            description: p.description,
+            items: p.items,
+            subtotal: safeNum(p.subtotal)
+        }));
+    },
+
+    async create(purchase: any) {
+        const dbPurchase = {
+            date: purchase.date || new Date().toISOString(),
+            vendor_id: purchase.vendorId || purchase.vendor_id,
+            bill_number: purchase.billNumber || purchase.bill_number,
+            amount: safeNum(purchase.amount),
+            gst_amount: safeNum(purchase.gstAmount || purchase.gst_amount || 0),
+            description: purchase.description,
+            items: purchase.items,
+            subtotal: safeNum(purchase.subtotal || purchase.amount)
+        };
+
+        const { data, error } = await supabase
+            .from('purchases')
+            .insert(dbPurchase)
             .select()
             .single();
 
@@ -142,7 +239,7 @@ export const vendorService = {
         return data;
     },
 
-    async create(vendor: Tables['vendors']['Insert']) {
+    async create(vendor: any) {
         const { data, error } = await supabase
             .from('vendors')
             .insert(vendor)
@@ -153,7 +250,7 @@ export const vendorService = {
         return data;
     },
 
-    async update(id: string, updates: Tables['vendors']['Update']) {
+    async update(id: string, updates: any) {
         const { data, error } = await supabase
             .from('vendors')
             .update(updates)
@@ -172,6 +269,43 @@ export const vendorService = {
             .eq('id', id);
 
         if (error) throw error;
+    }
+};
+
+// Service for Settlements
+export const settlementService = {
+    async create(settlement: any) {
+        const dbSettlement = {
+            customer_id: settlement.customer_id,
+            amount_paid: safeNum(settlement.amount_paid),
+            date: settlement.date || new Date().toISOString(),
+            previous_outstanding: safeNum(settlement.previous_outstanding),
+            new_outstanding: safeNum(settlement.new_outstanding)
+        };
+        const { data, error } = await supabase
+            .from('settlements')
+            .insert(dbSettlement)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+
+    async getByCustomerId(customerId: string) {
+        const { data, error } = await supabase
+            .from('settlements')
+            .select('*')
+            .eq('customer_id', customerId)
+            .order('date', { ascending: false });
+
+        if (error) throw error;
+        return data.map(s => ({
+            ...s,
+            amount_paid: safeNum(s.amount_paid),
+            previous_outstanding: safeNum(s.previous_outstanding),
+            new_outstanding: safeNum(s.new_outstanding)
+        }));
     }
 };
 

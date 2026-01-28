@@ -35,6 +35,8 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
             if (product) {
                 // Edit Mode
                 const cloned = JSON.parse(JSON.stringify(product));
+                cloned.units = cloned.units || [];
+                cloned.is_zero_tax = !!cloned.is_zero_tax;
                 setEditedProduct(cloned);
                 setImagePreviewUrl(cloned.image);
                 setExpiryDate(cloned.expiry_date ? parseISO(cloned.expiry_date) : undefined);

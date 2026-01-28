@@ -81,6 +81,7 @@ const CreditOutstanding = () => {
   const [isAddCreditSaleDialogOpen, setIsAddCreditSaleDialogOpen] = useState(false);
   const [selectedCustomerForAction, setSelectedCustomerForAction] = useState<Customer | null>(null);
   const [paymentAmount, setPaymentAmount] = useState<number | ''>('');
+  const [isPayAll, setIsPayAll] = useState(false);
 
   const filteredCustomers = customers.filter(customer =>
     (customer.outstanding_balance > 0 || searchTerm) && (
@@ -97,6 +98,7 @@ const CreditOutstanding = () => {
   const handleSettlePaymentClick = (customer: Customer) => {
     setSelectedCustomerForAction(customer);
     setPaymentAmount('');
+    setIsPayAll(false);
     setIsSettlePaymentDialogOpen(true);
   };
 
@@ -130,9 +132,12 @@ const CreditOutstanding = () => {
 
       addSettlement(selectedCustomerForAction.id, settlement);
 
+      addSettlement(selectedCustomerForAction.id, settlement);
+
       setIsSettlePaymentDialogOpen(false);
       setSelectedCustomerForAction(null);
       setPaymentAmount('');
+      setIsPayAll(false);
       showSuccess(t('settlement_successful'));
     } else {
       showError(t('error_updating_stock'));
@@ -500,10 +505,34 @@ const CreditOutstanding = () => {
                 id="paymentAmount"
                 type="number"
                 value={paymentAmount}
-                onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || '')}
-                className="text-right h-12 text-lg font-mono border-primary shadow-sm"
+                onChange={(e) => {
+                  setPaymentAmount(parseFloat(e.target.value) || '');
+                  setIsPayAll(false);
+                }}
+                readOnly={isPayAll}
+                className={cn("text-right h-12 text-lg font-mono border-primary shadow-sm", isPayAll && "bg-muted")}
                 autoFocus
                 placeholder="0.00"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2 mb-2">
+              <Label htmlFor="payAll" className="text-right font-bold cursor-pointer">
+                {renderBoth('pay_all')}
+              </Label>
+              <input
+                id="payAll"
+                type="checkbox"
+                checked={isPayAll}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setIsPayAll(checked);
+                  if (checked && selectedCustomerForAction) {
+                    setPaymentAmount(selectedCustomerForAction.outstanding_balance);
+                  } else {
+                    setPaymentAmount('');
+                  }
+                }}
+                className="w-5 h-5 accent-primary cursor-pointer"
               />
             </div>
             <div className="space-y-2">

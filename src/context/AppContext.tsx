@@ -1,7 +1,15 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { showError, showSuccess } from '@/utils/toast';
 import { supabase } from '@/lib/supabase';
-import { productService, customerService, saleService, vendorService, settingsService } from '@/services/supabaseService';
+import {
+  productService,
+  customerService,
+  saleService,
+  vendorService,
+  settingsService,
+  settlementService,
+  purchaseService
+} from '../services/supabaseService';
 import { useAuth } from './AuthContext';
 
 export interface Product {
@@ -177,7 +185,7 @@ interface PrintSettings {
   thermalPrinterWidth: '58mm' | '80mm';
 }
 
-interface AppSettings {
+export interface AppSettings {
   shop: ShopSettings;
   accounting: AccountingSettings;
   software: SoftwareSettings;
@@ -197,34 +205,34 @@ interface AppContextType {
   setFavoriteProductIds: React.Dispatch<React.SetStateAction<string[]>>;
   getTopProducts: (limit: number) => Product[];
   settings: AppSettings;
-  updateSettings: (category: keyof AppSettings, settings: any) => void;
+  updateSettings: (category: keyof AppSettings, settings: any, silent?: boolean) => Promise<void>;
   getNextCustomerCode: () => string;
   getNextProductCode: () => string;
   clearCart: (cartId: string) => void;
-  updateStock: (productId: string, newStock: number) => void;
-  updateProduct: (updatedProduct: Product) => void;
-  transferStock: (productId: string, from: 'shop' | 'godown', to: 'shop' | 'godown', amount: number) => void;
+  updateStock: (productId: string, newStock: number) => Promise<void>;
+  transferStock: (productId: string, from: 'shop' | 'godown', to: 'shop' | 'godown', amount: number) => Promise<void>;
   openCarts: Map<string, Cart>;
   setOpenCarts: React.Dispatch<React.SetStateAction<Map<string, Cart>>>;
   activeCartId: string;
   setActiveCartId: React.Dispatch<React.SetStateAction<string>>;
   awardLoyaltyPoints: (customerId: string, points: number) => void;
   redeemLoyaltyPoints: (customerId: string, points: number) => void;
-  updateCustomerBalance: (customerId: string, amount: number) => void;
-  addSettlement: (customerId: string, settlement: Settlement) => void;
+  updateCustomerBalance: (customerId: string, amount: number) => Promise<void>;
+  addSettlement: (customerId: string, settlement: Settlement) => Promise<void>;
   purchases: Purchase[];
   addPurchase: (purchase: Purchase) => void;
   addCustomer: (customer: Customer) => Promise<void>;
   updateCustomer: (customer: Customer) => Promise<void>;
   deleteCustomer: (customerId: string) => Promise<void>;
   addProduct: (product: Product) => Promise<void>;
+  updateProduct: (updatedProduct: Product) => Promise<void>;
   deleteProduct: (productId: string) => Promise<void>;
   bulkAddProducts: (products: Product[]) => Promise<void>;
   vendors: Vendor[];
   setVendors: React.Dispatch<React.SetStateAction<Vendor[]>>;
-  addVendor: (vendor: Vendor) => void;
-  updateVendor: (vendor: Vendor) => void;
-  deleteVendor: (vendorId: string) => void;
+  addVendor: (vendor: Vendor) => Promise<void>;
+  updateVendor: (vendor: Vendor) => Promise<void>;
+  deleteVendor: (vendorId: string) => Promise<void>;
   getNextVendorCode: () => string;
   updateProductCostPrice: (productId: string, newCost: number, purchaseDate: string) => void;
   calculateProfitMargin: (product: Product) => number;
@@ -283,17 +291,19 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     if (!currentUser) return;
     setLoading(true);
     try {
-      const [dbProducts, dbCustomers, dbVendors, dbSales] = await Promise.all([
+      const [dbProducts, dbCustomers, dbVendors, dbSales, dbPurchases] = await Promise.all([
         productService.getAll(),
         customerService.getAll(),
         vendorService.getAll(),
-        saleService.getAll()
+        saleService.getAll(),
+        purchaseService.getAll()
       ]);
 
       setProducts(dbProducts as any);
       setCustomers(dbCustomers as any);
       setVendors(dbVendors as any);
       setSales(dbSales as any);
+      setPurchases(dbPurchases as any);
 
       // Fetch settings
       const categories: (keyof AppSettings)[] = ['shop', 'accounting', 'software', 'general', 'reports', 'printing'];
@@ -389,11 +399,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     try {
       const { settlement_history, id, ...dbCustomer } = customer;
       const newCustomer = await customerService.create(dbCustomer as any);
-      setCustomers(prev => [...prev, newCustomer as any]);
+      setCustomers(prev => [...prev, { ...newCustomer, settlement_history: [] } as any]);
       showSuccess('Customer added successfully');
     } catch (error) {
       console.error('Error adding customer:', error);
       showError('Failed to add customer to database');
+      throw error;
     }
   };
 
@@ -448,13 +459,19 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const addSettlement = async (customerId: string, settlement: Settlement) => {
     try {
-      // 1. Create settlement record
-      // 2. Update customer balance
-      // Note: Assuming a settlements table exists or we just update customer
-      await customerService.update(customerId, {
-        outstanding_balance: settlement.new_outstanding
+      // 1. Create settlement record in DB
+      await settlementService.create({
+        customer_id: customerId,
+        amount_paid: settlement.amount_paid,
+        date: new Date().toISOString(),
+        previous_outstanding: settlement.previous_outstanding,
+        new_outstanding: settlement.new_outstanding
       });
-      // In a real app we'd also post to settlements table
+
+      // 2. Update customer balance in DB
+      await updateCustomerBalance(customerId, -settlement.amount_paid);
+
+      // 3. Update local state
       setCustomers(prev => prev.map(c =>
         c.id === customerId ? {
           ...c,
@@ -462,13 +479,15 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           settlement_history: [...c.settlement_history, settlement]
         } : c
       ));
+
       showSuccess('Settlement recorded');
     } catch (error) {
+      console.error('Error recording settlement:', error);
       showError('Failed to record settlement');
     }
   };
 
-  const updateSettings = async (category: keyof AppSettings, newSettings: any) => {
+  const updateSettings = async (category: keyof AppSettings, newSettings: any, silent: boolean = false) => {
     if (!currentUser) return;
     try {
       const mergedSettings = { ...settings[category], ...newSettings };
@@ -477,8 +496,11 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         ...prev,
         [category]: mergedSettings
       }));
-      showSuccess('Settings saved');
+      if (!silent) {
+        showSuccess('Settings saved');
+      }
     } catch (error) {
+      console.error('Error updating settings:', error);
       showError('Failed to save settings');
     }
   };
@@ -545,7 +567,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       showSuccess('Product added successfully');
     } catch (error) {
       console.error('Error adding product:', error);
-      showError('Failed to add product');
+      showError('Failed to add product to database');
+      throw error;
     }
   };
 
@@ -573,36 +596,34 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const createSale = async (sale: Sale, skipStockUpdate: boolean = false) => {
     try {
-      const { customer, id, grandTotal, paymentMethod, paidAmount, balance, ...rest } = sale;
-
-      const saleData = {
-        ...rest,
-        customer_id: customer?.id || null,
-        grand_total: grandTotal,
-        payment_method: paymentMethod,
-        paid_amount: paidAmount || 0,
-        balance: balance || 0,
-        items: sale.items as any,
-        date: new Date().toISOString()
+      // Map to strict service structure
+      const saleToCreate = {
+        date: new Date().toISOString(),
+        customer_id: sale.customer?.id || null,
+        items: sale.items,
+        grandTotal: sale.grandTotal,
+        paymentMethod: sale.paymentMethod,
+        paidAmount: sale.paidAmount || 0,
+        balance: sale.balance || 0
       };
 
-      const createdSale = await saleService.create(saleData as any);
+      const createdSale = await saleService.create(saleToCreate);
 
       // 1. Update Customer Balance and Loyalty Points if credit or loyalty enabled
-      if (customer) {
-        if (paymentMethod === 'credit') {
-          await updateCustomerBalance(customer.id, grandTotal);
+      if (sale.customer) {
+        if (sale.paymentMethod === 'credit') {
+          await updateCustomerBalance(sale.customer.id, sale.grandTotal);
         }
 
         if (settings.general.enableLoyaltyProgram) {
-          const points = Math.floor(grandTotal * settings.general.loyaltyPointsRate);
+          const points = Math.floor(sale.grandTotal * settings.general.loyaltyPointsRate);
           if (points > 0) {
-            await awardLoyaltyPoints(customer.id, points);
+            await awardLoyaltyPoints(sale.customer.id, points);
           }
         }
       }
 
-      setSales(prev => [...prev, { ...sale, id: createdSale.id }]);
+      setSales(prev => [{ ...sale, id: createdSale.id }, ...prev]);
 
       // 2. Update stock for each item
       if (!skipStockUpdate) {
@@ -625,14 +646,19 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const addPurchase = async (purchase: Purchase) => {
     try {
-      // Record to database
-      const { id, ...dbPurchase } = purchase;
-      const createdPurchase = await supabase.from('purchases').insert({
-        ...dbPurchase,
-        date: purchase.date || new Date().toISOString()
-      }).select().single();
+      // Strictly map for service
+      const purchaseToCreate = {
+        date: purchase.date || new Date().toISOString(),
+        vendorId: purchase.vendorId || null,
+        billNumber: purchase.billNumber || '',
+        amount: purchase.amount || 0,
+        gstAmount: purchase.gstAmount || 0,
+        description: purchase.description || '',
+        items: purchase.items || [],
+        subtotal: purchase.subtotal || purchase.amount || 0
+      };
 
-      if (createdPurchase.error) throw createdPurchase.error;
+      const createdPurchase = await purchaseService.create(purchaseToCreate);
 
       // Update cost prices for products in the purchase
       if (purchase.items && purchase.items.length > 0) {
@@ -640,7 +666,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           await updateProductCostPrice(item.product_id, item.unit_price, purchase.date);
         }
       }
-      setPurchases(prev => [...prev, createdPurchase.data as any]);
+      setPurchases(prev => [createdPurchase as any, ...prev]);
       showSuccess('Purchase recorded');
     } catch (error) {
       console.error('Error adding purchase:', error);
@@ -660,7 +686,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       showSuccess('Vendor added successfully');
     } catch (error) {
       console.error('Error adding vendor:', error);
-      showError('Failed to add vendor');
+      showError('Failed to add vendor to database');
+      throw error;
     }
   };
 
@@ -676,7 +703,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       showSuccess('Vendor updated successfully');
     } catch (error) {
       console.error('Error updating vendor:', error);
-      showError('Failed to update vendor');
+      showError('Failed to update vendor in database');
+      throw error;
     }
   };
 

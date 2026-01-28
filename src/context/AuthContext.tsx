@@ -1,8 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
+import SupabaseError from '@/components/SupabaseError';
 
 // User Permissions Interface
 export interface UserPermissions {
@@ -381,6 +382,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         deleteUser,
         loading,
     };
+
+    if (!isSupabaseConfigured) {
+        return <SupabaseError />;
+    }
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

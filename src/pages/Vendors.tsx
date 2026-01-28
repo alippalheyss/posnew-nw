@@ -54,7 +54,7 @@ const Vendors = () => {
         });
     };
 
-    const handleAddVendor = () => {
+    const handleAddVendor = async () => {
         if (!vendorForm.name_en || !vendorForm.phone) {
             showError(t('fill_all_fields_error'));
             return;
@@ -66,13 +66,13 @@ const Vendors = () => {
             ...vendorForm
         };
 
-        addVendor(newVendor);
+        await addVendor(newVendor);
         setIsAddDialogOpen(false);
         resetForm();
         showSuccess(t('vendor_added_successfully'));
     };
 
-    const handleEditVendor = () => {
+    const handleEditVendor = async () => {
         if (!selectedVendor) return;
         if (!vendorForm.name_en || !vendorForm.phone) {
             showError(t('fill_all_fields_error'));
@@ -84,16 +84,16 @@ const Vendors = () => {
             ...vendorForm
         };
 
-        updateVendor(updatedVendor);
+        await updateVendor(updatedVendor);
         setIsEditDialogOpen(false);
         setSelectedVendor(null);
         resetForm();
         showSuccess(t('vendor_updated_successfully'));
     };
 
-    const handleDeleteVendor = () => {
+    const handleDeleteVendor = async () => {
         if (!selectedVendor) return;
-        deleteVendor(selectedVendor.id);
+        await deleteVendor(selectedVendor.id);
         setIsDeleteDialogOpen(false);
         setSelectedVendor(null);
         showSuccess(t('vendor_deleted_successfully'));

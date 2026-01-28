@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, PlusCircle, PencilLine } from 'lucide-react';
+import { Search, PlusCircle, PencilLine, Trash2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -15,11 +15,13 @@ import { showSuccess } from '@/utils/toast';
 
 const Customers = () => {
   const { t } = useTranslation();
-  const { customers, setCustomers, settings } = useAppContext();
+  const { customers, updateCustomer, addCustomer, deleteCustomer, settings } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [isEditCustomerDialogOpen, setIsEditCustomerDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [isAddCustomerDialogOpen, setIsAddCustomerDialogOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
 
   const filteredCustomers = customers.filter(customer =>
     customer.name_dv.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -33,20 +35,28 @@ const Customers = () => {
     setIsEditCustomerDialogOpen(true);
   };
 
-  const handleSaveCustomer = (updatedCustomer: Customer) => {
-    setCustomers(prevCustomers =>
-      prevCustomers.map(cust =>
-        cust.id === updatedCustomer.id ? updatedCustomer : cust
-      )
-    );
-    showSuccess(t('customer_updated_successfully'));
+  const handleSaveCustomer = async (updatedCustomer: Customer) => {
+    await updateCustomer(updatedCustomer);
     setIsEditCustomerDialogOpen(false);
     setEditingCustomer(null);
   };
 
-  const handleAddNewCustomer = (newCustomer: Customer) => {
-    setCustomers(prevCustomers => [...prevCustomers, newCustomer]);
+  const handleAddNewCustomer = async (newCustomer: Customer) => {
+    await addCustomer(newCustomer);
     setIsAddCustomerDialogOpen(false);
+  };
+
+  const handleDeleteClick = (customer: Customer) => {
+    setCustomerToDelete(customer);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (customerToDelete) {
+      await deleteCustomer(customerToDelete.id);
+      setIsDeleteConfirmOpen(false);
+      setCustomerToDelete(null);
+    }
   };
 
   const renderBoth = (key: string, options?: any) => (
@@ -86,9 +96,14 @@ const Customers = () => {
                 <Card key={customer.id} className="cursor-pointer hover:shadow-lg transition-shadow duration-200 text-right">
                   <CardContent className="p-3">
                     <div className="flex justify-between items-center mb-1">
-                      <Button variant="ghost" size="sm" onClick={() => handleEditClick(customer)} className="p-0 h-auto">
-                        <PencilLine className="h-4 w-4 text-blue-500 hover:text-blue-700" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => handleEditClick(customer)} className="p-0 h-auto">
+                          <PencilLine className="h-4 w-4 text-blue-500 hover:text-blue-700" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(customer)} className="p-0 h-auto">
+                          <Trash2 className="h-4 w-4 text-red-500 hover:text-red-700" />
+                        </Button>
+                      </div>
                       <p className="font-semibold text-sm break-words">{customer.name_dv} ({customer.name_en})</p>
                     </div>
                     <p className="text-xs text-gray-600 dark:text-gray-400 break-words">Code: {customer.code}</p>
@@ -202,6 +217,31 @@ const Customers = () => {
         onClose={() => setIsAddCustomerDialogOpen(false)}
         onAdd={handleAddNewCustomer}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent className="sm:max-w-[400px] font-faruma" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-right text-red-600">{renderBoth('delete_customer')}</DialogTitle>
+            <DialogDescription className="text-right">
+              {renderBoth('delete_customer_confirm')}
+              {customerToDelete && (
+                <span className="block mt-2 font-semibold text-foreground">
+                  {customerToDelete.name_dv} ({customerToDelete.name_en})
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex justify-between gap-2">
+            <Button variant="outline" onClick={() => setIsDeleteConfirmOpen(false)} className="font-faruma">
+              {renderBoth('cancel')}
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete} className="font-faruma">
+              {renderBoth('delete')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

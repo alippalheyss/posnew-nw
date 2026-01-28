@@ -41,7 +41,8 @@ const POS = () => {
     setActiveCartId,
     awardLoyaltyPoints,
     redeemLoyaltyPoints,
-    updateCustomerBalance
+    updateCustomerBalance,
+    createSale
   } = useAppContext();
 
   const cartCounter = useRef(openCarts.size);
@@ -431,7 +432,7 @@ const POS = () => {
     setIsSplitDialogOpen(true);
   };
 
-  const processCashPayment = () => {
+  const processCashPayment = async () => {
     if (!activeCart || activeCart.items.length === 0) {
       showError(t('cart_empty_error'));
       return;
@@ -451,7 +452,7 @@ const POS = () => {
       paidAmount: paidAmount,
       balance: balance,
     };
-    setSales(prevSales => [...prevSales, newSale]);
+    await createSale(newSale);
 
     // Loyalty Logic
     if (activeCart.customer) {
@@ -482,7 +483,7 @@ const POS = () => {
     setIsCashDialogOpen(false);
   };
 
-  const processCreditPayment = () => {
+  const processCreditPayment = async () => {
     if (!activeCart || activeCart.items.length === 0) {
       showError(t('cart_empty_error'));
       return;
@@ -504,7 +505,7 @@ const POS = () => {
       grandTotal: grandTotal,
       paymentMethod: 'credit' as const,
     };
-    setSales(prevSales => [...prevSales, newSale]);
+    await createSale(newSale);
 
     // Loyalty Logic
     if (activeCart.customer) {
@@ -538,7 +539,7 @@ const POS = () => {
     setIsCreditDialogOpen(false);
   };
 
-  const processSplitPayment = () => {
+  const processSplitPayment = async () => {
     const totalSplit = splitEntries.reduce((sum, entry) => sum + entry.amount, 0);
     if (Math.abs(totalSplit - grandTotal) > 0.01) {
       showError(t('total_mismatch_error'));
@@ -551,25 +552,25 @@ const POS = () => {
     }
 
     // Create a sale for each split part
-    const newSales: Sale[] = splitEntries.map((entry, index) => {
+    for (let i = 0; i < splitEntries.length; i++) {
+      const entry = splitEntries[i];
       const customer = customers.find(c => c.id === entry.customerId);
 
       // Update customer balance for each credit split
       if (customer) {
-        updateCustomerBalance(customer.id, entry.amount);
+        await updateCustomerBalance(customer.id, entry.amount);
       }
 
-      return {
-        id: `sale-${Date.now()}-${index}`,
+      const splitSale = {
+        id: `sale-${Date.now()}-${i}`,
         date: new Date().toISOString().split('T')[0],
         customer: customer || null,
-        items: activeCart.items, // Same items for all
+        items: activeCart.items,
         grandTotal: entry.amount,
         paymentMethod: 'credit' as const,
       };
-    });
-
-    setSales(prevSales => [...prevSales, ...newSales]);
+      await createSale(splitSale);
+    }
     showSuccess(t('credit_sale_successful'));
 
     // Auto clear cart

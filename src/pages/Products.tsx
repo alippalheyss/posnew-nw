@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 
 const Products = () => {
   const { t } = useTranslation();
-  const { products, setProducts, favoriteProductIds, setFavoriteProductIds, settings, calculateProfitMargin } = useAppContext();
+  const { products, addProduct, updateProduct, deleteProduct, bulkAddProducts, favoriteProductIds, setFavoriteProductIds, settings, calculateProfitMargin } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -52,28 +52,23 @@ const Products = () => {
     setIsDialogOpen(true);
   };
 
-  const handleSaveProduct = (productData: Product) => {
+  const handleSaveProduct = async (productData: Product) => {
     if (editingProduct) {
-      // Update
-      setProducts(prev => prev.map(p => p.id === productData.id ? productData : p));
-      showSuccess(t('product_updated_successfully'));
+      await updateProduct(productData);
     } else {
-      // Add
-      setProducts(prev => [...prev, productData]);
-      showSuccess(t('product_added_successfully'));
+      await addProduct(productData);
     }
     setIsDialogOpen(false);
   };
 
-  const handleDeleteProduct = (id: string) => {
+  const handleDeleteProduct = async (id: string) => {
     if (window.confirm(t('confirm_delete_product'))) {
-      setProducts(prev => prev.filter(p => p.id !== id));
-      showSuccess(t('product_deleted_successfully'));
+      await deleteProduct(id);
     }
   };
 
-  const handleBulkImport = (importedProducts: Product[]) => {
-    setProducts(prev => [...prev, ...importedProducts]);
+  const handleBulkImport = async (importedProducts: Product[]) => {
+    await bulkAddProducts(importedProducts);
   };
 
   const renderBoth = (key: string, options?: any) => (

@@ -6,6 +6,8 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
 // Initialize with dummy values if missing to prevent throw on load
+const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || '';
+
 export const supabase = createClient(
     supabaseUrl || 'https://placeholder.supabase.co',
     supabaseAnonKey || 'placeholder',
@@ -14,6 +16,17 @@ export const supabase = createClient(
             autoRefreshToken: true,
             persistSession: true,
             detectSessionInUrl: true
+        }
+    }
+);
+
+export const supabaseAdmin = createClient(
+    supabaseUrl || 'https://placeholder.supabase.co',
+    supabaseServiceKey || 'placeholder',
+    {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false
         }
     }
 );

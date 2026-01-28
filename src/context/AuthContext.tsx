@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured, supabaseAdmin } from '@/lib/supabase';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import SupabaseError from '@/components/SupabaseError';
 
@@ -289,17 +289,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const addUser = async (userData: Omit<User, 'id' | 'createdAt'> & { password: string }) => {
         try {
-            // Create auth user using signUp (since admin API is restricted on client)
-            const { data: authData, error: authError } = await supabase.auth.signUp({
+            // Create auth user using supabaseAdmin (Admin API)
+            const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
                 email: userData.username,
                 password: userData.password,
-                options: {
-                    data: {
-                        name_en: userData.name_en,
-                        name_dv: userData.name_dv,
-                        role: userData.role,
-                        permissions: userData.permissions,
-                    }
+                email_confirm: true, // Auto-confirm email
+                user_metadata: {
+                    name_en: userData.name_en,
+                    name_dv: userData.name_dv,
+                    role: userData.role,
+                    permissions: userData.permissions,
                 }
             });
 
@@ -366,13 +365,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const deleteUser = async (id: string) => {
         try {
-            // Delete from auth.users (cascade will delete from users table)
-            const { error } = await supabase.auth.admin.deleteUser(id);
+            // Delete from auth.users using Admin client
+            const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
 
             if (error) {
                 console.error('Error deleting user:', error);
                 throw error;
             }
+
+            // Also delete from users table to be safe (though cascade should handle it)
+            await supabase.from('users').delete().eq('id', id);
 
             await fetchAllUsers();
         } catch (error) {

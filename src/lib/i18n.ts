@@ -449,7 +449,10 @@ const resources = {
       "supported_formats": "ސަޕޯޓް ކުރާ ފޯމެޓްތައް: JPG, PNG",
       "items_found": "ތަކެތި ފެނުނު",
       "vendor_identified": "ވެންޑަރު ދެނެގަނެވިއްޖެ",
-      "bill_number_identified": "ބިލް ނަންބަރު ދެނެގަނެވިއްޖެ"
+      "bill_number_identified": "ބިލް ނަންބަރު ދެނެގަނެވިއްޖެ",
+      "no_system_match": "ސިސްޓަމުން މި ތަކެތި ނުފެނުނު",
+      "extraction_failed": "މައުލޫމާތު ނެގުން ނާކާމިޔާބުވެއްޖެ",
+      "bill_data_imported": "ބިލްގެ މައުލޫމާތު އިމްޕޯޓް ކުރެވިއްޖެ"
     }
   },
   en: {
@@ -892,7 +895,10 @@ const resources = {
       "supported_formats": "Supported formats: JPG, PNG",
       "items_found": "items found",
       "vendor_identified": "Vendor identified",
-      "bill_number_identified": "Bill number identified"
+      "bill_number_identified": "Bill number identified",
+      "no_system_match": "No matching product in system",
+      "extraction_failed": "Information extraction failed",
+      "bill_data_imported": "Bill data imported"
     }
   }
 };

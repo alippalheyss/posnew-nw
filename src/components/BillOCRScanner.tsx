@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { Upload, FileSearch, CheckCircle2, AlertCircle, X, ShoppingCart, Loader2 } from 'lucide-react';
+import { Upload, FileSearch, CheckCircle2, AlertCircle, X, ShoppingCart, Loader2, Database, AlertTriangle } from 'lucide-react';
 import { useAppContext, PurchaseItem, Product, Vendor } from '@/context/AppContext';
+import { ocrService, OCRResult } from '@/services/ocrService';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 
@@ -52,32 +53,89 @@ const BillOCRScanner: React.FC<BillOCRScannerProps> = ({ onExtractionComplete })
         if (!selectedImage) return;
 
         setIsProcessing(true);
+        setExtractedData(null);
 
-        // Simulate thinking/scanning time
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        try {
+            const result = await ocrService.analyzeBill(selectedImage);
 
-        // Mock extraction logic
-        // In a real app, this would be an API response
-        const randomVendor = vendors[Math.floor(Math.random() * vendors.length)];
-        const randomProducts = [...products].sort(() => 0.5 - Math.random()).slice(0, 3);
+            // Map the OCR result to our system's vendors and products
+            const mappedData: ExtractedData = {
+                vendorId: findBestVendorMatch(result.vendorName),
+                billNumber: result.billNumber,
+                date: result.date || new Date().toISOString().split('T')[0],
+                items: result.items.map(item => {
+                    const matchedProduct = findBestProductMatch(item.description);
+                    return {
+                        productName: matchedProduct ? matchedProduct.name_en : item.description,
+                        suggestedProductId: matchedProduct?.id,
+                        quantity: item.quantity || 1,
+                        unitPrice: item.unitPrice || 0,
+                        confidence: 0.9 // Placeholder for now
+                    };
+                })
+            };
 
-        const mockData: ExtractedData = {
-            vendorId: randomVendor?.id || '',
-            billNumber: `BILL-${Math.floor(1000 + Math.random() * 9000)}`,
-            date: new Date().toISOString().split('T')[0],
-            items: randomProducts.map(p => ({
-                productName: p.name_en,
-                suggestedProductId: p.id,
-                quantity: Math.floor(Math.random() * 10) + 1,
-                unitPrice: p.price * 0.8, // Assuming wholesale price is lower
-                confidence: 0.85 + Math.random() * 0.1
-            }))
-        };
+            setExtractedData(mappedData);
+            setIsCompleted(true);
+            showSuccess(t('bill_scanned_successfully'));
+        } catch (error) {
+            console.error("Extraction failed:", error);
+            showError(error instanceof Error ? error.message : t('extraction_failed'));
+        } finally {
+            setIsProcessing(false);
+        }
+    };
 
-        setExtractedData(mockData);
-        setIsProcessing(false);
-        setIsCompleted(true);
-        showSuccess(t('bill_scanned_successfully'));
+    // Simple fuzzy matching for Vendors
+    const findBestVendorMatch = (name: string): string => {
+        if (!name) return '';
+        const lowerName = name.toLowerCase();
+
+        // Exact match
+        const exact = vendors.find(v =>
+            v.name_en.toLowerCase() === lowerName ||
+            v.name_dv.toLowerCase() === lowerName
+        );
+        if (exact) return exact.id;
+
+        // Partial match
+        const partial = vendors.find(v =>
+            lowerName.includes(v.name_en.toLowerCase()) ||
+            v.name_en.toLowerCase().includes(lowerName)
+        );
+        return partial ? partial.id : '';
+    };
+
+    // Simple fuzzy matching for Products
+    const findBestProductMatch = (name: string): Product | undefined => {
+        if (!name) return undefined;
+        const lowerName = name.toLowerCase();
+
+        // Level 1: Exact match name_en or name_dv
+        const exact = products.find(p =>
+            p.name_en.toLowerCase() === lowerName ||
+            p.name_dv.toLowerCase() === lowerName
+        );
+        if (exact) return exact;
+
+        // Level 2: Word-based intersection (shared words)
+        const nameWords = lowerName.split(/\s+/).filter(w => w.length > 2);
+        if (nameWords.length === 0) return undefined;
+
+        let bestMatch: Product | undefined = undefined;
+        let maxOverlap = 0;
+
+        for (const p of products) {
+            const pWords = p.name_en.toLowerCase().split(/\s+/);
+            const overlap = nameWords.filter(w => pWords.includes(w)).length;
+
+            if (overlap > maxOverlap) {
+                maxOverlap = overlap;
+                bestMatch = p;
+            }
+        }
+
+        return maxOverlap > 0 ? bestMatch : undefined;
     };
 
     const handleConfirm = () => {
@@ -199,15 +257,32 @@ const BillOCRScanner: React.FC<BillOCRScannerProps> = ({ onExtractionComplete })
                                 </div>
 
                                 <div>
-                                    <Label className="text-[10px] font-bold uppercase opacity-50 mb-2 block">{t('items_found')}</Label>
+                                    <Label className="text-[10px] font-bold uppercase opacity-50 block mb-2">{t('items_found')}</Label>
                                     <div className="space-y-2">
                                         {extractedData?.items.map((item, idx) => (
-                                            <div key={idx} className="p-2 bg-blue-50/50 dark:bg-blue-900/10 rounded border border-blue-100 dark:border-blue-900/30 text-xs">
-                                                <div className="font-bold truncate">{item.productName}</div>
-                                                <div className="flex justify-between mt-1 text-gray-500">
+                                            <div key={idx} className={cn(
+                                                "p-2 rounded border text-xs",
+                                                item.suggestedProductId
+                                                    ? "bg-green-50/50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30"
+                                                    : "bg-yellow-50/50 dark:bg-yellow-900/10 border-yellow-100 dark:border-yellow-900/30"
+                                            )}>
+                                                <div className="flex justify-between items-start mb-1">
+                                                    <div className="font-bold truncate flex-1">{item.productName}</div>
+                                                    {item.suggestedProductId ? (
+                                                        <Database className="h-3 w-3 text-green-600 flex-shrink-0" />
+                                                    ) : (
+                                                        <AlertTriangle className="h-3 w-3 text-yellow-600 flex-shrink-0" />
+                                                    )}
+                                                </div>
+                                                <div className="flex justify-between text-gray-500">
                                                     <span>{item.quantity} x {settings.shop.currency} {item.unitPrice.toFixed(2)}</span>
                                                     <span className="text-primary font-bold">{settings.shop.currency} {(item.quantity * item.unitPrice).toFixed(2)}</span>
                                                 </div>
+                                                {!item.suggestedProductId && (
+                                                    <div className="text-[10px] text-yellow-700 mt-1 italic">
+                                                        {t('no_system_match')}
+                                                    </div>
+                                                )}
                                             </div>
                                         ))}
                                     </div>

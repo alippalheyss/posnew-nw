@@ -256,10 +256,40 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   const [openCarts, setOpenCarts] = useState<Map<string, Cart>>(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('pos_open_carts') : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return new Map(parsed);
+      } catch (e) {
+        console.error('Error parsing saved carts:', e);
+      }
+    }
     const initialCartId = `cart-${Date.now()}`;
     return new Map([[initialCartId, { id: initialCartId, displayNumber: 1, customer: null, items: [] }]]);
   });
-  const [activeCartId, setActiveCartId] = useState<string>([...openCarts.keys()][0]);
+
+  const [activeCartId, setActiveCartId] = useState<string>(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('pos_active_cart_id') : null;
+    if (saved && openCarts.has(saved)) {
+      return saved;
+    }
+    return [...openCarts.keys()][0];
+  });
+
+  // Save carts to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('pos_open_carts', JSON.stringify([...openCarts.entries()]));
+    }
+  }, [openCarts]);
+
+  // Save active cart ID to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('pos_active_cart_id', activeCartId);
+    }
+  }, [activeCartId]);
 
   const [settings, setSettings] = useState<AppSettings>({
     shop: {

@@ -71,18 +71,31 @@ export const ocrService = {
             const file = new File([blob], "bill.jpg", { type: "image/jpeg" });
 
             const response = await window.puter.ai.chat(prompt, [file]);
+            console.log('Puter AI Raw Response:', response);
 
             // Puter.js returns a response object with a message
             const textResponse = typeof response === 'string' ? response : response?.message?.content || response?.text || "";
+            console.log('Puter AI Filtered Text:', textResponse);
 
             if (!textResponse) {
                 throw new Error("Empty response from Puter AI");
             }
 
             // Strip markdown code blocks if present
-            const cleanJson = textResponse.replace(/```json\n?|```/g, "").trim();
+            let cleanJson = textResponse.replace(/```json\n?|```/g, "").trim();
 
-            return JSON.parse(cleanJson) as OCRResult;
+            // If it still contains non-JSON text at start/end, try to find the first { and last }
+            const firstBrace = cleanJson.indexOf('{');
+            const lastBrace = cleanJson.lastIndexOf('}');
+            if (firstBrace !== -1 && lastBrace !== -1) {
+                cleanJson = cleanJson.substring(firstBrace, lastBrace + 1);
+            }
+
+            console.log('Puter AI Cleaned JSON (Robust):', cleanJson);
+
+            const parsed = JSON.parse(cleanJson) as OCRResult;
+            console.log('Puter AI Parsed Object:', parsed);
+            return parsed;
         } catch (error) {
             console.error("Puter OCR Error:", error);
             throw error;

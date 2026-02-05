@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 
 interface ExtractedData {
     vendorId: string;
+    rawVendorName?: string;
     billNumber: string;
     date: string;
     items: Array<{
@@ -57,13 +58,15 @@ const BillOCRScanner: React.FC<BillOCRScannerProps> = ({ onExtractionComplete })
 
         try {
             const result = await ocrService.analyzeBill(selectedImage);
+            console.log("Scanner received OCR result:", result);
 
             // Map the OCR result to our system's vendors and products
             const mappedData: ExtractedData = {
                 vendorId: findBestVendorMatch(result.vendorName),
+                rawVendorName: result.vendorName,
                 billNumber: result.billNumber,
                 date: result.date || new Date().toISOString().split('T')[0],
-                items: result.items.map(item => {
+                items: (result.items || []).map(item => {
                     const matchedProduct = findBestProductMatch(item.description);
                     return {
                         productName: matchedProduct ? matchedProduct.name_en : item.description,
@@ -75,6 +78,7 @@ const BillOCRScanner: React.FC<BillOCRScannerProps> = ({ onExtractionComplete })
                 })
             };
 
+            console.log("Scanner mapped data:", mappedData);
             setExtractedData(mappedData);
             setIsCompleted(true);
             showSuccess(t('bill_scanned_successfully'));
@@ -239,10 +243,17 @@ const BillOCRScanner: React.FC<BillOCRScannerProps> = ({ onExtractionComplete })
                                 <div>
                                     <Label className="text-[10px] font-bold uppercase opacity-50">{t('vendor')}</Label>
                                     <div className="p-2 bg-gray-50 dark:bg-white/5 rounded border text-sm font-bold">
-                                        {vendors.find(v => v.id === extractedData?.vendorId)?.name_dv || t('unknown_vendor')}
+                                        {extractedData?.vendorId
+                                            ? (vendors.find(v => v.id === extractedData?.vendorId)?.name_dv || vendors.find(v => v.id === extractedData?.vendorId)?.name_en)
+                                            : (extractedData?.rawVendorName || t('unknown_vendor'))}
                                     </div>
-                                    <p className="text-[10px] text-green-600 mt-1 flex items-center gap-1">
-                                        <CheckCircle2 className="h-3 w-3" /> {t('vendor_identified')}
+                                    <p className={cn(
+                                        "text-[10px] mt-1 flex items-center gap-1",
+                                        extractedData?.vendorId ? "text-green-600" : "text-yellow-600"
+                                    )}>
+                                        {extractedData?.vendorId
+                                            ? <><CheckCircle2 className="h-3 w-3" /> {t('vendor_identified')}</>
+                                            : <><AlertTriangle className="h-3 w-3" /> {t('vendor_not_in_system')}</>}
                                     </p>
                                 </div>
 
@@ -259,6 +270,11 @@ const BillOCRScanner: React.FC<BillOCRScannerProps> = ({ onExtractionComplete })
                                 <div>
                                     <Label className="text-[10px] font-bold uppercase opacity-50 block mb-2">{t('items_found')}</Label>
                                     <div className="space-y-2">
+                                        {extractedData?.items.length === 0 && (
+                                            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900/30 rounded text-xs text-center text-yellow-700">
+                                                {t('no_items_found_in_bill')}
+                                            </div>
+                                        )}
                                         {extractedData?.items.map((item, idx) => (
                                             <div key={idx} className={cn(
                                                 "p-2 rounded border text-xs",

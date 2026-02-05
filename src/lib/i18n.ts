@@ -452,7 +452,9 @@ const resources = {
       "bill_number_identified": "ބިލް ނަންބަރު ދެނެގަނެވިއްޖެ",
       "no_system_match": "ސިސްޓަމުން މި ތަކެތި ނުފެނުނު",
       "extraction_failed": "މައުލޫމާތު ނެގުން ނާކާމިޔާބުވެއްޖެ",
-      "bill_data_imported": "ބިލްގެ މައުލޫމާތު އިމްޕޯޓް ކުރެވިއްޖެ"
+      "bill_data_imported": "ބިލްގެ މައުލޫމާތު އިމްޕޯޓް ކުރެވިއްޖެ",
+      "vendor_not_in_system": "ވެންޑަރު ސިސްޓަމަކު ނެތް",
+      "no_items_found_in_bill": "ބިލުން އައިޓަމެއް ނުފެނުނު"
     }
   },
   en: {
@@ -898,7 +900,9 @@ const resources = {
       "bill_number_identified": "Bill number identified",
       "no_system_match": "No matching product in system",
       "extraction_failed": "Information extraction failed",
-      "bill_data_imported": "Bill data imported"
+      "bill_data_imported": "Bill data imported successfully",
+      "vendor_not_in_system": "Vendor not in system",
+      "no_items_found_in_bill": "No items found in bill"
     }
   }
 };

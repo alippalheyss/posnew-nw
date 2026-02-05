@@ -22,18 +22,27 @@ const GEMINI_API_KEY = import.meta.env.VITE_GOOGLE_AI_KEY;
 const GEMINI_MODEL = "gemini-1.5-flash";
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
+declare global {
+    interface Window {
+        puter: any;
+    }
+}
+
 export const ocrService = {
     /**
-     * Analyzes a bill image and returns structured JSON data.
-     * @param base64Image The image in base64 format (with or without data:image/ prefix)
+     * Analyzes a bill image and returns structured JSON data using Puter.js.
+     * @param base64Image The image in base64 format
      */
     async analyzeBill(base64Image: string): Promise<OCRResult> {
-        if (!GEMINI_API_KEY || GEMINI_API_KEY === 'your_google_ai_studio_key_here') {
-            throw new Error("Google AI API Key is missing. Please add VITE_GOOGLE_AI_KEY to your .env.local file.");
+        if (!window.puter) {
+            // Fallback or wait for it? For now, assume it's there as per index.html
+            console.warn("Puter.js not loaded yet. Trying to wait...");
+            await new Promise(resolve => setTimeout(resolve, 1000));
         }
 
-        // Strip prefix if present
-        const cleanBase64 = base64Image.replace(/^data:image\/(png|jpg|jpeg);base64,/, "");
+        if (!window.puter) {
+            throw new Error("Puter.js SDK failed to load. Please check your internet connection.");
+        }
 
         const prompt = `
             Analyze this purchase bill/receipt image and extract the following information in JSON format:
@@ -52,50 +61,30 @@ export const ocrService = {
             Rules:
             1. If a value is missing, use null or an empty string.
             2. Ensure all numbers are floats or integers.
-            3. Return ONLY the JSON object, no other text.
+            3. Return ONLY the JSON object, no other text or markdown markers.
         `;
 
         try {
-            const response = await fetch(API_URL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    contents: [
-                        {
-                            parts: [
-                                { text: prompt },
-                                {
-                                    inline_data: {
-                                        mime_type: "image/jpeg",
-                                        data: cleanBase64
-                                    }
-                                }
-                            ]
-                        }
-                    ],
-                    generationConfig: {
-                        response_mime_type: "application/json",
-                    }
-                })
-            });
+            // Convert base64 to a Blob/File for Puter.js
+            const res = await fetch(base64Image);
+            const blob = await res.blob();
+            const file = new File([blob], "bill.jpg", { type: "image/jpeg" });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error?.message || "Failed to communicate with Gemini API");
-            }
+            const response = await window.puter.ai.chat(prompt, [file]);
 
-            const data = await response.json();
-            const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            // Puter.js returns a response object with a message
+            const textResponse = typeof response === 'string' ? response : response?.message?.content || response?.text || "";
 
             if (!textResponse) {
-                throw new Error("Empty response from AI");
+                throw new Error("Empty response from Puter AI");
             }
 
-            return JSON.parse(textResponse) as OCRResult;
+            // Strip markdown code blocks if present
+            const cleanJson = textResponse.replace(/```json\n?|```/g, "").trim();
+
+            return JSON.parse(cleanJson) as OCRResult;
         } catch (error) {
-            console.error("OCR Error:", error);
+            console.error("Puter OCR Error:", error);
             throw error;
         }
     }

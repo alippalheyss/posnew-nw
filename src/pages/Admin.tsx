@@ -66,6 +66,10 @@ const Admin = () => {
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
+  React.useEffect(() => {
+    console.log('Admin Panel - Users state:', users);
+  }, [users]);
+
   // Apply saved theme and language on mount
   React.useEffect(() => {
     applyTheme(localSoftwareSettings.theme);

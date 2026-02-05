@@ -206,9 +206,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 .order('created_at', { ascending: false });
 
             if (error) {
-                console.error('Error fetching users:', error);
+                console.error('Error fetching users (RLS?):', error);
                 return;
             }
+
+            console.log('Fetched users count:', data?.length);
 
             const formattedUsers: User[] = data.map(user => ({
                 id: user.id,

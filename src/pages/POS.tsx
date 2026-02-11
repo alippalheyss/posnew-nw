@@ -600,7 +600,7 @@ const POS = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-50 font-faruma" dir="rtl">
-      <div className="flex flex-1 flex-col lg:flex-row p-4 gap-4">
+      <div className="flex flex-1 flex-col lg:flex-row p-2 lg:p-4 gap-2 lg:gap-4 overflow-hidden">
         {/* Products Section */}
         <Card className="flex-1 lg:w-2/3 flex flex-col">
           <CardHeader>
@@ -622,8 +622,8 @@ const POS = () => {
                   <h3 className="text-right text-lg font-semibold mb-3 flex items-center justify-end border-b pb-2">
                     {renderBoth('favorite_products')} <Heart className="h-5 w-5 mr-2 text-red-500 fill-red-500" />
                   </h3>
-                  <ScrollArea className="h-[235px] pr-4" dir="rtl">
-                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 py-1">
+                  <ScrollArea className="h-[200px] lg:h-[235px] pr-4" dir="rtl">
+                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 gap-2 lg:gap-3 py-1">
                       {favoriteProducts.map((product) => {
                         const isLowStock = product.stock_shop < LOW_STOCK_THRESHOLD;
                         return (
@@ -653,8 +653,8 @@ const POS = () => {
                 <h3 className="text-right text-lg font-semibold mb-3 flex items-center justify-end border-b pb-2">
                   {renderBoth('top_sold_items')} <PlusCircle className="h-5 w-5 mr-2 text-blue-500" />
                 </h3>
-                <ScrollArea className="h-[235px] pr-4" dir="rtl">
-                  <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 py-1">
+                <ScrollArea className="h-[200px] lg:h-[235px] pr-4" dir="rtl">
+                  <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 gap-2 lg:gap-3 py-1">
                     {displayProducts.map((product) => {
                       const isLowStock = product.stock_shop < LOW_STOCK_THRESHOLD;
                       return (
@@ -683,7 +683,7 @@ const POS = () => {
         </Card>
 
         {/* Cart and Payment Section */}
-        <Card className="lg:w-1/3 flex flex-col h-[calc(100vh-120px)] overflow-hidden">
+        <Card className="lg:w-1/3 flex flex-col h-[calc(100vh-140px)] overflow-hidden">
           <CardHeader className="flex-none pb-2 border-b">
             <div className="flex justify-between items-center mb-2">
               <CardTitle className="text-right text-lg">{renderBoth('cart')}</CardTitle>
@@ -717,16 +717,16 @@ const POS = () => {
             </div>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col overflow-hidden p-0">
-            <ScrollArea className="flex-1 px-4 py-4">
+            <ScrollArea className="flex-1 px-3 py-2">
               {activeCart?.items.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-gray-400">
                   <ShoppingCart className="h-10 w-10 mb-2 opacity-20" />
                   <p className="text-sm">{renderBoth('cart_empty')}</p>
                 </div>
               ) : (
-                <div className="space-y-3 pb-4">
+                <div className="space-y-2 pb-2">
                   {activeCart?.items.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between p-2 border rounded-md group hover:border-primary/50 transition-colors">
+                    <div key={item.id} className="flex items-center justify-between p-1.5 border rounded-md group hover:border-primary/50 transition-colors">
                       <Button variant="ghost" size="sm" onClick={() => removeFromCart(item.id)} className="text-gray-400 hover:text-red-500 p-0 h-auto">
                         <XCircle className="h-4 w-4" />
                       </Button>
@@ -794,8 +794,8 @@ const POS = () => {
               )}
             </ScrollArea>
 
-            <div className="flex-none p-4 border-t bg-gray-50 dark:bg-gray-900/50">
-              <div className="space-y-1 text-right mb-4">
+            <div className="flex-none p-3 lg:p-4 border-t bg-gray-50 dark:bg-gray-900/50">
+              <div className="space-y-0.5 text-right mb-2 lg:mb-4">
                 {activeCart?.customer && (
                   <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-100 dark:border-blue-800">
                     <div className="flex justify-between items-center mb-2">
@@ -837,28 +837,28 @@ const POS = () => {
                 </div>
               </div>
 
-              {/* Prominent Grand Total Display */}
-              <div className="mb-3 p-4 bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 rounded-lg border-2 border-primary/30">
+              {/* Prominent Grand Total Display - Compact for small screens */}
+              <div className="mb-2 lg:mb-3 p-2 lg:p-4 bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 rounded-lg border-2 border-primary/30">
                 <div className="text-center">
-                  <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wider">
+                  <div className="text-[10px] lg:text-xs font-semibold text-gray-600 dark:text-gray-400 mb-0 lg:mb-1 uppercase tracking-wider">
                     {renderBoth('grand_total')}
                   </div>
-                  <div className="text-4xl font-black text-primary">
+                  <div className="text-2xl lg:text-4xl font-black text-primary">
                     {settings.shop.currency} {grandTotal.toFixed(2)}
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" className="bg-green-600 hover:bg-green-700 border-none text-white font-faruma h-10 text-xs" onClick={handleCashCheckout}>{renderBoth('cash')}</Button>
+              <div className="space-y-1.5 lg:space-y-2">
+                <div className="grid grid-cols-2 gap-1.5 lg:gap-2">
+                  <Button variant="outline" className="bg-green-600 hover:bg-green-700 border-none text-white font-faruma h-8 lg:h-10 text-[10px] lg:text-xs" onClick={handleCashCheckout}>{renderBoth('cash')}</Button>
                   {settings.shop.enableCardPayment && (
-                    <Button variant="outline" className="bg-blue-600 hover:bg-blue-700 border-none text-white font-faruma h-10 text-xs">{renderBoth('card')}</Button>
+                    <Button variant="outline" className="bg-blue-600 hover:bg-blue-700 border-none text-white font-faruma h-8 lg:h-10 text-[10px] lg:text-xs">{renderBoth('card')}</Button>
                   )}
-                  <Button variant="outline" className="bg-amber-600 hover:bg-amber-700 border-none text-white font-faruma h-10 text-xs" onClick={handleCreditCheckout}>{renderBoth('credit')}</Button>
-                  <Button variant="outline" className="bg-orange-600 hover:bg-orange-700 border-none text-white font-faruma h-10 text-xs" onClick={handleSplitBill}>{renderBoth('split_bill')}</Button>
+                  <Button variant="outline" className="bg-amber-600 hover:bg-amber-700 border-none text-white font-faruma h-8 lg:h-10 text-[10px] lg:text-xs" onClick={handleCreditCheckout}>{renderBoth('credit')}</Button>
+                  <Button variant="outline" className="bg-orange-600 hover:bg-orange-700 border-none text-white font-faruma h-8 lg:h-10 text-[10px] lg:text-xs" onClick={handleSplitBill}>{renderBoth('split_bill')}</Button>
                 </div>
-                <Button className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground text-base font-bold font-faruma shadow-lg overflow-hidden flex items-center justify-center" onClick={handleCashCheckout}>
+                <Button className="w-full h-10 lg:h-12 bg-primary hover:bg-primary/90 text-primary-foreground text-sm lg:text-base font-bold font-faruma shadow-lg overflow-hidden flex items-center justify-center" onClick={handleCashCheckout}>
                   {renderBoth('checkout')}
                 </Button>
               </div>

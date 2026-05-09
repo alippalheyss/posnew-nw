@@ -1,0 +1,172 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%; /* Very light blue */
+    --foreground: 222.2 84% 4.9%; /* Dark text */
+
+    --card: 210 40% 98%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 210 40% 98%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 210 100% 50%; /* Vibrant blue for primary actions */
+    --primary-foreground: 210 20% 98%; /* Light text for contrast on primary */
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 84% 4.9%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 222.2 84% 4.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 84% 4.9%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 210 100% 50%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 210 40% 96.1%; /* Light blue for sidebar */
+    --sidebar-foreground: 222.2 84% 4.9%; /* Dark text for sidebar */
+    --sidebar-primary: 210 100% 50%; /* Vibrant blue for active sidebar item */
+    --sidebar-primary-foreground: 210 20% 98%; /* Light text for active sidebar item */
+    --sidebar-accent: 210 40% 96.1%; /* Light blue for sidebar hover */
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 210 100% 50%;
+  }
+
+  .dark {
+    /* Dark theme for 'dark' mode */
+    --background: 220 20% 10%; /* Dark gray */
+    --foreground: 210 40% 98%; /* Light text for contrast */
+
+    --card: 220 20% 10%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 220 20% 10%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 100% 50%; /* Vibrant blue for primary actions */
+    --primary-foreground: 210 20% 98%; /* Light text for contrast on primary */
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 84% 4.9%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 210 40% 98%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 84% 4.9%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 210 100% 50%;
+
+    /* Sidebar colors for the dark theme */
+    --sidebar-background: 220 20% 10%; /* Dark gray sidebar */
+    --sidebar-foreground: 210 40% 98%; /* Light text */
+    --sidebar-primary: 210 100% 50%; /* Vibrant blue for active state */
+    --sidebar-primary-foreground: 210 20% 98%; /* Light text for active state */
+    --sidebar-accent: 220 20% 15%; /* Dark gray for sidebar hover */
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 210 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom font for Dhivehi */
+@font-face {
+  font-family: 'Faruma';
+  src: url('/fonts/Faruma.woff2') format('woff2'),
+       url('/fonts/Faruma.woff') format('woff'),
+       url('/fonts/Faruma.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Modern UI enhancements */
+@layer utilities {
+  /* Add subtle shadows for cards */
+  .card {
+    @apply shadow-sm hover:shadow-md transition-shadow duration-200;
+  }
+
+  /* Modern button styling */
+  .btn {
+    @apply transition-all duration-200;
+  }
+
+  .btn:hover {
+    @apply transform translate-y-[-1px];
+  }
+
+  .btn:active {
+    @apply transform translate-y-[0px];
+  }
+
+  /* Smooth transitions for interactive elements */
+  .transition-all-smooth {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  /* Modern input styling */
+  .input {
+    @apply focus:ring-2 focus:ring-primary focus:ring-opacity-50;
+  }
+
+  /* Modern card hover effect */
+  .card-hover {
+    @apply transition-all duration-200 hover:scale-[1.01] hover:shadow-lg;
+  }
+
+  /* Cart auto-scaling utilities */
+  .cart-container {
+    container-type: inline-size;
+  }
+  .cart-container .text-\[10px\] { font-size: clamp(8px, 2.5cqi, 12px) !important; line-height: 1.2 !important; }
+  .cart-container .text-xs { font-size: clamp(10px, 3.2cqi, 14px) !important; line-height: 1.2 !important; }
+  .cart-container .text-sm { font-size: clamp(12px, 3.8cqi, 16px) !important; line-height: 1.25 !important; }
+  .cart-container .text-base { font-size: clamp(14px, 4.5cqi, 18px) !important; line-height: 1.5 !important; }
+  .cart-container .text-lg { font-size: clamp(16px, 5.5cqi, 20px) !important; line-height: 1.5 !important; }
+  .cart-container .text-4xl { font-size: clamp(24px, 10cqi, 48px) !important; line-height: 1 !important; }
+  
+  .cart-container .h-10 { height: clamp(30px, 10cqi, 48px) !important; }
+  .cart-container .h-12 { height: clamp(40px, 12cqi, 60px) !important; }
+  .cart-container .h-8 { height: clamp(24px, 8cqi, 36px) !important; }
+  .cart-container .h-6 { height: clamp(18px, 6cqi, 28px) !important; }
+  .cart-container .h-5 { height: clamp(16px, 5cqi, 24px) !important; }
+  .cart-container .h-4 { height: clamp(12px, 4cqi, 20px) !important; }
+  .cart-container .w-4 { width: clamp(12px, 4cqi, 20px) !important; }
+  .cart-container .w-7 { width: clamp(20px, 7cqi, 32px) !important; }
+  .cart-container .w-10 { width: clamp(30px, 10cqi, 48px) !important; }
+  .cart-container .w-12 { width: clamp(40px, 12cqi, 60px) !important; }
+  .cart-container .w-\[100px\] { width: clamp(70px, 25cqi, 120px) !important; }
+  
+  .cart-container .p-4 { padding: clamp(10px, 4cqi, 20px) !important; }
+  .cart-container .p-3 { padding: clamp(8px, 3cqi, 16px) !important; }
+  .cart-container .p-2 { padding: clamp(6px, 2cqi, 12px) !important; }
+  .cart-container .gap-2 { gap: clamp(6px, 2cqi, 12px) !important; }
+  .cart-container .gap-3 { gap: clamp(8px, 3cqi, 16px) !important; }
+  .cart-container .gap-4 { gap: clamp(10px, 4cqi, 20px) !important; }
+}

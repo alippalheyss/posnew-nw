@@ -20,6 +20,7 @@ import CreditInvoices from "./pages/CreditInvoices";
 import SalesReports from "./pages/SalesReports";
 import ExpiryAlerts from "./pages/ExpiryAlerts";
 import GSTReports from "./pages/GSTReports";
+import ShrinkageReport from "./pages/ShrinkageReport";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +54,7 @@ const App = () => (
                       <Route path="/sales-reports" element={<SalesReports />} />
                       <Route path="/expiry-alerts" element={<ExpiryAlerts />} />
                       <Route path="/gst-reports" element={<GSTReports />} />
+                      <Route path="/shrinkage-report" element={<ShrinkageReport />} />
                       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                       <Route path="*" element={<NotFound />} />
                     </Routes>

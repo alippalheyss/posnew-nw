@@ -499,8 +499,93 @@ const POS = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#050510] font-faruma selection:bg-primary/30 text-white" dir="rtl">
-      {/* Cart Section - Left Side */}
-      <div className="w-[400px] flex flex-col bg-[#0a0a1a]/80 backdrop-blur-xl border-l border-white/5 shadow-2xl z-20">
+      {/* Main Content - Products Grid (Right Side in RTL) */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top bar: Category & Search */}
+        <div className="h-20 px-8 flex items-center justify-between border-b border-white/5 bg-[#050510]/50 backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+             <div className="flex items-center bg-white/5 rounded-full p-1 border border-white/10">
+                <Button variant="ghost" size="sm" className="rounded-full px-4 text-[10px] font-black text-white/40 hover:text-white">DRINKS</Button>
+                <Button variant="ghost" size="sm" className="rounded-full px-4 text-[10px] font-black text-white/40 hover:text-white">FOOD</Button>
+                <Button variant="ghost" size="sm" className="rounded-full px-4 text-[10px] font-black text-white/40 hover:text-white">HARDWARE</Button>
+                <Button variant="ghost" size="sm" className="rounded-full px-4 text-[10px] font-black text-white/40 hover:text-white">OTHER</Button>
+                <Button variant="default" size="sm" className="rounded-full px-6 bg-primary text-white text-[10px] font-black shadow-[0_0_10px_rgba(0,132,255,0.3)]">ALL</Button>
+             </div>
+             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10">
+                <Trash2 className="h-4 w-4 text-white/40" />
+             </Button>
+             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10">
+                <Heart className="h-4 w-4 text-white/40" />
+             </Button>
+          </div>
+
+          <div className="relative w-[400px]">
+             <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
+             <Input 
+                ref={searchInputRef}
+                placeholder="Search by name, code or barcode..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-white/5 border-white/10 rounded-xl px-10 text-right font-bold h-11 focus:border-primary/50 focus:ring-0 transition-all placeholder:text-white/10 text-white"
+                dir="rtl"
+             />
+          </div>
+        </div>
+
+        {/* Product Grid */}
+        <ScrollArea className="flex-1 p-8 custom-scrollbar">
+           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+              {displayProducts.map((product) => {
+                const isLowStock = product.stock_shop < LOW_STOCK_THRESHOLD;
+                const cardColors = [
+                  'bg-blue-600', 'bg-red-600', 'bg-purple-600', 'bg-orange-600', 'bg-pink-600', 'bg-indigo-600'
+                ];
+                const colorClass = cardColors[Math.abs(product.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % cardColors.length];
+                
+                return (
+                  <div 
+                    key={product.id}
+                    onClick={() => handleProductSelection(product)}
+                    className="group bg-[#0a0a1a] hover:bg-[#0f0f25] border border-white/5 rounded-[2rem] p-5 transition-all cursor-pointer relative"
+                  >
+                    <div className={cn(
+                      "aspect-square rounded-[1.5rem] mb-4 flex items-center justify-center overflow-hidden relative border border-white/5",
+                      product.image ? "bg-white" : colorClass
+                    )}>
+                       {product.image ? (
+                         <img src={product.image} alt={product.name_dv} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                       ) : (
+                         <div className="text-white font-black text-2xl uppercase tracking-tighter text-center px-4 leading-tight drop-shadow-lg">
+                            {product.name_en}
+                         </div>
+                       )}
+                       {isLowStock && (
+                         <Badge className="absolute top-3 right-3 bg-red-500 text-white border-none text-[8px] font-black px-2 py-0.5 rounded-full shadow-lg uppercase tracking-widest">
+                           LOW
+                         </Badge>
+                       )}
+                    </div>
+                    
+                    <div className="text-center px-2">
+                       <h3 className="text-base font-black text-white leading-tight truncate">{product.name_dv}</h3>
+                       <p className="text-[10px] font-bold text-white/30 mt-1 truncate uppercase tracking-widest mb-4">{product.name_en}</p>
+                       
+                       <div className="flex items-center justify-center gap-2">
+                          <span className="text-sm font-black text-primary leading-none">{settings.shop.currency} {product.price.toFixed(2)}</span>
+                          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white scale-0 group-hover:scale-100 transition-transform shadow-[0_0_15px_rgba(0,132,255,0.5)]">
+                             <PlusCircle className="h-4 w-4" />
+                          </div>
+                       </div>
+                    </div>
+                  </div>
+                );
+              })}
+           </div>
+        </ScrollArea>
+      </div>
+
+      {/* Cart Section - Left Side in RTL */}
+      <div className="w-[400px] flex flex-col bg-[#0a0a1a]/80 backdrop-blur-xl border-r border-white/5 shadow-2xl z-20">
         {/* Cart Header */}
         <div className="p-6 pb-2">
           <div className="flex justify-between items-center mb-6">
@@ -626,25 +711,25 @@ const POS = () => {
           <div className="grid grid-cols-2 gap-2">
             <Button 
               onClick={() => setIsSplitDialogOpen(true)}
-              className="h-10 bg-[#1a1a2e] hover:bg-[#252545] text-white border border-white/5 text-[10px] font-black uppercase tracking-widest gap-2"
+              className="h-10 bg-[#2d5a5a] hover:bg-[#3d6a6a] text-white border border-white/5 text-[10px] font-black uppercase tracking-widest gap-2"
             >
               <Users className="h-4 w-4 text-primary" /> SPLIT BILL
             </Button>
             <Button 
               onClick={clearActiveCart}
-              className="h-10 bg-[#1a1a2e] hover:bg-[#252545] text-white border border-white/5 text-[10px] font-black uppercase tracking-widest gap-2"
+              className="h-10 bg-[#5a2d2d] hover:bg-[#6a3d3d] text-white border border-white/5 text-[10px] font-black uppercase tracking-widest gap-2"
             >
               <Trash2 className="h-4 w-4 text-red-500" /> CLEAR
             </Button>
             <Button 
               onClick={() => setIsCashDialogOpen(true)}
-              className="h-10 btn-gradient-purple text-white text-[10px] font-black uppercase tracking-widest col-span-1 shadow-lg shadow-purple-500/20"
+              className="h-10 bg-[#2d3a5a] hover:bg-[#3d4a6a] text-white border border-white/5 text-[10px] font-black uppercase tracking-widest gap-2"
             >
-              WAITING TRANSFER
+              <Receipt className="h-4 w-4 text-blue-400" /> AWAITING TRANSFER
             </Button>
             <Button 
               onClick={() => { setCreditDialogStep(1); setIsCreditDialogOpen(true); }}
-              className="h-10 bg-[#f39c12]/20 hover:bg-[#f39c12]/30 text-[#f39c12] border border-[#f39c12]/20 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-500/10"
+              className="h-10 bg-[#5a4d2d] hover:bg-[#6a5d3d] text-[#f39c12] border border-[#f39c12]/20 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-500/10"
             >
               CREDIT SALE
             </Button>
@@ -652,88 +737,11 @@ const POS = () => {
 
           <Button 
             onClick={() => setIsCashDialogOpen(true)}
-            className="w-full h-14 btn-gradient-blue text-white text-lg font-black uppercase tracking-[0.2em] shadow-xl shadow-blue-500/30"
+            className="w-full h-14 btn-gradient-purple text-white text-lg font-black uppercase tracking-[0.2em] shadow-xl shadow-purple-500/30"
           >
             {renderBoth('checkout')}
           </Button>
         </div>
-      </div>
-
-      {/* Main Content - Products Grid */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar: Category & Search */}
-        <div className="h-20 px-8 flex items-center justify-between border-b border-white/5 bg-[#050510]/50 backdrop-blur-sm">
-          <div className="flex items-center gap-3">
-             <div className="flex items-center bg-white/5 rounded-full p-1 border border-white/10">
-                <Button variant="ghost" size="sm" className="rounded-full px-4 text-[10px] font-black text-white/40 hover:text-white">DRINKS</Button>
-                <Button variant="ghost" size="sm" className="rounded-full px-4 text-[10px] font-black text-white/40 hover:text-white">FOOD</Button>
-                <Button variant="ghost" size="sm" className="rounded-full px-4 text-[10px] font-black text-white/40 hover:text-white">HARDWARE</Button>
-                <Button variant="ghost" size="sm" className="rounded-full px-4 text-[10px] font-black text-white/40 hover:text-white">OTHER</Button>
-                <Button variant="default" size="sm" className="rounded-full px-6 bg-primary text-white text-[10px] font-black shadow-[0_0_10px_rgba(0,132,255,0.3)]">ALL</Button>
-             </div>
-             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10">
-                <Trash2 className="h-4 w-4 text-white/40" />
-             </Button>
-             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10">
-                <Heart className="h-4 w-4 text-white/40" />
-             </Button>
-          </div>
-
-          <div className="relative w-[400px]">
-             <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
-             <Input 
-                ref={searchInputRef}
-                placeholder="Search by name, code or barcode..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-white/5 border-white/10 rounded-xl px-10 text-right font-bold h-11 focus:border-primary/50 focus:ring-0 transition-all placeholder:text-white/10 text-white"
-                dir="rtl"
-             />
-          </div>
-        </div>
-
-        {/* Product Grid */}
-        <ScrollArea className="flex-1 p-8 custom-scrollbar">
-           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-              {displayProducts.map((product) => {
-                const isLowStock = product.stock_shop < LOW_STOCK_THRESHOLD;
-                return (
-                  <div 
-                    key={product.id}
-                    onClick={() => handleProductSelection(product)}
-                    className="group bg-[#0a0a1a] hover:bg-[#0f0f25] border border-white/5 rounded-[2rem] p-5 transition-all cursor-pointer relative"
-                  >
-                    <div className="aspect-square bg-white/5 rounded-[1.5rem] mb-4 flex items-center justify-center overflow-hidden relative border border-white/5">
-                       {product.image ? (
-                         <img src={product.image} alt={product.name_dv} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                       ) : (
-                         <div className="text-white/5 font-black text-4xl uppercase tracking-tighter text-center px-4 leading-tight">
-                            {product.name_en}
-                         </div>
-                       )}
-                       {isLowStock && (
-                         <Badge className="absolute top-3 right-3 bg-red-500/10 text-red-500 border-red-500/20 text-[8px] font-black px-2 py-0.5 rounded-full backdrop-blur-md uppercase tracking-widest">
-                           LOW
-                         </Badge>
-                       )}
-                    </div>
-                    
-                    <div className="text-center px-2">
-                       <h3 className="text-sm font-black text-white leading-tight truncate">{product.name_dv}</h3>
-                       <p className="text-[10px] font-bold text-white/30 mt-1 truncate uppercase tracking-widest mb-4">{product.name_en}</p>
-                       
-                       <div className="flex items-center justify-center gap-2">
-                          <span className="text-sm font-black text-primary leading-none">{settings.shop.currency} {product.price.toFixed(2)}</span>
-                          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white scale-0 group-hover:scale-100 transition-transform shadow-[0_0_15px_rgba(0,132,255,0.5)]">
-                             <PlusCircle className="h-4 w-4" />
-                          </div>
-                       </div>
-                    </div>
-                  </div>
-                );
-              })}
-           </div>
-        </ScrollArea>
       </div>
 
       {/* Dialogs */}

@@ -795,7 +795,7 @@ const POS = () => {
 
                         <div className="flex items-center justify-between mt-2 bg-gray-50 dark:bg-gray-800 p-1 rounded">
                           <div className="text-[10px] text-black dark:text-white ">
-                            Rate: <span className="font-bold text-black dark:text-white dark:text-black dark:text-white ">{settings.shop.currency} {item.price.toFixed(2)}</span>
+                            Rate: <span className="font-bold text-black dark:text-white">{settings.shop.currency} {item.price.toFixed(2)}</span>
                           </div>
                           <div className="flex items-center gap-3">
                             <div className="flex items-center border rounded bg-white dark:bg-black overflow-hidden h-7">

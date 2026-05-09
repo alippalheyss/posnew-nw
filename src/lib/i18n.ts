@@ -909,7 +909,6 @@ const resources = {
       "printers_found": "Found {{count}} printers",
       "qz_tray_not_running": "QZ Tray is not running"
     }
-    }
   }
 };
 

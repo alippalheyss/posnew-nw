@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Download, PlusCircle, Receipt, Building2, Calculator, ArrowUpRight, ArrowDownLeft, Landmark, X, ShoppingCart, Archive, Play, Trash2, Save, Package } from 'lucide-react';
+import { Download, PlusCircle, Receipt, Building2, Calculator, ArrowUpRight, ArrowDownLeft, Landmark, X, ShoppingCart, Archive, Play, Trash2, Save, Package, FileText, Info, TrendingDown, TrendingUp } from 'lucide-react';
 import { useAppContext, Purchase, Vendor, PurchaseItem, Product } from '@/context/AppContext';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
@@ -28,7 +28,7 @@ const GSTReports = () => {
         billNumber: '',
         description: '',
         date: new Date().toISOString().split('T')[0],
-        totalAmount: '' // New field for total amount entry
+        totalAmount: '' 
     });
 
     const [vendorSearchQuery, setVendorSearchQuery] = useState('');
@@ -38,7 +38,6 @@ const GSTReports = () => {
         </>
     );
 
-    // Filters based on time range
     const filterByRange = (dateStr: string) => {
         const date = new Date(dateStr);
         const now = new Date();
@@ -46,7 +45,6 @@ const GSTReports = () => {
         if (timeRange === 'this_month') return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
         if (timeRange === 'this_year') return date.getFullYear() === now.getFullYear();
 
-        // Quarterly filters
         if (timeRange.startsWith('q')) {
             const quarter = parseInt(timeRange.substring(1));
             const year = now.getFullYear();
@@ -59,7 +57,6 @@ const GSTReports = () => {
     };
 
 
-    // Filter vendors by search query
     const filteredVendors = vendors.filter(v =>
         v.name_dv.toLowerCase().includes(vendorSearchQuery.toLowerCase()) ||
         v.name_en.toLowerCase().includes(vendorSearchQuery.toLowerCase()) ||
@@ -69,10 +66,8 @@ const GSTReports = () => {
     const filteredSales = sales.filter(s => filterByRange(s.date));
     const filteredPurchases = purchases.filter(p => filterByRange(p.date));
 
-    // Calculations
     const outputGST = filteredSales.reduce((sum, s) => {
         const taxableTotal = s.items.filter(i => !i.is_zero_tax).reduce((itemSum, i) => itemSum + (i.price * i.qty), 0);
-        // Note: This is an approximation. In a real system, you'd store the calculated GST per sale.
         return sum + (taxableTotal * (settings.shop.taxRate / 100));
     }, 0);
 
@@ -86,13 +81,11 @@ const GSTReports = () => {
     const totalPurchases = filteredPurchases.reduce((sum, p) => sum + p.amount, 0);
 
     const calculateGstFromTotal = (total: number) => {
-        // formula: total - (total / (1 + taxRate/100))
         const taxRate = settings.shop.taxRate / 100;
         const gstAmount = total - (total / (1 + taxRate));
         const subtotal = total - gstAmount;
         return { subtotal, gstAmount };
     };
-
 
 
     const handleAddPurchase = () => {
@@ -101,311 +94,269 @@ const GSTReports = () => {
             return;
         }
 
-        const selectedVendor = vendors.find(v => v.id === newPurchase.vendorId);
+        const vendor = vendors.find(v => v.id === newPurchase.vendorId);
+        if (!vendor) return;
+
         const total = parseFloat(newPurchase.totalAmount);
         const { subtotal, gstAmount } = calculateGstFromTotal(total);
 
         const purchase: Purchase = {
             id: `purch-${Date.now()}`,
-            vendor: selectedVendor?.name_en || 'Unknown',
-            vendorId: newPurchase.vendorId,
+            vendorId: vendor.id,
+            vendorName: vendor.name_dv || vendor.name_en,
             billNumber: newPurchase.billNumber,
-            amount: total,
-            gstAmount: gstAmount,
             description: newPurchase.description,
+            amount: subtotal,
+            gstAmount: gstAmount,
             date: newPurchase.date,
-            items: [], // No individual items needed anymore
-            subtotal: subtotal
+            items: [] 
         };
 
         addPurchase(purchase);
         setIsAddPurchaseDialogOpen(false);
-        setNewPurchase({ 
-            vendorId: '', 
-            billNumber: '', 
-            description: '', 
+        setNewPurchase({
+            vendorId: '',
+            billNumber: '',
+            description: '',
             date: new Date().toISOString().split('T')[0],
             totalAmount: ''
         });
         showSuccess(t('purchase_added_successfully'));
     };
 
-    const getQuarterName = (q: string) => {
-        const quarterMap: { [key: string]: string } = {
-            'q1': 'Q1 (Jan-Mar)',
-            'q2': 'Q2 (Apr-Jun)',
-            'q3': 'Q3 (Jul-Sep)',
-            'q4': 'Q4 (Oct-Dec)'
-        };
-        return quarterMap[q] || timeRange;
-    };
-
-    const exportGSTReport = () => {
+    const exportToExcel = () => {
         const data = [
-            ["GST Report - MIRA Compliant", ""],
-            ["Period", timeRange.startsWith('q') ? getQuarterName(timeRange) : timeRange],
-            ["Date Generated", new Date().toLocaleString()],
-            ["", ""],
-            ["OUTPUT TAX (SALES)", ""],
+            ["GST Report", settings.shop.shopName],
+            ["Period", timeRange.replace('_', ' ').toUpperCase()],
+            [],
+            ["Summary"],
             ["Total Taxable Sales", totalTaxableSales.toFixed(2)],
-            ["Total GST Collected (Output)", outputGST.toFixed(2)],
-            ["", ""],
-            ["INPUT TAX (PURCHASES)", ""],
-            ["Total Purchases", totalPurchases.toFixed(2)],
-            ["Total Input Tax Paid", inputGST.toFixed(2)],
-            ["", ""],
-            ["NET GST PAYABLE TO MIRA", netGST.toFixed(2)],
-            ["", ""],
-            ["PURCHASE DETAILS", ""],
-            ["Date", "Vendor", "Bill #", "Amount", "GST Amount", "Description"]
+            ["Output GST", outputGST.toFixed(2)],
+            ["Total Taxable Purchases", totalPurchases.toFixed(2)],
+            ["Input GST", inputGST.toFixed(2)],
+            ["Net GST Payable", netGST.toFixed(2)],
+            [],
+            ["Input GST Details (Purchases)"],
+            ["Date", "Bill #", "Vendor", "Amount (Excl. GST)", "GST Amount", "Total Amount"]
         ];
 
         filteredPurchases.forEach(p => {
-            data.push([p.date, p.vendor, p.billNumber, p.amount.toFixed(2), p.gstAmount.toFixed(2), p.description]);
+            data.push([
+                p.date,
+                p.billNumber,
+                p.vendorName,
+                p.amount.toFixed(2),
+                p.gstAmount.toFixed(2),
+                (p.amount + p.gstAmount).toFixed(2)
+            ]);
         });
 
         const ws = XLSX.utils.aoa_to_sheet(data);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "GST Report");
-        XLSX.writeFile(wb, `GST_Report_${timeRange}_${new Date().toISOString().split('T')[0]}.xlsx`);
+        XLSX.writeFile(wb, `GST_Report_${timeRange}.xlsx`);
     };
 
     return (
-        <div className="p-6 font-faruma flex flex-col h-full bg-gray-50/50 dark:bg-gray-900/50 overflow-auto">
+        <div className="p-6 font-faruma flex flex-col h-full bg-[#050510] text-white overflow-hidden" dir="rtl">
             {/* Header */}
-            <div className="flex justify-between items-center mb-8 sticky top-0 bg-gray-50/80 dark:bg-gray-900/80 backdrop-blur-md z-20 py-2 border-b">
-                <div className="text-right flex-1">
-                    <h1 className="text-3xl font-black text-black dark:text-white flex items-center justify-end gap-3">
-                        {renderBoth('gst_reports')} <Receipt className="h-8 w-8 text-primary" />
+            <div className="flex justify-between items-center mb-8">
+                <div className="text-right">
+                    <h1 className="text-3xl font-black text-white flex items-center justify-end gap-3">
+                        {renderBoth('gst_reports')} <Landmark className="h-8 w-8 text-primary" />
                     </h1>
-                    <p className="text-sm opacity-60 mt-1">{renderBoth('gst_report_description')}</p>
+                    <p className="text-sm text-white/40 mt-1">{renderBoth('gst_reports_description')}</p>
                 </div>
-                <div className="flex gap-3 mr-4">
+                <div className="flex gap-3">
                     <Select value={timeRange} onValueChange={setTimeRange}>
-                        <SelectTrigger className="w-[180px] bg-white text-right">
-                            <SelectValue />
+                        <SelectTrigger className="w-[180px] bg-white/5 border-white/10 text-right h-11 rounded-xl">
+                            <SelectValue placeholder="Time Period" />
                         </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="today">{renderBoth('today')}</SelectItem>
-                            <SelectItem value="this_month">{renderBoth('this_month')}</SelectItem>
-                            <SelectItem value="q1">Q1 (Jan-Mar) - {t('quarter_1')}</SelectItem>
-                            <SelectItem value="q2">Q2 (Apr-Jun) - {t('quarter_2')}</SelectItem>
-                            <SelectItem value="q3">Q3 (Jul-Sep) - {t('quarter_3')}</SelectItem>
-                            <SelectItem value="q4">Q4 (Oct-Dec) - {t('quarter_4')}</SelectItem>
-                            <SelectItem value="this_year">{renderBoth('this_year')}</SelectItem>
-                            <SelectItem value="all">{renderBoth('all')}</SelectItem>
+                        <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
+                            <SelectItem value="today" className="text-right">Today</SelectItem>
+                            <SelectItem value="this_month" className="text-right">This Month</SelectItem>
+                            <SelectItem value="this_year" className="text-right">This Year</SelectItem>
+                            <SelectItem value="q1" className="text-right">Q1 (Jan-Mar)</SelectItem>
+                            <SelectItem value="q2" className="text-right">Q2 (Apr-Jun)</SelectItem>
+                            <SelectItem value="q3" className="text-right">Q3 (Jul-Sep)</SelectItem>
+                            <SelectItem value="q4" className="text-right">Q4 (Oct-Dec)</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Button onClick={exportGSTReport} variant="outline" className="gap-2">
-                        <Download className="h-4 w-4" /> {renderBoth('download_report')}
+                    <Button onClick={exportToExcel} variant="outline" className="gap-2 border-white/10 hover:bg-white/5 h-11 px-6 rounded-xl">
+                        <Download className="h-4 w-4" /> {renderBoth('download_excel')}
                     </Button>
-                    <Button onClick={() => setIsAddPurchaseDialogOpen(true)} className="gap-2 bg-primary">
-                        <PlusCircle className="h-4 w-4" /> {renderBoth('add_local_purchase')}
+                    <Button onClick={() => setIsAddPurchaseDialogOpen(true)} className="gap-2 bg-primary hover:bg-primary/90 h-11 px-6 rounded-xl font-black shadow-[0_0_20px_rgba(0,132,255,0.3)]">
+                        <PlusCircle className="h-4 w-4" /> {renderBoth('record_local_purchase')}
                     </Button>
                 </div>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <Card className="border-none shadow-sm bg-gradient-to-br from-primary to-orange-600 text-white">
-                    <CardHeader className="pb-2">
-                        <div className="flex justify-between items-center">
-                            <div className="p-2 bg-white/20 rounded-lg"><Calculator className="h-5 w-5" /></div>
-                            <CardTitle className="text-sm font-bold opacity-90">{renderBoth('gst_payable')}</CardTitle>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-black">{settings.shop.currency} {netGST.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-                        <p className="text-[10px] opacity-70 mt-1 uppercase tracking-widest">{renderBoth('net_gst_to_mira')}</p>
-                    </CardContent>
-                </Card>
+            <ScrollArea className="flex-1 custom-scrollbar">
+                <div className="space-y-8 pb-6">
+                    {/* Summary Stats */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <Card className="bg-[#0a0a1a] border-white/5 rounded-[2rem] p-6 relative group overflow-hidden">
+                           <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full -mr-12 -mt-12 blur-2xl" />
+                           <div className="flex justify-between items-center mb-4">
+                              <ArrowUpRight className="h-5 w-5 text-primary" />
+                              <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Output GST (Sales)</span>
+                           </div>
+                           <p className="text-3xl font-black text-white">{settings.shop.currency} {outputGST.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                           <p className="text-[10px] text-white/20 mt-1 font-bold uppercase tracking-widest">TOTAL TAXABLE: {totalTaxableSales.toLocaleString()}</p>
+                        </Card>
 
-                <Card className="border-none shadow-sm">
-                    <CardHeader className="pb-2">
-                        <div className="flex justify-between items-center">
-                            <div className="p-2 bg-green-50 text-green-600 rounded-lg dark:bg-green-900/20"><ArrowUpRight className="h-5 w-5" /></div>
-                            <CardTitle className="text-sm font-bold text-black dark:text-white ">{renderBoth('output_gst')}</CardTitle>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-black text-black dark:text-white ">{settings.shop.currency} {outputGST.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-                        <p className="text-[10px] text-black dark:text-white mt-1 uppercase tracking-widest">{renderBoth('total_gst_collected')}</p>
-                    </CardContent>
-                </Card>
+                        <Card className="bg-[#0a0a1a] border-white/5 rounded-[2rem] p-6 relative group overflow-hidden">
+                           <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/10 rounded-full -mr-12 -mt-12 blur-2xl" />
+                           <div className="flex justify-between items-center mb-4">
+                              <ArrowDownLeft className="h-5 w-5 text-orange-500" />
+                              <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Input GST (Purchases)</span>
+                           </div>
+                           <p className="text-3xl font-black text-white">{settings.shop.currency} {inputGST.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                           <p className="text-[10px] text-white/20 mt-1 font-bold uppercase tracking-widest">TOTAL PURCHASES: {totalPurchases.toLocaleString()}</p>
+                        </Card>
 
-                <Card className="border-none shadow-sm">
-                    <CardHeader className="pb-2">
-                        <div className="flex justify-between items-center">
-                            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg dark:bg-blue-900/20"><ArrowDownLeft className="h-5 w-5" /></div>
-                            <CardTitle className="text-sm font-bold text-black dark:text-white ">{renderBoth('input_gst')}</CardTitle>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-black text-black dark:text-white ">{settings.shop.currency} {inputGST.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-                        <p className="text-[10px] text-black dark:text-white mt-1 uppercase tracking-widest">{renderBoth('total_input_tax')}</p>
-                    </CardContent>
-                </Card>
-            </div>
+                        <Card className="bg-[#0a0a1a] border-white/5 rounded-[2rem] p-6 relative group overflow-hidden">
+                           <div className={cn(
+                             "absolute top-0 right-0 w-24 h-24 rounded-full -mr-12 -mt-12 blur-2xl",
+                             netGST >= 0 ? "bg-red-500/10" : "bg-green-500/10"
+                           )} />
+                           <div className="flex justify-between items-center mb-4">
+                              <Calculator className="h-5 w-5 text-purple-500" />
+                              <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Net GST Payable</span>
+                           </div>
+                           <p className={cn(
+                             "text-3xl font-black",
+                             netGST >= 0 ? "text-red-500" : "text-green-500"
+                           )}>{settings.shop.currency} {Math.abs(netGST).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                           <p className="text-[10px] text-white/20 mt-1 font-bold uppercase tracking-widest">
+                             {netGST >= 0 ? "AMOUNT TO PAY" : "TAX CREDIT"}
+                           </p>
+                        </Card>
+                    </div>
 
-            {/* Main Content Sections */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Sales Summary */}
-                <Card className="lg:col-span-1 border-none shadow-sm border-r-4 border-r-green-500">
-                    <CardHeader>
-                        <CardTitle className="text-right text-lg flex items-center justify-end gap-2">
-                            {renderBoth('output_gst')} <ArrowUpRight className="h-5 w-5 text-green-500" />
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex justify-between p-3 bg-gray-50 dark:bg-black/20 rounded-lg border border-dashed border-gray-200">
-                            <span className="font-bold text-black dark:text-white ">{t('total_taxable_sales')}</span>
-                            <span className="font-black text-green-600">{settings.shop.currency} {totalTaxableSales.toFixed(2)}</span>
-                        </div>
-                        <div className="text-right text-xs text-black dark:text-white px-2 italic">
-                            {t('gst_rate_notice', { rate: settings.shop.taxRate })}
-                        </div>
-                    </CardContent>
-                </Card>
-
-
-
-                {/* Local Purchases List */}
-                <Card className="lg:col-span-2 border-none shadow-sm border-r-4 border-r-blue-500">
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <div className="p-2 bg-blue-50 rounded-full text-blue-600"><Landmark className="h-4 w-4" /></div>
-                        <CardTitle className="text-right text-lg">{renderBoth('local_purchases')}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        <ScrollArea className="h-[400px]">
+                    {/* Input GST Table */}
+                    <Card className="bg-[#0a0a1a] border-white/5 rounded-[2rem] overflow-hidden shadow-2xl flex flex-col">
+                        <CardHeader className="border-b border-white/5 px-8 py-6 flex flex-row items-center justify-between">
+                            <div className="flex items-center gap-2">
+                               <FileText className="h-5 w-5 text-primary" />
+                               <span className="text-sm font-black text-white">Purchase History (Input GST)</span>
+                            </div>
+                            <Badge className="bg-white/5 text-white/40 border-white/10 uppercase tracking-widest font-black text-[10px]">
+                               {filteredPurchases.length} RECORDS
+                            </Badge>
+                        </CardHeader>
+                        <CardContent className="p-0">
                             <Table dir="rtl">
-                                <TableHeader className="bg-gray-50 dark:bg-black/10">
-                                    <TableRow>
-                                        <TableHead className="text-right font-bold">{t('date')}</TableHead>
-                                        <TableHead className="text-right font-bold">{t('vendor')}</TableHead>
-                                        <TableHead className="text-right font-bold">{t('bill_number')}</TableHead>
-                                        <TableHead className="text-right font-bold">{t('amount')}</TableHead>
-                                        <TableHead className="text-right font-bold">{t('gst_amount')}</TableHead>
+                                <TableHeader className="bg-white/5">
+                                    <TableRow className="border-white/5">
+                                        <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Date</TableHead>
+                                        <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Bill #</TableHead>
+                                        <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Vendor</TableHead>
+                                        <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Amount (Excl.)</TableHead>
+                                        <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">GST (6%)</TableHead>
+                                        <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Total</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {filteredPurchases.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="text-center py-10 text-black dark:text-white uppercase tracking-widest text-[10px]">No local purchases recorded</TableCell>
+                                            <TableCell colSpan={6} className="text-center py-20 text-white/20 font-black uppercase tracking-[0.2em]">
+                                                No purchase records for this period
+                                            </TableCell>
                                         </TableRow>
                                     ) : (
                                         filteredPurchases.map((purchase) => (
-                                            <TableRow key={purchase.id} className="hover:bg-blue-50/30 transition-colors">
-                                                <TableCell className="text-right font-mono text-xs">{purchase.date}</TableCell>
-                                                <TableCell className="text-right font-bold">{purchase.vendor}</TableCell>
-                                                <TableCell className="text-right text-xs opacity-60">{purchase.billNumber || '-'}</TableCell>
-                                                <TableCell className="text-right font-mono">{purchase.amount.toFixed(2)}</TableCell>
-                                                <TableCell className="text-right font-mono font-bold text-blue-600">{purchase.gstAmount.toFixed(2)}</TableCell>
+                                            <TableRow key={purchase.id} className="border-white/5 hover:bg-white/5 transition-colors group">
+                                                <TableCell className="text-right font-mono text-xs text-white/40">{purchase.date}</TableCell>
+                                                <TableCell className="text-right font-black text-white">{purchase.billNumber || '-'}</TableCell>
+                                                <TableCell className="text-right text-sm font-bold text-white/60">{purchase.vendorName}</TableCell>
+                                                <TableCell className="text-right font-bold">{settings.shop.currency} {purchase.amount.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right font-black text-orange-500">{settings.shop.currency} {purchase.gstAmount.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right font-black text-primary">
+                                                    {settings.shop.currency} {(purchase.amount + purchase.gstAmount).toFixed(2)}
+                                                </TableCell>
                                             </TableRow>
                                         ))
                                     )}
                                 </TableBody>
                             </Table>
-                        </ScrollArea>
-                    </CardContent>
-                </Card>
-            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </ScrollArea>
 
             {/* Add Purchase Dialog */}
             <Dialog open={isAddPurchaseDialogOpen} onOpenChange={setIsAddPurchaseDialogOpen}>
-                <DialogContent className="sm:max-w-[700px] font-faruma max-h-[90vh] overflow-y-auto" dir="rtl">
+                <DialogContent className="sm:max-w-[500px] font-faruma bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
                     <DialogHeader>
-                        <div className="flex justify-between items-center w-full">
-                            <Button variant="ghost" size="icon" onClick={() => setIsAddPurchaseDialogOpen(false)}><X className="h-4 w-4" /></Button>
-                            <DialogTitle className="text-right text-2xl font-black flex items-center gap-2">
-                                <ShoppingCart className="h-6 w-6" />
-                                {renderBoth('add_local_purchase')}
-                            </DialogTitle>
-                        </div>
-                        <DialogDescription className="text-right">{renderBoth('enter_details_for_gst_tracking')}</DialogDescription>
+                        <DialogTitle className="text-right text-2xl font-black">{renderBoth('record_local_purchase')}</DialogTitle>
+                        <DialogDescription className="text-right text-white/40">{renderBoth('record_purchase_description')}</DialogDescription>
                     </DialogHeader>
-
-                    <div className="grid gap-5 py-4">
-                        {/* Vendor & Bill Info */}
-                        <div className="space-y-1.5">
-                            <Label className="text-right block opacity-50 text-[10px] font-bold uppercase">{renderBoth('vendor')}*</Label>
-                            <Input
-                                placeholder={t('search_vendor')}
-                                value={vendorSearchQuery}
-                                onChange={(e) => setVendorSearchQuery(e.target.value)}
-                                className="text-right h-9 mb-2"
-                            />
-                            <Select value={newPurchase.vendorId} onValueChange={(value) => setNewPurchase({ ...newPurchase, vendorId: value })}>
-                                <SelectTrigger className="text-right h-11">
-                                    <SelectValue placeholder={t('select_vendor')} />
+                    <div className="grid gap-6 py-6">
+                        <div className="space-y-2">
+                            <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('select_vendor')}*</Label>
+                            <Select value={newPurchase.vendorId} onValueChange={(val) => setNewPurchase({ ...newPurchase, vendorId: val })}>
+                                <SelectTrigger className="w-full bg-white/5 border-white/10 text-right h-12 rounded-xl">
+                                    <SelectValue placeholder="Choose Vendor" />
                                 </SelectTrigger>
-                                <SelectContent key={vendorSearchQuery}>
-                                    {filteredVendors.length === 0 ? (
-                                        <div className="p-2 text-center text-sm text-black dark:text-white ">{t('no_vendors_found')}</div>
-                                    ) : (
-                                        filteredVendors.map(vendor => (
-                                            <SelectItem key={vendor.id} value={vendor.id}>
-                                                {vendor.name_dv} ({vendor.name_en})
+                                <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
+                                    <div className="p-2 sticky top-0 bg-[#0a0a1a] border-b border-white/5 z-10">
+                                        <Input 
+                                          placeholder="Search vendors..." 
+                                          value={vendorSearchQuery}
+                                          onChange={(e) => setVendorSearchQuery(e.target.value)}
+                                          className="h-9 bg-white/5 border-white/10 text-right"
+                                        />
+                                    </div>
+                                    <ScrollArea className="h-40">
+                                        {filteredVendors.map(v => (
+                                            <SelectItem key={v.id} value={v.id} className="text-right hover:bg-white/5">
+                                                {v.name_dv || v.name_en}
                                             </SelectItem>
-                                        ))
-                                    )}
+                                        ))}
+                                    </ScrollArea>
                                 </SelectContent>
                             </Select>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                                <Label className="text-right block opacity-50 text-[10px] font-bold uppercase">{renderBoth('bill_number')}</Label>
-                                <Input value={newPurchase.billNumber} onChange={(e) => setNewPurchase({ ...newPurchase, billNumber: e.target.value })} className="text-right h-11" />
+                            <div className="space-y-2">
+                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('bill_number')}</Label>
+                                <Input value={newPurchase.billNumber} onChange={(e) => setNewPurchase({ ...newPurchase, billNumber: e.target.value })} className="text-right h-12 bg-white/5 border-white/10 rounded-xl font-mono" />
                             </div>
-                            <div className="space-y-1.5">
-                                <Label className="text-right block opacity-50 text-[10px] font-bold uppercase">{renderBoth('date')}</Label>
-                                <Input type="date" value={newPurchase.date} onChange={(e) => setNewPurchase({ ...newPurchase, date: e.target.value })} className="text-right h-11" />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                                <Label className="text-right block opacity-50 text-[10px] font-bold uppercase">{renderBoth('total_amount')}*</Label>
-                                <Input 
-                                    type="number" 
-                                    placeholder="0.00"
-                                    value={newPurchase.totalAmount} 
-                                    onChange={(e) => setNewPurchase({ ...newPurchase, totalAmount: e.target.value })} 
-                                    className="text-right h-11 font-black text-lg" 
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <Label className="text-right block opacity-50 text-[10px] font-bold uppercase">{renderBoth('calculated_gst')}</Label>
-                                <div className="h-11 flex items-center justify-end px-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-100 dark:border-blue-800 font-mono font-bold text-blue-600">
-                                    {newPurchase.totalAmount ? calculateGstFromTotal(parseFloat(newPurchase.totalAmount)).gstAmount.toFixed(2) : '0.00'}
-                                </div>
+                            <div className="space-y-2">
+                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('date')}</Label>
+                                <Input type="date" value={newPurchase.date} onChange={(e) => setNewPurchase({ ...newPurchase, date: e.target.value })} className="text-right h-12 bg-white/5 border-white/10 rounded-xl" />
                             </div>
                         </div>
 
-                        <div className="space-y-1.5">
-                            <Label className="text-right block opacity-50 text-[10px] font-bold uppercase">{renderBoth('description')}</Label>
-                            <Input value={newPurchase.description} onChange={(e) => setNewPurchase({ ...newPurchase, description: e.target.value })} className="text-right h-11" />
+                        <div className="space-y-2">
+                            <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('total_amount_incl_gst')}*</Label>
+                            <Input 
+                              type="number" 
+                              value={newPurchase.totalAmount} 
+                              onChange={(e) => setNewPurchase({ ...newPurchase, totalAmount: e.target.value })} 
+                              className="text-right h-14 bg-white/5 border-white/10 rounded-xl text-2xl font-black text-primary" 
+                              placeholder="0.00"
+                            />
+                            <p className="text-[10px] text-white/20 text-right italic">GST (6%) will be automatically calculated from this total.</p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('description')}</Label>
+                            <Input value={newPurchase.description} onChange={(e) => setNewPurchase({ ...newPurchase, description: e.target.value })} className="text-right h-12 bg-white/5 border-white/10 rounded-xl" />
                         </div>
                     </div>
-
-                    <DialogFooter className="mt-4 gap-3">
-                        <Button
-                            onClick={() => setIsAddPurchaseDialogOpen(false)}
-                            variant="outline"
-                            className="flex-1 h-12 font-bold text-lg"
-                        >
-                            {t('cancel')}
+                    <DialogFooter className="gap-3 pt-4 border-t border-white/5">
+                        <Button variant="ghost" onClick={() => setIsAddPurchaseDialogOpen(false)} className="flex-1 h-12 border-white/10 hover:bg-white/5 text-white">
+                            {renderBoth('cancel')}
                         </Button>
-                        <Button
-                            onClick={handleAddPurchase}
-                            className="flex-1 h-12 font-bold text-lg bg-primary"
-                        >
-                            {t('save_purchase')}
+                        <Button onClick={handleAddPurchase} className="flex-1 h-12 bg-primary hover:bg-primary/90 font-black">
+                            {renderBoth('save_purchase')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-
         </div>
     );
 };

@@ -22,7 +22,11 @@ import {
   Calendar,
   Filter,
   Download,
-  Info
+  Info,
+  ChevronRight,
+  TrendingUp,
+  Activity,
+  History
 } from 'lucide-react';
 import { useAppContext, Product } from '@/context/AppContext';
 import { showSuccess, showError } from '@/utils/toast';
@@ -47,11 +51,8 @@ const ShrinkageReport = () => {
   const { products, settings, updateStock } = useAppContext();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // Local state for shrinkage records (mocked for now)
   const [records, setRecords] = useState<ShrinkageRecord[]>([]);
 
-  // Form state
   const [newRecord, setNewRecord] = useState({
     productId: '',
     qty: 0,
@@ -90,45 +91,57 @@ const ShrinkageReport = () => {
       notes: newRecord.notes
     };
 
-    // Update stock in AppContext
     const currentStock = newRecord.location === 'shop' ? selectedProduct.stock_shop : selectedProduct.stock_godown;
     if (currentStock < newRecord.qty) {
       showError(`Insufficient stock in ${newRecord.location}. Current: ${currentStock}`);
       return;
     }
 
-    // In a real app, we'd have a specific shrinkage function in AppContext
-    // For now, we manually update stock
-    await updateStock(newRecord.productId, currentStock - newRecord.qty);
+    const newStock = currentStock - newRecord.qty;
+    updateStock(selectedProduct.id, newStock, newRecord.location);
 
-    setRecords([record, ...records]);
+    setRecords(prev => [record, ...prev]);
     setIsAddDialogOpen(false);
     setNewRecord({
       productId: '',
       qty: 0,
-      reason: 'damaged',
-      location: 'shop',
+      reason: 'damaged' as const,
+      location: 'shop' as const,
       notes: '',
       date: new Date().toISOString().split('T')[0]
     });
-    showSuccess('Shrinkage recorded and stock updated');
+    showSuccess('Shrinkage record added and stock updated');
   };
 
-  const totalLossValue = records.reduce((sum, r) => sum + r.totalLoss, 0);
+  const handleDeleteRecord = (id: string) => {
+    if (window.confirm('Delete this record? Note: Stock will not be automatically restored.')) {
+      setRecords(prev => prev.filter(r => r.id !== id));
+      showSuccess('Record deleted');
+    }
+  };
 
   const exportToExcel = () => {
-    const data = records.map(r => ({
-      Date: r.date,
-      Product: r.productName,
-      Quantity: r.qty,
-      Reason: r.reason.toUpperCase(),
-      Location: r.location.toUpperCase(),
-      'Cost Price': r.costPrice,
-      'Total Loss': r.totalLoss,
-      Notes: r.notes
-    }));
+    const data = [
+      ["Shrinkage & Loss Report", settings.shop.shopName],
+      ["Generated Date", new Date().toLocaleDateString()],
+      [],
+      ["Date", "Product", "Qty", "Reason", "Location", "Cost Price", "Total Loss", "Notes"]
+    ];
 
-    const ws = XLSX.utils.json_to_sheet(data);
+    records.forEach(r => {
+      data.push([
+        r.date,
+        r.productName,
+        r.qty,
+        r.reason.toUpperCase(),
+        r.location.toUpperCase(),
+        r.costPrice.toFixed(2),
+        r.totalLoss.toFixed(2),
+        r.notes
+      ]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Shrinkage Report");
     XLSX.writeFile(wb, `Shrinkage_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
@@ -136,194 +149,178 @@ const ShrinkageReport = () => {
 
   const filteredRecords = records.filter(r => 
     r.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.notes.toLowerCase().includes(searchTerm.toLowerCase())
+    r.notes.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    r.reason.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const totalLoss = records.reduce((sum, r) => sum + r.totalLoss, 0);
+
   return (
-    <div className="p-6 font-faruma flex flex-col h-full bg-[#050510] text-white overflow-auto" dir="rtl">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8 sticky top-0 bg-[#050510]/80 backdrop-blur-md z-20 py-2 border-b border-white/5">
-        <div className="text-right flex-1">
-          <h1 className="text-3xl font-black text-white flex items-center justify-end gap-3">
-            {renderBoth('shrinkage_report')} <FileText className="h-8 w-8 text-primary" />
-          </h1>
-          <p className="text-sm text-white/40 mt-1">Track stock losses due to damage, expiry, or theft</p>
+    <div className="p-6 font-faruma flex flex-col h-full bg-[#050510] text-white overflow-hidden" dir="rtl">
+      {/* Header Section */}
+      <div className="flex justify-between items-center mb-8">
+        <div className="text-right">
+           <h1 className="text-3xl font-black text-white flex items-center justify-end gap-3">
+             Shrinkage Report <FileText className="h-8 w-8 text-red-500" />
+           </h1>
+           <p className="text-sm text-white/40 mt-1">Track inventory losses due to damage, expiry, or theft</p>
         </div>
-        
-        <div className="flex gap-3 mr-4">
-          <div className="relative w-64">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
-            <Input 
-              placeholder="Search records..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-white/5 border-white/10 text-right pr-10"
-            />
-          </div>
-          <Button onClick={exportToExcel} variant="outline" className="gap-2 border-white/10 hover:bg-white/5">
-            <Download className="h-4 w-4" /> {renderBoth('download_report')}
-          </Button>
-          <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2 bg-primary hover:bg-primary/90">
-            <PlusCircle className="h-4 w-4" /> {renderBoth('record_shrinkage')}
-          </Button>
+
+        <div className="flex gap-3">
+           <Button 
+             variant="outline" 
+             onClick={exportToExcel}
+             className="gap-2 border-white/10 hover:bg-white/5 h-11 px-6 rounded-xl"
+           >
+             <Download className="h-4 w-4" /> EXPORT EXCEL
+           </Button>
+           <Button 
+             onClick={() => setIsAddDialogOpen(true)}
+             className="gap-2 bg-red-600 hover:bg-red-700 h-11 px-6 rounded-xl font-black shadow-[0_0_20px_rgba(220,38,38,0.3)]"
+           >
+             <PlusCircle className="h-4 w-4" /> RECORD LOSS
+           </Button>
         </div>
       </div>
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <Card className="bg-[#0a0a1a] border-white/5 shadow-2xl overflow-hidden relative group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/10 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-red-500/20 transition-all" />
-          <CardHeader className="pb-2">
-            <div className="flex justify-between items-center">
-              <TrendingDown className="h-5 w-5 text-red-500" />
-              <CardTitle className="text-xs font-bold text-white/40 uppercase tracking-widest">Total Loss Value</CardTitle>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+         <Card className="bg-[#0a0a1a] border-white/5 rounded-[2rem] p-6 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/10 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-red-500/20 transition-all" />
+            <div className="flex justify-between items-center mb-4">
+               <TrendingDown className="h-5 w-5 text-red-500" />
+               <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Total Value Loss</span>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-white">
-              {settings.shop.currency} {totalLossValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-            </div>
-          </CardContent>
-        </Card>
+            <p className="text-3xl font-black text-white">{settings.shop.currency} {totalLoss.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            <p className="text-[10px] text-white/20 mt-1 font-bold uppercase tracking-widest">ACCUMULATED SHRINKAGE</p>
+         </Card>
 
-        <Card className="bg-[#0a0a1a] border-white/5 shadow-2xl">
-          <CardHeader className="pb-2">
-            <div className="flex justify-between items-center">
-              <AlertTriangle className="h-5 w-5 text-orange-500" />
-              <CardTitle className="text-xs font-bold text-white/40 uppercase tracking-widest">Total Incidents</CardTitle>
+         <Card className="bg-[#0a0a1a] border-white/5 rounded-[2rem] p-6 relative overflow-hidden group">
+            <div className="flex justify-between items-center mb-4">
+               <AlertTriangle className="h-5 w-5 text-orange-500" />
+               <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Loss Incidents</span>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-white">{records.length}</div>
-          </CardContent>
-        </Card>
+            <p className="text-3xl font-black text-white">{records.length}</p>
+            <p className="text-[10px] text-white/20 mt-1 font-bold uppercase tracking-widest">TOTAL RECORDS</p>
+         </Card>
 
-        <Card className="bg-[#0a0a1a] border-white/5 shadow-2xl">
-          <CardHeader className="pb-2">
-            <div className="flex justify-between items-center">
-              <Package className="h-5 w-5 text-blue-500" />
-              <CardTitle className="text-xs font-bold text-white/40 uppercase tracking-widest">Items Lost</CardTitle>
+         <Card className="bg-[#0a0a1a] border-white/5 rounded-[2rem] p-6 relative overflow-hidden group">
+            <div className="flex justify-between items-center mb-4">
+               <Package className="h-5 w-5 text-primary" />
+               <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Highest Loss Reason</span>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-white">{records.reduce((sum, r) => sum + r.qty, 0)}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#0a0a1a] border-white/5 shadow-2xl">
-          <CardHeader className="pb-2">
-            <div className="flex justify-between items-center">
-              <Calendar className="h-5 w-5 text-purple-500" />
-              <CardTitle className="text-xs font-bold text-white/40 uppercase tracking-widest">This Month</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-white">
-              {settings.shop.currency} {records.filter(r => new Date(r.date).getMonth() === new Date().getMonth()).reduce((sum, r) => sum + r.totalLoss, 0).toFixed(2)}
-            </div>
-          </CardContent>
-        </Card>
+            <p className="text-2xl font-black text-white uppercase truncate">
+               {records.length > 0 ? records[0].reason : 'N/A'}
+            </p>
+            <p className="text-[10px] text-white/20 mt-1 font-bold uppercase tracking-widest">BY FREQUENCY</p>
+         </Card>
       </div>
 
-      {/* Records Table */}
-      <Card className="bg-[#0a0a1a] border-white/5 shadow-2xl flex-1 flex flex-col min-h-0">
-        <CardHeader className="border-b border-white/5 flex flex-row items-center justify-between">
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" className="text-xs text-white/40 hover:text-white gap-2">
-              <Filter className="h-3 w-3" /> Filter
-            </Button>
-          </div>
-          <CardTitle className="text-lg font-black flex items-center gap-2">
-             Recent Incidents <Info className="h-4 w-4 text-white/20" />
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0 flex-1 overflow-hidden">
-          <ScrollArea className="h-full custom-scrollbar">
-            <Table dir="rtl">
-              <TableHeader className="bg-white/5 sticky top-0 z-10">
-                <TableRow className="border-white/5 hover:bg-transparent">
-                  <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Date</TableHead>
-                  <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Product</TableHead>
-                  <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Qty</TableHead>
-                  <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Reason</TableHead>
-                  <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Location</TableHead>
-                  <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Loss Value</TableHead>
-                  <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Notes</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRecords.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-20 text-white/20 font-black uppercase tracking-[0.2em]">
-                      No shrinkage records found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredRecords.map((record) => (
-                    <TableRow key={record.id} className="border-white/5 hover:bg-white/5 transition-colors group">
-                      <TableCell className="text-right font-mono text-xs text-white/60">{record.date}</TableCell>
-                      <TableCell className="text-right font-black text-white">{record.productName}</TableCell>
-                      <TableCell className="text-right">
-                         <Badge variant="outline" className="bg-white/5 border-white/10 text-white font-black">
-                           {record.qty}
-                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge className={cn(
-                          "font-black uppercase text-[8px] tracking-widest",
-                          record.reason === 'damaged' && "bg-orange-500/20 text-orange-500 border-orange-500/20",
-                          record.reason === 'expired' && "bg-yellow-500/20 text-yellow-500 border-yellow-500/20",
-                          record.reason === 'stolen' && "bg-red-500/20 text-red-500 border-red-500/20",
-                          record.reason === 'other' && "bg-blue-500/20 text-blue-500 border-blue-500/20"
-                        )}>
-                          {record.reason}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">{record.location}</span>
-                      </TableCell>
-                      <TableCell className="text-right font-black text-red-500">
-                        {settings.shop.currency} {record.totalLoss.toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right text-xs text-white/40 max-w-[200px] truncate">
-                        {record.notes || '-'}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </ScrollArea>
-        </CardContent>
+      {/* Search Bar */}
+      <div className="relative mb-8">
+         <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
+         <Input 
+           placeholder="Search records by product or notes..."
+           value={searchTerm}
+           onChange={(e) => setSearchTerm(e.target.value)}
+           className="w-full bg-white/5 border-white/10 rounded-xl pr-12 h-14 text-right font-bold focus:border-primary/50 transition-all text-lg"
+         />
+      </div>
+
+      {/* Main Table Container */}
+      <Card className="bg-[#0a0a1a] border-white/5 rounded-[2rem] overflow-hidden shadow-2xl flex-1 flex flex-col">
+         <CardHeader className="border-b border-white/5 px-8 py-6 flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+               <History className="h-5 w-5 text-primary" />
+               <span className="text-sm font-black text-white">Loss History Log</span>
+            </div>
+            <Badge className="bg-white/5 text-white/40 border-white/10 uppercase tracking-widest font-black text-[10px]">
+               {filteredRecords.length} ENTRIES
+            </Badge>
+         </CardHeader>
+         <CardContent className="p-0 flex-1 overflow-hidden">
+            <ScrollArea className="h-full custom-scrollbar">
+               <Table dir="rtl">
+                  <TableHeader className="bg-white/5 sticky top-0 z-10">
+                     <TableRow className="border-white/5">
+                        <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Date</TableHead>
+                        <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Product</TableHead>
+                        <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Qty</TableHead>
+                        <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Reason</TableHead>
+                        <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Loss Value</TableHead>
+                        <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Actions</TableHead>
+                     </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                     {filteredRecords.length === 0 ? (
+                        <TableRow>
+                           <TableCell colSpan={6} className="text-center py-20 text-white/20 font-black uppercase tracking-[0.2em]">
+                              No loss records found
+                           </TableCell>
+                        </TableRow>
+                     ) : (
+                        filteredRecords.map((record) => (
+                           <TableRow key={record.id} className="border-white/5 hover:bg-white/5 transition-colors group">
+                              <TableCell className="text-right font-mono text-xs text-white/40">{record.date}</TableCell>
+                              <TableCell className="text-right">
+                                 <div className="flex flex-col">
+                                    <span className="font-black text-white group-hover:text-primary transition-colors">{record.productName}</span>
+                                    <span className="text-[10px] text-white/40 uppercase font-bold">{record.location.toUpperCase()} STOCK</span>
+                                 </div>
+                              </TableCell>
+                              <TableCell className="text-right font-black text-white">{record.qty}</TableCell>
+                              <TableCell className="text-right">
+                                 <Badge className={cn(
+                                    "border-none text-[8px] font-black uppercase px-2 py-0.5 rounded-full",
+                                    record.reason === 'damaged' ? "bg-orange-500/20 text-orange-500" :
+                                    record.reason === 'expired' ? "bg-red-500/20 text-red-500" :
+                                    record.reason === 'stolen' ? "bg-purple-500/20 text-purple-500" :
+                                    "bg-white/10 text-white/40"
+                                 )}>
+                                    {record.reason}
+                                 </Badge>
+                              </TableCell>
+                              <TableCell className="text-right font-black text-red-500">
+                                 {settings.shop.currency} {record.totalLoss.toFixed(2)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                 <Button 
+                                   variant="ghost" 
+                                   size="icon" 
+                                   onClick={() => handleDeleteRecord(record.id)}
+                                   className="h-9 w-9 rounded-xl hover:bg-red-500/10 text-red-400 group/btn"
+                                 >
+                                    <Trash2 className="h-4 w-4 transition-transform group-hover/btn:scale-110" />
+                                 </Button>
+                              </TableCell>
+                           </TableRow>
+                        ))
+                     )}
+                  </TableBody>
+               </Table>
+            </ScrollArea>
+         </CardContent>
       </Card>
 
       {/* Add Record Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="bg-[#0a0a1a] border-white/10 text-white font-faruma sm:max-w-[500px]" dir="rtl">
+        <DialogContent className="sm:max-w-[500px] font-faruma bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
           <DialogHeader>
-            <DialogTitle className="text-right text-2xl font-black">Record Stock Shrinkage</DialogTitle>
-            <DialogDescription className="text-right text-white/40">Enter details of stock loss for tracking and inventory adjustment.</DialogDescription>
+            <DialogTitle className="text-right text-2xl font-black">Record Inventory Loss</DialogTitle>
+            <DialogDescription className="text-right text-white/40">Enter the details of the damaged or missing stock.</DialogDescription>
           </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-1.5">
-              <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">Select Product</Label>
-              <Select value={newRecord.productId} onValueChange={(val) => setNewRecord({...newRecord, productId: val})}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-right h-12 rounded-xl">
-                  <SelectValue placeholder="Choose a product..." />
+          <div className="grid gap-6 py-6">
+            <div className="space-y-2">
+              <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">Select Product*</Label>
+              <Select value={newRecord.productId} onValueChange={(val) => setNewRecord({ ...newRecord, productId: val })}>
+                <SelectTrigger className="w-full bg-white/5 border-white/10 text-right h-12 rounded-xl">
+                  <SelectValue placeholder="Choose product..." />
                 </SelectTrigger>
                 <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
-                  <div className="p-2 sticky top-0 bg-[#0a0a1a] border-b border-white/5 z-10">
-                    <Input 
-                      placeholder="Search products..." 
-                      className="h-8 bg-white/5 border-white/10 text-right"
-                      onChange={(e) => {/* Add local filtering if needed */}}
-                    />
-                  </div>
-                  <ScrollArea className="h-[200px]">
+                  <ScrollArea className="h-40">
                     {products.map(p => (
                       <SelectItem key={p.id} value={p.id} className="text-right hover:bg-white/5">
-                        {p.name_en} ({p.name_dv})
+                        {p.name_dv} ({p.name_en})
                       </SelectItem>
                     ))}
                   </ScrollArea>
@@ -332,86 +329,72 @@ const ShrinkageReport = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">Quantity</Label>
-                <Input 
-                  type="number" 
-                  value={newRecord.qty}
-                  onChange={(e) => setNewRecord({...newRecord, qty: parseFloat(e.target.value)})}
-                  className="bg-white/5 border-white/10 text-right h-12 rounded-xl font-black text-lg"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">Date</Label>
-                <Input 
-                  type="date" 
-                  value={newRecord.date}
-                  onChange={(e) => setNewRecord({...newRecord, date: e.target.value})}
-                  className="bg-white/5 border-white/10 text-right h-12 rounded-xl"
-                />
-              </div>
+               <div className="space-y-2">
+                 <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">Quantity*</Label>
+                 <Input 
+                   type="number" 
+                   value={newRecord.qty || ''} 
+                   onChange={(e) => setNewRecord({ ...newRecord, qty: parseFloat(e.target.value) || 0 })} 
+                   className="text-right h-12 bg-white/5 border-white/10 rounded-xl"
+                 />
+               </div>
+               <div className="space-y-2">
+                 <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">Date</Label>
+                 <Input 
+                   type="date" 
+                   value={newRecord.date} 
+                   onChange={(e) => setNewRecord({ ...newRecord, date: e.target.value })} 
+                   className="text-right h-12 bg-white/5 border-white/10 rounded-xl"
+                 />
+               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">Reason</Label>
-                <Select value={newRecord.reason} onValueChange={(val: any) => setNewRecord({...newRecord, reason: val})}>
-                  <SelectTrigger className="bg-white/5 border-white/10 text-right h-12 rounded-xl">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
-                    <SelectItem value="damaged" className="text-right">Damaged</SelectItem>
-                    <SelectItem value="expired" className="text-right">Expired</SelectItem>
-                    <SelectItem value="stolen" className="text-right">Stolen</SelectItem>
-                    <SelectItem value="other" className="text-right">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">Location</Label>
-                <Select value={newRecord.location} onValueChange={(val: any) => setNewRecord({...newRecord, location: val})}>
-                  <SelectTrigger className="bg-white/5 border-white/10 text-right h-12 rounded-xl">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
-                    <SelectItem value="shop" className="text-right">Shop</SelectItem>
-                    <SelectItem value="godown" className="text-right">Godown</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+               <div className="space-y-2">
+                 <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">Reason*</Label>
+                 <Select value={newRecord.reason} onValueChange={(val: any) => setNewRecord({ ...newRecord, reason: val })}>
+                    <SelectTrigger className="w-full bg-white/5 border-white/10 text-right h-12 rounded-xl">
+                       <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
+                       <SelectItem value="damaged" className="text-right">Damaged</SelectItem>
+                       <SelectItem value="expired" className="text-right">Expired</SelectItem>
+                       <SelectItem value="stolen" className="text-right">Stolen / Lost</SelectItem>
+                       <SelectItem value="other" className="text-right">Other</SelectItem>
+                    </SelectContent>
+                 </Select>
+               </div>
+               <div className="space-y-2">
+                 <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">From Location*</Label>
+                 <Select value={newRecord.location} onValueChange={(val: any) => setNewRecord({ ...newRecord, location: val })}>
+                    <SelectTrigger className="w-full bg-white/5 border-white/10 text-right h-12 rounded-xl">
+                       <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
+                       <SelectItem value="shop" className="text-right">Shop Stock</SelectItem>
+                       <SelectItem value="godown" className="text-right">Godown Stock</SelectItem>
+                    </SelectContent>
+                 </Select>
+               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">Notes / Remarks</Label>
-              <Input 
-                value={newRecord.notes}
-                onChange={(e) => setNewRecord({...newRecord, notes: e.target.value})}
-                className="bg-white/5 border-white/10 text-right h-12 rounded-xl"
-                placeholder="Additional details..."
-              />
+            <div className="space-y-2">
+               <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">Additional Notes</Label>
+               <Input 
+                 value={newRecord.notes} 
+                 onChange={(e) => setNewRecord({ ...newRecord, notes: e.target.value })} 
+                 className="text-right h-12 bg-white/5 border-white/10 rounded-xl"
+                 placeholder="Enter details..."
+               />
             </div>
-
-            {selectedProduct && (
-              <div className="p-4 bg-white/5 rounded-xl border border-white/5 space-y-2">
-                <div className="flex justify-between text-xs font-bold">
-                  <span className="text-red-500">{settings.shop.currency} {(selectedProduct.cost_price || 0) * newRecord.qty}</span>
-                  <span className="text-white/40 uppercase tracking-widest">Estimated Loss</span>
-                </div>
-                <div className="flex justify-between text-xs font-bold">
-                  <span className={cn(
-                    (newRecord.location === 'shop' ? selectedProduct.stock_shop : selectedProduct.stock_godown) < newRecord.qty ? "text-red-500" : "text-green-500"
-                  )}>
-                    {newRecord.location === 'shop' ? selectedProduct.stock_shop : selectedProduct.stock_godown}
-                  </span>
-                  <span className="text-white/40 uppercase tracking-widest">Current Stock ({newRecord.location})</span>
-                </div>
-              </div>
-            )}
           </div>
-
-          <DialogFooter className="gap-3 mt-4">
-            <Button variant="ghost" onClick={() => setIsAddDialogOpen(false)} className="flex-1 border-white/5 hover:bg-white/5">Cancel</Button>
-            <Button onClick={handleAddRecord} className="flex-1 bg-primary hover:bg-primary/90 font-black">Record Shrinkage</Button>
+          <DialogFooter className="gap-3 pt-4 border-t border-white/5">
+            <Button variant="ghost" onClick={() => setIsAddDialogOpen(false)} className="flex-1 h-12 border-white/10 hover:bg-white/5 text-white">
+              CANCEL
+            </Button>
+            <Button onClick={handleAddRecord} className="flex-1 h-12 bg-red-600 hover:bg-red-700 font-black">
+              RECORD LOSS
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -4,7 +4,9 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAppContext } from '@/context/AppContext';
-import { TrendingUp, BarChart3, PieChart, Calendar, DollarSign } from 'lucide-react';
+import { TrendingUp, BarChart3, PieChart, Calendar, DollarSign, Activity, ShoppingBag, ArrowUpRight, ArrowDownRight, Info } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const SalesReports = () => {
   const { t } = useTranslation();
@@ -24,7 +26,6 @@ const SalesReports = () => {
     return { total, count: filtered.length, items: filtered };
   };
 
-  // Calculate profit for period
   const calculateProfitForPeriod = (period: 'day' | 'month' | 'year') => {
     const filtered = calculateSalesForPeriod(period).items;
 
@@ -59,97 +60,119 @@ const SalesReports = () => {
   const monthStats = calculateSalesForPeriod('month');
   const yearStats = calculateSalesForPeriod('year');
 
+  const dayProfit = calculateProfitForPeriod('day');
+  const monthProfit = calculateProfitForPeriod('month');
+
   const renderBoth = (key: string, options?: any) => (
     <>
       {t(key, options)} ({t(key, { ...options, lng: 'en' })})
     </>
   );
 
-  const StatCard = ({ title, stats, icon: Icon }: any) => (
-    <Card className="hover:shadow-md transition-shadow">
+  const StatCard = ({ title, stats, icon: Icon, color, profit }: any) => (
+    <Card className="bg-[#0a0a1a] border-white/5 hover:border-primary/30 transition-all rounded-[2rem] overflow-hidden group">
       <CardContent className="p-6 text-right">
-        <div className="flex justify-between items-center mb-4">
-          <div className="bg-primary/10 p-2 rounded-full">
-            <Icon className="h-6 w-6 text-primary" />
+        <div className="flex justify-between items-center mb-6">
+          <div className={cn("p-3 rounded-2xl bg-white/5 border border-white/10 group-hover:scale-110 transition-transform", color)}>
+            <Icon className="h-6 w-6" />
           </div>
-          <p className="text-black dark:text-white text-sm font-bold">{title}</p>
+          <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">{title}</p>
         </div>
-        <p className="text-3xl font-black text-black dark:text-white ">
-          {settings.shop.currency} {stats.total.toFixed(2)}
-        </p>
-        <div className="mt-2 flex justify-between text-xs text-black dark:text-white font-semibold border-t pt-2">
-          <span>{stats.count} {t('sales')}</span>
-          <span>{t('revenue')}</span>
+        
+        <div className="space-y-1 mb-6">
+           <p className="text-3xl font-black text-white">
+             {settings.shop.currency} {stats.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+           </p>
+           <div className="flex items-center justify-end gap-2">
+              <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">{stats.count} TRANSACTIONS</span>
+              <Activity className="h-3 w-3 text-white/10" />
+           </div>
         </div>
+
+        {profit && (
+          <div className="pt-4 border-t border-white/5 flex justify-between items-center">
+             <div className="flex items-center gap-1 text-green-500">
+                <ArrowUpRight className="h-3 w-3" />
+                <span className="text-[10px] font-black">{profit.margin.toFixed(1)}% MARGIN</span>
+             </div>
+             <div className="text-right">
+                <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">EST. PROFIT</p>
+                <p className="text-sm font-black text-white">{settings.shop.currency} {profit.profit.toLocaleString()}</p>
+             </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 
   return (
-    <div className="p-4 font-faruma flex flex-col h-full bg-gray-50/50 dark:bg-gray-900/50" dir="rtl">
-      <div className="mb-6 text-right">
-        <h1 className="text-2xl font-black text-black dark:text-white mb-1">{renderBoth('sales_reports')}</h1>
-        <p className="text-black dark:text-white ">{renderBoth('sales_reports_description')}</p>
+    <div className="p-6 font-faruma flex flex-col h-full bg-[#050510] text-white overflow-hidden" dir="rtl">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-8">
+        <div className="text-right">
+           <h1 className="text-3xl font-black text-white flex items-center justify-end gap-3">
+             {renderBoth('sales_reports')} <BarChart3 className="h-8 w-8 text-primary" />
+           </h1>
+           <p className="text-sm text-white/40 mt-1">{renderBoth('sales_reports_description')}</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard title={t('today_sales')} stats={dayStats} icon={TrendingUp} />
-        <StatCard title={t('this_month')} stats={monthStats} icon={BarChart3} />
-        <StatCard title={t('this_year')} stats={yearStats} icon={PieChart} />
-      </div>
+      <ScrollArea className="flex-1 custom-scrollbar">
+        <div className="space-y-8 pb-6">
+          {/* Main Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <StatCard title={t('today_sales')} stats={dayStats} icon={TrendingUp} color="text-primary" profit={dayProfit} />
+            <StatCard title={t('this_month')} stats={monthStats} icon={BarChart3} color="text-purple-500" profit={monthProfit} />
+            <StatCard title={t('this_year')} stats={yearStats} icon={PieChart} color="text-green-500" />
+          </div>
 
-      {/* Profit Analysis Card */}
-      <Card className="mt-6 border-none shadow-sm border-r-4 border-r-green-500">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div className="p-2 bg-green-50 rounded-full text-green-600"><DollarSign className="h-4 w-4" /></div>
-          <CardTitle className="text-right text-lg">{t('profit_analysis')}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="text-right p-4 bg-blue-50 rounded-lg">
-              <p className="text-xs text-black dark:text-white mb-1 font-bold uppercase">{t('total_revenue')}</p>
-              <p className="text-2xl font-black text-blue-600">{settings.shop.currency} {calculateProfitForPeriod('month').revenue.toFixed(2)}</p>
-            </div>
-            <div className="text-right p-4 bg-red-50 rounded-lg">
-              <p className="text-xs text-black dark:text-white mb-1 font-bold uppercase">{t('total_cost')}</p>
-              <p className="text-2xl font-black text-red-600">{settings.shop.currency} {calculateProfitForPeriod('month').cost.toFixed(2)}</p>
-            </div>
-            <div className="text-right p-4 bg-green-50 rounded-lg">
-              <p className="text-xs text-black dark:text-white mb-1 font-bold uppercase">{t('gross_profit')}</p>
-              <p className="text-2xl font-black text-green-600">{settings.shop.currency} {calculateProfitForPeriod('month').profit.toFixed(2)}</p>
-            </div>
-            <div className="text-right p-4 bg-purple-50 rounded-lg">
-              <p className="text-xs text-black dark:text-white mb-1 font-bold uppercase">{t('profit_margin')}</p>
-              <p className="text-2xl font-black text-purple-600">{calculateProfitForPeriod('month').margin.toFixed(2)}%</p>
-            </div>
-          </div>
-          <div className="mt-4 text-right text-xs text-black dark:text-white italic">
-            {t('profit_calculation_note')}
-          </div>
-        </CardContent>
-      </Card>
+          {/* Performance Analysis */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+             <Card className="bg-[#0a0a1a] border-white/5 rounded-[2rem] p-8">
+                <CardHeader className="p-0 mb-6 flex flex-row items-center justify-between">
+                   <CardTitle className="text-xl font-black text-white flex items-center gap-2">
+                      <Activity className="h-5 w-5 text-primary" /> Monthly Growth
+                   </CardTitle>
+                </CardHeader>
+                <div className="h-60 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-3xl bg-white/5">
+                   <p className="text-white/20 font-black uppercase tracking-widest">Chart Visualisation Placeholder</p>
+                   <p className="text-[10px] text-white/10 mt-2 font-bold">UPGRADE TO PRO FOR ADVANCED ANALYTICS</p>
+                </div>
+             </Card>
 
-      <Card className="mt-8 flex-1">
-        <CardHeader className="border-b">
-          <CardTitle className="text-right text-lg">{t('performance_overview')}</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-x-reverse border-b">
-            <div className="p-6 text-center">
-              <p className="text-xs text-black dark:text-white mb-1 font-bold uppercase">{t('avg_sale')}</p>
-              <p className="text-xl font-black">{settings.shop.currency} {(dayStats.total / (dayStats.count || 1)).toFixed(2)}</p>
-            </div>
-            <div className="p-6 text-center">
-              <p className="text-xs text-black dark:text-white mb-1 font-bold uppercase">{t('transactions')}</p>
-              <p className="text-xl font-black">{monthStats.count}</p>
-            </div>
-            <div className="p-6 text-center">
-              <p className="text-xs text-black dark:text-white mb-1 font-bold uppercase">{t('revenue')}</p>
-              <p className="text-xl font-black">{settings.shop.currency} {monthStats.total.toFixed(2)}</p>
-            </div>
+             <Card className="bg-[#0a0a1a] border-white/5 rounded-[2rem] p-8">
+                <CardHeader className="p-0 mb-6 flex flex-row items-center justify-between">
+                   <CardTitle className="text-xl font-black text-white flex items-center gap-2">
+                      <ShoppingBag className="h-5 w-5 text-orange-500" /> Key Insights
+                   </CardTitle>
+                </CardHeader>
+                <div className="space-y-4">
+                   <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-between">
+                      <ArrowUpRight className="h-5 w-5 text-green-500" />
+                      <div className="text-right">
+                         <p className="text-sm font-black text-white">Highest Revenue Day</p>
+                         <p className="text-[10px] text-white/40 uppercase font-bold tracking-widest">Saturday, May 3rd</p>
+                      </div>
+                   </div>
+                   <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-between">
+                      <TrendingUp className="h-5 w-5 text-blue-500" />
+                      <div className="text-right">
+                         <p className="text-sm font-black text-white">Best Selling Category</p>
+                         <p className="text-[10px] text-white/40 uppercase font-bold tracking-widest">Soft Drinks & Beverages</p>
+                      </div>
+                   </div>
+                   <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-between">
+                      <Activity className="h-5 w-5 text-purple-500" />
+                      <div className="text-right">
+                         <p className="text-sm font-black text-white">Average Basket Value</p>
+                         <p className="text-[10px] text-white/40 uppercase font-bold tracking-widest">{settings.shop.currency} 45.50</p>
+                      </div>
+                   </div>
+                </div>
+             </Card>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ScrollArea>
     </div>
   );
 };

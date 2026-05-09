@@ -7,10 +7,10 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { showError } from '@/utils/toast';
-import { Lock, User } from 'lucide-react';
+import { Lock, User as UserIcon, ShieldCheck, Activity, Globe, ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const Login = () => {
     const { t } = useTranslation();
@@ -19,7 +19,6 @@ const Login = () => {
 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [rememberMe, setRememberMe] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -42,101 +41,139 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4 font-faruma">
-            <Card className="w-full max-w-md shadow-2xl border-none">
-                <CardHeader className="space-y-4 pb-8">
-                    {/* Logo/Branding */}
-                    <div className="flex flex-col items-center space-y-3">
-                        <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
-                            <span className="text-white text-3xl font-black">MV</span>
-                        </div>
-                        <div className="text-center">
-                            <h1 className="text-3xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                                {t('mvpos')}
-                            </h1>
-                            <p className="text-sm text-black dark:text-white dark:text-black dark:text-white mt-1">
-                                Point of Sale System
-                            </p>
-                        </div>
+        <div className="min-h-screen flex items-center justify-center bg-[#050510] relative overflow-hidden font-faruma">
+            {/* Animated Background Elements */}
+            <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+               <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px] animate-pulse" />
+               <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[120px] animate-pulse delay-700" />
+            </div>
+
+            <div className="w-full max-w-[1000px] grid grid-cols-1 md:grid-cols-2 gap-0 bg-[#0a0a1a]/80 backdrop-blur-2xl border border-white/5 rounded-[2.5rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] m-4">
+                
+                {/* Left Side: Branding & Info */}
+                <div className="p-12 flex flex-col justify-between bg-primary/5 relative overflow-hidden hidden md:flex border-r border-white/5">
+                   <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+                      <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:20px_20px]" />
+                   </div>
+
+                   <div className="relative z-10">
+                      <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(0,132,255,0.4)] mb-8 rotate-3">
+                         <span className="text-white text-2xl font-black -rotate-3">MV</span>
+                      </div>
+                      <h1 className="text-5xl font-black text-white leading-tight mb-4 tracking-tighter">
+                         Enterprise <br/><span className="text-primary text-neon-blue">POS Solution</span>
+                      </h1>
+                      <p className="text-white/40 text-lg max-w-[300px]">Next-generation point of sale system designed for Maldivian businesses.</p>
+                   </div>
+
+                   <div className="relative z-10 space-y-6">
+                      <div className="flex items-center gap-4 text-white/60">
+                         <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
+                            <ShieldCheck className="h-5 w-5 text-primary" />
+                         </div>
+                         <div>
+                            <p className="text-sm font-black text-white">Secure Access</p>
+                            <p className="text-[10px] uppercase font-bold tracking-widest opacity-50">End-to-end encryption</p>
+                         </div>
+                      </div>
+                      <div className="flex items-center gap-4 text-white/60">
+                         <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
+                            <Activity className="h-5 w-5 text-green-500" />
+                         </div>
+                         <div>
+                            <p className="text-sm font-black text-white">Real-time Sync</p>
+                            <p className="text-[10px] uppercase font-bold tracking-widest opacity-50">Cloud-enabled persistence</p>
+                         </div>
+                      </div>
+                   </div>
+
+                   <div className="relative z-10 pt-10 border-t border-white/5">
+                      <div className="flex items-center gap-2 text-white/20">
+                         <Globe className="h-4 w-4" />
+                         <span className="text-[10px] font-black uppercase tracking-[0.3em]">VERSION 2.0.4 - RELEASE CANDIDATE</span>
+                      </div>
+                   </div>
+                </div>
+
+                {/* Right Side: Login Form */}
+                <div className="p-12 flex flex-col justify-center bg-black/20">
+                    <div className="md:hidden flex flex-col items-center mb-10">
+                       <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-lg mb-4">
+                          <span className="text-white text-2xl font-black">MV</span>
+                       </div>
+                       <h2 className="text-2xl font-black text-white">MV POS</h2>
                     </div>
 
-                    <div className="text-center">
-                        <CardTitle className="text-2xl font-bold">{t('welcome_back')}</CardTitle>
-                        <CardDescription className="mt-2">{t('enter_credentials')}</CardDescription>
+                    <div className="mb-10 text-right">
+                       <h2 className="text-3xl font-black text-white mb-2">{t('welcome_back')}</h2>
+                       <p className="text-white/40 text-sm">{t('enter_credentials')}</p>
                     </div>
-                </CardHeader>
 
-                <CardContent>
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Username */}
+                    <form onSubmit={handleSubmit} className="space-y-6" dir="rtl">
                         <div className="space-y-2">
-                            <Label htmlFor="username" className="text-right block">
+                            <Label htmlFor="username" className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest pr-2">
                                 {t('username')}
                             </Label>
                             <div className="relative">
-                                <User className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-black dark:text-white " />
+                                <UserIcon className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-white/20" />
                                 <Input
                                     id="username"
                                     type="text"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
-                                    className="text-right pr-10"
-                                    placeholder="admin"
+                                    className="bg-white/5 border-white/10 h-14 rounded-2xl pr-12 text-lg font-bold text-white focus:border-primary/50 transition-all text-right"
+                                    placeholder="Username"
                                     required
                                     autoFocus
                                 />
                             </div>
                         </div>
 
-                        {/* Password */}
                         <div className="space-y-2">
-                            <Label htmlFor="password" className="text-right block">
+                            <Label htmlFor="password" className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest pr-2">
                                 {t('password')}
                             </Label>
                             <div className="relative">
-                                <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-black dark:text-white " />
+                                <Lock className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-white/20" />
                                 <Input
                                     id="password"
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="text-right pr-10"
+                                    className="bg-white/5 border-white/10 h-14 rounded-2xl pr-12 text-lg font-bold text-white focus:border-primary/50 transition-all text-right font-mono"
                                     placeholder="••••••••"
                                     required
                                 />
                             </div>
                         </div>
 
-                        {/* Remember Me */}
-                        <div className="flex items-center justify-end space-x-2 rtl:space-x-reverse">
-                            <Label htmlFor="remember" className="text-sm cursor-pointer">
-                                {t('remember_me')}
-                            </Label>
-                            <Checkbox
-                                id="remember"
-                                checked={rememberMe}
-                                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                            />
-                        </div>
-
-                        {/* Login Button */}
-                        <Button
-                            type="submit"
-                            className="w-full h-12 text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg"
+                        <Button 
+                            type="submit" 
                             disabled={isLoading}
+                            className="w-full bg-primary hover:bg-primary/90 h-14 rounded-2xl text-lg font-black text-white shadow-[0_0_30px_rgba(0,132,255,0.2)] group transition-all"
                         >
-                            {isLoading ? t('loading') : t('login')}
+                            {isLoading ? (
+                               <div className="flex items-center gap-2">
+                                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                  <span>AUTHENTICATING...</span>
+                               </div>
+                            ) : (
+                               <div className="flex items-center justify-center gap-2">
+                                  <span>{t('login').toUpperCase()}</span>
+                                  <ChevronRight className="h-5 w-5 group-hover:translate-x-[-4px] transition-transform" />
+                               </div>
+                            )}
                         </Button>
                     </form>
 
-                    {/* Default Credentials Hint (for development) */}
-                    <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-dashed">
-                        <p className="text-xs text-black dark:text-white dark:text-black dark:text-white text-center">
-                            Default: <span className="font-mono font-bold">admin</span> / <span className="font-mono font-bold">admin123</span>
-                        </p>
+                    <div className="mt-10 text-center">
+                       <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+                          Authorized Access Only <br/>
+                          <span className="opacity-50">© 2026 MV POS Enterprise Solutions</span>
+                       </p>
                     </div>
-                </CardContent>
-            </Card>
+                </div>
+            </div>
         </div>
     );
 };

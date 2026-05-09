@@ -6,8 +6,9 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppContext } from '@/context/AppContext';
 import { format, isPast, parseISO, addDays } from 'date-fns';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, AlertTriangle, Clock, Calendar, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 const ExpiryAlerts = () => {
   const { t } = useTranslation();
@@ -31,69 +32,87 @@ const ExpiryAlerts = () => {
   );
 
   return (
-    <div className="p-4 font-faruma flex flex-col h-full">
-      <Card className="flex-1">
-        <CardHeader>
-          <CardTitle className="text-right text-xl">{renderBoth('expiry_alerts')}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 overflow-hidden">
-          <p className="text-right mb-4">{renderBoth('expiry_alerts_description')}</p>
-          <ScrollArea className="h-[calc(100vh-250px)] pr-4">
-            {expiringProducts.length === 0 ? (
-              <p className="text-center text-black dark:text-white ">{renderBoth('no_expiry_alerts')}</p>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-                {expiringProducts.map((product) => {
-                  const expiryDate = product.expiry_date ? parseISO(product.expiry_date) : null;
-                  const isExpired = expiryDate ? isPast(expiryDate) : false;
-                  const isNearingExpiry = expiryDate ? (expiryDate <= thirtyDaysFromNow && !isExpired) : false;
+    <div className="p-6 font-faruma flex flex-col h-full bg-[#050510] text-white overflow-hidden" dir="rtl">
+      {/* Header Section */}
+      <div className="flex justify-between items-center mb-8">
+        <div className="text-right">
+           <h1 className="text-3xl font-black text-white flex items-center justify-end gap-3">
+             {renderBoth('expiry_alerts')} <ShieldAlert className="h-8 w-8 text-red-500" />
+           </h1>
+           <p className="text-sm text-white/40 mt-1">{renderBoth('expiry_alerts_description')}</p>
+        </div>
+      </div>
 
-                  return (
-                    <Card
-                      key={product.id}
-                      className={cn(
-                        "text-right flex flex-col h-full",
-                        isExpired && "border-red-500 bg-red-50 dark:bg-red-900/10",
-                        isNearingExpiry && "border-yellow-500 bg-yellow-50 dark:bg-yellow-900/10"
-                      )}
-                    >
-                      <CardContent className="p-3 flex flex-col h-full">
-                        <div className="flex justify-center mb-2 relative">
-                          <img src={product.image} alt={product.name_dv} className="w-20 h-20 object-cover rounded-md border shadow-sm" />
-                          <div className="absolute -top-1 -right-1">
-                            {isExpired ? (
-                              <AlertCircle className="h-4 w-4 text-red-600 fill-white rounded-full bg-red-50" />
-                            ) : isNearingExpiry ? (
-                              <AlertCircle className="h-4 w-4 text-yellow-600 fill-white rounded-full bg-yellow-50" />
-                            ) : (
-                              <CheckCircle2 className="h-4 w-4 text-green-600" />
-                            )}
-                          </div>
-                        </div>
+      <ScrollArea className="flex-1 custom-scrollbar">
+        {expiringProducts.length === 0 ? (
+          <div className="h-60 flex flex-col items-center justify-center text-white/20 uppercase tracking-[0.2em] font-black">
+             <CheckCircle2 className="h-16 w-16 mb-4 opacity-10" />
+             All products are within safety range
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-6">
+            {expiringProducts.map((product) => {
+              const expiryDate = product.expiry_date ? parseISO(product.expiry_date) : null;
+              const isExpired = expiryDate ? isPast(expiryDate) : false;
+              const isNearingExpiry = expiryDate ? (expiryDate <= thirtyDaysFromNow && !isExpired) : false;
 
-                        <div className="flex-1 flex flex-col justify-between text-center">
-                          <div>
-                            <p className="font-bold text-sm leading-tight mb-1 text-black dark:text-white truncate">{product.name_dv}</p>
-                            <p className="text-[10px] text-black dark:text-white mb-2 truncate">{product.name_en}</p>
-                          </div>
+              return (
+                <Card key={product.id} className={cn(
+                  "bg-[#0a0a1a] border-white/5 hover:border-primary/30 transition-all rounded-[2rem] overflow-hidden group relative",
+                  isExpired ? "border-red-500/20" : isNearingExpiry ? "border-orange-500/20" : ""
+                )}>
+                   <CardContent className="p-0">
+                      <div className="p-6">
+                         <div className="flex justify-between items-start mb-6">
+                            <div className={cn(
+                              "w-12 h-12 rounded-2xl flex items-center justify-center border transition-all group-hover:scale-110",
+                              isExpired ? "bg-red-500/10 border-red-500/20 text-red-500" : "bg-orange-500/10 border-orange-500/20 text-orange-500"
+                            )}>
+                               <AlertTriangle className="h-6 w-6" />
+                            </div>
+                            <Badge className={cn(
+                              "border-none text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest",
+                              isExpired ? "bg-red-500 text-white animate-pulse" : "bg-orange-500 text-white"
+                            )}>
+                               {isExpired ? 'EXPIRED' : 'NEARING EXPIRY'}
+                            </Badge>
+                         </div>
 
-                          <div className={cn(
-                            "rounded p-1.5 text-[9px] font-bold border",
-                            isExpired ? "bg-red-500 text-white border-red-600" : isNearingExpiry ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-gray-100 text-black dark:text-white border-gray-200"
-                          )}>
-                            <p className="uppercase opacity-70 mb-0.5">{isExpired ? t('expired') : t('expiry_date')}</p>
-                            <p>{format(expiryDate!, 'dd/MM/yyyy')}</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </ScrollArea>
-        </CardContent>
-      </Card>
+                         <div className="text-right mb-6">
+                            <h3 className="text-lg font-black text-white leading-tight mb-1 truncate">{product.name_dv}</h3>
+                            <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest truncate">{product.name_en}</p>
+                            <p className="text-[10px] font-mono text-primary mt-2">ID: {product.item_code}</p>
+                         </div>
+
+                         <div className={cn(
+                           "p-4 rounded-2xl border flex flex-col items-center justify-center transition-all",
+                           isExpired ? "bg-red-500/10 border-red-500/10" : "bg-orange-500/10 border-orange-500/10"
+                         )}>
+                            <div className="flex items-center gap-2 mb-1">
+                               <Calendar className={cn("h-4 w-4", isExpired ? "text-red-500" : "text-orange-500")} />
+                               <span className="text-[10px] font-black uppercase tracking-widest text-white/40">EXPIRY DATE</span>
+                            </div>
+                            <p className={cn(
+                              "text-xl font-black",
+                              isExpired ? "text-red-500" : "text-orange-500"
+                            )}>
+                               {format(expiryDate!, 'dd MMMM yyyy')}
+                            </p>
+                            <div className="flex items-center gap-1 mt-2">
+                               <Clock className="h-3 w-3 text-white/20" />
+                               <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">
+                                  {isExpired ? 'STOCK SHOULD BE REMOVED' : `${Math.ceil((expiryDate!.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))} DAYS REMAINING`}
+                               </span>
+                            </div>
+                         </div>
+                      </div>
+                   </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </ScrollArea>
     </div>
   );
 };

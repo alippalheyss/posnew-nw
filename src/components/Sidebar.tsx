@@ -4,7 +4,7 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Home, Package, Boxes, Users, DollarSign, Settings, BarChart, 
-  Receipt, CalendarDays, AlertTriangle, Building2, LogOut, FileText 
+  Receipt, CalendarDays, AlertTriangle, Building2, LogOut, FileText, ChevronRight, Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
@@ -42,67 +42,86 @@ const Sidebar = () => {
   const navItems = allNavItems.filter(item => can(item.permission));
 
   return (
-    <div className="flex flex-col h-screen bg-[#080812] border-l border-white/5 w-[240px] font-faruma overflow-hidden z-50">
+    <div className="flex flex-col h-screen bg-[#050510] border-l border-white/5 w-[260px] font-faruma overflow-hidden z-50 shadow-[20px_0_50px_rgba(0,0,0,0.5)]">
       {/* Branding */}
-      <div className="p-6 pb-2">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(0,132,255,0.4)]">
-            <span className="text-white text-lg font-black tracking-tighter">MV</span>
+      <div className="p-8 pb-10">
+        <div className="flex items-center gap-4 mb-2">
+          <div className="w-12 h-12 bg-primary rounded-[1rem] flex items-center justify-center shadow-[0_0_30px_rgba(0,132,255,0.4)] rotate-3">
+            <span className="text-white text-xl font-black tracking-tighter -rotate-3">MV</span>
           </div>
           <div className="text-right">
-            <h1 className="text-lg font-black text-white leading-tight tracking-tight">
+            <h1 className="text-2xl font-black text-white leading-tight tracking-tighter">
               {t('mvpos')}
             </h1>
-            <p className="text-[9px] text-primary font-bold uppercase tracking-widest opacity-80">Enterprise POS</p>
+            <div className="flex items-center justify-end gap-1.5 opacity-60">
+               <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+               <p className="text-[10px] text-white font-bold uppercase tracking-widest">System Online</p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Navigation */}
       <div className="flex-1 overflow-y-auto px-4 custom-scrollbar" dir="rtl">
-        <ul className="space-y-1">
-          {navItems.map((item) => (
-            <li key={item.path}>
-              <Link
-                to={item.path}
-                className={cn(
-                  "flex items-center justify-between p-2.5 rounded-lg transition-all group",
-                  location.pathname === item.path 
-                    ? "bg-primary text-white shadow-[0_0_10px_rgba(0,132,255,0.2)]" 
-                    : "text-white/60 hover:text-white hover:bg-white/5"
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <item.icon className={cn(
-                    "h-4 w-4 transition-transform group-hover:scale-110",
-                    location.pathname === item.path ? "text-white" : "text-primary"
+        <ul className="space-y-1.5">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <li key={item.path}>
+                <Link
+                  to={item.path}
+                  className={cn(
+                    "flex items-center justify-between p-3.5 rounded-2xl transition-all group relative overflow-hidden",
+                    isActive 
+                      ? "bg-white/5 text-white" 
+                      : "text-white/40 hover:text-white hover:bg-white/[0.02]"
+                  )}
+                >
+                  {isActive && (
+                    <div className="absolute right-0 top-0 bottom-0 w-1 bg-primary rounded-l-full shadow-[0_0_15px_rgba(0,132,255,1)]" />
+                  )}
+                  
+                  <div className="flex items-center gap-4">
+                    <div className={cn(
+                      "h-9 w-9 rounded-xl flex items-center justify-center transition-all",
+                      isActive ? "bg-primary text-white" : "bg-white/5 text-white/40 group-hover:bg-white/10 group-hover:text-white"
+                    )}>
+                       <item.icon className="h-4.5 w-4.5" />
+                    </div>
+                    <div className="flex flex-col text-right">
+                      <span className="text-[11px] font-black leading-none mb-0.5">{item.name_dv}</span>
+                      <span className="text-[9px] font-bold opacity-40 uppercase tracking-widest">{item.name_en}</span>
+                    </div>
+                  </div>
+                  
+                  <ChevronRight className={cn(
+                    "h-3 w-3 transition-all",
+                    isActive ? "text-primary opacity-100" : "opacity-0 group-hover:opacity-20"
                   )} />
-                  <span className="text-[11px] font-bold whitespace-nowrap">
-                    {item.name_dv} <span className="opacity-50 font-normal">({item.name_en})</span>
-                  </span>
-                </div>
-              </Link>
-            </li>
-          ))}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </div>
 
       {/* Bottom User Section */}
-      <div className="p-4 mt-auto border-t border-white/5">
-        <div className="flex items-center justify-between mb-4 px-2">
+      <div className="p-6 mt-auto border-t border-white/5 bg-white/[0.02]">
+        <div className="flex items-center justify-between mb-6 px-2">
           <div className="text-right">
-            <p className="text-[10px] text-white/40 uppercase font-black tracking-tighter">{currentUser?.role}</p>
-            <p className="text-xs font-bold text-white truncate w-32">{currentUser?.name_dv}</p>
+            <p className="text-[9px] text-primary uppercase font-black tracking-widest mb-0.5">{currentUser?.role}</p>
+            <p className="text-sm font-black text-white truncate w-32">{currentUser?.name_dv}</p>
           </div>
-          <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
-             <Users className="h-4 w-4 text-primary" />
+          <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center relative">
+             <Users className="h-5 w-5 text-white/40" />
+             <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[#050510]" />
           </div>
         </div>
         <button
           onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 p-2.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-all text-xs font-black uppercase tracking-widest"
+          className="w-full flex items-center justify-center gap-3 p-3.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-2xl transition-all text-[10px] font-black uppercase tracking-[0.2em] group"
         >
-          <LogOut className="h-4 w-4" />
+          <LogOut className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
           {t('logout')}
         </button>
       </div>

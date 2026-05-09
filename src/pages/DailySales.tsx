@@ -6,12 +6,13 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { PencilLine } from 'lucide-react';
+import { PencilLine, CalendarDays, Printer, Trash2, Filter, ChevronRight, Receipt, DollarSign, CreditCard, ArrowRightLeft } from 'lucide-react';
 import { useAppContext, Product, Customer, CartItem, Sale } from '@/context/AppContext';
-import SaleEditDialog from '@/components/SaleEditDialog'; // Import the new dialog
+import SaleEditDialog from '@/components/SaleEditDialog'; 
 import { showSuccess } from '@/utils/toast';
-import { Printer } from 'lucide-react';
 import { printContent } from '@/utils/printHelper';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 const DailySales = () => {
   const { t } = useTranslation();
@@ -101,33 +102,25 @@ const DailySales = () => {
             <span>${currency} ${sale.grandTotal.toFixed(2)}</span>
           </div>
           <div class="separator"></div>
-          <div class="info" style="text-align: left;">
-            Payment: ${sale.paymentMethod.toUpperCase()}<br/>
-            ${sale.paidAmount ? `Paid: ${currency} ${sale.paidAmount.toFixed(2)}<br/>` : ''}
-            ${sale.balance !== undefined ? `Balance: ${currency} ${sale.balance.toFixed(2)}` : ''}
-          </div>
-          <div class="footer">
-            ${settings.shop.receiptFooter}
-          </div>
+          <div class="footer">Thank you for shopping with us!</div>
         </body>
       </html>
     `;
-    printContent(htmlContent, settings);
+    printContent(htmlContent);
   };
 
-  const handleEditClick = (sale: Sale) => {
-    setEditingSale({ ...sale });
+  const handleEditSale = (sale: Sale) => {
+    setEditingSale(sale);
     setIsEditSaleDialogOpen(true);
   };
 
-  const handleSaveSale = (updatedSale: Sale) => {
-    setSales(prevSales =>
-      prevSales.map(s => (s.id === updatedSale.id ? updatedSale : s))
-    );
-    showSuccess(t('sale_updated_successfully'));
+  const handleSaveSaleUpdate = (updatedSale: Sale) => {
+    setSales(prevSales => prevSales.map(s => s.id === updatedSale.id ? updatedSale : s));
     setIsEditSaleDialogOpen(false);
-    setEditingSale(null);
+    showSuccess(t('sale_updated_successfully'));
   };
+
+  const totalSalesAmount = filteredSales.reduce((acc, sale) => acc + sale.grandTotal, 0);
 
   const renderBoth = (key: string, options?: any) => (
     <>
@@ -135,118 +128,161 @@ const DailySales = () => {
     </>
   );
 
+  const getMethodIcon = (method: string) => {
+    switch (method.toLowerCase()) {
+      case 'cash': return <DollarSign className="h-4 w-4" />;
+      case 'card': return <CreditCard className="h-4 w-4" />;
+      case 'transfer': return <ArrowRightLeft className="h-4 w-4" />;
+      default: return <Receipt className="h-4 w-4" />;
+    }
+  };
+
   return (
-    <div className="p-4 font-faruma flex flex-col h-full">
-      <Card className="flex-1">
-        <CardHeader>
-          <CardTitle className="text-right text-xl">{renderBoth('daily_sales')}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 overflow-hidden">
-          <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4">
-            <p className="text-right text-black dark:text-white ">{renderBoth('daily_sales_description')}</p>
-            <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
-              <Button
-                variant={dateFilter === 'today' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setDateFilter('today')}
-                className="text-xs h-8"
-              >
-                {t('today')}
-              </Button>
-              <Button
-                variant={dateFilter === 'yesterday' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setDateFilter('yesterday')}
-                className="text-xs h-8"
-              >
-                {t('yesterday')}
-              </Button>
-              <Button
-                variant={dateFilter === 'last30' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setDateFilter('last30')}
-                className="text-xs h-8"
-              >
-                {t('last_30_days')}
-              </Button>
-              <Button
-                variant={dateFilter === 'all' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setDateFilter('all')}
-                className="text-xs h-8"
-              >
-                {t('all')}
-              </Button>
+    <div className="p-6 font-faruma flex flex-col h-full bg-[#050510] text-white overflow-hidden" dir="rtl">
+      {/* Header Section */}
+      <div className="flex justify-between items-center mb-8">
+        <div className="text-right">
+           <h1 className="text-3xl font-black text-white flex items-center justify-end gap-3">
+             {renderBoth('daily_sales')} <CalendarDays className="h-8 w-8 text-primary" />
+           </h1>
+           <p className="text-sm text-white/40 mt-1">Review and manage your business transactions</p>
+        </div>
+
+        <div className="flex gap-3">
+           <div className="bg-white/5 rounded-xl p-1 border border-white/10 flex gap-1">
+              {['today', 'yesterday', 'last30', 'all'].map((filter) => (
+                <Button 
+                  key={filter}
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setDateFilter(filter as any)}
+                  className={cn(
+                    "px-4 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                    dateFilter === filter ? "bg-primary text-white" : "text-white/40 hover:text-white"
+                  )}
+                >
+                  {filter}
+                </Button>
+              ))}
+           </div>
+        </div>
+      </div>
+
+      {/* Stats Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+         <Card className="bg-[#0a0a1a] border-white/5 rounded-3xl p-6 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-primary/20 transition-all" />
+            <div className="flex justify-between items-center mb-4">
+               <DollarSign className="h-5 w-5 text-primary" />
+               <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Total Sales</span>
             </div>
-          </div>
+            <p className="text-3xl font-black text-white">{settings.shop.currency} {totalSalesAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            <p className="text-[10px] text-white/20 mt-1 font-bold uppercase tracking-widest">{dateFilter} SUMMARY</p>
+         </Card>
 
-          <ScrollArea className="h-[calc(100vh-280px)] pr-4">
-            {filteredSales.length === 0 ? (
-              <p className="text-center text-black dark:text-white py-10 font-bold">{t('no_sales_for_selected_range')}</p>
-            ) : (
-              <div className="space-y-3">
-                {[...filteredSales]
-                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || b.id.localeCompare(a.id))
-                  .map((sale) => (
-                    <Card key={sale.id} className="text-right border shadow-sm">
-                      <CardHeader className="p-3 pb-0">
-                        <CardTitle className="text-sm flex justify-between items-center text-black dark:text-white ">
-                          <span>{sale.id}</span>
-                          <span>{sale.date}</span>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-3">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="text-left font-bold text-lg text-primary">
-                            {settings.shop.currency} {sale.grandTotal.toFixed(2)}
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold text-sm">
-                              {sale.customer ? `${sale.customer.name_dv} (${sale.customer.name_en})` : renderBoth('walk_in_customer')}
-                            </p>
-                            <p className="text-xs text-black dark:text-white ">
-                              {renderBoth('payment_method')}: {renderBoth(sale.paymentMethod)}
-                            </p>
-                          </div>
-                        </div>
+         <Card className="bg-[#0a0a1a] border-white/5 rounded-3xl p-6 relative overflow-hidden group">
+            <div className="flex justify-between items-center mb-4">
+               <Receipt className="h-5 w-5 text-purple-500" />
+               <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Total Transactions</span>
+            </div>
+            <p className="text-3xl font-black text-white">{filteredSales.length}</p>
+            <p className="text-[10px] text-white/20 mt-1 font-bold uppercase tracking-widest">RECEIPTS ISSUED</p>
+         </Card>
 
-                        {sale.paymentMethod === 'cash' && (
-                          <div className="bg-gray-50 dark:bg-gray-800/50 p-2 rounded text-xs mb-2 flex justify-between">
-                            <span>{renderBoth('paid_amount')}: {settings.shop.currency} {sale.paidAmount?.toFixed(2) || '0.00'}</span>
-                            <span>{renderBoth('balance')}: {settings.shop.currency} {sale.balance?.toFixed(2) || '0.00'}</span>
-                          </div>
-                        )}
+         <Card className="bg-[#0a0a1a] border-white/5 rounded-3xl p-6 relative overflow-hidden group">
+            <div className="flex justify-between items-center mb-4">
+               <TrendingUp className="h-5 w-5 text-green-500" />
+               <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Average Transaction</span>
+            </div>
+            <p className="text-3xl font-black text-white">
+              {settings.shop.currency} {(filteredSales.length > 0 ? totalSalesAmount / filteredSales.length : 0).toFixed(2)}
+            </p>
+            <p className="text-[10px] text-white/20 mt-1 font-bold uppercase tracking-widest">PER CUSTOMER</p>
+         </Card>
+      </div>
 
-                        <div className="border-t pt-2">
-                          <div className="flex justify-between items-center">
-                            <div className="flex gap-2">
-                              <Button variant="outline" size="sm" onClick={() => handlePrintReceipt(sale)} className="h-8 px-2 text-xs">
-                                <Printer className="h-3 w-3 ml-1" /> {renderBoth('print')}
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={() => handleEditClick(sale)} className="h-8 w-8 p-0">
-                                <PencilLine className="h-4 w-4 text-blue-500" />
-                              </Button>
-                            </div>
-                            <div className="text-xs font-semibold text-black dark:text-white ">
-                              {sale.items.length} {renderBoth('items')}
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-              </div>
-            )}
-          </ScrollArea>
-        </CardContent>
-      </Card>
+      {/* Sales List */}
+      <ScrollArea className="flex-1 custom-scrollbar">
+        <div className="space-y-4 pb-6">
+          {filteredSales.length === 0 ? (
+            <div className="h-60 flex flex-col items-center justify-center text-white/20 uppercase tracking-[0.2em] font-black">
+               <Receipt className="h-16 w-16 mb-4 opacity-10" />
+               No sales recorded for this period
+            </div>
+          ) : (
+            filteredSales.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale) => (
+              <Card key={sale.id} className="bg-[#0a0a1a] border-white/5 hover:border-primary/30 transition-all rounded-3xl p-6 group">
+                <div className="flex items-center justify-between gap-6">
+                   <div className="flex items-center gap-6">
+                      <div className="h-14 w-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                         <Receipt className="h-7 w-7" />
+                      </div>
+                      <div className="text-right">
+                         <div className="flex items-center justify-end gap-3 mb-1">
+                            <span className="text-lg font-black text-white">{sale.id}</span>
+                            <Badge className="bg-primary/20 text-primary border-none text-[8px] font-black uppercase tracking-widest px-2 py-0.5">
+                               {sale.paymentMethod}
+                            </Badge>
+                         </div>
+                         <div className="flex items-center justify-end gap-2 text-xs font-bold text-white/40">
+                            <span>{new Date(sale.date).toLocaleString()}</span>
+                            <span className="h-1 w-1 rounded-full bg-white/10" />
+                            <span>{sale.items.length} ITEMS</span>
+                         </div>
+                      </div>
+                   </div>
 
-      <SaleEditDialog
-        isOpen={isEditSaleDialogOpen}
-        onClose={() => setIsEditSaleDialogOpen(false)}
-        sale={editingSale}
-        onSave={handleSaveSale}
-      />
+                   <div className="flex-1 flex justify-center">
+                      <div className="flex items-center gap-2">
+                        {sale.items.slice(0, 3).map((item, idx) => (
+                          <div key={idx} className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center text-[10px] font-black text-white/40">
+                             {item.name_en.substring(0, 2).toUpperCase()}
+                          </div>
+                        ))}
+                        {sale.items.length > 3 && <span className="text-[10px] font-black text-white/20">+{sale.items.length - 3}</span>}
+                      </div>
+                   </div>
+
+                   <div className="flex items-center gap-8">
+                      <div className="text-right">
+                         <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">Grand Total</p>
+                         <p className="text-2xl font-black text-primary">{settings.shop.currency} {sale.grandTotal.toFixed(2)}</p>
+                      </div>
+                      <div className="flex gap-2">
+                         <Button 
+                           variant="ghost" 
+                           size="icon" 
+                           onClick={() => handlePrintReceipt(sale)}
+                           className="h-11 w-11 rounded-xl bg-white/5 border border-white/10 hover:bg-primary hover:text-white transition-all text-white/40"
+                         >
+                           <Printer className="h-4 w-4" />
+                         </Button>
+                         <Button 
+                           variant="ghost" 
+                           size="icon" 
+                           onClick={() => handleEditSale(sale)}
+                           className="h-11 w-11 rounded-xl bg-white/5 border border-white/10 hover:bg-blue-500 hover:text-white transition-all text-white/40"
+                         >
+                           <PencilLine className="h-4 w-4" />
+                         </Button>
+                      </div>
+                   </div>
+                </div>
+              </Card>
+            ))
+          )}
+        </div>
+      </ScrollArea>
+
+      {/* Sale Edit Dialog */}
+      {editingSale && (
+        <SaleEditDialog
+          isOpen={isEditSaleDialogOpen}
+          onClose={() => setIsEditSaleDialogOpen(false)}
+          onSave={handleSaveSaleUpdate}
+          sale={editingSale}
+        />
+      )}
     </div>
   );
 };

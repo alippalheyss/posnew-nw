@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, PackagePlus } from 'lucide-react';
+import { Search, PackagePlus, Boxes, ArrowRightLeft, Store, Warehouse, Pencil, AlertTriangle, TrendingDown, TrendingUp, Info } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import StockUpdateDialog from '@/components/StockUpdateDialog';
@@ -12,7 +12,7 @@ import StockTransferDialog from '@/components/StockTransferDialog';
 import ProductDialog from '@/components/ProductDialog';
 import { useAppContext, Product } from '@/context/AppContext';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRightLeft, Store, Warehouse, Pencil } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const Stock = () => {
   const { t } = useTranslation();
@@ -35,8 +35,6 @@ const Stock = () => {
   const LOW_STOCK_THRESHOLD = 10;
   const WARNING_STOCK_THRESHOLD = 50;
 
-
-  // Use products directly from context instead of mapping
   const stockItems = products;
 
   const filteredStockItems = stockItems.filter(item => {
@@ -55,13 +53,6 @@ const Stock = () => {
     return true;
   });
 
-  const getStockColor = (qty: number) => {
-    if (qty < LOW_STOCK_THRESHOLD) return 'border-red-500 bg-red-50 dark:bg-red-900/10';
-    if (qty < WARNING_STOCK_THRESHOLD) return 'border-amber-500 bg-amber-50 dark:bg-amber-900/10';
-    return 'border-green-500 bg-green-50 dark:bg-green-900/10';
-  };
-
-
   const handleUpdateStockClick = (item: Product) => {
     setUpdatingStockItem(item);
     setIsStockUpdateDialogOpen(true);
@@ -74,8 +65,6 @@ const Stock = () => {
   };
 
   const handleSaveStockUpdate = (updatedStockItem: any) => {
-    // Determine if we are updating shop or godown stock based on the dialog (simplified to shop for now or check dialog implementation)
-    // For now assuming the standard update dialog updates Shop Stock.
     updateStock(updatedStockItem.id, updatedStockItem.stock_shop !== undefined ? updatedStockItem.stock_shop : updatedStockItem.current_stock);
     setIsStockUpdateDialogOpen(false);
     setUpdatingStockItem(null);
@@ -102,179 +91,151 @@ const Stock = () => {
     </>
   );
 
-  const renderBothString = (key: string, options?: any) => {
-    return `${t(key, options)} (${t(key, { ...options, lng: 'en' })})`;
-  };
-
   return (
-    <div className="p-4 font-faruma flex flex-col h-full">
-      <Card className="flex-1">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-right text-xl">{renderBoth('stock')}</CardTitle>
-          <div className="flex flex-col md:flex-row items-center gap-3">
-            <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
-              <Button
-                variant={stockFilter === 'all' ? 'secondary' : 'ghost'}
-                size="sm"
+    <div className="p-6 font-faruma flex flex-col h-full bg-[#050510] text-white overflow-hidden" dir="rtl">
+      {/* Header Section */}
+      <div className="flex justify-between items-center mb-8">
+        <div className="text-right">
+           <h1 className="text-3xl font-black text-white flex items-center justify-end gap-3">
+             {renderBoth('stock_inventory')} <Boxes className="h-8 w-8 text-primary" />
+           </h1>
+           <p className="text-sm text-white/40 mt-1">Monitor stock levels and manage transfers between shop and godown</p>
+        </div>
+
+        <div className="flex gap-3">
+           <div className="bg-white/5 rounded-xl p-1 border border-white/10 flex gap-1">
+              <Button 
+                variant="ghost" 
+                size="sm" 
                 onClick={() => setStockFilter('all')}
-                className="text-xs h-8"
+                className={cn("px-4 rounded-lg text-[10px] font-black", stockFilter === 'all' ? "bg-primary text-white" : "text-white/40")}
               >
-                {renderBoth('all')}
+                ALL
               </Button>
-              <Button
-                variant={stockFilter === 'low' ? 'secondary' : 'ghost'}
-                size="sm"
+              <Button 
+                variant="ghost" 
+                size="sm" 
                 onClick={() => setStockFilter('low')}
-                className="text-xs h-8 text-red-600"
+                className={cn("px-4 rounded-lg text-[10px] font-black", stockFilter === 'low' ? "bg-red-500 text-white" : "text-white/40")}
               >
-                {renderBoth('low_stock')}
+                LOW
               </Button>
-              <Button
-                variant={stockFilter === 'warning' ? 'secondary' : 'ghost'}
-                size="sm"
+              <Button 
+                variant="ghost" 
+                size="sm" 
                 onClick={() => setStockFilter('warning')}
-                className="text-xs h-8 text-amber-600"
+                className={cn("px-4 rounded-lg text-[10px] font-black", stockFilter === 'warning' ? "bg-orange-500 text-white" : "text-white/40")}
               >
-                {renderBoth('warning')}
+                WARNING
               </Button>
-              <Button
-                variant={stockFilter === 'high' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setStockFilter('high')}
-                className="text-xs h-8 text-green-600"
-              >
-                {renderBoth('high_stock')}
-              </Button>
-            </div>
-            <div className="relative">
-              <Input
-                placeholder={renderBothString('search_products')}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="text-right pr-9"
-                dir="rtl"
-              />
-              <Search className="h-4 w-4 text-black dark:text-white absolute right-3 top-1/2 -translate-y-1/2" />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="flex-1 overflow-hidden p-0">
-          <div className="flex h-full">
-            {/* Shop Stock Column */}
-            <div className="flex-1 border-r flex flex-col bg-green-50/30 dark:bg-green-900/10">
-              <div className="p-3 border-b bg-white dark:bg-black/20 flex items-center justify-between sticky top-0 z-10">
-                <div className="flex items-center gap-2">
-                  <Store className="h-5 w-5 text-green-600" />
-                  <h3 className="font-bold text-lg">{renderBoth('shop_stock')}</h3>
-                </div>
-                <Badge variant="outline" className="text-xs bg-green-100 text-green-800 border-green-200">Main Shop</Badge>
-              </div>
-              <ScrollArea className="flex-1 p-3">
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                  {filteredStockItems.map((item) => (
-                    <Card key={item.id} className={`text-right border-l-4 ${getStockColor(item.stock_shop)} hover:shadow-md transition-all`}>
-                      <CardContent className="p-3">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleUpdateStockClick(item)}>
-                              <PackagePlus className="h-3 w-3" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-green-600" onClick={() => handleTransferClick(item, 'to_godown')}>
-                              <ArrowRightLeft className="h-3 w-3" />
-                            </Button>
-                          </div>
-                          <div>
-                            <p className="font-bold text-sm truncate w-32">{item.name_dv}</p>
-                            <p className="text-[10px] text-black dark:text-white truncate w-32">{item.name_en}</p>
-                          </div>
-                        </div>
-                        <div className="flex justify-between items-end">
-                          <div className="text-left">
-                            <p className="text-[10px] text-black dark:text-white ">{item.item_code}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-[10px] text-black dark:text-white uppercase">In Shop</p>
-                            <p className={`text-xl font-black ${item.stock_shop < LOW_STOCK_THRESHOLD ? 'text-red-500' : 'text-primary'}`}>
-                              {item.stock_shop}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
+           </div>
+        </div>
+      </div>
 
-            {/* Godown Stock Column */}
-            <div className="flex-1 flex flex-col bg-blue-50/30 dark:bg-blue-900/10">
-              <div className="p-3 border-b bg-white dark:bg-black/20 flex items-center justify-between sticky top-0 z-10">
-                <div className="flex items-center gap-2">
-                  <Warehouse className="h-5 w-5 text-blue-600" />
-                  <h3 className="font-bold text-lg">{renderBoth('godown_stock')}</h3>
-                </div>
-                <Badge variant="outline" className="text-xs bg-blue-100 text-blue-800 border-blue-200">Storage</Badge>
-              </div>
-              <ScrollArea className="flex-1 p-3">
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                  {filteredStockItems.map((item) => (
-                    <Card key={`godown-${item.id}`} className="text-right border-l-4 border-blue-300 hover:shadow-md transition-all bg-white/80 dark:bg-gray-900/80">
-                      <CardContent className="p-3">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex gap-1 opacity-50 hover:opacity-100 transition-opacity">
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-600" onClick={() => handleTransferClick(item, 'to_shop')}>
-                              <ArrowRightLeft className="h-3 w-3" />
-                            </Button>
-                          </div>
-                          <div>
-                            <p className="font-bold text-sm truncate w-32">{item.name_dv}</p>
-                            <p className="text-[10px] text-black dark:text-white truncate w-32">{item.name_en}</p>
-                          </div>
+      {/* Search Bar */}
+      <div className="relative mb-8">
+         <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
+         <Input 
+           placeholder={renderBoth('search_products')}
+           value={searchTerm}
+           onChange={(e) => setSearchTerm(e.target.value)}
+           className="w-full bg-white/5 border-white/10 rounded-xl pr-12 h-14 text-right font-bold focus:border-primary/50 transition-all text-lg"
+         />
+      </div>
+
+      {/* Stock Cards Grid */}
+      <ScrollArea className="flex-1 custom-scrollbar">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-6">
+          {filteredStockItems.map((item) => (
+            <Card key={item.id} className="bg-[#0a0a1a] border-white/5 hover:border-primary/30 transition-all rounded-[2rem] overflow-hidden group relative">
+               <CardContent className="p-0">
+                  <div className="p-6">
+                     <div className="flex justify-between items-start mb-6">
+                        <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                           <Boxes className="h-6 w-6" />
                         </div>
-                        <div className="flex justify-between items-end">
-                          <div className="text-left">
-                            <p className="text-[10px] text-black dark:text-white ">{item.barcode}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-[10px] text-black dark:text-white uppercase">In Godown</p>
-                            <p className="text-xl font-black text-blue-700">
-                              {item.stock_godown}
-                            </p>
-                          </div>
+                        <div className="flex flex-col items-end gap-2">
+                           <Badge className="bg-primary/20 text-primary border-primary/20 text-[10px] font-black px-3 py-1 rounded-full">{item.item_code}</Badge>
+                           {item.stock_shop < LOW_STOCK_THRESHOLD && (
+                             <Badge className="bg-red-500 text-white border-none text-[8px] font-black px-2 py-0.5 rounded-full animate-pulse">CRITICAL STOCK</Badge>
+                           )}
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                     </div>
 
-      <StockUpdateDialog
-        isOpen={isStockUpdateDialogOpen}
-        onClose={() => setIsStockUpdateDialogOpen(false)}
-        stockItem={updatingStockItem}
-        onSave={handleSaveStockUpdate}
-      />
+                     <div className="text-right mb-6">
+                        <h3 className="text-xl font-black text-white leading-tight mb-1 truncate">{item.name_dv}</h3>
+                        <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest truncate">{item.name_en}</p>
+                     </div>
 
-      <StockTransferDialog
-        isOpen={isTransferDialogOpen}
-        onClose={() => setIsTransferDialogOpen(false)}
-        stockItem={updatingStockItem}
-        initialDirection={transferDirection}
-        onTransfer={(id, from, to, amount) => {
-          transferStock(id, from, to, amount);
-        }}
-      />
+                     <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5 group-hover:bg-white/10 transition-all">
+                           <div className="flex items-center justify-end gap-2 text-[10px] font-black text-white/30 uppercase tracking-widest mb-2">
+                              {renderBoth('shop')} <Store className="h-3 w-3" />
+                           </div>
+                           <p className={cn(
+                             "text-2xl font-black text-right",
+                             item.stock_shop < LOW_STOCK_THRESHOLD ? "text-red-500" : item.stock_shop < WARNING_STOCK_THRESHOLD ? "text-orange-500" : "text-green-500"
+                           )}>{item.stock_shop}</p>
+                           <p className="text-[10px] text-white/20 text-right mt-1 font-bold">UNITS AVAILABLE</p>
+                        </div>
+                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5 group-hover:bg-white/10 transition-all">
+                           <div className="flex items-center justify-end gap-2 text-[10px] font-black text-white/30 uppercase tracking-widest mb-2">
+                              {renderBoth('godown')} <Warehouse className="h-3 w-3" />
+                           </div>
+                           <p className="text-2xl font-black text-white text-right">{item.stock_godown}</p>
+                           <p className="text-[10px] text-white/20 text-right mt-1 font-bold">UNITS STORED</p>
+                        </div>
+                     </div>
 
-      <ProductDialog
-        isOpen={isProductDialog}
-        onClose={() => setIsProductDialog(false)}
-        product={editingProduct}
-        onSave={handleSaveProduct}
-      />
+                     <div className="flex gap-2">
+                        <Button 
+                          onClick={() => handleUpdateStockClick(item)}
+                          className="flex-1 bg-white/5 hover:bg-white/10 text-white text-[10px] font-black h-11 rounded-xl border border-white/10 transition-all"
+                        >
+                          MANUAL UPDATE
+                        </Button>
+                        <Button 
+                          onClick={() => handleTransferClick(item, 'to_shop')}
+                          className="flex-1 bg-primary/10 hover:bg-primary text-primary hover:text-white text-[10px] font-black h-11 rounded-xl border border-primary/20 transition-all gap-2"
+                        >
+                          <ArrowRightLeft className="h-3 w-3" /> TRANSFER
+                        </Button>
+                     </div>
+                  </div>
+               </CardContent>
+            </Card>
+          ))}
+        </div>
+      </ScrollArea>
+
+      {/* Dialogs */}
+      {updatingStockItem && (
+        <StockUpdateDialog
+          isOpen={isStockUpdateDialogOpen}
+          onClose={() => setIsStockUpdateDialogOpen(false)}
+          onSave={handleSaveStockUpdate}
+          product={updatingStockItem}
+        />
+      )}
+
+      {updatingStockItem && (
+        <StockTransferDialog
+          isOpen={isTransferDialogOpen}
+          onClose={() => setIsTransferDialogOpen(false)}
+          onTransfer={handleTransfer}
+          product={updatingStockItem}
+          defaultDirection={transferDirection}
+        />
+      )}
+
+      {editingProduct && (
+        <ProductDialog
+          isOpen={isProductDialog}
+          onClose={() => setIsProductDialog(false)}
+          onSave={handleSaveProduct}
+          product={editingProduct}
+        />
+      )}
     </div>
   );
 };

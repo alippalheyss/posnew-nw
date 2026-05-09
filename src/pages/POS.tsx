@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, ShoppingCart, XCircle, PlusCircle, Trash2, Heart, ArrowLeft, Users, Plus, Minus, AlertTriangle } from 'lucide-react';
+import { Search, ShoppingCart, XCircle, PlusCircle, Trash2, Heart, ArrowLeft, Users, Plus, Minus, AlertTriangle, Receipt } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';

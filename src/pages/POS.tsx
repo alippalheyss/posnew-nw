@@ -631,7 +631,7 @@ const POS = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-black dark:text-white dark:text-black dark:text-white font-faruma" dir="rtl">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-black dark:text-white font-faruma" dir="rtl">
       <div className="flex flex-1 flex-col lg:flex-row p-4 gap-4">
         {/* Products Section */}
         <Card className="flex-1 lg:w-2/3 flex flex-col">
@@ -753,7 +753,7 @@ const POS = () => {
           </CardHeader>
           <CardContent className="flex-1 flex flex-col overflow-hidden p-0">
             <ScrollArea className="flex-1 px-4 py-4">
-              {activeCart?.items.length === 0 ? (
+              {(!activeCart || activeCart.items.length === 0) ? (
                 <div className="flex flex-col items-center justify-center py-20 text-black dark:text-white ">
                   <ShoppingCart className="h-10 w-10 mb-2 opacity-20" />
                   <p className="text-sm">{renderBoth('cart_empty')}</p>

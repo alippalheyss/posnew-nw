@@ -760,7 +760,7 @@ const POS = () => {
                 </div>
               ) : (
                 <div className="space-y-3 pb-4">
-                  {activeCart?.items.map((item) => (
+                  {(activeCart?.items || []).map((item) => (
                     <div key={item.id} className="flex items-center justify-between p-2 border rounded-md group hover:border-primary/50 transition-colors">
                       <Button variant="ghost" size="sm" onClick={() => removeFromCart(item.id)} className="text-black dark:text-white hover:text-red-500 p-0 h-auto">
                         <XCircle className="h-4 w-4" />

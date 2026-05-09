@@ -453,6 +453,7 @@ const resources = {
       "use_qz_tray": "ކިއު.ޒީ ޓްރޭ ބޭނުންކުރޭ",
       "find_qz_printers": "ޕްރިންޓަރުތައް ހޯދާ",
       "printers_found": "{{count}} ޕްރިންޓަރު ފެނިއްޖެ",
+      "qz_tray_not_running": "ކިއު.ޒީ ޓްރޭ އެޕްލިކޭޝަން ހުޅުވާފައެއް ނެތް",
       "calculated_gst": "ޖީ.އެސް.ޓީ (ހިސާބު ކުރެވިފައި)",
       "save_purchase": "ބިލް ސޭވް ކުރޭ"
     }
@@ -908,6 +909,7 @@ const resources = {
       "use_qz_tray": "Use QZ Tray",
       "find_qz_printers": "Find Printers",
       "printers_found": "Found {{count}} printers",
+      "qz_tray_not_running": "QZ Tray is not running",
       "calculated_gst": "Calculated GST",
       "save_purchase": "Save Purchase"
     }

@@ -209,8 +209,25 @@ const POS = () => {
   };
 
   const handleRemoveCartClick = (cartId: string) => {
-    setCartToRemoveId(cartId);
-    setIsConfirmRemoveCartDialogOpen(true);
+    const cart = openCarts.get(cartId);
+    if (cart && cart.items.length > 0) {
+      setCartToRemoveId(cartId);
+      setIsConfirmRemoveCartDialogOpen(true);
+    } else {
+      // If empty, just remove it immediately
+      setOpenCarts(prev => {
+        const newCarts = new Map(prev);
+        newCarts.delete(cartId);
+        if (newCarts.size === 0) {
+          const firstId = `cart-${Date.now()}`;
+          newCarts.set(firstId, { id: firstId, displayNumber: 1, customer: null, items: [] });
+          setActiveCartId(firstId);
+        } else if (activeCartId === cartId) {
+          setActiveCartId([...newCarts.keys()][0]);
+        }
+        return newCarts;
+      });
+    }
   };
 
   const confirmRemoveCart = () => {
@@ -706,14 +723,17 @@ const POS = () => {
                 <PlusCircle className="h-4 w-4 ml-2" /> {renderBoth('add_new_cart')}
               </Button>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 py-1">
               {[...openCarts.values()].map(cart => (
                 <div key={cart.id} className="relative">
                   <Button
                     variant={activeCartId === cart.id ? "default" : "outline"}
                     size="sm"
                     onClick={() => switchCart(cart.id)}
-                    className={cn("font-faruma h-8 px-3", activeCartId === cart.id ? "bg-primary hover:bg-primary/90" : "")}
+                    className={cn(
+                      "font-faruma h-6 px-1.5 text-[9px] min-w-[40px]", 
+                      activeCartId === cart.id ? "bg-primary hover:bg-primary/90" : ""
+                    )}
                   >
                     {cart.customer ? `${cart.customer.name_dv}` : `${renderBothString('cart')} ${cart.displayNumber}`}
                   </Button>
@@ -722,9 +742,9 @@ const POS = () => {
                       variant="ghost"
                       size="icon"
                       onClick={(e) => { e.stopPropagation(); handleRemoveCartClick(cart.id); }}
-                      className="absolute -top-1 -left-1 h-4 w-4 rounded-full bg-red-500 text-white hover:bg-red-600 p-0"
+                      className="absolute -top-1 -left-1 h-3.5 w-3.5 rounded-full bg-red-500 text-white hover:bg-red-600 p-0 shadow-sm"
                     >
-                      <XCircle className="h-3 w-3" />
+                      <XCircle className="h-2.5 w-2.5" />
                     </Button>
                   )}
                 </div>

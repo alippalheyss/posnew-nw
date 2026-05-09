@@ -144,12 +144,12 @@
   .cart-container {
     container-type: inline-size;
   }
-  .cart-container .text-\[10px\] { font-size: clamp(10px, 3.5cqi, 14px) !important; line-height: 1.2 !important; }
-  .cart-container .text-xs { font-size: clamp(12px, 4cqi, 16px) !important; line-height: 1.2 !important; }
-  .cart-container .text-sm { font-size: clamp(14px, 4.5cqi, 18px) !important; line-height: 1.25 !important; }
-  .cart-container .text-base { font-size: clamp(16px, 5cqi, 20px) !important; line-height: 1.5 !important; }
-  .cart-container .text-lg { font-size: clamp(18px, 6cqi, 24px) !important; line-height: 1.5 !important; }
-  .cart-container .text-4xl { font-size: clamp(28px, 12cqi, 56px) !important; line-height: 1 !important; }
+  .cart-container .text-\[10px\] { font-size: clamp(12px, 4cqi, 16px) !important; line-height: 1.2 !important; }
+  .cart-container .text-xs { font-size: clamp(14px, 4.5cqi, 18px) !important; line-height: 1.2 !important; }
+  .cart-container .text-sm { font-size: clamp(16px, 5cqi, 20px) !important; line-height: 1.25 !important; }
+  .cart-container .text-base { font-size: clamp(18px, 6cqi, 24px) !important; line-height: 1.5 !important; }
+  .cart-container .text-lg { font-size: clamp(20px, 7cqi, 28px) !important; line-height: 1.5 !important; }
+  .cart-container .text-4xl { font-size: clamp(32px, 14cqi, 64px) !important; line-height: 1 !important; }
   
   .cart-container .h-10 { height: clamp(30px, 10cqi, 48px) !important; }
   .cart-container .h-12 { height: clamp(40px, 12cqi, 60px) !important; }

@@ -748,8 +748,8 @@ const POS = () => {
                       <div className="flex-1 text-right mr-3">
                         <div className="flex justify-between items-start">
                           <div>
-                            <p className="font-bold text-sm leading-tight">{item.name_dv}</p>
-                            <p className="text-[10px] text-black dark:text-white ">{item.name_en}</p>
+                            <p className="font-black text-sm text-black dark:text-white leading-tight">{item.name_dv}</p>
+                            <p className="text-[10px] font-bold text-black dark:text-white mt-1 opacity-70">{item.name_en}</p>
                           </div>
                           {(item.units && item.units.length > 0) ? (
                             <Select

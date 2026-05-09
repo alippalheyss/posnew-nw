@@ -15,7 +15,6 @@ import { useAppContext, Purchase, Vendor, PurchaseItem, Product } from '@/contex
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
-import ProductPickerDialog from '@/components/ProductPickerDialog';
 
 const GSTReports = () => {
     const { t } = useTranslation();
@@ -28,43 +27,11 @@ const GSTReports = () => {
         vendorId: '',
         billNumber: '',
         description: '',
-        date: new Date().toISOString().split('T')[0]
+        date: new Date().toISOString().split('T')[0],
+        totalAmount: '' // New field for total amount entry
     });
 
-    // Product selection state
-    const [purchaseItems, setPurchaseItems] = useState<PurchaseItem[]>([]);
-    const [selectedProductId, setSelectedProductId] = useState('');
-    const [itemQuantity, setItemQuantity] = useState('');
-    const [itemUnitPrice, setItemUnitPrice] = useState('');
-    const [itemTotalPrice, setItemTotalPrice] = useState(''); // For flexible entry
-
-    // Search filters
-    const [productSearchQuery, setProductSearchQuery] = useState('');
     const [vendorSearchQuery, setVendorSearchQuery] = useState('');
-
-    // Held purchases (for hold/resume functionality)
-    const [heldPurchases, setHeldPurchases] = useState<Array<{
-        id: string;
-        vendorId: string;
-        billNumber: string;
-        description: string;
-        date: string;
-        items: PurchaseItem[];
-        timestamp: number;
-    }>>([]);
-
-    // Product picker dialog state
-    const [isProductPickerOpen, setIsProductPickerOpen] = useState(false);
-
-    // Products pending quantity/price entry
-    interface PendingProduct {
-        product: Product;
-        quantity: string;
-        unitPrice: string;
-        totalPrice: string;
-    }
-    const [pendingProducts, setPendingProducts] = useState<PendingProduct[]>([]);
-
     const renderBoth = (key: string, options?: any) => (
         <>
             {t(key, options)} ({t(key, { ...options, lng: 'en' })})
@@ -106,130 +73,6 @@ const GSTReports = () => {
         v.code.toLowerCase().includes(vendorSearchQuery.toLowerCase())
     );
 
-    // Hold current purchase
-    const holdPurchase = () => {
-        if (purchaseItems.length === 0) {
-            showError(t('no_items_to_hold'));
-            return;
-        }
-
-        const heldPurchase = {
-            id: `held-${Date.now()}`,
-            vendorId: newPurchase.vendorId,
-            billNumber: newPurchase.billNumber,
-            description: newPurchase.description,
-            date: newPurchase.date,
-            items: [...purchaseItems],
-            timestamp: Date.now()
-        };
-
-        setHeldPurchases([...heldPurchases, heldPurchase]);
-
-        // Clear current purchase
-        setNewPurchase({
-            vendorId: '',
-            billNumber: '',
-            description: '',
-            date: new Date().toISOString().split('T')[0]
-        });
-        setPurchaseItems([]);
-        setIsAddPurchaseDialogOpen(false);
-        showSuccess(t('purchase_held'));
-    };
-
-    // Resume held purchase
-    const resumeHeldPurchase = (heldId: string) => {
-        const held = heldPurchases.find(h => h.id === heldId);
-        if (!held) return;
-
-        setNewPurchase({
-            vendorId: held.vendorId,
-            billNumber: held.billNumber,
-            description: held.description,
-            date: held.date
-        });
-        setPurchaseItems(held.items);
-        setHeldPurchases(heldPurchases.filter(h => h.id !== heldId));
-        setIsAddPurchaseDialogOpen(true);
-        showSuccess(t('purchase_resumed'));
-    };
-
-    // Delete held purchase
-    const deleteHeldPurchase = (heldId: string) => {
-        setHeldPurchases(heldPurchases.filter(h => h.id !== heldId));
-        showSuccess(t('held_purchase_deleted'));
-    };
-
-    // Handle products selected from picker
-    const handleProductsSelected = (selectedProducts: Product[]) => {
-        const newPending: PendingProduct[] = selectedProducts.map(p => ({
-            product: p,
-            quantity: '',
-            unitPrice: '',
-            totalPrice: ''
-        }));
-        setPendingProducts([...pendingProducts, ...newPending]);
-    };
-
-    // Update pending product field
-    const updatePendingProduct = (index: number, field: 'quantity' | 'unitPrice' | 'totalPrice', value: string) => {
-        const updated = [...pendingProducts];
-        updated[index] = { ...updated[index], [field]: value };
-
-        // Auto-calculate based on what was entered
-        if (field === 'unitPrice' && value) {
-            updated[index].totalPrice = ''; // Clear total if unit entered
-        } else if (field === 'totalPrice' && value) {
-            updated[index].unitPrice = ''; // Clear unit if total entered
-        }
-
-        setPendingProducts(updated);
-    };
-
-    // Add pending product to purchase items
-    const addPendingProductToPurchase = (index: number) => {
-        const pending = pendingProducts[index];
-
-        if (!pending.quantity || (!pending.unitPrice && !pending.totalPrice)) {
-            showError(t('enter_quantity_and_price'));
-            return;
-        }
-
-        const qty = parseFloat(pending.quantity);
-        let unitPrice: number;
-
-        if (pending.totalPrice && !pending.unitPrice) {
-            unitPrice = parseFloat(pending.totalPrice) / qty;
-        } else {
-            unitPrice = parseFloat(pending.unitPrice);
-        }
-
-        const subtotal = qty * unitPrice;
-        // Check if product is tax-exempt
-        const gstAmount = pending.product.is_zero_tax ? 0 : subtotal * (settings.shop.taxRate / 100);
-        const total = subtotal + gstAmount;
-
-        const newItem: PurchaseItem = {
-            product_id: pending.product.id,
-            product_name: pending.product.name_en,
-            quantity: qty,
-            unit_price: unitPrice,
-            subtotal,
-            gst_amount: gstAmount,
-            total
-        };
-
-        setPurchaseItems([...purchaseItems, newItem]);
-
-        // Remove from pending
-        setPendingProducts(pendingProducts.filter((_, i) => i !== index));
-    };
-
-    // Remove pending product
-    const removePendingProduct = (index: number) => {
-        setPendingProducts(pendingProducts.filter((_, i) => i !== index));
-    };
-
     const filteredSales = sales.filter(s => filterByRange(s.date));
     const filteredPurchases = purchases.filter(p => filterByRange(p.date));
 
@@ -249,91 +92,48 @@ const GSTReports = () => {
 
     const totalPurchases = filteredPurchases.reduce((sum, p) => sum + p.amount, 0);
 
-    const calculatePurchaseTotals = () => {
-        const subtotal = purchaseItems.reduce((sum, item) => sum + item.subtotal, 0);
-        const gstAmount = purchaseItems.reduce((sum, item) => sum + item.gst_amount, 0);
-        const total = purchaseItems.reduce((sum, item) => sum + item.total, 0);
-        return { subtotal, gstAmount, total };
+    const calculateGstFromTotal = (total: number) => {
+        // formula: total - (total / (1 + taxRate/100))
+        const taxRate = settings.shop.taxRate / 100;
+        const gstAmount = total - (total / (1 + taxRate));
+        const subtotal = total - gstAmount;
+        return { subtotal, gstAmount };
     };
 
-    const addProductToPurchase = () => {
-        if (!selectedProductId || !itemQuantity) {
-            showError(t('fill_all_fields_error'));
-            return;
-        }
 
-        // Must have either unit price OR total price
-        if (!itemUnitPrice && !itemTotalPrice) {
-            showError(t('enter_unit_price_or_total_price'));
-            return;
-        }
-
-        const product = products.find(p => p.id === selectedProductId);
-        if (!product) return;
-
-        const qty = parseFloat(itemQuantity);
-        let unitPrice: number;
-
-        // Calculate unit price from total if only total is provided
-        if (itemTotalPrice && !itemUnitPrice) {
-            const totalPrice = parseFloat(itemTotalPrice);
-            unitPrice = totalPrice / qty;
-        } else {
-            unitPrice = parseFloat(itemUnitPrice);
-        }
-
-        const subtotal = qty * unitPrice;
-        // Check if product is tax-exempt
-        const gstAmount = product.is_zero_tax ? 0 : subtotal * (settings.shop.taxRate / 100);
-        const total = subtotal + gstAmount;
-
-        const newItem: PurchaseItem = {
-            product_id: product.id,
-            product_name: product.name_en,
-            quantity: qty,
-            unit_price: unitPrice,
-            subtotal,
-            gst_amount: gstAmount,
-            total
-        };
-
-        setPurchaseItems([...purchaseItems, newItem]);
-        setSelectedProductId('');
-        setItemQuantity('');
-        setItemUnitPrice('');
-        setItemTotalPrice('');
-    };
-
-    const removeProductFromPurchase = (index: number) => {
-        setPurchaseItems(purchaseItems.filter((_, i) => i !== index));
-    };
 
     const handleAddPurchase = () => {
-        if (!newPurchase.vendorId || purchaseItems.length === 0) {
+        if (!newPurchase.vendorId || !newPurchase.totalAmount) {
             showError(t('fill_all_fields_error'));
             return;
         }
 
         const selectedVendor = vendors.find(v => v.id === newPurchase.vendorId);
-        const totals = calculatePurchaseTotals();
+        const total = parseFloat(newPurchase.totalAmount);
+        const { subtotal, gstAmount } = calculateGstFromTotal(total);
 
         const purchase: Purchase = {
             id: `purch-${Date.now()}`,
             vendor: selectedVendor?.name_en || 'Unknown',
             vendorId: newPurchase.vendorId,
             billNumber: newPurchase.billNumber,
-            amount: totals.total,
-            gstAmount: totals.gstAmount,
+            amount: total,
+            gstAmount: gstAmount,
             description: newPurchase.description,
             date: newPurchase.date,
-            items: purchaseItems,
-            subtotal: totals.subtotal
+            items: [], // No individual items needed anymore
+            subtotal: subtotal
         };
 
         addPurchase(purchase);
         setIsAddPurchaseDialogOpen(false);
-        setNewPurchase({ vendorId: '', billNumber: '', description: '', date: new Date().toISOString().split('T')[0] });
-        setPurchaseItems([]);
+        setNewPurchase({ 
+            vendorId: '', 
+            billNumber: '', 
+            description: '', 
+            date: new Date().toISOString().split('T')[0],
+            totalAmount: ''
+        });
         showSuccess(t('purchase_added_successfully'));
     };
 
@@ -474,52 +274,7 @@ const GSTReports = () => {
                     </CardContent>
                 </Card>
 
-                {/* Held Purchases Section */}
-                {heldPurchases.length > 0 && (
-                    <Card className="lg:col-span-2 border-none shadow-sm border-r-4 border-r-orange-500">
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <div className="p-2 bg-orange-50 rounded-full text-orange-600"><Archive className="h-4 w-4" /></div>
-                            <CardTitle className="text-right text-lg">{t('held_purchases')} ({heldPurchases.length})</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                            {heldPurchases.map((held) => {
-                                const vendor = vendors.find(v => v.id === held.vendorId);
-                                const totalItems = held.items.reduce((sum, item) => sum + item.quantity, 0);
-                                const totalAmount = held.items.reduce((sum, item) => sum + item.total, 0);
 
-                                return (
-                                    <div key={held.id} className="flex items-center justify-between p-3 bg-orange-50/30 rounded-lg border border-orange-200 hover:bg-orange-50 transition-colors">
-                                        <div className="flex-1 text-right">
-                                            <div className="font-bold text-sm">{vendor?.name_dv || vendor?.name_en || t('unknown_vendor')}</div>
-                                            <div className="text-xs text-black dark:text-white ">
-                                                {held.items.length} {t('products')} • {totalItems} {t('items')} • {settings.shop.currency} {totalAmount.toFixed(2)}
-                                            </div>
-                                            {held.billNumber && <div className="text-xs text-black dark:text-white ">{t('bill_number')}: {held.billNumber}</div>}
-                                        </div>
-                                        <div className="flex gap-2 mr-3">
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                className="h-8"
-                                                onClick={() => resumeHeldPurchase(held.id)}
-                                            >
-                                                <Play className="h-3 w-3 ml-1" /> {t('resume')}
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                                onClick={() => deleteHeldPurchase(held.id)}
-                                            >
-                                                <Trash2 className="h-3 w-3" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </CardContent>
-                    </Card>
-                )}
 
                 {/* Local Purchases List */}
                 <Card className="lg:col-span-2 border-none shadow-sm border-r-4 border-r-blue-500">
@@ -615,172 +370,23 @@ const GSTReports = () => {
                             </div>
                         </div>
 
-                        {/* Product Selection */}
-                        <div className="border-t pt-4 mt-2">
-                            <div className="flex items-center justify-between mb-3">
-                                <Button
-                                    onClick={() => setIsProductPickerOpen(true)}
-                                    variant="outline"
-                                    className="h-10"
-                                >
-                                    <Package className="h-4 w-4 ml-2" /> {t('select_products_button')}
-                                </Button>
-                                <Label className="text-right text-sm font-bold">{t('add_products_to_purchase')}</Label>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                                <Label className="text-right block opacity-50 text-[10px] font-bold uppercase">{renderBoth('total_amount')}*</Label>
+                                <Input 
+                                    type="number" 
+                                    placeholder="0.00"
+                                    value={newPurchase.totalAmount} 
+                                    onChange={(e) => setNewPurchase({ ...newPurchase, totalAmount: e.target.value })} 
+                                    className="text-right h-11 font-black text-lg" 
+                                />
                             </div>
-
-                            {/* Pending Products - Awaiting Quantity/Price */}
-                            {pendingProducts.length > 0 && (
-                                <div className="mb-4 border rounded-lg p-3 bg-yellow-50/30">
-                                    <Label className="text-right block mb-2 text-xs font-bold text-yellow-800">
-                                        {t('enter_quantity_price')} ({pendingProducts.length} {t('products')})
-                                    </Label>
-                                    <div className="space-y-2">
-                                        {pendingProducts.map((pending, index) => (
-                                            <div key={index} className="grid grid-cols-12 gap-2 items-center bg-white p-2 rounded border">
-                                                <div className="col-span-4 text-right">
-                                                    <div className="font-bold text-sm">{pending.product.name_dv}</div>
-                                                    <div className="text-xs text-black dark:text-white ">{pending.product.name_en}</div>
-                                                </div>
-                                                <div className="col-span-2">
-                                                    <Input
-                                                        type="number"
-                                                        placeholder={t('qty')}
-                                                        value={pending.quantity}
-                                                        onChange={(e) => updatePendingProduct(index, 'quantity', e.target.value)}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter' && pending.quantity) {
-                                                                e.preventDefault();
-                                                                // Focus unit price field
-                                                                const unitPriceInput = document.getElementById(`unit-price-${index}`);
-                                                                unitPriceInput?.focus();
-                                                            }
-                                                        }}
-                                                        className="text-right h-9 text-sm"
-                                                        id={`quantity-${index}`}
-                                                        autoFocus={index === 0}
-                                                    />
-                                                </div>
-                                                <div className="col-span-2">
-                                                    <Input
-                                                        type="number"
-                                                        placeholder={t('unit_cost')}
-                                                        value={pending.unitPrice}
-                                                        onChange={(e) => updatePendingProduct(index, 'unitPrice', e.target.value)}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter') {
-                                                                e.preventDefault();
-                                                                // Focus total price field
-                                                                const totalPriceInput = document.getElementById(`total-price-${index}`);
-                                                                totalPriceInput?.focus();
-                                                            }
-                                                        }}
-                                                        className="text-right h-9 text-sm"
-                                                        id={`unit-price-${index}`}
-                                                    />
-                                                </div>
-                                                <div className="col-span-1 flex items-center justify-center">
-                                                    <span className="text-xs text-black dark:text-white ">{t('or')}</span>
-                                                </div>
-                                                <div className="col-span-2">
-                                                    <Input
-                                                        type="number"
-                                                        placeholder={t('total_price')}
-                                                        value={pending.totalPrice}
-                                                        onChange={(e) => updatePendingProduct(index, 'totalPrice', e.target.value)}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter' && pending.quantity && (pending.unitPrice || pending.totalPrice)) {
-                                                                e.preventDefault();
-                                                                // Add product and focus next quantity
-                                                                addPendingProductToPurchase(index);
-                                                                setTimeout(() => {
-                                                                    const nextQtyInput = document.getElementById(`quantity-${index}`);
-                                                                    nextQtyInput?.focus();
-                                                                }, 100);
-                                                            }
-                                                        }}
-                                                        className="text-right h-9 text-sm"
-                                                        id={`total-price-${index}`}
-                                                    />
-                                                </div>
-                                                <div className="col-span-1 flex gap-1">
-                                                    <Button
-                                                        size="sm"
-                                                        onClick={() => addPendingProductToPurchase(index)}
-                                                        className="h-8 w-8 p-0"
-                                                    >
-                                                        <PlusCircle className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        onClick={() => removePendingProduct(index)}
-                                                        className="h-8 w-8 p-0 text-red-600"
-                                                    >
-                                                        <X className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                            <div className="space-y-1.5">
+                                <Label className="text-right block opacity-50 text-[10px] font-bold uppercase">{renderBoth('calculated_gst')}</Label>
+                                <div className="h-11 flex items-center justify-end px-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-100 dark:border-blue-800 font-mono font-bold text-blue-600">
+                                    {newPurchase.totalAmount ? calculateGstFromTotal(parseFloat(newPurchase.totalAmount)).gstAmount.toFixed(2) : '0.00'}
                                 </div>
-                            )}
-
-                            {/* Added Products - Final List */}
-                            {purchaseItems.length > 0 && (
-                                <div className="border rounded-lg overflow-hidden">
-                                    <Table>
-                                        <TableHeader className="bg-gray-50">
-                                            <TableRow>
-                                                <TableHead className="text-right text-xs">{t('item')}</TableHead>
-                                                <TableHead className="text-right text-xs">{t('qty')}</TableHead>
-                                                <TableHead className="text-right text-xs">{t('unit_cost')}</TableHead>
-                                                <TableHead className="text-right text-xs">{t('subtotal')}</TableHead>
-                                                <TableHead className="text-right text-xs">{t('gst')}</TableHead>
-                                                <TableHead className="text-right text-xs">{t('total')}</TableHead>
-                                                <TableHead className="w-10"></TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {purchaseItems.map((item, index) => (
-                                                <TableRow key={index}>
-                                                    <TableCell className="text-right text-sm font-medium">{item.product_name}</TableCell>
-                                                    <TableCell className="text-right text-sm">{item.quantity}</TableCell>
-                                                    <TableCell className="text-right text-sm font-mono">{item.unit_price.toFixed(2)}</TableCell>
-                                                    <TableCell className="text-right text-sm font-mono">{item.subtotal.toFixed(2)}</TableCell>
-                                                    <TableCell className="text-right text-sm font-mono text-blue-600">{item.gst_amount.toFixed(2)}</TableCell>
-                                                    <TableCell className="text-right text-sm font-mono font-bold">{item.total.toFixed(2)}</TableCell>
-                                                    <TableCell>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-7 w-7"
-                                                            onClick={() => removeProductFromPurchase(index)}
-                                                        >
-                                                            <X className="h-3 w-3" />
-                                                        </Button>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-
-                                    {/* Totals */}
-                                    <div className="bg-gray-50 p-3 space-y-2 border-t">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="font-bold">{t('subtotal')}:</span>
-                                            <span className="font-mono">{settings.shop.currency} {calculatePurchaseTotals().subtotal.toFixed(2)}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="font-bold text-blue-600">{t('gst')} ({settings.shop.taxRate}%):</span>
-                                            <span className="font-mono text-blue-600">{settings.shop.currency} {calculatePurchaseTotals().gstAmount.toFixed(2)}</span>
-                                        </div>
-                                        <div className="flex justify-between text-lg border-t pt-2">
-                                            <span className="font-black">{t('grand_total')}:</span>
-                                            <span className="font-mono font-black">{settings.shop.currency} {calculatePurchaseTotals().total.toFixed(2)}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                            </div>
                         </div>
 
                         <div className="space-y-1.5">
@@ -791,32 +397,22 @@ const GSTReports = () => {
 
                     <DialogFooter className="mt-4 gap-3">
                         <Button
-                            onClick={holdPurchase}
+                            onClick={() => setIsAddPurchaseDialogOpen(false)}
                             variant="outline"
                             className="flex-1 h-12 font-bold text-lg"
-                            disabled={purchaseItems.length === 0}
                         >
-                            {t('hold_purchase')}
+                            {t('cancel')}
                         </Button>
                         <Button
                             onClick={handleAddPurchase}
-                            className="flex-1 h-12 bg-primary font-bold text-lg"
-                            disabled={purchaseItems.length === 0}
+                            className="flex-1 h-12 font-bold text-lg bg-primary"
                         >
-                            {renderBoth('save_changes')}
+                            {t('save_purchase')}
                         </Button>
-                        <Button variant="outline" onClick={() => setIsAddPurchaseDialogOpen(false)} className="flex-1 h-12">{renderBoth('cancel')}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
-            {/* Product Picker Dialog */}
-            <ProductPickerDialog
-                isOpen={isProductPickerOpen}
-                onClose={() => setIsProductPickerOpen(false)}
-                products={products}
-                onAddProducts={handleProductsSelected}
-            />
         </div>
     );
 };

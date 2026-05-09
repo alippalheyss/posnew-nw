@@ -58,13 +58,6 @@ const GSTReports = () => {
         return true;
     };
 
-    // Filter products by search query
-    const filteredProducts = products.filter(p =>
-        p.name_dv.toLowerCase().includes(productSearchQuery.toLowerCase()) ||
-        p.name_en.toLowerCase().includes(productSearchQuery.toLowerCase()) ||
-        p.barcode.includes(productSearchQuery) ||
-        p.item_code.toLowerCase().includes(productSearchQuery.toLowerCase())
-    );
 
     // Filter vendors by search query
     const filteredVendors = vendors.filter(v =>

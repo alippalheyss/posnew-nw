@@ -226,6 +226,9 @@ interface AppContextType {
   getNextVendorCode: () => string;
   updateProductCostPrice: (productId: string, newCost: number, purchaseDate: string) => Promise<void>;
   calculateProfitMargin: (product: Product) => number;
+  addSale: (sale: Sale) => Promise<void>;
+  addCustomer: (customer: Customer) => Promise<void>;
+  updateCustomer: (customer: Customer) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -283,70 +286,88 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   });
   const [activeCartId, setActiveCartId] = useState<string>([...openCarts.keys()][0]);
 
-  const [settings, setSettings] = useState<AppSettings>({
-    shop: {
-      shopName: 'My Retail Shop',
-      shopAddress: 'Male, Maldives',
-      shopPhone: '3301234',
-      shopEmail: 'info@myshop.com',
-      currency: 'MVR',
-      taxRate: 8,
-      receiptHeader: 'Thank you for shopping with us!',
-      receiptFooter: 'Visit us again soon!',
-      logo: '',
-      enableCardPayment: true,
-    },
-    accounting: {
-      fiscalYearStart: 'January',
-      accountingMethod: 'accrual',
-      taxCalculation: 'inclusive',
-      defaultPaymentTerms: 'due_on_receipt',
-      enableCreditSales: true,
-      creditLimit: 10000,
-      latePaymentFee: 5,
-      latePaymentGracePeriod: 7,
-    },
-    software: {
-      language: 'dv',
-      dateFormat: 'DD/MM/YYYY',
-      timeFormat: '24-hour',
-      theme: 'light',
-      autoBackup: true,
-      backupFrequency: 'daily',
-      dataRetentionPeriod: 365,
-      enableAnalytics: true,
-      enableNotifications: true,
-    },
-    general: {
-      appName: 'Retail POS System',
-      appVersion: '1.0.0',
-      enableMultiCart: true,
-      maxCarts: 5,
-      barcodeScannerEnabled: true,
-      receiptPrinterEnabled: true,
-      defaultDiscount: 0,
-      enableLoyaltyProgram: false,
-      loyaltyPointsRate: 1,
-    },
-    reports: {
-      invoiceHeader: 'INVOICE',
-      invoiceFooter: 'Thank you for your business!',
-      quotationHeader: 'QUOTATION',
-      quotationFooter: 'Valid for 30 days.',
-      customerOutstandingHeader: 'CUSTOMER OUTSTANDING REPORT',
-      customerOutstandingFooter: 'Please settle your balance as soon as possible.',
-      showLogo: true,
-      showContactInfo: true,
-    },
-    printing: {
-      printReceiptOnCheckout: true,
-      printMode: 'ask',
-      printerName: '',
-      thermalPrinterWidth: '80mm',
-      enableDirectPrint: false,
-      useQzTray: false,
-    },
+  const [settings, setSettings] = useState<AppSettings>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('app_settings');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error('Error parsing settings from localStorage', e);
+        }
+      }
+    }
+    return {
+      shop: {
+        shopName: 'My Retail Shop',
+        shopAddress: 'Male, Maldives',
+        shopPhone: '3301234',
+        shopEmail: 'info@myshop.com',
+        currency: 'MVR',
+        taxRate: 8,
+        receiptHeader: 'Thank you for shopping with us!',
+        receiptFooter: 'Visit us again soon!',
+        logo: '',
+        enableCardPayment: true,
+      },
+      accounting: {
+        fiscalYearStart: 'January',
+        accountingMethod: 'accrual',
+        taxCalculation: 'inclusive',
+        defaultPaymentTerms: 'due_on_receipt',
+        enableCreditSales: true,
+        creditLimit: 10000,
+        latePaymentFee: 5,
+        latePaymentGracePeriod: 7,
+      },
+      software: {
+        language: 'dv',
+        dateFormat: 'DD/MM/YYYY',
+        timeFormat: '24-hour',
+        theme: 'light',
+        autoBackup: true,
+        backupFrequency: 'daily',
+        dataRetentionPeriod: 365,
+        enableAnalytics: true,
+        enableNotifications: true,
+      },
+      general: {
+        appName: 'Retail POS System',
+        appVersion: '1.0.0',
+        enableMultiCart: true,
+        maxCarts: 5,
+        barcodeScannerEnabled: true,
+        receiptPrinterEnabled: true,
+        defaultDiscount: 0,
+        enableLoyaltyProgram: false,
+        loyaltyPointsRate: 1,
+      },
+      reports: {
+        invoiceHeader: 'INVOICE',
+        invoiceFooter: 'Thank you for your business!',
+        quotationHeader: 'QUOTATION',
+        quotationFooter: 'Valid for 30 days.',
+        customerOutstandingHeader: 'CUSTOMER OUTSTANDING REPORT',
+        customerOutstandingFooter: 'Please settle your balance as soon as possible.',
+        showLogo: true,
+        showContactInfo: true,
+      },
+      printing: {
+        printReceiptOnCheckout: true,
+        printMode: 'ask',
+        printerName: '',
+        thermalPrinterWidth: '80mm',
+        enableDirectPrint: false,
+        useQzTray: false,
+      },
+    };
   });
+
+  useEffect(() => {
+    if (settings) {
+      localStorage.setItem('app_settings', JSON.stringify(settings));
+    }
+  }, [settings]);
 
   const clearCart = (cartId: string) => {
     // Logic as before
@@ -460,6 +481,72 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       ));
     } catch (error) {
       console.error('Error updating customer balance:', error);
+    }
+  };
+
+  const addSale = async (sale: Sale) => {
+    try {
+      const { error } = await supabase
+        .from('sales')
+        .insert({
+          id: sale.id,
+          date: sale.date,
+          customer_id: sale.customer?.id || null,
+          items: sale.items,
+          grand_total: sale.grandTotal,
+          payment_method: sale.paymentMethod,
+          paid_amount: sale.paidAmount || 0,
+          balance: sale.balance || 0,
+          split_details: sale.splitDetails || null
+        });
+
+      if (error) throw error;
+
+      setSales(prev => [...prev, sale]);
+
+      // Update stock levels
+      for (const item of sale.items) {
+        const product = products.find(p => p.id === item.id);
+        if (product) {
+          await updateStock(product.id, product.stock_shop - item.qty);
+        }
+      }
+    } catch (error) {
+      console.error('Error adding sale:', error);
+      showError('Failed to save sale to database');
+    }
+  };
+
+  const addCustomer = async (customer: Customer) => {
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .insert(customer);
+
+      if (error) throw error;
+
+      setCustomers(prev => [...prev, customer]);
+    } catch (error) {
+      console.error('Error adding customer:', error);
+      showError('Failed to save customer to database');
+    }
+  };
+
+  const updateCustomer = async (customer: Customer) => {
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .update(customer)
+        .eq('id', customer.id);
+
+      if (error) throw error;
+
+      setCustomers(prev => prev.map(c =>
+        c.id === customer.id ? customer : c
+      ));
+    } catch (error) {
+      console.error('Error updating customer:', error);
+      showError('Failed to update customer in database');
     }
   };
 

@@ -29,17 +29,23 @@ const Products = () => {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [visibleCount, setVisibleCount] = useState(30);
 
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name_dv.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = !searchTerm || 
+      product.name_dv.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.barcode.includes(searchTerm) ||
       product.item_code.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesFavorite = !showFavoritesOnly || favoriteProductIds.includes(product.id);
+    const matchesCategory = selectedCategory === 'ALL' || product.category === selectedCategory;
 
-    return matchesSearch && matchesFavorite;
+    return matchesSearch && matchesFavorite && matchesCategory;
   });
+
+  const displayProducts = filteredProducts.slice(0, visibleCount);
 
   const toggleFavorite = (productId: string) => {
     if (favoriteProductIds.includes(productId)) {
@@ -119,20 +125,36 @@ const Products = () => {
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="flex flex-row-reverse gap-4 mb-6">
+      <div className="flex flex-row-reverse gap-4 mb-4">
         <div className="relative flex-1">
            <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
            <Input 
              placeholder={renderBothString('search_products')}
              value={searchTerm}
-             onChange={(e) => setSearchTerm(e.target.value)}
+             onChange={(e) => { setSearchTerm(e.target.value); setVisibleCount(30); }}
              className="w-full bg-white/5 border-white/10 rounded-xl pr-12 h-12 text-right font-bold focus:border-primary/50 transition-all"
            />
         </div>
         <div className="flex gap-2">
+           <div className="bg-white/5 rounded-xl p-1 border border-white/10 flex gap-1">
+              {['DRINKS', 'FOOD', 'HARDWARE', 'COSMETICS', 'OTHER', 'ALL'].map((cat) => (
+                <Button 
+                  key={cat}
+                  variant={selectedCategory === cat ? "default" : "ghost"} 
+                  size="sm" 
+                  onClick={() => { setSelectedCategory(cat); setVisibleCount(30); }}
+                  className={cn(
+                    "px-4 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                    selectedCategory === cat ? "bg-primary text-white" : "text-white/40 hover:text-white"
+                  )}
+                >
+                  {cat}
+                </Button>
+              ))}
+           </div>
            <Button 
              variant={showFavoritesOnly ? "default" : "outline"}
-             onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+             onClick={() => { setShowFavoritesOnly(!showFavoritesOnly); setVisibleCount(30); }}
              className={cn(
                "h-12 w-12 p-0 rounded-xl border-white/10 transition-all",
                showFavoritesOnly ? "bg-yellow-500 hover:bg-yellow-600 text-black shadow-[0_0_15px_rgba(234,179,8,0.3)]" : "hover:bg-white/5"
@@ -165,7 +187,7 @@ const Products = () => {
       <ScrollArea className="flex-1 custom-scrollbar">
         {viewMode === 'grid' ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 pb-6">
-            {filteredProducts.map((product) => {
+            {displayProducts.map((product) => {
                const margin = calculateProfitMargin(product);
                const cardColors = ['bg-blue-600', 'bg-red-600', 'bg-purple-600', 'bg-orange-600', 'bg-pink-600', 'bg-indigo-600'];
                const colorClass = cardColors[Math.abs(product.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % cardColors.length];
@@ -248,7 +270,7 @@ const Products = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredProducts.map((product) => (
+                  {displayProducts.map((product) => (
                     <tr key={product.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                       <td className="p-4">
                         <div className="flex items-center gap-3 justify-end">
@@ -284,6 +306,18 @@ const Products = () => {
               </table>
             </div>
           </Card>
+        )}
+
+        {visibleCount < filteredProducts.length && (
+          <div className="flex justify-center py-8">
+            <Button 
+              onClick={() => setVisibleCount(prev => prev + 30)}
+              variant="outline"
+              className="bg-white/5 border-white/10 hover:bg-white/10 px-8 h-12 rounded-xl text-[10px] font-black uppercase tracking-widest"
+            >
+              Load More Products ({filteredProducts.length - visibleCount} remaining)
+            </Button>
+          </div>
         )}
       </ScrollArea>
 

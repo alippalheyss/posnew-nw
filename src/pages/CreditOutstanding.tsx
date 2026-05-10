@@ -29,7 +29,7 @@ interface Settlement {
 
 const CreditOutstanding = () => {
   const { t } = useTranslation();
-  const { customers, sales, setSales, settings, addSettlement, updateCustomerBalance } = useAppContext();
+  const { customers, sales, setSales, settings, addSettlement, updateCustomerBalance, addSale } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [isOutstandingVisible, setIsOutstandingVisible] = useState(false);
 
@@ -79,7 +79,7 @@ const CreditOutstanding = () => {
   };
 
   const handleAddCreditSale = (newSale: any) => {
-    setSales(prevSales => [...prevSales, newSale as Sale]);
+    addSale(newSale as Sale);
     updateCustomerBalance(newSale.customer.id, newSale.grandTotal);
     showSuccess(t('credit_sale_added_successfully'));
   };

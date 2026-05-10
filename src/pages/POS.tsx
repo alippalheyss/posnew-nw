@@ -42,8 +42,11 @@ const POS = () => {
     setActiveCartId,
     awardLoyaltyPoints,
     redeemLoyaltyPoints,
-    updateCustomerBalance
+    updateCustomerBalance,
+    addSale
   } = useAppContext();
+
+  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
 
   const cartCounter = useRef(openCarts.size);
   const [searchTerm, setSearchTerm] = useState('');
@@ -300,15 +303,17 @@ const POS = () => {
   const { subtotal, gstAmount, grandTotal, subtotalNoDiscount, loyaltyDiscount } = calculateTotals();
   const balance = typeof paidAmount === 'number' ? paidAmount - grandTotal : -grandTotal;
 
-  const topProducts = getTopProducts(18);
-  const displayProducts = searchTerm
-    ? products.filter(product =>
+  const displayProducts = products.filter(product => {
+    const matchesSearch = !searchTerm || 
       product.name_dv.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.barcode.includes(searchTerm) ||
-      product.item_code.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    : topProducts;
+      product.item_code.toLowerCase().includes(searchTerm.toLowerCase());
+      
+    const matchesCategory = selectedCategory === 'ALL' || product.category === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
+  }).slice(0, 50); // Optimization: only show first 50 matches initially
 
   const processCashPayment = () => {
     if (!activeCart || activeCart.items.length === 0) {
@@ -330,7 +335,7 @@ const POS = () => {
       paidAmount: paidAmount,
       balance: balance,
     };
-    setSales(prevSales => [...prevSales, newSale]);
+    addSale(newSale);
 
     if (activeCart.customer) {
       if (pointsToRedeem > 0) {
@@ -373,7 +378,7 @@ const POS = () => {
       grandTotal: grandTotal,
       paymentMethod: 'credit' as const,
     };
-    setSales(prevSales => [...prevSales, newSale]);
+    addSale(newSale);
 
     if (activeCart.customer) {
       if (pointsToRedeem > 0) {
@@ -505,11 +510,20 @@ const POS = () => {
         <div className="h-20 px-8 flex items-center justify-between border-b border-white/5 bg-[#050510]/50 backdrop-blur-sm">
           <div className="flex items-center gap-3">
              <div className="flex items-center bg-white/5 rounded-full p-1 border border-white/10">
-                <Button variant="ghost" size="sm" className="rounded-full px-4 text-[10px] font-black text-white/40 hover:text-white">DRINKS</Button>
-                <Button variant="ghost" size="sm" className="rounded-full px-4 text-[10px] font-black text-white/40 hover:text-white">FOOD</Button>
-                <Button variant="ghost" size="sm" className="rounded-full px-4 text-[10px] font-black text-white/40 hover:text-white">HARDWARE</Button>
-                <Button variant="ghost" size="sm" className="rounded-full px-4 text-[10px] font-black text-white/40 hover:text-white">OTHER</Button>
-                <Button variant="default" size="sm" className="rounded-full px-6 bg-primary text-white text-[10px] font-black shadow-[0_0_10px_rgba(0,132,255,0.3)]">ALL</Button>
+                {['DRINKS', 'FOOD', 'HARDWARE', 'COSMETICS', 'OTHER', 'ALL'].map((cat) => (
+                   <Button 
+                     key={cat}
+                     variant={selectedCategory === cat ? "default" : "ghost"} 
+                     size="sm" 
+                     onClick={() => setSelectedCategory(cat)}
+                     className={cn(
+                       "rounded-full px-4 text-[10px] font-black transition-all",
+                       selectedCategory === cat ? "bg-primary text-white shadow-[0_0_10px_rgba(0,132,255,0.3)]" : "text-white/40 hover:text-white"
+                     )}
+                   >
+                     {cat}
+                   </Button>
+                ))}
              </div>
              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10">
                 <Trash2 className="h-4 w-4 text-white/40" />
@@ -585,7 +599,7 @@ const POS = () => {
       </div>
 
       {/* Cart Section - Left Side in RTL */}
-      <div className="w-[400px] flex flex-col bg-[#0a0a1a]/80 backdrop-blur-xl border-r border-white/5 shadow-2xl z-20">
+      <div className="w-[480px] flex flex-col bg-[#0a0a1a]/80 backdrop-blur-xl border-r border-white/5 shadow-2xl z-20">
         {/* Cart Header */}
         <div className="p-6 pb-2">
           <div className="flex justify-between items-center mb-6">
@@ -646,31 +660,34 @@ const POS = () => {
             <div className="space-y-2 pb-6">
               {activeCart.items.map((item) => (
                 <div key={`${item.id}-${item.selected_unit}`} className="group relative bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl p-3 transition-all">
-                  <div className="flex justify-between items-start mb-1">
-                    <div className="text-right">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="text-right flex-1">
                       <p className="text-base font-black text-white leading-tight">{item.name_dv}</p>
-                      <p className="text-[11px] font-bold text-white/50 mt-1">{item.name_en}</p>
-                      {item.selected_unit && item.selected_unit !== 'Piece' && (
-                        <Badge variant="outline" className="mt-1 text-[8px] border-primary/30 text-primary uppercase font-black px-1 py-0">{item.selected_unit}</Badge>
-                      )}
+                      <p className="text-[11px] font-bold text-white/40 mt-0.5">{item.name_en}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                         <span className="text-sm font-black text-primary">{settings.shop.currency} {item.price.toFixed(2)}</span>
+                         {item.selected_unit && item.selected_unit !== 'Piece' && (
+                           <Badge variant="outline" className="text-[8px] border-primary/30 text-primary uppercase font-black px-1.5 py-0">{item.selected_unit}</Badge>
+                         )}
+                      </div>
                     </div>
                     <button 
                       onClick={() => removeFromCart(item.id)}
-                      className="text-white/20 hover:text-red-500 transition-colors"
+                      className="text-white/20 hover:text-red-500 transition-colors p-1"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                   
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1 bg-black/40 rounded-lg p-1 border border-white/5">
+                  <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                    <div className="flex items-center gap-1 bg-black/40 rounded-lg p-0.5 border border-white/5">
                       <Button 
                         variant="ghost" 
                         size="icon" 
                         className="h-7 w-7 text-white/40 hover:text-white"
                         onClick={() => updateCartItemQty(item.id, -1)}
                       ><Minus className="h-3 w-3" /></Button>
-                      <span className="w-8 text-center text-xs font-black text-white">{item.qty}</span>
+                      <span className="w-10 text-center text-xs font-black text-white">{item.qty}</span>
                       <Button 
                         variant="ghost" 
                         size="icon" 
@@ -679,8 +696,7 @@ const POS = () => {
                       ><Plus className="h-3 w-3" /></Button>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs font-black text-primary">{settings.shop.currency} {(item.price * item.qty).toFixed(2)}</p>
-                      <p className="text-[10px] text-white/30">@ {item.price.toFixed(2)}</p>
+                      <p className="text-lg font-black text-white leading-none">{settings.shop.currency} {(item.price * item.qty).toFixed(2)}</p>
                     </div>
                   </div>
                 </div>

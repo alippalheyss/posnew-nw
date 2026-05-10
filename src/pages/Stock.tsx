@@ -31,12 +31,13 @@ const Stock = () => {
   const [updatingStockItem, setUpdatingStockItem] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [transferDirection, setTransferDirection] = useState<'to_godown' | 'to_shop'>('to_godown');
+  const [visibleCount, setVisibleCount] = useState(20);
 
   const LOW_STOCK_THRESHOLD = 10;
   const WARNING_STOCK_THRESHOLD = 50;
 
   const filteredStockItems = products.filter(item => {
-    const matchesSearch =
+    const matchesSearch = !searchTerm || 
       item.name_dv.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.barcode.includes(searchTerm) ||
@@ -50,6 +51,8 @@ const Stock = () => {
 
     return true;
   });
+
+  const displayStockItems = filteredStockItems.slice(0, visibleCount);
 
   const handleUpdateStockClick = (item: Product) => {
     setUpdatingStockItem(item);
@@ -126,7 +129,7 @@ const Stock = () => {
          <Input 
            placeholder="Search stock by name, code or barcode..."
            value={searchTerm}
-           onChange={(e) => setSearchTerm(e.target.value)}
+           onChange={(e) => { setSearchTerm(e.target.value); setVisibleCount(20); }}
            className="w-full bg-white/5 border-white/10 rounded-xl pr-12 h-14 text-right font-bold focus:border-primary/50 transition-all text-lg"
          />
       </div>
@@ -134,7 +137,7 @@ const Stock = () => {
       {/* Stock Grid */}
       <ScrollArea className="flex-1 custom-scrollbar">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-6">
-          {filteredStockItems.map((item) => (
+          {displayStockItems.map((item) => (
             <Card key={item.id} className="bg-[#0a0a1a] border-white/5 hover:border-primary/30 transition-all rounded-[2rem] overflow-hidden group relative">
                <CardContent className="p-0">
                   <div className="p-6">
@@ -192,6 +195,18 @@ const Stock = () => {
             </Card>
           ))}
         </div>
+
+        {visibleCount < filteredStockItems.length && (
+          <div className="flex justify-center py-8">
+            <Button 
+              onClick={() => setVisibleCount(prev => prev + 20)}
+              variant="outline"
+              className="bg-white/5 border-white/10 hover:bg-white/10 px-8 h-12 rounded-xl text-[10px] font-black uppercase tracking-widest"
+            >
+              Load More Items ({filteredStockItems.length - visibleCount} remaining)
+            </Button>
+          </div>
+        )}
       </ScrollArea>
 
       {/* Dialogs */}

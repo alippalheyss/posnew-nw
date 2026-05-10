@@ -22,7 +22,7 @@ import {
 
 const Customers = () => {
   const { t } = useTranslation();
-  const { customers, setCustomers, settings } = useAppContext();
+  const { customers, setCustomers, settings, addCustomer, updateCustomer } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [isEditCustomerDialogOpen, setIsEditCustomerDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -40,19 +40,20 @@ const Customers = () => {
     setIsEditCustomerDialogOpen(true);
   };
 
-  const handleSaveCustomer = (updatedCustomer: Customer) => {
-    setCustomers(prevCustomers =>
-      prevCustomers.map(cust =>
-        cust.id === updatedCustomer.id ? updatedCustomer : cust
-      )
-    );
-    showSuccess(t('customer_updated_successfully'));
-    setIsEditCustomerDialogOpen(false);
-    setEditingCustomer(null);
+  const handleSaveCustomer = async () => {
+    if (!editingCustomer) return;
+    try {
+      await updateCustomer(editingCustomer);
+      showSuccess(t('customer_updated_successfully'));
+      setIsEditCustomerDialogOpen(false);
+      setEditingCustomer(null);
+    } catch (error) {
+      console.error('Error updating customer:', error);
+    }
   };
 
   const handleAddNewCustomer = (newCustomer: Customer) => {
-    setCustomers(prevCustomers => [...prevCustomers, newCustomer]);
+    addCustomer(newCustomer);
     setIsAddCustomerDialogOpen(false);
   };
 

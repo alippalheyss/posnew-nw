@@ -20,17 +20,20 @@ interface StockUpdateDialogProps {
 
 const StockUpdateDialog: React.FC<StockUpdateDialogProps> = ({ isOpen, onClose, stockItem, onSave }) => {
   const { t } = useTranslation();
-  const [editedStock, setEditedStock] = useState<number | ''>(stockItem?.stock_shop || '');
+  const [target, setTarget] = useState<'shop' | 'godown'>('shop');
+  const [editedStock, setEditedStock] = useState<number | ''>('');
 
   useEffect(() => {
-    setEditedStock(stockItem?.stock_shop || '');
-  }, [stockItem, isOpen]);
+    if (stockItem) {
+      setEditedStock(target === 'shop' ? stockItem.stock_shop : stockItem.stock_godown);
+    }
+  }, [stockItem, isOpen, target]);
 
   const handleSave = () => {
     if (stockItem && typeof editedStock === 'number' && editedStock >= 0) {
       const updatedStockItem: Product = {
         ...stockItem,
-        stock_shop: editedStock,
+        [target === 'shop' ? 'stock_shop' : 'stock_godown']: editedStock,
       };
       onSave(updatedStockItem);
       showSuccess(t('stock_updated_successfully'));
@@ -62,15 +65,25 @@ const StockUpdateDialog: React.FC<StockUpdateDialogProps> = ({ isOpen, onClose, 
 
         <div className="space-y-8 py-8">
            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white/5 p-4 rounded-2xl border border-white/5 text-right">
-                 <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">{renderBoth('current_stock')}</p>
+              <div 
+                onClick={() => setTarget('shop')}
+                className={cn(
+                  "p-4 rounded-2xl border cursor-pointer transition-all text-right",
+                  target === 'shop' ? "bg-primary/10 border-primary shadow-lg shadow-primary/20" : "bg-white/5 border-white/5 opacity-50"
+                )}
+              >
+                 <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">{renderBoth('shop_stock')}</p>
                  <p className="text-2xl font-black text-white">{stockItem.stock_shop}</p>
-                 <p className="text-[10px] text-white/20 mt-1 font-bold uppercase tracking-widest">PCS IN SHOP</p>
               </div>
-              <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10 text-right">
-                 <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-1">Stock Godown</p>
+              <div 
+                onClick={() => setTarget('godown')}
+                className={cn(
+                  "p-4 rounded-2xl border cursor-pointer transition-all text-right",
+                  target === 'godown' ? "bg-primary/10 border-primary shadow-lg shadow-primary/20" : "bg-white/5 border-white/5 opacity-50"
+                )}
+              >
+                 <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">{renderBoth('godown_stock')}</p>
                  <p className="text-2xl font-black text-white">{stockItem.stock_godown}</p>
-                 <p className="text-[10px] text-white/20 mt-1 font-bold uppercase tracking-widest">PCS IN STORAGE</p>
               </div>
            </div>
 
@@ -90,7 +103,9 @@ const StockUpdateDialog: React.FC<StockUpdateDialogProps> = ({ isOpen, onClose, 
                    placeholder="0"
                  />
               </div>
-              <p className="text-[10px] text-white/20 text-right italic">This will manually override the current shop stock value.</p>
+              <p className="text-[10px] text-white/20 text-right italic">
+                This will manually override the current {target === 'shop' ? 'Shop' : 'Godown'} stock value.
+              </p>
            </div>
         </div>
 

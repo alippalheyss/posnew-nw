@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { ChevronDown, ChevronUp, Upload, Image as ImageIcon, Trash2, Settings, Landmark, Monitor, Layout, FileText, Printer, Building2, X, Edit, UserPlus, Shield, Database, Languages, Palette, Globe } from 'lucide-react';
+import { ChevronDown, ChevronUp, Upload, Image as ImageIcon, Trash2, Settings, Landmark, Monitor, Layout, FileText, Printer, Building2, X, Edit, UserPlus, Shield, Database, Languages, Palette, Globe, CreditCard, Receipt, Percent } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/AppContext';
@@ -52,8 +52,8 @@ const Admin = () => {
     }));
   };
 
-  const handleShopSettingsChange = (field: string, value: string | number | boolean) => {
-    updateSettings('shop', { [field]: value });
+  const handleSettingsChange = (category: keyof typeof expandedSections, field: string, value: any) => {
+    updateSettings(category as any, { [field]: value });
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -61,7 +61,7 @@ const Admin = () => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        handleShopSettingsChange('logo', reader.result as string);
+        handleSettingsChange('shopSettings', 'logo', reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -126,7 +126,7 @@ const Admin = () => {
                               <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('shop_name')}</Label>
                               <Input 
                                 value={shopSettings.shopName} 
-                                onChange={(e) => handleShopSettingsChange('shopName', e.target.value)}
+                                onChange={(e) => handleSettingsChange('shop', 'shopName', e.target.value)}
                                 className="bg-white/5 border-white/10 h-12 rounded-xl text-right font-bold"
                               />
                            </div>
@@ -134,7 +134,7 @@ const Admin = () => {
                               <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('shop_address')}</Label>
                               <Input 
                                 value={shopSettings.shopAddress} 
-                                onChange={(e) => handleShopSettingsChange('shopAddress', e.target.value)}
+                                onChange={(e) => handleSettingsChange('shop', 'shopAddress', e.target.value)}
                                 className="bg-white/5 border-white/10 h-12 rounded-xl text-right font-bold"
                               />
                            </div>
@@ -142,7 +142,7 @@ const Admin = () => {
                               <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('shop_phone')}</Label>
                               <Input 
                                 value={shopSettings.shopPhone} 
-                                onChange={(e) => handleShopSettingsChange('shopPhone', e.target.value)}
+                                onChange={(e) => handleSettingsChange('shop', 'shopPhone', e.target.value)}
                                 className="bg-white/5 border-white/10 h-12 rounded-xl text-right font-mono"
                               />
                            </div>
@@ -156,7 +156,7 @@ const Admin = () => {
                                   variant="destructive" 
                                   size="icon" 
                                   className="absolute -top-2 -right-2 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                  onClick={() => handleShopSettingsChange('logo', '')}
+                                  onClick={() => handleSettingsChange('shop', 'logo', '')}
                                 >
                                    <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -179,7 +179,7 @@ const Admin = () => {
                            <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('currency')}</Label>
                            <Input 
                              value={shopSettings.currency} 
-                             onChange={(e) => handleShopSettingsChange('currency', e.target.value)}
+                             onChange={(e) => handleSettingsChange('shop', 'currency', e.target.value)}
                              className="bg-white/5 border-white/10 h-12 rounded-xl text-right font-black text-primary"
                            />
                         </div>
@@ -188,8 +188,130 @@ const Admin = () => {
                            <Input 
                              type="number"
                              value={shopSettings.taxRate} 
-                             onChange={(e) => handleShopSettingsChange('taxRate', parseFloat(e.target.value))}
+                             onChange={(e) => handleSettingsChange('shop', 'taxRate', parseFloat(e.target.value))}
                              className="bg-white/5 border-white/10 h-12 rounded-xl text-right font-black"
+                           />
+                        </div>
+                     </div>
+                  </CardContent>
+                )}
+             </Card>
+
+             {/* Accounting Settings */}
+             <Card className="bg-[#0a0a1a] border-white/5 rounded-3xl overflow-hidden shadow-2xl">
+                <SectionHeader 
+                  id="accountingSettings" 
+                  icon={Landmark} 
+                  title={renderBoth('accounting_settings')} 
+                  expanded={expandedSections.accountingSettings} 
+                />
+                {expandedSections.accountingSettings && (
+                  <CardContent className="p-8 space-y-8 animate-in fade-in slide-in-from-top-4 duration-300">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+                           <CreditCard className="h-5 w-5 text-primary" />
+                           <div className="text-right">
+                              <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest mb-2 block">Enable Credit Sales</Label>
+                              <Switch 
+                                checked={accountingSettings.enableCreditSales} 
+                                onCheckedChange={(val) => handleSettingsChange('accounting', 'enableCreditSales', val)}
+                                className="data-[state=checked]:bg-primary"
+                              />
+                           </div>
+                        </div>
+                        <div className="space-y-2">
+                           <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest">Default Credit Limit</Label>
+                           <div className="relative">
+                              <Percent className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
+                              <Input 
+                                type="number"
+                                value={accountingSettings.creditLimit} 
+                                onChange={(e) => handleSettingsChange('accounting', 'creditLimit', parseFloat(e.target.value))}
+                                className="bg-white/5 border-white/10 h-12 rounded-xl text-right font-bold pr-10"
+                              />
+                           </div>
+                        </div>
+                     </div>
+                  </CardContent>
+                )}
+             </Card>
+
+             {/* Printing Settings */}
+             <Card className="bg-[#0a0a1a] border-white/5 rounded-3xl overflow-hidden shadow-2xl">
+                <SectionHeader 
+                  id="printingSettings" 
+                  icon={Printer} 
+                  title={renderBoth('printing_settings')} 
+                  expanded={expandedSections.printingSettings} 
+                />
+                {expandedSections.printingSettings && (
+                  <CardContent className="p-8 space-y-8 animate-in fade-in slide-in-from-top-4 duration-300">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-4">
+                           <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+                              <Receipt className="h-5 w-5 text-primary" />
+                              <div className="text-right">
+                                 <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest mb-2 block">Print Mode</Label>
+                                 <Select value={printingSettings.printMode} onValueChange={(val) => handleSettingsChange('printing', 'printMode', val)}>
+                                    <SelectTrigger className="w-[120px] bg-white/10 border-none h-9 text-right font-bold">
+                                       <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
+                                       <SelectItem value="auto" className="text-right">Automatic</SelectItem>
+                                       <SelectItem value="ask" className="text-right">Ask Always</SelectItem>
+                                       <SelectItem value="off" className="text-right">Disabled</SelectItem>
+                                    </SelectContent>
+                                 </Select>
+                              </div>
+                           </div>
+                        </div>
+                        <div className="space-y-4">
+                           <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+                              <Layout className="h-5 w-5 text-primary" />
+                              <div className="text-right">
+                                 <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest mb-2 block">Paper Width</Label>
+                                 <Select value={printingSettings.thermalPrinterWidth} onValueChange={(val) => handleSettingsChange('printing', 'thermalPrinterWidth', val)}>
+                                    <SelectTrigger className="w-[120px] bg-white/10 border-none h-9 text-right font-bold">
+                                       <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
+                                       <SelectItem value="58mm" className="text-right">58mm</SelectItem>
+                                       <SelectItem value="80mm" className="text-right">80mm</SelectItem>
+                                    </SelectContent>
+                                 </Select>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                  </CardContent>
+                )}
+             </Card>
+
+             {/* Report Settings */}
+             <Card className="bg-[#0a0a1a] border-white/5 rounded-3xl overflow-hidden shadow-2xl">
+                <SectionHeader 
+                  id="reportSettings" 
+                  icon={FileText} 
+                  title={renderBoth('report_settings')} 
+                  expanded={expandedSections.reportSettings} 
+                />
+                {expandedSections.reportSettings && (
+                  <CardContent className="p-8 space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-4 text-right">
+                           <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest">Invoice Header</Label>
+                           <Input 
+                             value={reportSettings.invoiceHeader} 
+                             onChange={(e) => handleSettingsChange('reports', 'invoiceHeader', e.target.value)}
+                             className="bg-white/5 border-white/10 rounded-xl text-right"
+                           />
+                        </div>
+                        <div className="space-y-4 text-right">
+                           <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest">Invoice Footer</Label>
+                           <Input 
+                             value={reportSettings.invoiceFooter} 
+                             onChange={(e) => handleSettingsChange('reports', 'invoiceFooter', e.target.value)}
+                             className="bg-white/5 border-white/10 rounded-xl text-right"
                            />
                         </div>
                      </div>
@@ -268,7 +390,7 @@ const Admin = () => {
                               <Languages className="h-5 w-5 text-primary" />
                               <div className="text-right">
                                  <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest mb-2 block">System Language</Label>
-                                 <Select value={softwareSettings.language} onValueChange={(val) => updateSettings('software', { language: val })}>
+                                 <Select value={softwareSettings.language} onValueChange={(val) => handleSettingsChange('software', 'language', val)}>
                                     <SelectTrigger className="w-[120px] bg-white/10 border-none h-9 text-right font-bold">
                                        <SelectValue />
                                     </SelectTrigger>
@@ -285,7 +407,7 @@ const Admin = () => {
                               <Palette className="h-5 w-5 text-purple-500" />
                               <div className="text-right">
                                  <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest mb-2 block">System Theme</Label>
-                                 <Select value={softwareSettings.theme} onValueChange={(val) => updateSettings('software', { theme: val })}>
+                                 <Select value={softwareSettings.theme} onValueChange={(val) => handleSettingsChange('software', 'theme', val)}>
                                     <SelectTrigger className="w-[120px] bg-white/10 border-none h-9 text-right font-bold">
                                        <SelectValue />
                                     </SelectTrigger>

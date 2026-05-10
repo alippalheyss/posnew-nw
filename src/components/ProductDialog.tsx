@@ -52,7 +52,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                     image: '/placeholder.svg',
                     stock_shop: 0,
                     stock_godown: 0,
-                    category: 'Beverage',
+                    category: 'OTHER',
                     is_zero_tax: false,
                     units: []
                 });
@@ -199,11 +199,11 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
-                                        <SelectItem value="Beverage" className="text-right">Beverage</SelectItem>
-                                        <SelectItem value="Food" className="text-right">Food</SelectItem>
-                                        <SelectItem value="Hardware" className="text-right">Hardware</SelectItem>
-                                        <SelectItem value="Cosmetics" className="text-right">Cosmetics</SelectItem>
-                                        <SelectItem value="Other" className="text-right">Other</SelectItem>
+                                        <SelectItem value="DRINKS" className="text-right">DRINKS</SelectItem>
+                                        <SelectItem value="FOOD" className="text-right">FOOD</SelectItem>
+                                        <SelectItem value="HARDWARE" className="text-right">HARDWARE</SelectItem>
+                                        <SelectItem value="COSMETICS" className="text-right">COSMETICS</SelectItem>
+                                        <SelectItem value="OTHER" className="text-right">OTHER</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Download, PlusCircle, Receipt, Building2, Calculator, ArrowUpRight, ArrowDownLeft, Landmark, X, ShoppingCart, Archive, Play, Trash2, Save, Package, FileText, Info, TrendingDown, TrendingUp } from 'lucide-react';
 import { useAppContext, Purchase, Vendor, PurchaseItem, Product } from '@/context/AppContext';
+import { Badge } from '@/components/ui/badge';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';

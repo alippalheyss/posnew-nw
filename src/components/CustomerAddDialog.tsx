@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { showSuccess, showError } from '@/utils/toast';
-import { useAppContext, Customer } from '@/context/AppContext'; // Import Customer type
+import { useAppContext, Customer } from '@/context/AppContext';
+import { UserPlus, User, Phone, Mail, CreditCard, Hash } from 'lucide-react';
 
 interface CustomerAddDialogProps {
   isOpen: boolean;
@@ -34,7 +35,6 @@ const CustomerAddDialog: React.FC<CustomerAddDialogProps> = ({ isOpen, onClose, 
     if (isOpen) {
       setNewCustomer(prev => ({ ...prev, code: getNextCustomerCode() }));
     } else {
-      // Reset form when dialog closes
       setNewCustomer({
         code: '',
         name_dv: '',
@@ -67,10 +67,9 @@ const CustomerAddDialog: React.FC<CustomerAddDialogProps> = ({ isOpen, onClose, 
 
     const customerToAdd: Customer = {
       ...newCustomer,
-      id: `cust-${Date.now()}`, // Generate a unique ID
+      id: `cust-${Date.now()}`,
     };
     onAdd(customerToAdd);
-    showSuccess(t('customer_added_successfully'));
     onClose();
   };
 
@@ -82,88 +81,73 @@ const CustomerAddDialog: React.FC<CustomerAddDialogProps> = ({ isOpen, onClose, 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] font-faruma" dir="rtl">
-        <DialogHeader>
-          <DialogTitle className="text-right">{renderBoth('add_new_customer')}</DialogTitle>
-          <DialogDescription className="text-right">
+      <DialogContent className="sm:max-w-[500px] font-faruma bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
+        <DialogHeader className="text-right">
+          <DialogTitle className="text-2xl font-black flex items-center justify-end gap-3">
+             {renderBoth('add_new_customer')} <UserPlus className="h-6 w-6 text-primary" />
+          </DialogTitle>
+          <DialogDescription className="text-white/40">
             {renderBoth('add_new_customer_description')}
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-3 items-center gap-4">
-            <Label htmlFor="name_dv" className="text-right">
-              {renderBoth('customer_name')} (ދިވެހި)
-            </Label>
-            <Input
-              id="name_dv"
-              value={newCustomer.name_dv}
-              onChange={handleChange}
-              className="col-span-2 text-right"
-            />
-          </div>
-          <div className="grid grid-cols-3 items-center gap-4">
-            <Label htmlFor="name_en" className="text-right">
-              {renderBoth('customer_name')} (English)
-            </Label>
-            <Input
-              id="name_en"
-              value={newCustomer.name_en}
-              onChange={handleChange}
-              className="col-span-2 text-right"
-            />
-          </div>
-          <div className="grid grid-cols-3 items-center gap-4">
-            <Label htmlFor="code" className="text-right">
-              {renderBoth('customer_code')}
-            </Label>
-            <Input
-              id="code"
-              value={newCustomer.code}
-              readOnly // Make customer code read-only
-              className="col-span-2 text-right"
-            />
-          </div>
-          <div className="grid grid-cols-3 items-center gap-4">
-            <Label htmlFor="phone" className="text-right">
-              {renderBoth('customer_phone')}
-            </Label>
-            <Input
-              id="phone"
-              value={newCustomer.phone}
-              onChange={handleChange}
-              className="col-span-2 text-right"
-            />
-          </div>
-          <div className="grid grid-cols-3 items-center gap-4">
-            <Label htmlFor="email" className="text-right">
-              {renderBoth('customer_email')}
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              value={newCustomer.email}
-              onChange={handleChange}
-              className="col-span-2 text-right"
-            />
-          </div>
-          <div className="grid grid-cols-3 items-center gap-4">
-            <Label htmlFor="credit_limit" className="text-right">
-              {renderBoth('credit_limit')}
-            </Label>
-            <Input
-              id="credit_limit"
-              type="number"
-              value={newCustomer.credit_limit}
-              onChange={handleChange}
-              className="col-span-2 text-right"
-            />
-          </div>
+        
+        <div className="space-y-6 py-6">
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name_dv" className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('customer_name')} (ދިވެހި)*</Label>
+                <div className="relative">
+                   <User className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
+                   <Input id="name_dv" value={newCustomer.name_dv} onChange={handleChange} className="bg-white/5 border-white/10 h-12 rounded-xl text-right pr-10 font-bold" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="name_en" className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('customer_name')} (English)*</Label>
+                <div className="relative">
+                   <User className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
+                   <Input id="name_en" value={newCustomer.name_en} onChange={handleChange} className="bg-white/5 border-white/10 h-12 rounded-xl text-right pr-10 font-bold" />
+                </div>
+              </div>
+           </div>
+
+           <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="code" className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('customer_code')}</Label>
+                <div className="relative">
+                   <Hash className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
+                   <Input id="code" value={newCustomer.code} readOnly className="bg-white/5 border-white/10 h-11 rounded-xl text-right pr-10 font-mono text-sm opacity-50" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('customer_phone')}*</Label>
+                <div className="relative">
+                   <Phone className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
+                   <Input id="phone" value={newCustomer.phone} onChange={handleChange} className="bg-white/5 border-white/10 h-12 rounded-xl text-right pr-10 font-bold" />
+                </div>
+              </div>
+           </div>
+
+           <div className="space-y-2">
+              <Label htmlFor="email" className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('customer_email')}</Label>
+              <div className="relative">
+                 <Mail className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
+                 <Input id="email" type="email" value={newCustomer.email} onChange={handleChange} className="bg-white/5 border-white/10 h-12 rounded-xl text-right pr-10" />
+              </div>
+           </div>
+
+           <div className="space-y-2">
+              <Label htmlFor="credit_limit" className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('credit_limit')}</Label>
+              <div className="relative">
+                 <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-primary">MVR</span>
+                 <Input id="credit_limit" type="number" value={newCustomer.credit_limit} onChange={handleChange} className="bg-white/5 border-white/10 h-14 rounded-2xl text-right pr-4 text-2xl font-black text-white" />
+              </div>
+           </div>
         </div>
-        <DialogFooter className="flex justify-between">
-          <Button variant="outline" onClick={onClose} className="font-faruma">
+
+        <DialogFooter className="gap-3 pt-4 border-t border-white/5">
+          <Button variant="ghost" onClick={onClose} className="flex-1 h-12 border-white/10 hover:bg-white/5 text-white font-black uppercase tracking-widest">
             {renderBoth('cancel')}
           </Button>
-          <Button onClick={handleAdd} className="font-faruma">
+          <Button onClick={handleAdd} className="flex-1 h-12 bg-primary hover:bg-primary/90 font-black uppercase tracking-widest">
             {renderBoth('add_customer')}
           </Button>
         </DialogFooter>

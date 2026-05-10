@@ -35,9 +35,7 @@ const Stock = () => {
   const LOW_STOCK_THRESHOLD = 10;
   const WARNING_STOCK_THRESHOLD = 50;
 
-  const stockItems = products;
-
-  const filteredStockItems = stockItems.filter(item => {
+  const filteredStockItems = products.filter(item => {
     const matchesSearch =
       item.name_dv.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -64,8 +62,8 @@ const Stock = () => {
     setIsTransferDialogOpen(true);
   };
 
-  const handleSaveStockUpdate = (updatedStockItem: any) => {
-    updateStock(updatedStockItem.id, updatedStockItem.stock_shop !== undefined ? updatedStockItem.stock_shop : updatedStockItem.current_stock);
+  const handleSaveStockUpdate = (updatedStockItem: Product) => {
+    updateStock(updatedStockItem.id, updatedStockItem.stock_shop);
     setIsStockUpdateDialogOpen(false);
     setUpdatingStockItem(null);
   };
@@ -99,35 +97,25 @@ const Stock = () => {
            <h1 className="text-3xl font-black text-white flex items-center justify-end gap-3">
              {renderBoth('stock_inventory')} <Boxes className="h-8 w-8 text-primary" />
            </h1>
-           <p className="text-sm text-white/40 mt-1">Monitor stock levels and manage transfers between shop and godown</p>
+           <p className="text-sm text-white/40 mt-1">Monitor and manage stock levels across locations</p>
         </div>
 
         <div className="flex gap-3">
            <div className="bg-white/5 rounded-xl p-1 border border-white/10 flex gap-1">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setStockFilter('all')}
-                className={cn("px-4 rounded-lg text-[10px] font-black", stockFilter === 'all' ? "bg-primary text-white" : "text-white/40")}
-              >
-                ALL
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setStockFilter('low')}
-                className={cn("px-4 rounded-lg text-[10px] font-black", stockFilter === 'low' ? "bg-red-500 text-white" : "text-white/40")}
-              >
-                LOW
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setStockFilter('warning')}
-                className={cn("px-4 rounded-lg text-[10px] font-black", stockFilter === 'warning' ? "bg-orange-500 text-white" : "text-white/40")}
-              >
-                WARNING
-              </Button>
+              {['all', 'low', 'warning', 'high'].map((filter) => (
+                <Button 
+                  key={filter}
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setStockFilter(filter as any)}
+                  className={cn(
+                    "px-4 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                    stockFilter === filter ? "bg-primary text-white" : "text-white/40 hover:text-white"
+                  )}
+                >
+                  {filter}
+                </Button>
+              ))}
            </div>
         </div>
       </div>
@@ -136,16 +124,16 @@ const Stock = () => {
       <div className="relative mb-8">
          <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
          <Input 
-           placeholder={renderBoth('search_products')}
+           placeholder="Search stock by name, code or barcode..."
            value={searchTerm}
            onChange={(e) => setSearchTerm(e.target.value)}
            className="w-full bg-white/5 border-white/10 rounded-xl pr-12 h-14 text-right font-bold focus:border-primary/50 transition-all text-lg"
          />
       </div>
 
-      {/* Stock Cards Grid */}
+      {/* Stock Grid */}
       <ScrollArea className="flex-1 custom-scrollbar">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-6">
           {filteredStockItems.map((item) => (
             <Card key={item.id} className="bg-[#0a0a1a] border-white/5 hover:border-primary/30 transition-all rounded-[2rem] overflow-hidden group relative">
                <CardContent className="p-0">
@@ -176,14 +164,12 @@ const Stock = () => {
                              "text-2xl font-black text-right",
                              item.stock_shop < LOW_STOCK_THRESHOLD ? "text-red-500" : item.stock_shop < WARNING_STOCK_THRESHOLD ? "text-orange-500" : "text-green-500"
                            )}>{item.stock_shop}</p>
-                           <p className="text-[10px] text-white/20 text-right mt-1 font-bold">UNITS AVAILABLE</p>
                         </div>
                         <div className="bg-white/5 p-4 rounded-2xl border border-white/5 group-hover:bg-white/10 transition-all">
                            <div className="flex items-center justify-end gap-2 text-[10px] font-black text-white/30 uppercase tracking-widest mb-2">
                               {renderBoth('godown')} <Warehouse className="h-3 w-3" />
                            </div>
                            <p className="text-2xl font-black text-white text-right">{item.stock_godown}</p>
-                           <p className="text-[10px] text-white/20 text-right mt-1 font-bold">UNITS STORED</p>
                         </div>
                      </div>
 
@@ -212,19 +198,25 @@ const Stock = () => {
       {updatingStockItem && (
         <StockUpdateDialog
           isOpen={isStockUpdateDialogOpen}
-          onClose={() => setIsStockUpdateDialogOpen(false)}
+          onClose={() => {
+            setIsStockUpdateDialogOpen(false);
+            setUpdatingStockItem(null);
+          }}
           onSave={handleSaveStockUpdate}
-          product={updatingStockItem}
+          stockItem={updatingStockItem}
         />
       )}
 
       {updatingStockItem && (
         <StockTransferDialog
           isOpen={isTransferDialogOpen}
-          onClose={() => setIsTransferDialogOpen(false)}
+          onClose={() => {
+            setIsTransferDialogOpen(false);
+            setUpdatingStockItem(null);
+          }}
           onTransfer={handleTransfer}
-          product={updatingStockItem}
-          defaultDirection={transferDirection}
+          stockItem={updatingStockItem}
+          initialDirection={transferDirection}
         />
       )}
 

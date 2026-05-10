@@ -1,11 +1,14 @@
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowRightLeft, Store, Warehouse } from "lucide-react";
+import { ArrowRightLeft, Store, Warehouse, ArrowRight, ArrowLeft } from "lucide-react";
 import { Product } from '@/context/AppContext';
+import { cn } from '@/lib/utils';
 
 interface StockTransferDialogProps {
     isOpen: boolean;
@@ -57,85 +60,102 @@ const StockTransferDialog: React.FC<StockTransferDialogProps> = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[450px] font-faruma" dir="rtl">
-                <DialogHeader>
-                    <DialogTitle className="text-right flex items-center justify-end gap-2">
+            <DialogContent className="sm:max-w-[500px] font-faruma bg-[#0a0a1a] border-white/10 text-white shadow-2xl" dir="rtl">
+                <DialogHeader className="text-right">
+                    <DialogTitle className="text-2xl font-black flex items-center justify-end gap-3">
                         {renderBoth('transfer_stock')}
-                        <ArrowRightLeft className="h-5 w-5 text-primary" />
+                        <ArrowRightLeft className="h-6 w-6 text-primary" />
                     </DialogTitle>
-                    <DialogDescription className="text-right">
+                    <DialogDescription className="text-white/40">
                         {stockItem.name_dv} ({stockItem.name_en})
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="py-4 space-y-6">
+                <div className="py-8 space-y-8">
                     {/* Direction Toggle */}
-                    <div className="grid grid-cols-2 gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+                    <div className="grid grid-cols-2 gap-3 bg-white/5 p-1.5 rounded-2xl border border-white/5">
                         <Button
                             variant={direction === 'to_godown' ? 'default' : 'ghost'}
                             onClick={() => setDirection('to_godown')}
-                            className="flex items-center gap-2"
+                            className={cn(
+                                "flex items-center gap-2 h-12 rounded-xl text-[10px] font-black uppercase tracking-widest",
+                                direction === 'to_godown' ? "bg-primary text-white shadow-lg" : "text-white/40 hover:text-white"
+                            )}
                         >
-                            <Store className="h-4 w-4" /> Shop → Godown <Warehouse className="h-4 w-4" />
+                            <Store className="h-4 w-4" /> {renderBoth('shop')} <ArrowRight className="h-3 w-3" /> <Warehouse className="h-4 w-4" />
                         </Button>
                         <Button
                             variant={direction === 'to_shop' ? 'default' : 'ghost'}
                             onClick={() => setDirection('to_shop')}
-                            className="flex items-center gap-2"
+                            className={cn(
+                                "flex items-center gap-2 h-12 rounded-xl text-[10px] font-black uppercase tracking-widest",
+                                direction === 'to_shop' ? "bg-primary text-white shadow-lg" : "text-white/40 hover:text-white"
+                            )}
                         >
-                            <Warehouse className="h-4 w-4" /> Godown → Shop <Store className="h-4 w-4" />
+                            <Warehouse className="h-4 w-4" /> {renderBoth('godown')} <ArrowRight className="h-3 w-3" /> <Store className="h-4 w-4" />
                         </Button>
                     </div>
 
-                    {/* Stock Info */}
-                    <div className="flex justify-between items-center px-4">
-                        <div className="text-center">
-                            <p className="text-xs text-black dark:text-white ">{renderBoth('shop_stock')}</p>
-                            <p className="text-xl font-bold">{stockItem.stock_shop}</p>
+                    {/* Stock Info Cards */}
+                    <div className="flex justify-between items-center gap-4">
+                        <div className={cn(
+                            "flex-1 p-5 rounded-2xl border transition-all text-center",
+                            direction === 'to_godown' ? "bg-primary/10 border-primary/30" : "bg-white/5 border-white/5 opacity-40"
+                        )}>
+                            <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">{renderBoth('shop_stock')}</p>
+                            <p className="text-3xl font-black text-white">{stockItem.stock_shop}</p>
                         </div>
-                        <ArrowRightLeft className="h-5 w-5 text-black dark:text-white " />
-                        <div className="text-center">
-                            <p className="text-xs text-black dark:text-white ">{renderBoth('godown_stock')}</p>
-                            <p className="text-xl font-bold">{stockItem.stock_godown}</p>
+                        
+                        <div className="flex flex-col items-center gap-2">
+                            <ArrowRightLeft className={cn("h-6 w-6 text-primary", direction === 'to_shop' && "rotate-180 transition-transform")} />
+                        </div>
+
+                        <div className={cn(
+                            "flex-1 p-5 rounded-2xl border transition-all text-center",
+                            direction === 'to_shop' ? "bg-primary/10 border-primary/30" : "bg-white/5 border-white/5 opacity-40"
+                        )}>
+                            <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">{renderBoth('godown_stock')}</p>
+                            <p className="text-3xl font-black text-white">{stockItem.stock_godown}</p>
                         </div>
                     </div>
 
-                    {/* Amount Input */}
-                    <div className="space-y-2">
-                        <Label className="text-right block w-full">
-                            {renderBoth('transfer_quantity')}
+                    {/* Transfer Amount Input */}
+                    <div className="space-y-3">
+                        <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest pr-2">
+                           {renderBoth('transfer_amount')}*
                         </Label>
-                        <div className="flex gap-2">
+                        <div className="relative">
+                            <ArrowRightLeft className="absolute right-4 top-1/2 -translate-y-1/2 h-6 w-6 text-primary/40" />
                             <Input
                                 type="number"
                                 value={transferAmount}
                                 onChange={(e) => setTransferAmount(e.target.value)}
-                                className="text-right text-lg font-bold"
+                                className={cn(
+                                    "bg-white/5 h-16 rounded-2xl pr-14 text-3xl font-black text-white focus:ring-0 text-right transition-all",
+                                    !isValid && currentAmount > 0 ? "border-red-500/50" : "border-primary"
+                                )}
                                 placeholder="0"
-                                autoFocus
                                 max={maxAmount}
+                                autoFocus
                             />
-                            <Button
-                                variant="secondary"
-                                onClick={() => setTransferAmount(maxAmount.toString())}
-                            >
-                                {renderBoth('all')}
-                            </Button>
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-white/20 uppercase tracking-widest">
+                               Max: {maxAmount}
+                            </div>
                         </div>
-                        <p className="text-xs text-black dark:text-white text-right">
-                            {renderBoth('available_to_transfer')}: {maxAmount}
-                        </p>
+                        {!isValid && currentAmount > maxAmount && (
+                            <p className="text-[10px] text-red-500 text-right font-black uppercase tracking-widest">Insufficient stock in source location</p>
+                        )}
                     </div>
                 </div>
 
-                <DialogFooter className="flex justify-between gap-2">
-                    <Button variant="outline" onClick={onClose} className="flex-1">
+                <DialogFooter className="gap-3 pt-4 border-t border-white/5">
+                    <Button variant="ghost" onClick={onClose} className="flex-1 h-12 border-white/10 hover:bg-white/5 text-white font-black uppercase tracking-widest">
                         {renderBoth('cancel')}
                     </Button>
-                    <Button
-                        onClick={handleTransfer}
+                    <Button 
+                        onClick={handleTransfer} 
                         disabled={!isValid}
-                        className="flex-1"
+                        className="flex-1 h-12 bg-primary hover:bg-primary/90 font-black uppercase tracking-widest shadow-[0_0_20px_rgba(0,132,255,0.3)]"
                     >
                         {renderBoth('confirm_transfer')}
                     </Button>

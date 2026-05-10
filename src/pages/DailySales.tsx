@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { PencilLine, CalendarDays, Printer, Trash2, Filter, ChevronRight, Receipt, DollarSign, CreditCard, ArrowRightLeft } from 'lucide-react';
+import { PencilLine, CalendarDays, Printer, Trash2, Filter, ChevronRight, Receipt, DollarSign, CreditCard, ArrowRightLeft, TrendingUp } from 'lucide-react';
 import { useAppContext, Product, Customer, CartItem, Sale } from '@/context/AppContext';
 import SaleEditDialog from '@/components/SaleEditDialog'; 
 import { showSuccess } from '@/utils/toast';

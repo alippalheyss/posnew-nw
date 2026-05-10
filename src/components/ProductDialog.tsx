@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -7,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Product, useAppContext } from '@/context/AppContext';
-import { Plus, Trash2, Save, Upload, CalendarIcon } from 'lucide-react';
+import { Plus, Trash2, Save, Upload, CalendarIcon, Package, DollarSign, Barcode, Hash, ListTree, Image as ImageIcon } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -19,7 +21,7 @@ import { generatePlaceholderImage } from '@/utils/imageUtils';
 interface ProductDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    product: Product | null; // Null means 'Add' mode
+    product: Product | null;
     onSave: (updatedProduct: Product) => void;
 }
 
@@ -33,13 +35,11 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
     useEffect(() => {
         if (isOpen) {
             if (product) {
-                // Edit Mode
                 const cloned = JSON.parse(JSON.stringify(product));
                 setEditedProduct(cloned);
                 setImagePreviewUrl(cloned.image);
                 setExpiryDate(cloned.expiry_date ? parseISO(cloned.expiry_date) : undefined);
             } else {
-                // Add Mode
                 const newId = `prod-${Date.now()}`;
                 const autoBarcode = Math.floor(Math.random() * 900000000000 + 100000000000).toString();
                 setEditedProduct({
@@ -95,34 +95,6 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
         }
     };
 
-    const addUnit = () => {
-        setEditedProduct(prev => {
-            if (!prev) return null;
-            const newUnits = [...(prev.units || [])];
-            const unitIndex = newUnits.length + 1;
-            const unitBarcode = `${prev.barcode}-U${unitIndex}`;
-            newUnits.push({ name: '', price: 0, conversion_factor: 1, barcode: unitBarcode });
-            return { ...prev, units: newUnits };
-        });
-    };
-
-    const updateUnit = (index: number, field: string, value: any) => {
-        setEditedProduct(prev => {
-            if (!prev) return null;
-            const newUnits = [...(prev.units || [])];
-            newUnits[index] = { ...newUnits[index], [field]: value };
-            return { ...prev, units: newUnits };
-        });
-    };
-
-    const removeUnit = (index: number) => {
-        setEditedProduct(prev => {
-            if (!prev) return null;
-            const newUnits = prev.units?.filter((_, i) => i !== index) || [];
-            return { ...prev, units: newUnits };
-        });
-    };
-
     const renderBoth = (key: string, options?: any) => (
         <>
             {t(key, options)} ({t(key, { ...options, lng: 'en' })})
@@ -131,185 +103,149 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[650px] font-faruma max-h-[90vh] overflow-y-auto" dir="rtl">
-                <DialogHeader>
-                    <DialogTitle className="text-right">
+            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col font-faruma bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
+                <DialogHeader className="text-right">
+                    <DialogTitle className="text-2xl font-black flex items-center justify-end gap-3">
                         {product ? renderBoth('edit_product') : renderBoth('add_new_product')}
+                        <Package className="h-6 w-6 text-primary" />
                     </DialogTitle>
-                    <DialogDescription className="text-right">
-                        {product ? editedProduct.name_dv : renderBoth('enter_product_details')}
+                    <DialogDescription className="text-white/40">
+                        {renderBoth('product_details_description')}
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {/* Left Column */}
-                        <div className="md:col-span-1 space-y-4">
-                            <div className="flex flex-col items-center">
-                                <div className="w-full h-40 border-2 border-dashed rounded-lg flex items-center justify-center bg-gray-50 relative overflow-hidden group">
-                                    <img src={imagePreviewUrl || '/placeholder.svg'} className="w-full h-full object-cover" alt="Preview" />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                                        <Label htmlFor="image-upload" className="cursor-pointer text-white flex flex-col items-center gap-1">
-                                            <Upload className="h-6 w-6" />
-                                            <span className="text-[10px] font-bold uppercase">Change Image</span>
-                                        </Label>
-                                    </div>
-                                    <input id="image-upload" type="file" className="hidden" onChange={handleFileChange} accept="image/*" />
+                <div className="flex-1 overflow-y-auto custom-scrollbar py-6 pl-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {/* Image Section */}
+                        <div className="space-y-4">
+                            <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('product_image')}</Label>
+                            <div className="aspect-square rounded-3xl bg-white/5 border-2 border-dashed border-white/10 flex flex-col items-center justify-center relative overflow-hidden group">
+                                {imagePreviewUrl ? (
+                                    <img src={imagePreviewUrl} alt="Preview" className="w-full h-full object-cover" />
+                                ) : (
+                                    <ImageIcon className="h-12 w-12 text-white/10" />
+                                )}
+                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <Label htmlFor="image-upload" className="cursor-pointer bg-primary px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/90 transition-all flex items-center gap-2">
+                                        <Upload className="h-3 w-3" /> UPLOAD IMAGE
+                                    </Label>
+                                    <input id="image-upload" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
                                 </div>
-                            </div>
-
-                            <div className="space-y-1 text-right">
-                                <Label className="text-xs opacity-70">Item Code</Label>
-                                <Input value={editedProduct.item_code} readOnly className="h-8 bg-gray-50 text-[11px] font-mono text-center" />
-                            </div>
-
-                            <div className="space-y-1 text-right">
-                                <Label className="text-xs opacity-70">{t('expiry_date')}</Label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" className={cn("w-full h-8 justify-start text-right font-normal text-xs", !expiryDate && "text-muted-foreground")}>
-                                            {expiryDate ? format(expiryDate, "PPP") : <span>Pick a date</span>}
-                                            <CalendarIcon className="ml-2 h-3 w-3" />
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar mode="single" selected={expiryDate} onSelect={setExpiryDate} initialFocus dir="rtl" />
-                                    </PopoverContent>
-                                </Popover>
                             </div>
                         </div>
 
-                        {/* Right Column */}
-                        <div className="md:col-span-2 space-y-4 text-right">
-                            <div className="space-y-4">
-                                <div className="space-y-1">
-                                    <Label className="text-xs font-bold">{t('name_dv')} (Dhivehi)</Label>
-                                    <Input value={editedProduct.name_dv} onChange={(e) => updateField('name_dv', e.target.value)} onFocus={(e) => e.target.select()} className="text-right" />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label className="text-xs font-bold">{t('name_en')} (English)</Label>
-                                    <Input value={editedProduct.name_en} onChange={(e) => updateField('name_en', e.target.value)} onFocus={(e) => e.target.select()} className="text-left" dir="ltr" />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <Label className="text-xs font-bold">{t('barcode')}</Label>
-                                    <Input value={editedProduct.barcode} onChange={(e) => updateField('barcode', e.target.value)} onFocus={(e) => e.target.select()} className="font-mono text-right" />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label className="text-xs font-bold">{t('category')}</Label>
-                                    <Select value={editedProduct.category} onValueChange={(val) => updateField('category', val)}>
-                                        <SelectTrigger className="h-10 text-xs">
-                                            <SelectValue placeholder="Select Category" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Beverage">Beverage</SelectItem>
-                                            <SelectItem value="Snacks">Snacks</SelectItem>
-                                            <SelectItem value="Grocery">Grocery</SelectItem>
-                                            <SelectItem value="Dairy">Dairy</SelectItem>
-                                            <SelectItem value="Bakery">Bakery</SelectItem>
-                                            <SelectItem value="Personal Care">Personal Care</SelectItem>
-                                            <SelectItem value="Household">Household</SelectItem>
-                                            <SelectItem value="Stationery">Stationery</SelectItem>
-                                            <SelectItem value="Electronics">Electronics</SelectItem>
-                                            <SelectItem value="Canned Goods">Canned Goods</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center justify-between py-2 border-t mt-2">
-                                <Label className="text-xs font-bold">{renderBoth('zero_tax_rated')}</Label>
-                                <Switch
-                                    checked={editedProduct.is_zero_tax}
-                                    onCheckedChange={(val) => updateField('is_zero_tax', val)}
+                        {/* Basic Info Section */}
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('product_name')} (ދިވެހި)*</Label>
+                                <Input 
+                                    value={editedProduct.name_dv} 
+                                    onChange={(e) => updateField('name_dv', e.target.value)} 
+                                    className="bg-white/5 border-white/10 h-12 rounded-xl text-right font-bold focus:border-primary/50"
                                 />
                             </div>
-
+                            <div className="space-y-2">
+                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('product_name')} (English)*</Label>
+                                <Input 
+                                    value={editedProduct.name_en} 
+                                    onChange={(e) => updateField('name_en', e.target.value)} 
+                                    className="bg-white/5 border-white/10 h-12 rounded-xl text-right font-bold focus:border-primary/50"
+                                />
+                            </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <Label className="text-xs font-bold">{t('price')} (Selling)</Label>
-                                    <Input type="number" value={editedProduct.price} onChange={(e) => updateField('price', parseFloat(e.target.value) || 0)} className="font-mono text-left" dir="ltr" />
+                                <div className="space-y-2">
+                                    <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('item_code')}*</Label>
+                                    <div className="relative">
+                                       <Hash className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
+                                       <Input value={editedProduct.item_code} readOnly className="bg-white/5 border-white/10 h-11 rounded-xl text-right pr-10 font-mono text-sm opacity-50" />
+                                    </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <Label className="text-xs font-bold text-black dark:text-white ">{t('cost_price')}</Label>
-                                    <div className="h-10 px-3 py-2 rounded-md border border-gray-200 bg-gray-50 flex items-center justify-start">
-                                        <span className="font-mono text-sm text-black dark:text-white ">
-                                            {editedProduct.cost_price ? `MVR ${editedProduct.cost_price.toFixed(2)}` : '-'}
-                                        </span>
+                                <div className="space-y-2">
+                                    <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('barcode')}*</Label>
+                                    <div className="relative">
+                                       <Barcode className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
+                                       <Input 
+                                          value={editedProduct.barcode} 
+                                          onChange={(e) => updateField('barcode', e.target.value)} 
+                                          className="bg-white/5 border-white/10 h-11 rounded-xl text-right pr-10 font-mono text-sm focus:border-primary/50" 
+                                       />
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
 
-                            {/* Profit Margin Display */}
-                            {editedProduct.cost_price && editedProduct.cost_price > 0 && (
-                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs font-bold text-blue-900">{t('profit_margin')}:</span>
-                                        <span className={cn(
-                                            "text-sm font-black",
-                                            ((editedProduct.price - editedProduct.cost_price) / editedProduct.cost_price * 100) < 10 ? "text-red-600" :
-                                                ((editedProduct.price - editedProduct.cost_price) / editedProduct.cost_price * 100) < 20 ? "text-yellow-600" :
-                                                    "text-green-600"
-                                        )}>
-                                            {((editedProduct.price - editedProduct.cost_price) / editedProduct.cost_price * 100).toFixed(1)}%
-                                        </span>
-                                    </div>
-                                    {editedProduct.price < editedProduct.cost_price && (
-                                        <p className="text-[10px] text-red-600 mt-1 font-bold">⚠️ {t('selling_price_too_low')}</p>
-                                    )}
+                    <Separator className="my-8 bg-white/5" />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('price')}*</Label>
+                                <div className="relative">
+                                   <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-primary">MVR</span>
+                                   <Input 
+                                      type="number" 
+                                      value={editedProduct.price} 
+                                      onChange={(e) => updateField('price', parseFloat(e.target.value) || 0)} 
+                                      className="bg-white/5 border-white/10 h-14 rounded-2xl text-right pr-4 text-2xl font-black text-white focus:border-primary" 
+                                   />
                                 </div>
-                            )}
+                            </div>
 
-                            <Separator />
+                            <div className="space-y-2">
+                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('category')}</Label>
+                                <Select value={editedProduct.category} onValueChange={(val) => updateField('category', val)}>
+                                    <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl text-right">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
+                                        <SelectItem value="Beverage" className="text-right">Beverage</SelectItem>
+                                        <SelectItem value="Food" className="text-right">Food</SelectItem>
+                                        <SelectItem value="Hardware" className="text-right">Hardware</SelectItem>
+                                        <SelectItem value="Cosmetics" className="text-right">Cosmetics</SelectItem>
+                                        <SelectItem value="Other" className="text-right">Other</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
 
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-center">
-                                    <h4 className="text-xs font-black uppercase tracking-widest text-primary">Multi-Unit Pricing</h4>
-                                    <Button size="sm" variant="outline" onClick={addUnit} className="h-7 text-[10px] gap-1 bg-primary/5">
-                                        <Plus className="h-3 w-3" /> Add Unit
-                                    </Button>
-                                </div>
+                        <div className="space-y-6">
+                           <div className="bg-white/5 p-6 rounded-3xl border border-white/5">
+                              <div className="flex items-center justify-between mb-4">
+                                 <Switch 
+                                    checked={editedProduct.is_zero_tax} 
+                                    onCheckedChange={(val) => updateField('is_zero_tax', val)}
+                                    className="data-[state=checked]:bg-primary"
+                                 />
+                                 <Label className="font-black text-sm uppercase tracking-widest">Zero Tax Item</Label>
+                              </div>
+                              <p className="text-[10px] text-white/20 text-right">Enable this if the item is GST exempt (e.g. basic food items).</p>
+                           </div>
 
-                                <div className="space-y-3 max-h-[180px] overflow-y-auto pr-2">
-                                    {(editedProduct.units || []).map((unit, index) => (
-                                        <div key={index} className="flex flex-col gap-2 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border text-[10px] shadow-sm">
-                                            <div className="flex gap-2 items-center">
-                                                <div className="flex-1">
-                                                    <Input value={unit.name} onChange={(e) => updateUnit(index, 'name', e.target.value)} placeholder="Unit" className="h-7 text-xs bg-white" />
-                                                </div>
-                                                <div className="w-16">
-                                                    <Input type="number" value={unit.price} onChange={(e) => updateUnit(index, 'price', parseFloat(e.target.value) || 0)} className="h-7 text-xs font-mono" />
-                                                </div>
-                                                <div className="w-12">
-                                                    <Input type="number" value={unit.conversion_factor} onChange={(e) => updateUnit(index, 'conversion_factor', parseFloat(e.target.value) || 1)} className="h-7 text-[10px] font-mono" />
-                                                </div>
-                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:bg-red-50" onClick={() => removeUnit(index)}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                            <div className="flex gap-2 items-center border-t pt-2 mt-1">
-                                                <Label className="text-[9px] uppercase font-bold opacity-50">Barcode:</Label>
-                                                <Input value={unit.barcode} onChange={(e) => updateUnit(index, 'barcode', e.target.value)} onFocus={(e) => e.target.select()} placeholder="Barcode" className="h-7 text-[10px] bg-white font-mono flex-1" />
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {(!editedProduct.units || editedProduct.units.length === 0) && (
-                                        <p className="text-center text-[10px] text-black dark:text-white italic py-4 bg-gray-50 rounded-lg">No extra units defined</p>
-                                    )}
-                                </div>
+                           <div className="space-y-2">
+                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('expiry_date')}</Label>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" className={cn("w-full justify-start text-right font-normal h-12 rounded-xl bg-white/5 border-white/10 hover:bg-white/10", !expiryDate && "text-muted-foreground")}>
+                                            {expiryDate ? format(expiryDate, "PPP") : <span>{renderBoth('pick_a_date')}</span>}
+                                            <CalendarIcon className="mr-auto h-4 w-4 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0 bg-[#0a0a1a] border-white/10" align="start">
+                                        <Calendar mode="single" selected={expiryDate} onSelect={setExpiryDate} initialFocus className="text-white" />
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <DialogFooter className="flex justify-between gap-3 mt-6 border-t pt-4">
-                    <Button variant="outline" onClick={onClose} className="flex-1 h-11 text-sm font-bold">
+                <DialogFooter className="gap-3 pt-6 border-t border-white/5">
+                    <Button variant="ghost" onClick={onClose} className="flex-1 h-12 border-white/10 hover:bg-white/5 text-white font-black uppercase tracking-widest">
                         {renderBoth('cancel')}
                     </Button>
-                    <Button onClick={handleSave} className="flex-1 h-11 bg-primary hover:bg-primary/90 text-sm font-black shadow-md">
-                        <Save className="h-4 w-4 mr-2" /> {renderBoth('save_changes')}
+                    <Button onClick={handleSave} className="flex-1 h-12 bg-primary hover:bg-primary/90 font-black uppercase tracking-widest shadow-[0_0_20px_rgba(0,132,255,0.3)]">
+                        <Save className="ml-2 h-4 w-4" /> {renderBoth('save_product')}
                     </Button>
                 </DialogFooter>
             </DialogContent>

@@ -150,6 +150,28 @@ const CreditOutstanding = () => {
     showSuccess(t('download_report_successful'));
   };
 
+  const exportAllOutstanding = () => {
+    const data = [
+      ["Credit Outstanding Report", settings.shop.shopName],
+      ["Generated Date", new Date().toLocaleDateString()],
+      [],
+      ["Customer Code", "Customer Name", "Total Outstanding"]
+    ];
+
+    customers.filter(c => c.outstanding_balance > 0).forEach(c => {
+      data.push([c.code, c.name_en, c.outstanding_balance.toFixed(2)]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Outstanding Report");
+    XLSX.writeFile(wb, `Credit_Outstanding_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const currentOutstandingAfterPayment = selectedCustomerForAction 
+    ? Math.max(0, selectedCustomerForAction.outstanding_balance - (typeof paymentAmount === 'number' ? paymentAmount : 0))
+    : 0;
+
   const handleDownloadPdfReport = (customer: Customer) => {
     const customerSales = sales.filter(s => s.customer?.id === customer.id && s.paymentMethod === 'credit');
     if (customerSales.length === 0) {

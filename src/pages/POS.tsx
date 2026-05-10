@@ -643,15 +643,15 @@ const POS = () => {
               <p className="text-lg font-black uppercase tracking-widest">{renderBoth('cart_empty')}</p>
             </div>
           ) : (
-            <div className="space-y-4 pb-6">
+            <div className="space-y-2 pb-6">
               {activeCart.items.map((item) => (
-                <div key={`${item.id}-${item.selected_unit}`} className="group relative bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl p-4 transition-all">
-                  <div className="flex justify-between items-start mb-3">
+                <div key={`${item.id}-${item.selected_unit}`} className="group relative bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl p-3 transition-all">
+                  <div className="flex justify-between items-start mb-1">
                     <div className="text-right">
                       <p className="text-base font-black text-white leading-tight">{item.name_dv}</p>
                       <p className="text-[11px] font-bold text-white/50 mt-1">{item.name_en}</p>
                       {item.selected_unit && item.selected_unit !== 'Piece' && (
-                        <Badge variant="outline" className="mt-2 text-[8px] border-primary/30 text-primary uppercase font-black">{item.selected_unit}</Badge>
+                        <Badge variant="outline" className="mt-1 text-[8px] border-primary/30 text-primary uppercase font-black px-1 py-0">{item.selected_unit}</Badge>
                       )}
                     </div>
                     <button 

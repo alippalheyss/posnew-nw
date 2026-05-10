@@ -61,11 +61,9 @@ const Products = () => {
 
   const handleSaveProduct = (productData: Product) => {
     if (editingProduct) {
-      // Update
       setProducts(prev => prev.map(p => p.id === productData.id ? productData : p));
       showSuccess(t('product_updated_successfully'));
     } else {
-      // Add
       setProducts(prev => [...prev, productData]);
       showSuccess(t('product_added_successfully'));
     }
@@ -166,62 +164,43 @@ const Products = () => {
       {/* Main Content Area */}
       <ScrollArea className="flex-1 custom-scrollbar">
         {viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 pb-6">
             {filteredProducts.map((product) => {
                const margin = calculateProfitMargin(product);
                const cardColors = ['bg-blue-600', 'bg-red-600', 'bg-purple-600', 'bg-orange-600', 'bg-pink-600', 'bg-indigo-600'];
                const colorClass = cardColors[Math.abs(product.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % cardColors.length];
 
                return (
-                 <Card key={product.id} className="bg-[#0a0a1a] border-white/5 hover:border-primary/30 transition-all overflow-hidden group rounded-[2rem]">
+                 <Card key={product.id} className="bg-[#0a0a1a] border-white/5 hover:border-primary/30 transition-all overflow-hidden group rounded-2xl">
                    <CardContent className="p-0">
-                     <div className={cn(
-                       "aspect-[16/10] relative flex items-center justify-center overflow-hidden border-b border-white/5",
-                       product.image ? "bg-white" : colorClass
-                     )}>
+                      <div className={cn(
+                        "aspect-[16/9] relative flex items-center justify-center overflow-hidden border-b border-white/5",
+                        product.image ? "bg-white" : colorClass
+                      )}>
                         {product.image ? (
                           <img src={product.image} alt={product.name_dv} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                         ) : (
-                          <div className="text-white font-black text-3xl uppercase tracking-tighter text-center px-6 leading-tight drop-shadow-xl">
+                          <div className="text-white font-black text-xl uppercase tracking-tighter text-center px-4 leading-tight drop-shadow-xl">
                             {product.name_en}
                           </div>
                         )}
                         
-                        <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
+                        <div className="absolute top-2 left-2 right-2 flex justify-between items-start">
                            <Button 
                              variant="ghost" 
                              size="icon" 
                              onClick={(e) => { e.stopPropagation(); toggleFavorite(product.id); }}
                              className={cn(
-                               "h-10 w-10 rounded-xl backdrop-blur-md border border-white/10 transition-all",
+                               "h-7 w-7 rounded-lg backdrop-blur-md border border-white/10 transition-all",
                                favoriteProductIds.includes(product.id) ? "bg-yellow-500 border-yellow-400 text-black shadow-lg" : "bg-black/20 text-white"
                              )}
                            >
-                             <Star className={cn("h-5 w-5", favoriteProductIds.includes(product.id) ? "fill-current" : "")} />
+                             <Star className={cn("h-3.5 w-3.5", favoriteProductIds.includes(product.id) ? "fill-current" : "")} />
                            </Button>
 
-                           <div className="flex flex-col items-end gap-2">
-                             <Badge className="bg-primary text-white border-none font-black text-[10px] px-3 py-1 rounded-full shadow-lg">
-                                {product.item_code}
-                             </Badge>
-                             {product.stock_shop < 10 && (
-                               <Badge className="bg-red-500 text-white border-none font-black text-[10px] px-3 py-1 rounded-full shadow-lg animate-pulse">
-                                  LOW STOCK
-                               </Badge>
-                             )}
-                           </div>
-                        </div>
-                     </div>
-
-                     <div className="p-6">
-                        <div className="flex justify-between items-start mb-4">
-                           <div className="text-right flex-1">
-                              <h3 className="text-lg font-black text-white leading-tight mb-1 truncate">{product.name_dv}</h3>
-                              <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest truncate">{product.name_en}</p>
-                           </div>
                            <DropdownMenu>
                              <DropdownMenuTrigger asChild>
-                               <Button variant="ghost" size="icon" className="h-8 w-8 text-white/20 hover:text-white">
+                               <Button variant="ghost" size="icon" className="h-7 w-7 bg-black/20 text-white/70 hover:bg-black/40 backdrop-blur-md border border-white/10 rounded-lg">
                                  <MoreVertical className="h-4 w-4" />
                                </Button>
                              </DropdownMenuTrigger>
@@ -235,31 +214,20 @@ const Products = () => {
                              </DropdownMenuContent>
                            </DropdownMenu>
                         </div>
+                      </div>
 
-                        <div className="grid grid-cols-2 gap-4 mb-6">
-                           <div className="bg-white/5 p-3 rounded-2xl border border-white/5">
-                              <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1">{renderBoth('price')}</p>
-                              <p className="text-base font-black text-primary">{settings.shop.currency} {product.price.toFixed(2)}</p>
-                           </div>
-                           <div className="bg-white/5 p-3 rounded-2xl border border-white/5 text-right">
-                              <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1">{renderBoth('stock')}</p>
-                              <p className="text-base font-black text-white">{product.stock_shop + product.stock_godown} <span className="text-[10px] text-white/40 font-normal">PCS</span></p>
-                           </div>
-                        </div>
-
-                        <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                           <div className="flex flex-col">
-                              <span className="text-[8px] font-black text-white/30 uppercase tracking-widest">Margin</span>
-                              <span className={cn("text-xs font-black", margin > 20 ? "text-green-500" : "text-orange-500")}>{margin.toFixed(1)}%</span>
-                           </div>
-                           <Button 
-                             onClick={() => handleEditClick(product)}
-                             className="bg-white/5 hover:bg-white/10 text-white text-[10px] font-black px-4 rounded-xl h-9 border border-white/10"
-                           >
-                             QUICK EDIT
-                           </Button>
-                        </div>
-                     </div>
+                      <div className="p-3 text-right">
+                         <h3 className="text-sm font-black text-white leading-tight mb-0.5 truncate">{product.name_dv}</h3>
+                         <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest truncate">{product.name_en}</p>
+                         
+                         <div className="flex items-center justify-between mt-3">
+                            <span className="text-xs font-black text-primary">{settings.shop.currency} {product.price.toFixed(2)}</span>
+                            <div className="flex items-center gap-1">
+                               <div className={cn("w-1.5 h-1.5 rounded-full", product.stock_shop < 10 ? "bg-red-500" : "bg-green-500")} />
+                               <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">{product.stock_shop}</span>
+                            </div>
+                         </div>
+                      </div>
                    </CardContent>
                  </Card>
                );
@@ -283,37 +251,32 @@ const Products = () => {
                   {filteredProducts.map((product) => (
                     <tr key={product.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                       <td className="p-4">
-                        <div className="flex items-center justify-end gap-3">
-                          <div>
-                             <p className="font-black text-white">{product.name_dv}</p>
-                             <p className="text-[10px] text-white/30 uppercase tracking-widest">{product.name_en}</p>
+                        <div className="flex items-center gap-3 justify-end">
+                          <div className="text-right">
+                            <p className="font-black text-white">{product.name_dv}</p>
+                            <p className="text-[10px] text-white/40">{product.name_en}</p>
                           </div>
-                          <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center overflow-hidden border border-white/10">
-                             {product.image ? (
-                               <img src={product.image} className="w-full h-full object-cover" />
-                             ) : (
-                               <Package className="h-5 w-5 text-primary" />
-                             )}
+                          <div className="h-10 w-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
+                             {product.image ? <img src={product.image} className="w-full h-full object-cover" /> : <Package className="h-4 w-4 text-white/20" />}
                           </div>
                         </div>
                       </td>
-                      <td className="p-4 font-black text-primary text-sm">{product.item_code}</td>
+                      <td className="p-4 font-mono text-xs text-white/40">{product.item_code}</td>
                       <td className="p-4 font-mono text-xs text-white/40">{product.barcode}</td>
-                      <td className="p-4 font-black text-white">{settings.shop.currency} {product.price.toFixed(2)}</td>
+                      <td className="p-4 font-black text-primary">{settings.shop.currency} {product.price.toFixed(2)}</td>
                       <td className="p-4">
-                         <Badge variant={product.stock_shop < 10 ? "destructive" : "outline"} className="font-black">
-                           {product.stock_shop + product.stock_godown}
+                         <Badge className={cn(
+                           "bg-white/5 text-white/40 border-white/10 text-[10px] font-black px-2 py-0.5 rounded-full",
+                           product.stock_shop < 10 && "bg-red-500/20 text-red-500 border-red-500/20"
+                         )}>
+                            {product.stock_shop} PCS
                          </Badge>
                       </td>
                       <td className="p-4">
-                         <div className="flex items-center justify-end gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => handleEditClick(product)} className="h-8 w-8 text-blue-400 hover:bg-blue-400/10">
-                               <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteProduct(product.id)} className="h-8 w-8 text-red-400 hover:bg-red-400/10">
-                               <Trash2 className="h-4 w-4" />
-                            </Button>
-                         </div>
+                        <div className="flex justify-end gap-2">
+                           <Button variant="ghost" size="icon" onClick={() => handleEditClick(product)} className="h-8 w-8 text-blue-400 hover:bg-blue-500/10"><Edit2 className="h-4 w-4" /></Button>
+                           <Button variant="ghost" size="icon" onClick={() => handleDeleteProduct(product.id)} className="h-8 w-8 text-red-400 hover:bg-red-500/10"><Trash2 className="h-4 w-4" /></Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -324,13 +287,13 @@ const Products = () => {
         )}
       </ScrollArea>
 
-      <ProductDialog
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        onSave={handleSaveProduct}
-        product={editingProduct}
+      <ProductDialog 
+        isOpen={isDialogOpen} 
+        onClose={() => setIsDialogOpen(false)} 
+        product={editingProduct} 
+        onSave={handleSaveProduct} 
       />
-
+      
       <ExcelImportDialog
         isOpen={isImportDialogOpen}
         onClose={() => setIsImportDialogOpen(false)}

@@ -295,9 +295,6 @@ const CreditOutstanding = () => {
     }
   };
 
-  const currentOutstandingAfterPayment = selectedCustomerForAction
-    ? Math.max(0, selectedCustomerForAction.outstanding_balance - (typeof paymentAmount === 'number' ? paymentAmount : 0))
-    : 0;
 
   const renderBoth = (key: string, options?: any) => (
     <>

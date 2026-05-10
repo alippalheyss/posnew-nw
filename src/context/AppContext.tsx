@@ -519,9 +519,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const addCustomer = async (customer: Customer) => {
     try {
+      // Strip settlement_history as it's a relation, not a column
+      const { settlement_history, ...customerData } = customer;
+      
       const { error } = await supabase
         .from('customers')
-        .insert(customer);
+        .insert(customerData);
 
       if (error) throw error;
 

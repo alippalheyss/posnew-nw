@@ -9,18 +9,20 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { ChevronDown, ChevronUp, Upload, Image as ImageIcon, Trash2, Settings, Landmark, Monitor, Layout, FileText, Printer, Building2, X, Edit, UserPlus, Shield, Database, Languages, Palette, Globe, CreditCard, Receipt, Percent } from 'lucide-react';
+import { ChevronDown, ChevronUp, Upload, Image as ImageIcon, Trash2, Settings, Landmark, Monitor, Layout, FileText, Printer, Building2, X, Edit, UserPlus, Shield, Database, Languages, Palette, Globe, CreditCard, Receipt, Percent, LogOut } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/AppContext';
 import { useAuth, User } from '@/context/AuthContext';
 import UserDialog from '@/components/UserDialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useNavigate } from 'react-router-dom';
 
 const Admin = () => {
   const { t, i18n } = useTranslation();
   const { settings, updateSettings, clearAllData } = useAppContext();
-  const { currentUser } = useAuth();
+  const { currentUser, logout } = useAuth();
+  const navigate = useNavigate();
 
   const shopSettings = settings.shop;
   const accountingSettings = settings.accounting;
@@ -100,6 +102,16 @@ const Admin = () => {
   return (
     <div className="p-6 font-faruma flex flex-col h-full bg-[#050510] text-white overflow-hidden" dir="rtl">
        <div className="flex justify-between items-center mb-8">
+          <Button 
+            onClick={() => {
+              logout();
+              navigate('/login');
+            }}
+            variant="destructive"
+            className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white h-11 px-6 rounded-xl font-black gap-2 transition-all"
+          >
+             <LogOut className="h-4 w-4" /> {renderBoth('logout')}
+          </Button>
           <div className="text-right">
              <h1 className="text-3xl font-black text-white flex items-center justify-end gap-3">
                {renderBoth('admin_settings')} <Settings className="h-8 w-8 text-primary" />

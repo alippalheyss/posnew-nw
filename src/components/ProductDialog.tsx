@@ -101,6 +101,10 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
         </>
     );
 
+    const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+        event.target.select();
+    };
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col font-faruma bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
@@ -187,6 +191,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                       type="number" 
                                       value={editedProduct.price} 
                                       onChange={(e) => updateField('price', parseFloat(e.target.value) || 0)} 
+                                      onFocus={handleFocus}
                                       className="bg-white/5 border-white/10 h-14 rounded-2xl text-right pr-4 text-2xl font-black text-white focus:border-primary" 
                                    />
                                 </div>

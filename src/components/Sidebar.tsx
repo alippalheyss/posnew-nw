@@ -117,13 +117,6 @@ const Sidebar = () => {
              <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[#050510]" />
           </div>
         </div>
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-3 p-3.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-2xl transition-all text-[10px] font-black uppercase tracking-[0.2em] group"
-        >
-          <LogOut className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
-          {t('logout')}
-        </button>
       </div>
     </div>
   );

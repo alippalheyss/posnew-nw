@@ -51,6 +51,10 @@ const StockUpdateDialog: React.FC<StockUpdateDialogProps> = ({ isOpen, onClose, 
 
   if (!stockItem) return null;
 
+  const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    event.target.select();
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[450px] font-faruma bg-[#0a0a1a] border-white/10 text-white shadow-2xl" dir="rtl">
@@ -97,7 +101,7 @@ const StockUpdateDialog: React.FC<StockUpdateDialogProps> = ({ isOpen, onClose, 
                    id="newStock"
                    type="number"
                    value={editedStock}
-                   onChange={(e) => setEditedStock(parseFloat(e.target.value) || '')}
+                   onChange={(e) => setEditedStock(parseFloat(e.target.value) || '')} onFocus={handleFocus}
                    className="bg-white/5 border-primary h-16 rounded-2xl pr-14 text-3xl font-black text-white focus:ring-0 text-right"
                    autoFocus
                    placeholder="0"

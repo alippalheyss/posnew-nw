@@ -79,6 +79,10 @@ const CustomerAddDialog: React.FC<CustomerAddDialogProps> = ({ isOpen, onClose, 
     </>
   );
 
+  const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    event.target.select();
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px] font-faruma bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
@@ -138,7 +142,7 @@ const CustomerAddDialog: React.FC<CustomerAddDialogProps> = ({ isOpen, onClose, 
               <Label htmlFor="credit_limit" className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('credit_limit')}</Label>
               <div className="relative">
                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-primary">MVR</span>
-                 <Input id="credit_limit" type="number" value={newCustomer.credit_limit} onChange={handleChange} className="bg-white/5 border-white/10 h-14 rounded-2xl text-right pr-4 text-2xl font-black text-white" />
+                 <Input id="credit_limit" type="number" value={newCustomer.credit_limit} onChange={handleChange} onFocus={handleFocus} className="bg-white/5 border-white/10 h-14 rounded-2xl text-right pr-4 text-2xl font-black text-white" />
               </div>
            </div>
         </div>

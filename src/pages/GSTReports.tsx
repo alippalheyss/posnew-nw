@@ -39,6 +39,10 @@ const GSTReports = () => {
         </>
     );
 
+    const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+        event.target.select();
+    };
+
     const filterByRange = (dateStr: string) => {
         const date = new Date(dateStr);
         const now = new Date();
@@ -337,6 +341,7 @@ const GSTReports = () => {
                               type="number" 
                               value={newPurchase.totalAmount} 
                               onChange={(e) => setNewPurchase({ ...newPurchase, totalAmount: e.target.value })} 
+                              onFocus={handleFocus}
                               className="text-right h-14 bg-white/5 border-white/10 rounded-xl text-2xl font-black text-primary" 
                               placeholder="0.00"
                             />

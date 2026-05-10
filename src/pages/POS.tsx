@@ -59,6 +59,8 @@ const POS = () => {
   const [lastSaleForPrint, setLastSaleForPrint] = useState<Sale | null>(null);
   const [customerSearchTerm, setCustomerSearchTerm] = useState('');
   const [isSplitDialogOpen, setIsSplitDialogOpen] = useState(false);
+  const [isAwaitingTransferDialogOpen, setIsAwaitingTransferDialogOpen] = useState(false);
+  const [transferAmount, setTransferAmount] = useState<number | ''>(0);
   
   const [pointsToRedeem, setPointsToRedeem] = useState<number>(0);
   const [isLoyaltyRedemptionDialogOpen, setIsLoyaltyRedemptionDialogOpen] = useState(false);
@@ -84,6 +86,41 @@ const POS = () => {
   useEffect(() => {
     searchInputRef.current?.focus();
   }, [activeCartId]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts if user is typing in an input (except search)
+      if (document.activeElement?.tagName === 'INPUT' && document.activeElement !== searchInputRef.current) {
+        if (e.key === 'Escape') {
+          (document.activeElement as HTMLElement).blur();
+        }
+        return;
+      }
+
+      if (e.key === 'F1') {
+        e.preventDefault();
+        setIsCashDialogOpen(true);
+      } else if (e.key === 'F2') {
+        e.preventDefault();
+        setCreditDialogStep(1);
+        setIsCreditDialogOpen(true);
+      } else if (e.key === 'F4') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      } else if (e.key === 'F8') {
+        e.preventDefault();
+        setIsSplitDialogOpen(true);
+      } else if (e.key === 'Escape') {
+        setIsCashDialogOpen(false);
+        setIsCreditDialogOpen(false);
+        setIsSplitDialogOpen(false);
+        setIsAwaitingTransferDialogOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     if (searchTerm.trim()) {
@@ -399,6 +436,29 @@ const POS = () => {
     setIsCreditDialogOpen(false);
   };
 
+  const processTransferPayment = () => {
+    if (!activeCart || activeCart.items.length === 0) return;
+    
+    const { grandTotal } = calculateTotals();
+    const amount = typeof transferAmount === 'number' ? transferAmount : grandTotal;
+
+    const newSale: Sale = {
+      id: `sale-${Date.now()}`,
+      date: new Date().toISOString(),
+      customer: activeCart.customer,
+      items: activeCart.items,
+      grandTotal: grandTotal,
+      paymentMethod: 'mobile' as const, 
+      paidAmount: amount,
+      balance: amount - grandTotal,
+    };
+
+    addSale(newSale);
+    showSuccess("Transfer Recorded Successfully");
+    setIsAwaitingTransferDialogOpen(false);
+    clearActiveCart();
+  };
+
   const handlePrintReceipt = (sale: Sale | any) => {
     const currency = settings.shop.currency;
     const itemsHtml = sale.items.map((item: any) => `
@@ -548,7 +608,7 @@ const POS = () => {
 
         {/* Product Grid */}
         <ScrollArea className="flex-1 p-8 custom-scrollbar">
-           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6">
               {displayProducts.map((product) => {
                 const isLowStock = product.stock_shop < LOW_STOCK_THRESHOLD;
                 const cardColors = [
@@ -659,15 +719,14 @@ const POS = () => {
           ) : (
             <div className="space-y-2 pb-6">
               {activeCart.items.map((item) => (
-                <div key={`${item.id}-${item.selected_unit}`} className="group relative bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl p-3 transition-all">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="text-right flex-1">
-                      <p className="text-base font-black text-white leading-tight">{item.name_dv}</p>
-                      <p className="text-[11px] font-bold text-white/40 mt-0.5">{item.name_en}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                         <span className="text-sm font-black text-primary">{settings.shop.currency} {item.price.toFixed(2)}</span>
+                <div key={`${item.id}-${item.selected_unit}`} className="group relative bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl p-2 transition-all">
+                  <div className="flex justify-between items-start mb-1">
+                    <div className="text-right flex-1 min-w-0">
+                      <p className="text-[13px] font-black text-white leading-tight truncate">{item.name_dv}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                         <span className="text-[11px] font-black text-primary">{settings.shop.currency} {item.price.toFixed(2)}</span>
                          {item.selected_unit && item.selected_unit !== 'Piece' && (
-                           <Badge variant="outline" className="text-[8px] border-primary/30 text-primary uppercase font-black px-1.5 py-0">{item.selected_unit}</Badge>
+                           <Badge variant="outline" className="text-[7px] border-primary/30 text-primary uppercase font-black px-1 py-0 h-3 leading-none">{item.selected_unit}</Badge>
                          )}
                       </div>
                     </div>
@@ -675,28 +734,28 @@ const POS = () => {
                       onClick={() => removeFromCart(item.id)}
                       className="text-white/20 hover:text-red-500 transition-colors p-1"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3" />
                     </button>
                   </div>
                   
-                  <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                    <div className="flex items-center gap-1 bg-black/40 rounded-lg p-0.5 border border-white/5">
+                  <div className="flex items-center justify-between pt-1 mt-1 border-t border-white/5">
+                    <div className="flex items-center gap-1 bg-black/40 rounded-lg p-0.5 border border-white/5 h-6">
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-7 w-7 text-white/40 hover:text-white"
+                        className="h-5 w-5 text-white/40 hover:text-white"
                         onClick={() => updateCartItemQty(item.id, -1)}
-                      ><Minus className="h-3 w-3" /></Button>
-                      <span className="w-10 text-center text-xs font-black text-white">{item.qty}</span>
+                      ><Minus className="h-2 w-2" /></Button>
+                      <span className="w-6 text-center text-[10px] font-black text-white">{item.qty}</span>
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-7 w-7 text-white/40 hover:text-white"
+                        className="h-5 w-5 text-white/40 hover:text-white"
                         onClick={() => updateCartItemQty(item.id, 1)}
-                      ><Plus className="h-3 w-3" /></Button>
+                      ><Plus className="h-2 w-2" /></Button>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-black text-white leading-none">{settings.shop.currency} {(item.price * item.qty).toFixed(2)}</p>
+                      <p className="text-sm font-black text-white leading-none">{settings.shop.currency} {(item.price * item.qty).toFixed(2)}</p>
                     </div>
                   </div>
                 </div>
@@ -738,7 +797,10 @@ const POS = () => {
               <Trash2 className="h-4 w-4 text-red-500" /> CLEAR
             </Button>
             <Button 
-              onClick={() => setIsCashDialogOpen(true)}
+              onClick={() => {
+                setTransferAmount(grandTotal);
+                setIsAwaitingTransferDialogOpen(true);
+              }}
               className="h-10 bg-[#2d3a5a] hover:bg-[#3d4a6a] text-white border border-white/5 text-[10px] font-black uppercase tracking-widest gap-2"
             >
               <Receipt className="h-4 w-4 text-blue-400" /> AWAITING TRANSFER
@@ -794,6 +856,7 @@ const POS = () => {
                 type="number"
                 value={paidAmount}
                 onChange={(e) => setPaidAmount(parseFloat(e.target.value) || '')}
+                onFocus={handleFocus}
                 className="text-right h-14 bg-white/5 border-white/10 text-2xl font-black focus:border-primary transition-all text-white"
                 autoFocus
               />
@@ -1010,6 +1073,53 @@ const POS = () => {
               className="flex-1 btn-gradient-blue text-white"
             >
               {renderBoth('confirm_split_payment')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Awaiting Transfer Dialog */}
+      <Dialog open={isAwaitingTransferDialogOpen} onOpenChange={setIsAwaitingTransferDialogOpen}>
+        <DialogContent className="sm:max-w-[400px] font-faruma bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-right text-2xl font-black flex items-center justify-end gap-3">
+              Confirm Bank Transfer <Receipt className="h-6 w-6 text-blue-400" />
+            </DialogTitle>
+            <DialogDescription className="text-right text-white/40">
+              Enter the amount transferred by the customer.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-8 space-y-4">
+             <div className="bg-white/5 p-4 rounded-2xl border border-white/5 text-right">
+                <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">Grand Total</p>
+                <p className="text-3xl font-black text-white">{settings.shop.currency} {grandTotal.toFixed(2)}</p>
+             </div>
+             
+             <div className="space-y-2">
+                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest pr-2">Transfer Amount</Label>
+                <div className="relative">
+                   <DollarSign className="absolute right-4 top-1/2 -translate-y-1/2 h-6 w-6 text-primary/40" />
+                   <Input 
+                     type="number" 
+                     value={transferAmount} 
+                     onChange={(e) => setTransferAmount(parseFloat(e.target.value) || 0)}
+                     onFocus={handleFocus}
+                     className="bg-white/5 border-primary h-16 rounded-2xl pr-14 text-3xl font-black text-white text-right"
+                     autoFocus
+                   />
+                </div>
+             </div>
+          </div>
+
+          <DialogFooter className="gap-3">
+            <Button variant="ghost" onClick={() => setIsAwaitingTransferDialogOpen(false)} className="flex-1 border-white/10 text-white">
+              Cancel
+            </Button>
+            <Button 
+              onClick={processTransferPayment}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-black"
+            >
+              Confirm Transfer
             </Button>
           </DialogFooter>
         </DialogContent>

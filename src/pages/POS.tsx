@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, ShoppingCart, XCircle, PlusCircle, Trash2, Heart, ArrowLeft, Users, Plus, Minus, AlertTriangle, Receipt } from 'lucide-react';
+import { Search, ShoppingCart, XCircle, PlusCircle, Trash2, Heart, ArrowLeft, Users, Plus, Minus, AlertTriangle, Receipt, DollarSign } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -61,6 +61,10 @@ const POS = () => {
   const [isSplitDialogOpen, setIsSplitDialogOpen] = useState(false);
   const [isAwaitingTransferDialogOpen, setIsAwaitingTransferDialogOpen] = useState(false);
   const [transferAmount, setTransferAmount] = useState<number | ''>(0);
+
+  const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    event.target.select();
+  };
   
   const [pointsToRedeem, setPointsToRedeem] = useState<number>(0);
   const [isLoyaltyRedemptionDialogOpen, setIsLoyaltyRedemptionDialogOpen] = useState(false);
@@ -75,10 +79,6 @@ const POS = () => {
   ]);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
-    event.target.select();
-  };
 
   const LOW_STOCK_THRESHOLD = 10;
   const NEAR_EXPIRY_DAYS = 30;

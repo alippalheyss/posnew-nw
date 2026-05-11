@@ -45,6 +45,7 @@ const POS = () => {
     redeemLoyaltyPoints,
     updateCustomerBalance,
     addSale,
+    addCustomer,
     addPendingTransfer,
     pendingTransfers,
     resolvePendingTransfer

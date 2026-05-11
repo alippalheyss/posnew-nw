@@ -42,7 +42,7 @@ const Sidebar = () => {
   const navItems = allNavItems.filter(item => can(item.permission));
 
   return (
-    <div className="flex flex-col h-screen bg-[#050510] border-l border-white/5 w-[280px] font-faruma overflow-hidden z-50 shadow-[20px_0_50px_rgba(0,0,0,0.5)]">
+    <div className="flex flex-col h-screen bg-[#050510] border-l border-white/5 w-[280px] min-w-[280px] flex-shrink-0 font-faruma overflow-hidden z-50 shadow-[20px_0_50px_rgba(0,0,0,0.5)]">
       {/* Branding */}
       <div className="p-8 pb-10">
         <div className="flex items-center gap-4 mb-2">

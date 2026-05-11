@@ -232,6 +232,8 @@ interface AppContextType {
   pendingTransfers: any[];
   addPendingTransfer: (transfer: any) => void;
   resolvePendingTransfer: (id: string, action: 'cash' | 'credit') => Promise<void>;
+  sidebarCollapsed: boolean;
+  setSidebarCollapsed: (collapsed: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -242,6 +244,18 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   const [sales, setSales] = useState<Sale[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sidebar_collapsed');
+      return saved === 'true';
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('sidebar_collapsed', String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
+
   const [pendingTransfers, setPendingTransfers] = useState<any[]>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -953,7 +967,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       updateCustomer,
       pendingTransfers,
       addPendingTransfer,
-      resolvePendingTransfer
+      resolvePendingTransfer,
+      sidebarCollapsed,
+      setSidebarCollapsed
     }}>
       {children}
     </AppContext.Provider>

@@ -4,7 +4,7 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Home, Package, Boxes, Users, DollarSign, Settings, BarChart, 
-  Receipt, CalendarDays, AlertTriangle, Building2, LogOut, FileText, ChevronRight, Activity
+  Receipt, CalendarDays, AlertTriangle, Building2, LogOut, FileText, ChevronRight, ChevronLeft, Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
@@ -39,10 +39,19 @@ const Sidebar = () => {
     { name_dv: t('admin_settings'), name_en: t('admin_settings', { lng: 'en' }), icon: Settings, path: '/admin', permission: 'canAccessAdmin' as const },
   ];
 
+  const { sidebarCollapsed, setSidebarCollapsed } = useAppContext();
   const navItems = allNavItems.filter(item => can(item.permission));
 
   return (
-    <div className="flex flex-col h-screen bg-[#050510] border-l border-white/5 w-[280px] min-w-[280px] flex-shrink-0 font-faruma overflow-hidden z-50 shadow-[20px_0_50px_rgba(0,0,0,0.5)]">
+    <div className="flex flex-col h-screen bg-[#050510] border-l border-white/5 w-[280px] min-w-[280px] flex-shrink-0 font-faruma overflow-hidden z-50 shadow-[20px_0_50px_rgba(0,0,0,0.5)] relative">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setSidebarCollapsed(true)}
+        className="absolute top-1/2 -translate-y-1/2 left-0 z-[60] h-12 w-4 bg-white/5 hover:bg-white/10 border-y border-r border-white/10 rounded-r-lg rounded-l-none text-white/20 hover:text-white"
+      >
+        <ChevronLeft className="h-3 w-3" />
+      </Button>
       {/* Branding */}
       <div className="p-8 pb-10">
         <div className="flex items-center gap-4 mb-2">

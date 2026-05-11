@@ -285,6 +285,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           settlement_history: c.settlement_history || []
         }));
         setCustomers(formatted);
+        showSuccess('Customers synchronized with database');
       }
     } catch (error) {
       console.error('Error refreshing customers:', error);

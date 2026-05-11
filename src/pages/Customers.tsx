@@ -4,14 +4,14 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, PlusCircle, PencilLine, Users, Phone, Mail, DollarSign, Award, MoreVertical } from 'lucide-react';
+import { Search, PlusCircle, PencilLine, Users, Phone, Mail, DollarSign, Award, MoreVertical, RefreshCcw } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import CustomerAddDialog from '@/components/CustomerAddDialog';
 import { useAppContext, Customer } from '@/context/AppContext';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { 
   DropdownMenu,
@@ -22,7 +22,7 @@ import {
 
 const Customers = () => {
   const { t } = useTranslation();
-  const { customers, setCustomers, settings, addCustomer, updateCustomer } = useAppContext();
+  const { customers, setCustomers, settings, addCustomer, updateCustomer, refreshCustomers } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [isEditCustomerDialogOpen, setIsEditCustomerDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -79,6 +79,13 @@ const Customers = () => {
         </div>
 
         <div className="flex gap-3">
+           <Button 
+             variant="outline"
+             onClick={refreshCustomers}
+             className="gap-2 border-white/10 hover:bg-white/5 h-11 px-6 rounded-xl font-black text-white"
+           >
+             <RefreshCcw className="h-4 w-4" /> Sync All Customers
+           </Button>
            <Button 
              onClick={() => setIsAddCustomerDialogOpen(true)}
              className="gap-2 bg-primary hover:bg-primary/90 h-11 px-6 rounded-xl font-black shadow-[0_0_20px_rgba(0,132,255,0.3)]"

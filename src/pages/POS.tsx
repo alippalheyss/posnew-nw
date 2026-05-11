@@ -599,15 +599,6 @@ const POS = () => {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                onClick={refreshCustomers}
-                className="h-11 w-11 rounded-xl bg-white/5 border border-white/10 hover:bg-primary/20 hover:text-primary text-white/40"
-                title="Sync All Customers"
-              >
-                <RefreshCcw className="h-5 w-5" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
                 onClick={() => setIsPendingTransfersDialogOpen(true)}
                 className="relative h-11 w-11 rounded-xl bg-white/5 border border-white/10 hover:bg-yellow-500/20 hover:text-yellow-500 text-white/40"
              >

@@ -607,6 +607,7 @@ const POS = () => {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar: Category & Search */}
         <div className="h-20 px-8 flex items-center justify-between border-b border-white/5 bg-[#050510]/50 backdrop-blur-sm">
+          {/* Right Section: Category & Favorites */}
           <div className="flex items-center gap-3">
              <div className="flex items-center gap-2">
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
@@ -623,19 +624,49 @@ const POS = () => {
                 </Select>
              </div>
              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10">
-                <Trash2 className="h-4 w-4 text-white/40" />
-             </Button>
-             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10">
                 <Heart className="h-4 w-4 text-white/40" />
              </Button>
           </div>
 
+          {/* Middle Section: Search */}
+          <div className="flex-1 max-w-xl mx-8">
+             <div className="relative">
+                <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
+                <Input 
+                   ref={searchInputRef}
+                   placeholder="...Search by name, code or barcode"
+                   value={searchTerm}
+                   onChange={(e) => setSearchTerm(e.target.value)}
+                   className="w-full bg-white/5 border-white/10 rounded-xl px-10 text-right font-bold h-11 focus:border-primary/50 focus:ring-0 transition-all placeholder:text-white/10 text-white"
+                   dir="rtl"
+                />
+             </div>
+          </div>
+
+          {/* Left Section: Cart Controls & Transfers */}
           <div className="flex items-center gap-3">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setIsPendingTransfersDialogOpen(true)}
-                className="relative h-11 w-11 rounded-xl bg-white/5 border border-white/10 hover:bg-yellow-500/20 hover:text-yellow-500 text-white/40"
+             <div className="flex items-center gap-2 bg-white/5 p-1 rounded-xl border border-white/10">
+                <Button 
+                  onClick={createNewCart}
+                  variant="ghost"
+                  className="h-9 px-4 text-[10px] font-black text-white hover:bg-primary/20 hover:text-primary transition-all flex items-center gap-2"
+                >
+                   (Add New Cart) {t('add_new_cart')} <PlusCircle className="h-4 w-4" />
+                </Button>
+                <div className="w-px h-6 bg-white/10" />
+                <div className="flex items-center gap-2 px-4">
+                   <span className="text-[10px] font-black text-white">(Cart) {t('cart')}</span>
+                   <div className="bg-primary/20 p-2 rounded-lg text-primary">
+                      <ShoppingCart className="h-4 w-4" />
+                   </div>
+                </div>
+             </div>
+             
+             <Button 
+               variant="ghost" 
+               size="icon" 
+               onClick={() => setIsPendingTransfersDialogOpen(true)}
+               className="relative h-11 w-11 rounded-xl bg-white/5 border border-white/10 hover:bg-yellow-500/20 hover:text-yellow-500 text-white/40"
              >
                <ArrowRightLeft className="h-5 w-5" />
                {pendingTransfers.length > 0 && (
@@ -644,17 +675,6 @@ const POS = () => {
                  </span>
                )}
              </Button>
-             <div className="relative w-[400px]">
-                <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
-                <Input 
-                   ref={searchInputRef}
-                   placeholder="Search by name, code or barcode..."
-                   value={searchTerm}
-                   onChange={(e) => setSearchTerm(e.target.value)}
-                   className="w-full bg-white/5 border-white/10 rounded-xl px-10 text-right font-bold h-11 focus:border-primary/50 focus:ring-0 transition-all placeholder:text-white/10 text-white"
-                   dir="rtl"
-                />
-             </div>
           </div>
         </div>
 

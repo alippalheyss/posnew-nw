@@ -16,6 +16,7 @@ import { useAppContext, Product, Customer, CartItem, Sale } from '@/context/AppC
 import { showSuccess, showError } from '@/utils/toast';
 import LoyaltyRedemptionDialog from '@/components/LoyaltyRedemptionDialog';
 import UnitSelectionDialog from '@/components/UnitSelectionDialog';
+import CustomerAddDialog from '@/components/CustomerAddDialog';
 import { Badge } from '@/components/ui/badge';
 import { printContent } from '@/utils/printHelper';
 

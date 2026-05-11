@@ -244,8 +244,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [pendingTransfers, setPendingTransfers] = useState<any[]>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('pending_transfers');
-      return saved ? JSON.parse(saved) : [];
+      try {
+        const saved = localStorage.getItem('pending_transfers');
+        return saved ? JSON.parse(saved) : [];
+      } catch (e) {
+        console.error('Error parsing pending_transfers', e);
+        return [];
+      }
     }
     return [];
   });

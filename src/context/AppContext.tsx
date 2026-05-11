@@ -229,6 +229,9 @@ interface AppContextType {
   addSale: (sale: Sale) => Promise<void>;
   addCustomer: (customer: Customer) => Promise<void>;
   updateCustomer: (customer: Customer) => Promise<void>;
+  pendingTransfers: any[];
+  addPendingTransfer: (transfer: any) => void;
+  resolvePendingTransfer: (id: string, action: 'cash' | 'credit') => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -239,6 +242,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   const [sales, setSales] = useState<Sale[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [pendingTransfers, setPendingTransfers] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('pending_transfers');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
 
   // Initial Data Fetching from Supabase
   useEffect(() => {
@@ -281,10 +291,29 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   const [favoriteProductIds, setFavoriteProductIds] = useState<string[]>([]);
 
   const [openCarts, setOpenCarts] = useState<Map<string, Cart>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('open_carts');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          return new Map(parsed);
+        } catch (e) {
+          console.error('Error parsing open_carts', e);
+        }
+      }
+    }
     const initialCartId = `cart-${Date.now()}`;
     return new Map([[initialCartId, { id: initialCartId, displayNumber: 1, customer: null, items: [] }]]);
   });
   const [activeCartId, setActiveCartId] = useState<string>([...openCarts.keys()][0]);
+
+  useEffect(() => {
+    localStorage.setItem('open_carts', JSON.stringify(Array.from(openCarts.entries())));
+  }, [openCarts]);
+
+  useEffect(() => {
+    localStorage.setItem('pending_transfers', JSON.stringify(pendingTransfers));
+  }, [pendingTransfers]);
 
   const [settings, setSettings] = useState<AppSettings>(() => {
     if (typeof window !== 'undefined') {
@@ -524,7 +553,17 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       
       const { error } = await supabase
         .from('customers')
-        .insert(customerData);
+        .insert({
+          id: customerData.id,
+          code: customerData.code,
+          name_dv: customerData.name_dv,
+          name_en: customerData.name_en,
+          phone: customerData.phone,
+          email: customerData.email,
+          credit_limit: customerData.credit_limit,
+          loyalty_points: customerData.loyalty_points,
+          outstanding_balance: customerData.outstanding_balance
+        });
 
       if (error) throw error;
 
@@ -551,6 +590,37 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       console.error('Error updating customer:', error);
       showError('Failed to update customer in database');
     }
+  };
+
+  const addPendingTransfer = (transfer: any) => {
+    setPendingTransfers(prev => [...prev, { ...transfer, id: `transfer-${Date.now()}` }]);
+  };
+
+  const resolvePendingTransfer = async (id: string, action: 'cash' | 'credit') => {
+    const transfer = pendingTransfers.find(t => t.id === id);
+    if (!transfer) return;
+
+    if (action === 'cash') {
+      await addSale({
+        ...transfer,
+        paymentMethod: 'cash',
+        paidAmount: transfer.grandTotal,
+        balance: 0
+      });
+    } else {
+      if (!transfer.customer) {
+        showError("This transfer has no associated customer for credit sale");
+        return;
+      }
+      await addSale({
+        ...transfer,
+        paymentMethod: 'credit'
+      });
+      await updateCustomerBalance(transfer.customer.id, transfer.grandTotal);
+    }
+
+    setPendingTransfers(prev => prev.filter(t => t.id !== id));
+    showSuccess(`Transfer resolved as ${action} sale`);
   };
 
   const addSettlement = async (customerId: string, settlement: Settlement) => {
@@ -850,7 +920,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       clearAllData,
       getNextVendorCode,
       updateProductCostPrice,
-      calculateProfitMargin
+      calculateProfitMargin,
+      addSale,
+      addCustomer,
+      updateCustomer,
+      pendingTransfers,
+      addPendingTransfer,
+      resolvePendingTransfer
     }}>
       {children}
     </AppContext.Provider>

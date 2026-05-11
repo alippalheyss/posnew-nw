@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, ShoppingCart, XCircle, PlusCircle, Trash2, Heart, ArrowLeft, Users, Plus, Minus, AlertTriangle, Receipt, DollarSign } from 'lucide-react';
+import { Search, ShoppingCart, XCircle, PlusCircle, Trash2, Heart, ArrowLeft, Users, Plus, Minus, AlertTriangle, Receipt, DollarSign, UserPlus, ArrowRightLeft } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -43,7 +43,8 @@ const POS = () => {
     awardLoyaltyPoints,
     redeemLoyaltyPoints,
     updateCustomerBalance,
-    addSale
+    addSale,
+    addPendingTransfer
   } = useAppContext();
 
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
@@ -58,6 +59,7 @@ const POS = () => {
   const [isPrintConfirmDialogOpen, setIsPrintConfirmDialogOpen] = useState(false);
   const [lastSaleForPrint, setLastSaleForPrint] = useState<Sale | null>(null);
   const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+  const [isAddCustomerDialogOpen, setIsAddCustomerDialogOpen] = useState(false);
   const [isSplitDialogOpen, setIsSplitDialogOpen] = useState(false);
   const [isAwaitingTransferDialogOpen, setIsAwaitingTransferDialogOpen] = useState(false);
   const [transferAmount, setTransferAmount] = useState<number | ''>(0);
@@ -97,17 +99,17 @@ const POS = () => {
         return;
       }
 
-      if (e.key === 'F1') {
+      if (e.key === 'Enter' && !isCashDialogOpen && !isCreditDialogOpen && !isSplitDialogOpen && !isAwaitingTransferDialogOpen) {
         e.preventDefault();
         setIsCashDialogOpen(true);
-      } else if (e.key === 'F2') {
+      } else if (e.key === 'F11') {
         e.preventDefault();
         setCreditDialogStep(1);
         setIsCreditDialogOpen(true);
       } else if (e.key === 'F4') {
         e.preventDefault();
         searchInputRef.current?.focus();
-      } else if (e.key === 'F8') {
+      } else if (e.key === 'F6') {
         e.preventDefault();
         setIsSplitDialogOpen(true);
       } else if (e.key === 'Escape') {
@@ -439,24 +441,20 @@ const POS = () => {
   const processTransferPayment = () => {
     if (!activeCart || activeCart.items.length === 0) return;
     
-    const { grandTotal } = calculateTotals();
-    const amount = typeof transferAmount === 'number' ? transferAmount : grandTotal;
-
-    const newSale: Sale = {
-      id: `sale-${Date.now()}`,
+    addPendingTransfer({
       date: new Date().toISOString(),
       customer: activeCart.customer,
+      tempCustomerName: !activeCart.customer ? customerSearchTerm : null,
       items: activeCart.items,
       grandTotal: grandTotal,
-      paymentMethod: 'mobile' as const, 
-      paidAmount: amount,
-      balance: amount - grandTotal,
-    };
+      paymentMethod: 'transfer',
+      status: 'pending'
+    });
 
-    addSale(newSale);
-    showSuccess("Transfer Recorded Successfully");
+    showSuccess(t('transfer_recorded_as_pending'));
     setIsAwaitingTransferDialogOpen(false);
     clearActiveCart();
+    setCustomerSearchTerm('');
   };
 
   const handlePrintReceipt = (sale: Sale | any) => {
@@ -659,7 +657,7 @@ const POS = () => {
       </div>
 
       {/* Cart Section - Left Side in RTL */}
-      <div className="w-[480px] flex flex-col bg-[#0a0a1a]/80 backdrop-blur-xl border-r border-white/5 shadow-2xl z-20">
+      <div className="w-[520px] flex flex-col bg-[#0a0a1a]/80 backdrop-blur-xl border-r border-white/5 shadow-2xl z-20">
         {/* Cart Header */}
         <div className="p-6 pb-2">
           <div className="flex justify-between items-center mb-6">
@@ -669,14 +667,24 @@ const POS = () => {
               </div>
               <h2 className="text-xl font-black text-white">{renderBoth('cart')}</h2>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={createNewCart} 
-              className="h-8 border-white/10 hover:bg-white/5 text-xs font-bold gap-2 text-white"
-            >
-              <PlusCircle className="h-4 w-4 text-primary" /> {renderBoth('add_new_cart')}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setIsAddCustomerDialogOpen(true)} 
+                className="h-8 border-white/10 hover:bg-white/5 text-xs font-bold gap-2 text-white"
+              >
+                <UserPlus className="h-4 w-4 text-green-500" /> {renderBoth('add_customer')}
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={createNewCart} 
+                className="h-8 border-white/10 hover:bg-white/5 text-xs font-bold gap-2 text-white"
+              >
+                <PlusCircle className="h-4 w-4 text-primary" /> {renderBoth('add_new_cart')}
+              </Button>
+            </div>
           </div>
 
           {/* Cart Tabs */}
@@ -722,9 +730,10 @@ const POS = () => {
                 <div key={`${item.id}-${item.selected_unit}`} className="group relative bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl p-2 transition-all">
                   <div className="flex justify-between items-start mb-1">
                     <div className="text-right flex-1 min-w-0">
-                      <p className="text-[13px] font-black text-white leading-tight truncate">{item.name_dv}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                         <span className="text-[11px] font-black text-primary">{settings.shop.currency} {item.price.toFixed(2)}</span>
+                      <p className="text-[15px] font-black text-white leading-tight mb-0.5">{item.name_dv}</p>
+                      <p className="text-[11px] font-bold text-white/40 leading-tight uppercase truncate">{item.name_en}</p>
+                      <div className="flex items-center gap-2 mt-1.5">
+                         <span className="text-[12px] font-black text-primary">{settings.shop.currency} {item.price.toFixed(2)}</span>
                          {item.selected_unit && item.selected_unit !== 'Piece' && (
                            <Badge variant="outline" className="text-[7px] border-primary/30 text-primary uppercase font-black px-1 py-0 h-3 leading-none">{item.selected_unit}</Badge>
                          )}
@@ -1109,6 +1118,38 @@ const POS = () => {
                    />
                 </div>
              </div>
+
+             <div className="space-y-2">
+                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest pr-2">Select Customer or Enter Name</Label>
+                <Input 
+                  placeholder="Search or type name..."
+                  value={customerSearchTerm}
+                  onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                  className="bg-white/5 border-white/10 h-12 text-right text-white"
+                />
+                <ScrollArea className="h-[150px] mt-2 border border-white/5 rounded-xl">
+                  <div className="p-2 space-y-1">
+                    {customers.filter(c => 
+                      c.name_dv.includes(customerSearchTerm) || 
+                      c.name_en.toLowerCase().includes(customerSearchTerm.toLowerCase())
+                    ).map(customer => (
+                      <div 
+                        key={customer.id}
+                        onClick={() => {
+                          updateActiveCart(prev => ({ ...prev, customer }));
+                          setCustomerSearchTerm(customer.name_dv);
+                        }}
+                        className={cn(
+                          "p-2 rounded-lg cursor-pointer text-right text-sm transition-all",
+                          activeCart?.customer?.id === customer.id ? "bg-primary text-white" : "bg-white/5 hover:bg-white/10 text-white/60"
+                        )}
+                      >
+                        {customer.name_dv}
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+             </div>
           </div>
 
           <DialogFooter className="gap-3">
@@ -1124,6 +1165,14 @@ const POS = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <CustomerAddDialog 
+        isOpen={isAddCustomerDialogOpen}
+        onClose={() => setIsAddCustomerDialogOpen(false)}
+        onAdd={(newCustomer) => {
+          addCustomer(newCustomer);
+          updateActiveCart(prev => ({ ...prev, customer: newCustomer }));
+        }}
+      />
     </div>
   );
 };

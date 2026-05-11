@@ -20,6 +20,8 @@ const DailySales = () => {
   const [isEditSaleDialogOpen, setIsEditSaleDialogOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'last30'>('today');
+  const [activeTab, setActiveTab] = useState<'sales' | 'pending'>('sales');
+  const { pendingTransfers, resolvePendingTransfer } = useAppContext();
 
   const filterSalesByDate = (salesList: Sale[]) => {
     const today = new Date();
@@ -150,6 +152,30 @@ const DailySales = () => {
 
         <div className="flex gap-3">
            <div className="bg-white/5 rounded-xl p-1 border border-white/10 flex gap-1">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setActiveTab('sales')}
+                className={cn(
+                  "px-4 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                  activeTab === 'sales' ? "bg-primary text-white" : "text-white/40 hover:text-white"
+                )}
+              >
+                Sales
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setActiveTab('pending')}
+                className={cn(
+                  "px-4 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                  activeTab === 'pending' ? "bg-yellow-500 text-white" : "text-white/40 hover:text-white"
+                )}
+              >
+                Pending ({pendingTransfers.length})
+              </Button>
+           </div>
+           <div className="bg-white/5 rounded-xl p-1 border border-white/10 flex gap-1">
               {['today', 'yesterday', 'last30', 'all'].map((filter) => (
                 <Button 
                   key={filter}
@@ -158,7 +184,7 @@ const DailySales = () => {
                   onClick={() => setDateFilter(filter as any)}
                   className={cn(
                     "px-4 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
-                    dateFilter === filter ? "bg-primary text-white" : "text-white/40 hover:text-white"
+                    dateFilter === filter ? "bg-white/10 text-white" : "text-white/40 hover:text-white"
                   )}
                 >
                   {filter}
@@ -201,75 +227,127 @@ const DailySales = () => {
          </Card>
       </div>
 
-      {/* Sales List */}
+       {/* Sales/Pending List */}
       <ScrollArea className="flex-1 custom-scrollbar">
         <div className="space-y-4 pb-6">
-          {filteredSales.length === 0 ? (
-            <div className="h-60 flex flex-col items-center justify-center text-white/20 uppercase tracking-[0.2em] font-black">
-               <Receipt className="h-16 w-16 mb-4 opacity-10" />
-               No sales recorded for this period
-            </div>
+          {activeTab === 'sales' ? (
+            filteredSales.length === 0 ? (
+              <div className="h-60 flex flex-col items-center justify-center text-white/20 uppercase tracking-[0.2em] font-black">
+                 <Receipt className="h-16 w-16 mb-4 opacity-10" />
+                 No sales recorded for this period
+              </div>
+            ) : (
+              filteredSales.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale) => (
+                <Card key={sale.id} className="bg-[#0a0a1a] border-white/5 hover:border-primary/30 transition-all rounded-3xl p-6 group">
+                  <div className="flex items-center justify-between gap-6">
+                     <div className="flex items-center gap-6">
+                        <div className="h-14 w-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                           <Receipt className="h-7 w-7" />
+                        </div>
+                        <div className="text-right">
+                           <div className="flex items-center justify-end gap-3 mb-1">
+                              <span className="text-lg font-black text-white">{sale.id}</span>
+                              <Badge className="bg-primary/20 text-primary border-none text-[8px] font-black uppercase tracking-widest px-2 py-0.5">
+                                 {sale.paymentMethod}
+                              </Badge>
+                           </div>
+                           <div className="flex items-center justify-end gap-2 text-xs font-bold text-white/40">
+                              <span>{new Date(sale.date).toLocaleString()}</span>
+                              <span className="h-1 w-1 rounded-full bg-white/10" />
+                              <span>{sale.items.length} ITEMS</span>
+                           </div>
+                        </div>
+                     </div>
+
+                     <div className="flex-1 flex justify-center">
+                        <div className="flex items-center gap-2">
+                          {sale.items.slice(0, 3).map((item, idx) => (
+                            <div key={idx} className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center text-[10px] font-black text-white/40">
+                               {item.name_en.substring(0, 2).toUpperCase()}
+                            </div>
+                          ))}
+                          {sale.items.length > 3 && <span className="text-[10px] font-black text-white/20">+{sale.items.length - 3}</span>}
+                        </div>
+                     </div>
+
+                     <div className="flex items-center gap-8">
+                        <div className="text-right">
+                           <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">Grand Total</p>
+                           <p className="text-2xl font-black text-primary">{settings.shop.currency} {sale.grandTotal.toFixed(2)}</p>
+                        </div>
+                        <div className="flex gap-2">
+                           <Button 
+                             variant="ghost" 
+                             size="icon" 
+                             onClick={() => handlePrintReceipt(sale)}
+                             className="h-11 w-11 rounded-xl bg-white/5 border border-white/10 hover:bg-primary hover:text-white transition-all text-white/40"
+                           >
+                             <Printer className="h-4 w-4" />
+                           </Button>
+                           <Button 
+                             variant="ghost" 
+                             size="icon" 
+                             onClick={() => handleEditSale(sale)}
+                             className="h-11 w-11 rounded-xl bg-white/5 border border-white/10 hover:bg-blue-500 hover:text-white transition-all text-white/40"
+                           >
+                             <PencilLine className="h-4 w-4" />
+                           </Button>
+                        </div>
+                     </div>
+                  </div>
+                </Card>
+              ))
+            )
           ) : (
-            filteredSales.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale) => (
-              <Card key={sale.id} className="bg-[#0a0a1a] border-white/5 hover:border-primary/30 transition-all rounded-3xl p-6 group">
-                <div className="flex items-center justify-between gap-6">
-                   <div className="flex items-center gap-6">
-                      <div className="h-14 w-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                         <Receipt className="h-7 w-7" />
-                      </div>
-                      <div className="text-right">
-                         <div className="flex items-center justify-end gap-3 mb-1">
-                            <span className="text-lg font-black text-white">{sale.id}</span>
-                            <Badge className="bg-primary/20 text-primary border-none text-[8px] font-black uppercase tracking-widest px-2 py-0.5">
-                               {sale.paymentMethod}
-                            </Badge>
-                         </div>
-                         <div className="flex items-center justify-end gap-2 text-xs font-bold text-white/40">
-                            <span>{new Date(sale.date).toLocaleString()}</span>
-                            <span className="h-1 w-1 rounded-full bg-white/10" />
-                            <span>{sale.items.length} ITEMS</span>
-                         </div>
-                      </div>
-                   </div>
+            pendingTransfers.length === 0 ? (
+              <div className="h-60 flex flex-col items-center justify-center text-white/20 uppercase tracking-[0.2em] font-black">
+                 <ArrowRightLeft className="h-16 w-16 mb-4 opacity-10" />
+                 No pending transfers
+              </div>
+            ) : (
+              pendingTransfers.map((transfer) => (
+                <Card key={transfer.id} className="bg-yellow-500/5 border-yellow-500/20 hover:border-yellow-500/40 transition-all rounded-3xl p-6">
+                  <div className="flex items-center justify-between gap-6">
+                     <div className="flex items-center gap-6">
+                        <div className="h-14 w-14 rounded-2xl bg-yellow-500/20 flex items-center justify-center text-yellow-500">
+                           <ArrowRightLeft className="h-7 w-7" />
+                        </div>
+                        <div className="text-right">
+                           <p className="text-lg font-black text-white">{transfer.customer?.name_dv || transfer.tempCustomerName || 'Guest'}</p>
+                           <p className="text-xs font-bold text-white/40">{new Date(transfer.date).toLocaleString()}</p>
+                        </div>
+                     </div>
 
-                   <div className="flex-1 flex justify-center">
-                      <div className="flex items-center gap-2">
-                        {sale.items.slice(0, 3).map((item, idx) => (
-                          <div key={idx} className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center text-[10px] font-black text-white/40">
-                             {item.name_en.substring(0, 2).toUpperCase()}
-                          </div>
-                        ))}
-                        {sale.items.length > 3 && <span className="text-[10px] font-black text-white/20">+{sale.items.length - 3}</span>}
-                      </div>
-                   </div>
+                     <div className="text-center">
+                        <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">Items</p>
+                        <p className="text-sm font-black text-white">{transfer.items.length}</p>
+                     </div>
 
-                   <div className="flex items-center gap-8">
-                      <div className="text-right">
-                         <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">Grand Total</p>
-                         <p className="text-2xl font-black text-primary">{settings.shop.currency} {sale.grandTotal.toFixed(2)}</p>
-                      </div>
-                      <div className="flex gap-2">
-                         <Button 
-                           variant="ghost" 
-                           size="icon" 
-                           onClick={() => handlePrintReceipt(sale)}
-                           className="h-11 w-11 rounded-xl bg-white/5 border border-white/10 hover:bg-primary hover:text-white transition-all text-white/40"
-                         >
-                           <Printer className="h-4 w-4" />
-                         </Button>
-                         <Button 
-                           variant="ghost" 
-                           size="icon" 
-                           onClick={() => handleEditSale(sale)}
-                           className="h-11 w-11 rounded-xl bg-white/5 border border-white/10 hover:bg-blue-500 hover:text-white transition-all text-white/40"
-                         >
-                           <PencilLine className="h-4 w-4" />
-                         </Button>
-                      </div>
-                   </div>
-                </div>
-              </Card>
-            ))
+                     <div className="flex items-center gap-8">
+                        <div className="text-right">
+                           <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">Amount</p>
+                           <p className="text-2xl font-black text-yellow-500">{settings.shop.currency} {transfer.grandTotal.toFixed(2)}</p>
+                        </div>
+                        <div className="flex gap-2">
+                           <Button 
+                             onClick={() => resolvePendingTransfer(transfer.id, 'cash')}
+                             className="bg-green-600 hover:bg-green-700 text-white font-black text-[10px] h-11 px-6 rounded-xl uppercase tracking-widest"
+                           >
+                             Confirm Cash
+                           </Button>
+                           <Button 
+                             onClick={() => resolvePendingTransfer(transfer.id, 'credit')}
+                             className="bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] h-11 px-6 rounded-xl uppercase tracking-widest"
+                             disabled={!transfer.customer}
+                           >
+                             Confirm Credit
+                           </Button>
+                        </div>
+                     </div>
+                  </div>
+                </Card>
+              ))
+            )
           )}
         </div>
       </ScrollArea>

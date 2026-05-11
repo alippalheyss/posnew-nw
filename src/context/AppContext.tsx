@@ -334,7 +334,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
             customer: customersData?.find(c => c.id === s.customer_id) || null,
             grandTotal: s.grand_total,
             paymentMethod: s.payment_method,
-            paidAmount: s.paid_amount
+            paidAmount: s.paid_amount,
+            splitDetails: s.split_details
           }));
           setSales(linkedSales);
         }

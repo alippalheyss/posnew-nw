@@ -58,6 +58,7 @@ const POS = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCashDialogOpen, setIsCashDialogOpen] = useState(false);
   const [isCreditDialogOpen, setIsCreditDialogOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [paidAmount, setPaidAmount] = useState<number | ''>(0);
   const [isConfirmRemoveCartDialogOpen, setIsConfirmRemoveCartDialogOpen] = useState(false);
   const [cartToRemoveId, setCartToRemoveId] = useState<string | null>(null);
@@ -372,7 +373,7 @@ const POS = () => {
 
     const newSale = {
       id: `sale-${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toLocaleDateString('sv-SE'),
       customer: activeCart.customer,
       items: activeCart.items,
       grandTotal: grandTotal,
@@ -422,7 +423,7 @@ const POS = () => {
 
     const newSale = {
       id: `sale-${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toLocaleDateString('sv-SE'),
       customer: activeCart.customer!,
       items: activeCart.items,
       grandTotal: grandTotal,
@@ -430,6 +431,7 @@ const POS = () => {
       balance: grandTotal,
       paidAmount: 0
     };
+    setIsProcessing(true);
     try {
       await addSale(newSale);
 
@@ -450,9 +452,11 @@ const POS = () => {
       }
       clearActiveCart();
       setIsCreditDialogOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error processing credit payment:', error);
-      showError('Failed to save credit sale');
+      showError(`Failed to save credit sale: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -460,7 +464,7 @@ const POS = () => {
     if (!activeCart || activeCart.items.length === 0) return;
     
     addPendingTransfer({
-      date: new Date().toISOString(),
+      date: new Date().toLocaleDateString('sv-SE'),
       customer: activeCart.customer,
       tempCustomerName: !activeCart.customer ? customerSearchTerm : null,
       items: activeCart.items,
@@ -558,7 +562,7 @@ const POS = () => {
 
     const newSale: Sale = {
       id: `sale-${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toLocaleDateString('sv-SE'),
       customer: activeCart?.customer || null,
       items: activeCart?.items || [],
       grandTotal: grandTotal,
@@ -1018,7 +1022,13 @@ const POS = () => {
             {creditDialogStep === 2 ? (
               <>
                 <Button variant="outline" onClick={() => setCreditDialogStep(1)} className="border-white/10 hover:bg-white/5 text-white">{renderBoth('change_customer')}</Button>
-                <Button onClick={processCreditPayment} className="flex-1 btn-gradient-blue text-white">{renderBoth('confirm_credit_sale')}</Button>
+                <Button 
+                  onClick={processCreditPayment} 
+                  disabled={isProcessing}
+                  className="flex-1 btn-gradient-blue text-white"
+                >
+                  {isProcessing ? 'Processing...' : renderBoth('confirm_credit_sale')}
+                </Button>
               </>
             ) : (
               <Button variant="outline" onClick={() => setIsCreditDialogOpen(false)} className="w-full border-white/10 hover:bg-white/5 text-white">{renderBoth('cancel')}</Button>

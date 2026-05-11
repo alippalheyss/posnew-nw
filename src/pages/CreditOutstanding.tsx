@@ -107,7 +107,7 @@ const CreditOutstanding = () => {
     }
   };
 
-  const currentOutstandingAfterPayment = Math.max(0, (selectedCustomerForAction?.outstanding_balance || 0) - (typeof paymentAmount === 'number' ? paymentAmount : 0));
+
 
   const handleDownloadCreditReport = (customer: Customer) => {
     const customerSales = sales.filter(s => s.customer?.id === customer.id && s.paymentMethod === 'credit');

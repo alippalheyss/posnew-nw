@@ -1136,6 +1136,7 @@ const POS = () => {
                         </div>
                       )}
                     </div>
+                  </div>
                 ))}
               </div>
             </ScrollArea>

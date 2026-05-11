@@ -737,44 +737,52 @@ const POS = () => {
           ) : (
             <div className="space-y-2 pb-6">
               {activeCart.items.map((item) => (
-                <div key={`${item.id}-${item.selected_unit}`} className="group relative bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl p-2 transition-all">
-                  <div className="flex justify-between items-start mb-1">
-                    <div className="text-right flex-1 min-w-0 pr-1">
-                      <p className="text-[18px] font-black text-white leading-tight mb-1">{item.name_dv}</p>
-                      <p className="text-[13px] font-bold text-white/50 leading-tight uppercase mb-2">{item.name_en}</p>
-                      <div className="flex items-center gap-2">
-                         <span className="text-[14px] font-black text-primary">{settings.shop.currency} {item.price.toFixed(2)}</span>
-                         {item.selected_unit && item.selected_unit !== 'Piece' && (
-                           <Badge variant="outline" className="text-[9px] border-primary/30 text-primary uppercase font-black px-1.5 py-0.5 h-auto leading-none">{item.selected_unit}</Badge>
-                         )}
+                <div key={`${item.id}-${item.selected_unit}`} className="group relative bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl p-3 transition-all">
+                  <div className="flex gap-4 items-start">
+                    {/* Left side: Price & Quantity (Green Area) */}
+                    <div className="flex flex-col gap-2 items-start">
+                      <div className="text-[16px] font-black text-primary whitespace-nowrap">
+                        {settings.shop.currency} {item.price.toFixed(2)}
+                      </div>
+                      <div className="flex items-center gap-1 bg-black/40 rounded-lg p-0.5 border border-white/5 h-8">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6 text-white/40 hover:text-white"
+                          onClick={() => updateCartItemQty(item.id, -1)}
+                        ><Minus className="h-3 w-3" /></Button>
+                        <span className="w-8 text-center text-[13px] font-black text-white">{item.qty}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6 text-white/40 hover:text-white"
+                          onClick={() => updateCartItemQty(item.id, 1)}
+                        ><Plus className="h-3 w-3" /></Button>
                       </div>
                     </div>
-                    <button 
-                      onClick={() => removeFromCart(item.id)}
-                      className="text-white/20 hover:text-red-500 transition-colors p-1"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  </div>
-                  
-                  <div className="flex items-center justify-between pt-1 mt-1 border-t border-white/5">
-                    <div className="flex items-center gap-1 bg-black/40 rounded-lg p-0.5 border border-white/5 h-6">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-5 w-5 text-white/40 hover:text-white"
-                        onClick={() => updateCartItemQty(item.id, -1)}
-                      ><Minus className="h-2 w-2" /></Button>
-                      <span className="w-6 text-center text-[10px] font-black text-white">{item.qty}</span>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-5 w-5 text-white/40 hover:text-white"
-                        onClick={() => updateCartItemQty(item.id, 1)}
-                      ><Plus className="h-2 w-2" /></Button>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-black text-white leading-none">{settings.shop.currency} {(item.price * item.qty).toFixed(2)}</p>
+
+                    {/* Right side: Name & Info */}
+                    <div className="flex-1 text-right min-w-0">
+                      <div className="flex justify-between items-start mb-1">
+                        <button 
+                          onClick={() => removeFromCart(item.id)}
+                          className="text-white/20 hover:text-red-500 transition-colors p-1"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[18px] font-black text-white leading-tight mb-1">{item.name_dv}</p>
+                          <p className="text-[13px] font-bold text-white/50 leading-tight uppercase mb-1">{item.name_en}</p>
+                          {item.selected_unit && item.selected_unit !== 'Piece' && (
+                            <Badge variant="outline" className="text-[9px] border-primary/30 text-primary uppercase font-black px-1.5 py-0.5 h-auto leading-none">{item.selected_unit}</Badge>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Subtotal moved here if needed, but keeping it simple as requested */}
+                      <div className="text-[14px] font-black text-white/40 mt-1">
+                        TOTAL: {settings.shop.currency} {(item.price * item.qty).toFixed(2)}
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -46,6 +46,16 @@ const CreditOutstanding = () => {
   const [isSettlePaymentDialogOpen, setIsSettlePaymentDialogOpen] = useState(false);
   const [isSettlementHistoryDialogOpen, setIsSettlementHistoryDialogOpen] = useState(false);
   const [isCreditPurchasesDialogOpen, setIsCreditPurchasesDialogOpen] = useState(false);
+  const [revealedTotals, setRevealedTotals] = useState<Set<string>>(new Set());
+
+  const toggleTotalReveal = (customerId: string) => {
+    setRevealedTotals(prev => {
+      const next = new Set(prev);
+      if (next.has(customerId)) next.delete(customerId);
+      else next.add(customerId);
+      return next;
+    });
+  };
   const [isAddCreditSaleDialogOpen, setIsAddCreditSaleDialogOpen] = useState(false);
   const [selectedCustomerForAction, setSelectedCustomerForAction] = useState<Customer | null>(null);
   const [paymentAmount, setPaymentAmount] = useState<number | ''>('');
@@ -59,7 +69,8 @@ const CreditOutstanding = () => {
   );
 
   const selectedCustomerCreditSales = sales.filter(s =>
-    s.customer?.id === selectedCustomerForAction?.id && s.paymentMethod === 'credit'
+    (s.customer?.id === selectedCustomerForAction?.id && s.paymentMethod === 'credit') ||
+    (s.paymentMethod === 'split' && s.splitDetails?.some((d: any) => d.method === 'Credit' && d.customerId === selectedCustomerForAction?.id))
   );
 
   const handleSettlePaymentClick = (customer: Customer) => {
@@ -418,7 +429,15 @@ const CreditOutstanding = () => {
 
                      <div className="bg-red-500/5 p-4 rounded-2xl border border-red-500/10 mb-6 text-right group-hover:bg-red-500/10 transition-all">
                         <p className="text-[8px] font-black text-red-500/40 uppercase tracking-widest mb-1">Total Due</p>
-                        <p className="text-2xl font-black text-red-500">{settings.shop.currency} {(customer.outstanding_balance || 0).toFixed(2)}</p>
+                        <p 
+                          onClick={() => toggleTotalReveal(customer.id)}
+                          className={cn(
+                            "text-2xl font-black text-red-500 cursor-pointer transition-all duration-300",
+                            !revealedTotals.has(customer.id) && "blur-md select-none"
+                          )}
+                        >
+                          {settings.shop.currency} {(customer.outstanding_balance || 0).toFixed(2)}
+                        </p>
                         <div className="flex items-center justify-end gap-2 text-[10px] text-white/20 mt-2 font-bold">
                            <Clock className="h-3 w-3" />
                            <span>LAST SETTLED: {customer.settlement_history.length > 0 ? customer.settlement_history[customer.settlement_history.length - 1].date : 'NONE'}</span>

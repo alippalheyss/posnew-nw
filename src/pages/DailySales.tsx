@@ -24,22 +24,23 @@ const DailySales = () => {
   const { pendingTransfers, resolvePendingTransfer } = useAppContext();
 
   const filterSalesByDate = (salesList: Sale[]) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayStr = new Date().toLocaleDateString('sv-SE');
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toLocaleDateString('sv-SE');
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
 
     return salesList.filter(sale => {
-      const saleDate = new Date(sale.date);
-      saleDate.setHours(0, 0, 0, 0);
-
-      if (dateFilter === 'today') return saleDate.getTime() === today.getTime();
-      if (dateFilter === 'yesterday') {
-        const yesterday = new Date(today);
-        yesterday.setDate(today.getDate() - 1);
-        return saleDate.getTime() === yesterday.getTime();
-      }
+      const saleDateStr = typeof sale.date === 'string' ? sale.date : new Date(sale.date).toLocaleDateString('sv-SE');
+      
+      if (dateFilter === 'today') return saleDateStr === todayStr;
+      if (dateFilter === 'yesterday') return saleDateStr === yesterdayStr;
       if (dateFilter === 'last30') {
-        const thirtyDaysAgo = new Date(today);
-        thirtyDaysAgo.setDate(today.getDate() - 30);
+        const saleDate = new Date(sale.date);
+        saleDate.setHours(0, 0, 0, 0);
         return saleDate.getTime() >= thirtyDaysAgo.getTime();
       }
       return true;

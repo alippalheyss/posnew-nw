@@ -427,6 +427,8 @@ const POS = () => {
       items: activeCart.items,
       grandTotal: grandTotal,
       paymentMethod: 'credit' as const,
+      balance: grandTotal,
+      paidAmount: 0
     };
     try {
       await addSale(newSale);
@@ -1153,9 +1155,25 @@ const POS = () => {
                 <span className="text-sm font-bold opacity-60 uppercase tracking-wider">{renderBoth('remaining_amount')}</span>
               </div>
               
-              <Button variant="outline" onClick={addSplitEntry} className="w-full border-dashed border-2 py-6 border-white/10 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-white/50">
-                <PlusCircle className="h-4 w-4" /> {renderBoth('add_person')}
-              </Button>
+              <div className="grid grid-cols-2 gap-3">
+                <Button 
+                  variant="outline" 
+                  onClick={addSplitEntry} 
+                  className="border-dashed border-2 py-6 border-white/10 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-white/50"
+                >
+                  <PlusCircle className="h-4 w-4" /> {renderBoth('add_person')}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    const newId = Date.now().toString();
+                    setSplitEntries([...splitEntries, { id: newId, amount: splitRemaining > 0 ? splitRemaining : 0, method: 'Credit' }]);
+                  }} 
+                  className="border-dashed border-2 py-6 border-blue-500/10 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-500/5 transition-all flex items-center justify-center gap-2 text-white/50"
+                >
+                  <Users className="h-4 w-4" /> {renderBoth('add_credit_customer')}
+                </Button>
+              </div>
             </div>
           </div>
 

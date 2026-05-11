@@ -73,14 +73,19 @@ const GSTReports = () => {
 
     const outputGST = filteredSales.reduce((sum, s) => {
         const taxableTotal = s.items.filter(i => !i.is_zero_tax).reduce((itemSum, i) => itemSum + (i.price * i.qty), 0);
-        return sum + (taxableTotal * (settings.shop.taxRate / 100));
+        const taxRate = settings.shop.taxRate / 100;
+        // Formula for tax-inclusive amount
+        const gstAmount = taxableTotal - (taxableTotal / (1 + taxRate));
+        return sum + gstAmount;
     }, 0);
 
     const inputGST = filteredPurchases.reduce((sum, p) => sum + p.gstAmount, 0);
     const netGST = outputGST - inputGST;
 
     const totalTaxableSales = filteredSales.reduce((sum, s) => {
-        return sum + s.items.filter(i => !i.is_zero_tax).reduce((itemSum, i) => itemSum + (i.price * i.qty), 0);
+        const taxableTotal = s.items.filter(i => !i.is_zero_tax).reduce((itemSum, i) => itemSum + (i.price * i.qty), 0);
+        const taxRate = settings.shop.taxRate / 100;
+        return sum + (taxableTotal / (1 + taxRate));
     }, 0);
 
     const totalPurchases = filteredPurchases.reduce((sum, p) => sum + p.amount, 0);

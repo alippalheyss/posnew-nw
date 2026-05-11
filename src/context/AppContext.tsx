@@ -592,7 +592,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         .from('sales')
         .insert({
           id: sale.id,
-          date: sale.date,
+          date: sale.date || new Date().toLocaleDateString('sv-SE'),
           customer_id: sale.customer?.id || null,
           items: sale.items,
           grand_total: sale.grandTotal,
@@ -708,9 +708,11 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     const transfer = pendingTransfers.find(t => t.id === id);
     if (!transfer) return;
 
+    const currentDate = new Date().toLocaleDateString('sv-SE');
     if (action === 'cash') {
       await addSale({
         ...transfer,
+        date: currentDate,
         paymentMethod: 'cash',
         paidAmount: transfer.grandTotal,
         balance: 0
@@ -722,6 +724,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       }
       await addSale({
         ...transfer,
+        date: currentDate,
         paymentMethod: 'credit'
       });
       await updateCustomerBalance(transfer.customer.id, transfer.grandTotal);
@@ -738,7 +741,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         .insert({
           customer_id: customerId,
           amount_paid: settlement.amount_paid,
-          date: settlement.date,
+          date: settlement.date || new Date().toLocaleDateString('sv-SE'),
           previous_outstanding: settlement.previous_outstanding,
           new_outstanding: settlement.new_outstanding
         });
@@ -828,16 +831,28 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const updateProduct = async (updatedProduct: Product) => {
     try {
+      console.log('Updating product in Supabase:', updatedProduct.id, updatedProduct.expiry_date);
       const { error } = await supabase
         .from('products')
-        .update(updatedProduct)
+        .update({
+          ...updatedProduct,
+          // Explicitly ensure numeric fields are numbers
+          price: Number(updatedProduct.price),
+          stock_shop: Number(updatedProduct.stock_shop),
+          stock_godown: Number(updatedProduct.stock_godown),
+          cost_price: updatedProduct.cost_price ? Number(updatedProduct.cost_price) : null
+        })
         .eq('id', updatedProduct.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase product update error:', error);
+        throw error;
+      }
 
       setProducts(prev => prev.map(p =>
         p.id === updatedProduct.id ? updatedProduct : p
       ));
+      console.log('Product updated successfully');
     } catch (error) {
       console.error('Error updating product:', error);
       showError('Failed to update product in database');

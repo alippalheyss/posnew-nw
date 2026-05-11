@@ -556,10 +556,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       // Strip settlement_history as it's a relation, not a column
       const { settlement_history, ...customerData } = customer;
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('customers')
         .insert({
-          id: customerData.id,
           code: customerData.code,
           name_dv: customerData.name_dv,
           name_en: customerData.name_en,
@@ -568,11 +567,15 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           credit_limit: customerData.credit_limit,
           loyalty_points: customerData.loyalty_points,
           outstanding_balance: customerData.outstanding_balance
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      setCustomers(prev => [...prev, customer]);
+      if (data) {
+        setCustomers(prev => [...prev, data]);
+      }
     } catch (error) {
       console.error('Error adding customer:', error);
       showError('Failed to save customer to database');

@@ -61,6 +61,7 @@ const POS = () => {
   const [lastSaleForPrint, setLastSaleForPrint] = useState<Sale | null>(null);
   const [customerSearchTerm, setCustomerSearchTerm] = useState('');
   const [isAddCustomerDialogOpen, setIsAddCustomerDialogOpen] = useState(false);
+  const [isPendingTransfersDialogOpen, setIsPendingTransfersDialogOpen] = useState(false);
   const [isSplitDialogOpen, setIsSplitDialogOpen] = useState(false);
   const [isAwaitingTransferDialogOpen, setIsAwaitingTransferDialogOpen] = useState(false);
   const [transferAmount, setTransferAmount] = useState<number | ''>(0);
@@ -592,16 +593,31 @@ const POS = () => {
              </Button>
           </div>
 
-          <div className="relative w-[400px]">
-             <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
-             <Input 
-                ref={searchInputRef}
-                placeholder="Search by name, code or barcode..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-white/5 border-white/10 rounded-xl px-10 text-right font-bold h-11 focus:border-primary/50 focus:ring-0 transition-all placeholder:text-white/10 text-white"
-                dir="rtl"
-             />
+          <div className="flex items-center gap-3">
+             <Button 
+               variant="ghost" 
+               size="icon" 
+               onClick={() => setIsPendingTransfersDialogOpen(true)}
+               className="relative h-11 w-11 rounded-xl bg-white/5 border border-white/10 hover:bg-yellow-500/20 hover:text-yellow-500 text-white/40"
+             >
+               <ArrowRightLeft className="h-5 w-5" />
+               {pendingTransfers.length > 0 && (
+                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 text-[#050510] rounded-full text-[10px] font-black flex items-center justify-center border-2 border-[#050510]">
+                   {pendingTransfers.length}
+                 </span>
+               )}
+             </Button>
+             <div className="relative w-[400px]">
+                <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
+                <Input 
+                   ref={searchInputRef}
+                   placeholder="Search by name, code or barcode..."
+                   value={searchTerm}
+                   onChange={(e) => setSearchTerm(e.target.value)}
+                   className="w-full bg-white/5 border-white/10 rounded-xl px-10 text-right font-bold h-11 focus:border-primary/50 focus:ring-0 transition-all placeholder:text-white/10 text-white"
+                   dir="rtl"
+                />
+             </div>
           </div>
         </div>
 
@@ -658,7 +674,7 @@ const POS = () => {
       </div>
 
       {/* Cart Section - Left Side in RTL */}
-      <div className="w-[520px] flex flex-col bg-[#0a0a1a]/80 backdrop-blur-xl border-r border-white/5 shadow-2xl z-20">
+      <div className="w-[600px] flex flex-col bg-[#0a0a1a]/80 backdrop-blur-xl border-r border-white/5 shadow-2xl z-20">
         {/* Cart Header */}
         <div className="p-6 pb-2">
           <div className="flex justify-between items-center mb-6">
@@ -669,14 +685,6 @@ const POS = () => {
               <h2 className="text-xl font-black text-white">{renderBoth('cart')}</h2>
             </div>
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setIsAddCustomerDialogOpen(true)} 
-                className="h-8 border-white/10 hover:bg-white/5 text-xs font-bold gap-2 text-white"
-              >
-                <UserPlus className="h-4 w-4 text-green-500" /> {renderBoth('add_customer')}
-              </Button>
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -896,12 +904,22 @@ const POS = () => {
           <div className="py-4">
             {creditDialogStep === 1 ? (
               <>
-                <Input 
-                  placeholder={renderBothString('search_customers')}
-                  value={customerSearchTerm}
-                  onChange={(e) => setCustomerSearchTerm(e.target.value)}
-                  className="mb-4 text-right bg-white/5 border-white/10 text-white"
-                />
+                <div className="flex gap-2 mb-4">
+                  <Input 
+                    placeholder={renderBothString('search_customers')}
+                    value={customerSearchTerm}
+                    onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                    className="flex-1 text-right bg-white/5 border-white/10 text-white"
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    onClick={() => setIsAddCustomerDialogOpen(true)}
+                    className="h-10 w-10 border-white/10 bg-white/5 hover:bg-primary/20 text-primary"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                  </Button>
+                </div>
                 <ScrollArea className="h-[300px] pr-4">
                   <div className="space-y-2">
                     {customers.filter(c => 
@@ -1010,6 +1028,17 @@ const POS = () => {
 
           <div className="p-6 flex-1 overflow-hidden flex flex-col gap-6">
             <div className="bg-primary/10 p-4 rounded-lg border border-primary/20">
+              <div className="flex justify-between items-center mb-2 border-b border-white/5 pb-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setIsAddCustomerDialogOpen(true)}
+                  className="text-[10px] h-6 px-2 text-green-500 hover:text-green-400 hover:bg-green-500/10 font-black"
+                >
+                  <UserPlus className="h-3 w-3 ml-1" /> {renderBoth('add_customer')}
+                </Button>
+                <span className="text-xs font-bold opacity-40 uppercase tracking-widest">Customer Actions</span>
+              </div>
               <div className="flex justify-between items-center">
                 <span className="text-lg font-black text-primary">{settings.shop.currency} {grandTotal.toFixed(2)}</span>
                 <span className="text-sm font-bold opacity-60 uppercase tracking-wider">{renderBoth('total_to_split')}</span>
@@ -1121,7 +1150,17 @@ const POS = () => {
              </div>
 
              <div className="space-y-2">
-                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest pr-2">Select Customer or Enter Name</Label>
+                <div className="flex justify-between items-center pr-2">
+                   <Button 
+                     variant="ghost" 
+                     size="sm" 
+                     onClick={() => setIsAddCustomerDialogOpen(true)}
+                     className="text-[10px] h-6 px-2 text-green-500 hover:text-green-400 hover:bg-green-500/10 font-black"
+                   >
+                     <UserPlus className="h-3 w-3 ml-1" /> {renderBoth('add_customer')}
+                   </Button>
+                   <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">Select Customer or Enter Name</Label>
+                </div>
                 <Input 
                   placeholder="Search or type name..."
                   value={customerSearchTerm}
@@ -1174,6 +1213,65 @@ const POS = () => {
           updateActiveCart(prev => ({ ...prev, customer: newCustomer }));
         }}
       />
+
+      {/* Pending Transfers Dialog in POS */}
+      <Dialog open={isPendingTransfersDialogOpen} onOpenChange={setIsPendingTransfersDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] font-faruma bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-right text-2xl font-black flex items-center justify-end gap-3">
+              Pending Transfers <ArrowRightLeft className="h-6 w-6 text-yellow-500" />
+            </DialogTitle>
+            <DialogDescription className="text-right text-white/40">
+              Review and resolve pending bank transfers.
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="h-[400px] mt-4">
+            <div className="space-y-3">
+              {pendingTransfers.length === 0 ? (
+                <div className="h-40 flex flex-col items-center justify-center text-white/20 uppercase tracking-widest font-black text-sm">
+                   No pending transfers
+                </div>
+              ) : (
+                pendingTransfers.map((transfer) => (
+                  <div key={transfer.id} className="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500">
+                        <ArrowRightLeft className="h-5 w-5" />
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-black text-white">{transfer.customer?.name_dv || transfer.tempCustomerName || 'Guest'}</p>
+                        <p className="text-[10px] font-bold text-white/40">{new Date(transfer.date).toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-0.5">Amount</p>
+                      <p className="text-lg font-black text-yellow-500">{settings.shop.currency} {transfer.grandTotal.toFixed(2)}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm"
+                        onClick={() => resolvePendingTransfer(transfer.id, 'cash')}
+                        className="bg-green-600 hover:bg-green-700 text-white text-[10px] font-black px-3 h-9"
+                      >
+                        CASH
+                      </Button>
+                      <Button 
+                        size="sm"
+                        onClick={() => resolvePendingTransfer(transfer.id, 'credit')}
+                        className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black px-3 h-9"
+                        disabled={!transfer.customer}
+                      >
+                        CREDIT
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

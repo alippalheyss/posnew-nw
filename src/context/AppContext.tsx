@@ -274,22 +274,25 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     try {
       const { data, error } = await supabase
         .from('customers')
-        .select('*, settlement_history (*)')
+        .select('*')
         .order('name_en', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase refresh error:', error);
+        throw error;
+      }
 
       if (data) {
         const formatted = data.map(c => ({
           ...c,
-          settlement_history: c.settlement_history || []
+          settlement_history: [] // We'll fetch history separately when needed to avoid join errors
         }));
         setCustomers(formatted);
         showSuccess('Customers synchronized with database');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error refreshing customers:', error);
-      showError('Failed to refresh customers');
+      showError('Failed to refresh customers: ' + (error.message || 'Unknown error'));
     }
   };
 
@@ -305,7 +308,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           { data: purchasesData }
         ] = await Promise.all([
           supabase.from('products').select('*'),
-          supabase.from('customers').select('*, settlement_history (*)').order('name_en', { ascending: true }),
+          supabase.from('customers').select('*').order('name_en', { ascending: true }),
           supabase.from('sales').select('*').order('date', { ascending: false }).limit(1000),
           supabase.from('vendors').select('*'),
           supabase.from('purchases').select('*')
@@ -315,7 +318,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         if (customersData) {
           const formattedCustomers = customersData.map(c => ({
             ...c,
-            settlement_history: c.settlement_history || []
+            settlement_history: []
           }));
           setCustomers(formattedCustomers);
         }

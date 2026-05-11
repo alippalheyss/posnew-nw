@@ -304,6 +304,10 @@ const CreditOutstanding = () => {
     </>
   );
 
+  const renderBothString = (key: string, options?: any) => {
+    return `${t(key, options)} (${t(key, { ...options, lng: 'en' })})`;
+  };
+
   const allSettlements = customers.flatMap(c =>
     c.settlement_history.map(s => ({
       ...s,

@@ -205,6 +205,7 @@ interface AppContextType {
   clearCart: (cartId: string) => void;
   updateStock: (productId: string, newStock: number) => void;
   updateProduct: (updatedProduct: Product) => Promise<void>;
+  addProduct: (product: Product) => Promise<void>;
   deleteProduct: (productId: string) => Promise<void>;
   transferStock: (productId: string, from: 'shop' | 'godown', to: 'shop' | 'godown', amount: number) => Promise<void>;
   openCarts: Map<string, Cart>;
@@ -843,6 +844,21 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
+  const addProduct = async (product: Product) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .insert(product);
+
+      if (error) throw error;
+
+      setProducts(prev => [...prev, product]);
+    } catch (error) {
+      console.error('Error adding product:', error);
+      showError('Failed to add product to database');
+    }
+  };
+
   const deleteProduct = async (productId: string) => {
     try {
       const { error } = await supabase
@@ -1021,6 +1037,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       clearCart,
       updateStock,
       updateProduct,
+      addProduct,
       deleteProduct,
       openCarts,
       setOpenCarts,

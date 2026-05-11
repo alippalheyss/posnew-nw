@@ -22,7 +22,7 @@ import {
 
 const Products = () => {
   const { t } = useTranslation();
-  const { products, setProducts, favoriteProductIds, setFavoriteProductIds, settings, calculateProfitMargin, deleteProduct } = useAppContext();
+  const { products, setProducts, favoriteProductIds, setFavoriteProductIds, settings, calculateProfitMargin, deleteProduct, addProduct, updateProduct } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -65,12 +65,12 @@ const Products = () => {
     setIsDialogOpen(true);
   };
 
-  const handleSaveProduct = (productData: Product) => {
+  const handleSaveProduct = async (productData: Product) => {
     if (editingProduct) {
-      setProducts(prev => prev.map(p => p.id === productData.id ? productData : p));
+      await updateProduct(productData);
       showSuccess(t('product_updated_successfully'));
     } else {
-      setProducts(prev => [...prev, productData]);
+      await addProduct(productData);
       showSuccess(t('product_added_successfully'));
     }
     setIsDialogOpen(false);

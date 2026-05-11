@@ -360,7 +360,7 @@ const POS = () => {
     return matchesSearch && matchesCategory;
   }).slice(0, 50); // Optimization: only show first 50 matches initially
 
-  const processCashPayment = () => {
+  const processCashPayment = async () => {
     if (!activeCart || activeCart.items.length === 0) {
       showError(t('cart_empty_error'));
       return;
@@ -406,7 +406,7 @@ const POS = () => {
     }
   };
 
-  const processCreditPayment = () => {
+  const processCreditPayment = async () => {
     if (!activeCart || activeCart.items.length === 0) {
       showError(t('cart_empty_error'));
       return;

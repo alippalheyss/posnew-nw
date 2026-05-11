@@ -45,7 +45,9 @@ const POS = () => {
     redeemLoyaltyPoints,
     updateCustomerBalance,
     addSale,
-    addPendingTransfer
+    addPendingTransfer,
+    pendingTransfers,
+    resolvePendingTransfer
   } = useAppContext();
 
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');

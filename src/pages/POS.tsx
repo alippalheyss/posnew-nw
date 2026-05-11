@@ -625,8 +625,8 @@ const POS = () => {
         </div>
 
         {/* Product Grid */}
-        <ScrollArea className="flex-1 p-8 custom-scrollbar">
-           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6">
+        <ScrollArea className="flex-1 p-4 custom-scrollbar">
+           <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2">
               {displayProducts.map((product) => {
                 const isLowStock = product.stock_shop < LOW_STOCK_THRESHOLD;
                 const cardColors = [
@@ -638,32 +638,32 @@ const POS = () => {
                   <div 
                     key={product.id}
                     onClick={() => handleProductSelection(product)}
-                    className="group bg-[#0a0a1a] hover:bg-[#0f0f25] border border-white/5 rounded-[2rem] p-5 transition-all cursor-pointer relative"
+                    className="group bg-[#0a0a1a] hover:bg-[#0f0f25] border border-white/5 rounded-xl p-2 transition-all cursor-pointer relative"
                   >
                     <div className={cn(
-                      "aspect-square rounded-[1.5rem] mb-4 flex items-center justify-center overflow-hidden relative border border-white/5",
+                      "aspect-square rounded-lg mb-2 flex items-center justify-center overflow-hidden relative border border-white/5",
                       product.image ? "bg-white" : colorClass
                     )}>
                        {product.image ? (
                          <img src={product.image} alt={product.name_dv} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                        ) : (
-                         <div className="text-white font-black text-2xl uppercase tracking-tighter text-center px-4 leading-tight drop-shadow-lg">
+                         <div className="text-white font-black text-lg uppercase tracking-tighter text-center px-2 leading-tight drop-shadow-lg">
                             {product.name_en}
                          </div>
                        )}
                        {isLowStock && (
-                         <Badge className="absolute top-3 right-3 bg-red-500 text-white border-none text-[8px] font-black px-2 py-0.5 rounded-full shadow-lg uppercase tracking-widest">
+                         <Badge className="absolute top-2 right-2 bg-red-500 text-white border-none text-[8px] font-black px-1.5 py-0 rounded-full shadow-lg uppercase tracking-widest">
                            LOW
                          </Badge>
                        )}
                     </div>
                     
-                    <div className="text-center px-2">
-                       <h3 className="text-base font-black text-white leading-tight truncate">{product.name_dv}</h3>
-                       <p className="text-[10px] font-bold text-white/30 mt-1 truncate uppercase tracking-widest mb-4">{product.name_en}</p>
+                    <div className="text-center px-1">
+                       <h3 className="text-xs font-black text-white leading-tight truncate mb-0.5">{product.name_dv}</h3>
+                       <p className="text-[8px] font-bold text-white/30 truncate uppercase tracking-widest mb-2">{product.name_en}</p>
                        
-                       <div className="flex items-center justify-center gap-2">
-                          <span className="text-sm font-black text-primary leading-none">{settings.shop.currency} {product.price.toFixed(2)}</span>
+                       <div className="flex items-center justify-center gap-1.5">
+                          <span className="text-[11px] font-black text-primary leading-none">{settings.shop.currency} {product.price.toFixed(2)}</span>
                           <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white scale-0 group-hover:scale-100 transition-transform shadow-[0_0_15px_rgba(0,132,255,0.5)]">
                              <PlusCircle className="h-4 w-4" />
                           </div>

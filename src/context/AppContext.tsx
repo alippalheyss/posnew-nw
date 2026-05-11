@@ -673,11 +673,25 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   const getNextCustomerCode = () => {
-    const lastCustomerCode = customers.reduce((maxCode, customer) => {
-      const codeNum = parseInt(customer.code.replace('CUST', ''), 10);
-      return isNaN(codeNum) ? maxCode : Math.max(maxCode, codeNum);
-    }, 0);
-    return `CUST${String(lastCustomerCode + 1).padStart(3, '0')}`;
+    let lastNum = 0;
+    customers.forEach(c => {
+      const match = c.code.match(/\d+/);
+      if (match) {
+        const num = parseInt(match[0], 10);
+        if (num > lastNum) lastNum = num;
+      }
+    });
+    
+    let nextNum = lastNum + 1;
+    let nextCode = `CUST${String(nextNum).padStart(3, '0')}`;
+    
+    // Safety check against local state
+    while (customers.some(c => c.code === nextCode)) {
+      nextNum++;
+      nextCode = `CUST${String(nextNum).padStart(3, '0')}`;
+    }
+    
+    return nextCode;
   };
 
   const getNextProductCode = () => {

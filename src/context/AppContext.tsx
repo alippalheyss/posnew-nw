@@ -283,9 +283,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       }
 
       if (data) {
+        // Fetch settlements separately
+        const { data: settlementsData } = await supabase.from('settlements').select('*');
+        
         const formatted = data.map(c => ({
           ...c,
-          settlement_history: [] // We'll fetch history separately when needed to avoid join errors
+          settlement_history: settlementsData?.filter(s => s.customer_id === c.id) || []
         }));
         setCustomers(formatted);
         showSuccess('Customers synchronized with database');
@@ -305,20 +308,22 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           { data: customersData },
           { data: salesData },
           { data: vendorsData },
-          { data: purchasesData }
+          { data: purchasesData },
+          { data: settlementsData }
         ] = await Promise.all([
           supabase.from('products').select('*'),
           supabase.from('customers').select('*').order('name_en', { ascending: true }),
           supabase.from('sales').select('*').order('date', { ascending: false }).limit(1000),
           supabase.from('vendors').select('*'),
-          supabase.from('purchases').select('*')
+          supabase.from('purchases').select('*'),
+          supabase.from('settlements').select('*')
         ]);
 
         if (productsData) setProducts(productsData);
         if (customersData) {
           const formattedCustomers = customersData.map(c => ({
             ...c,
-            settlement_history: []
+            settlement_history: settlementsData?.filter(s => s.customer_id === c.id) || []
           }));
           setCustomers(formattedCustomers);
         }

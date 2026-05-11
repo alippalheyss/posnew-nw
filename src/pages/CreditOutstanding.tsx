@@ -465,7 +465,16 @@ const CreditOutstanding = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('amount_to_pay')}</Label>
+              <div className="flex justify-between items-end">
+                <Button 
+                  variant="link" 
+                  onClick={() => setPaymentAmount(selectedCustomerForAction?.outstanding_balance || '')}
+                  className="p-0 h-auto text-[10px] text-primary font-black uppercase"
+                >
+                  SETTLE FULL AMOUNT
+                </Button>
+                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('amount_to_pay')}</Label>
+              </div>
               <Input
                 type="number"
                 value={paymentAmount}
@@ -496,7 +505,98 @@ const CreditOutstanding = () => {
         </DialogContent>
       </Dialog>
 
-      {/* History and Purchases dialogs would follow same theme pattern... */}
+      {/* Settlement History Dialog */}
+      <Dialog open={isSettlementHistoryDialogOpen} onOpenChange={setIsSettlementHistoryDialogOpen}>
+        <DialogContent className="sm:max-w-[500px] font-faruma bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
+          <DialogHeader className="text-right">
+            <DialogTitle className="text-2xl font-black flex items-center justify-end gap-3">
+              {renderBoth('settlement_history')} <History className="h-6 w-6 text-primary" />
+            </DialogTitle>
+            <DialogDescription className="text-right text-white/40">
+              {selectedCustomerForAction?.name_dv} ({selectedCustomerForAction?.name_en})
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="h-[400px] mt-4 pr-4">
+            <div className="space-y-3">
+              {selectedCustomerForAction?.settlement_history && selectedCustomerForAction.settlement_history.length > 0 ? (
+                [...selectedCustomerForAction.settlement_history].reverse().map((settlement, idx) => (
+                  <div key={settlement.id || idx} className="p-4 rounded-2xl bg-white/5 border border-white/5 text-right relative overflow-hidden group">
+                    <div className="flex justify-between items-center mb-2">
+                       <span className="text-[10px] font-mono text-white/20">{settlement.date}</span>
+                       <span className="text-sm font-black text-green-500">+{settings.shop.currency} {settlement.amount_paid.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] font-bold text-white/40">
+                       <span>NEW: {settlement.new_outstanding.toFixed(2)}</span>
+                       <span>PREV: {settlement.previous_outstanding.toFixed(2)}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center h-40 opacity-20">
+                  <Clock className="h-10 w-10 mb-2" />
+                  <p className="font-black uppercase tracking-widest">{renderBothString('no_settlement_history')}</p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+          <DialogFooter className="pt-4 border-t border-white/5">
+            <Button onClick={() => setIsSettlementHistoryDialogOpen(false)} className="w-full h-12 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-black">
+              {renderBoth('close')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Credit Purchases (Details) Dialog */}
+      <Dialog open={isCreditPurchasesDialogOpen} onOpenChange={setIsCreditPurchasesDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] font-faruma bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
+          <DialogHeader className="text-right">
+            <DialogTitle className="text-2xl font-black flex items-center justify-end gap-3">
+              {renderBoth('credit_purchases')} <ShoppingBag className="h-6 w-6 text-orange-500" />
+            </DialogTitle>
+            <DialogDescription className="text-right text-white/40">
+              {selectedCustomerForAction?.name_dv} ({selectedCustomerForAction?.name_en})
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="h-[450px] mt-4 pr-4">
+            <div className="space-y-4">
+              {selectedCustomerCreditSales.length > 0 ? (
+                [...selectedCustomerCreditSales].reverse().map((sale) => (
+                  <div key={sale.id} className="p-4 rounded-2xl bg-white/5 border border-white/5 text-right">
+                    <div className="flex justify-between items-center mb-3">
+                       <Badge variant="outline" className="border-orange-500/30 text-orange-500 text-[8px] font-black">{sale.id}</Badge>
+                       <span className="text-[10px] font-mono text-white/40">{sale.date}</span>
+                    </div>
+                    <div className="space-y-2 mb-3">
+                      {sale.items.map((item: any, i: number) => (
+                        <div key={i} className="flex justify-between items-center text-xs">
+                          <span className="text-white/40">{item.qty} x {item.price.toFixed(2)}</span>
+                          <span className="font-bold">{item.name_dv}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="pt-3 border-t border-white/5 flex justify-between items-center">
+                       <span className="text-sm font-black text-white">{settings.shop.currency} {sale.grandTotal.toFixed(2)}</span>
+                       <span className="text-[10px] font-black text-white/20 uppercase">Total Invoice</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center h-40 opacity-20">
+                  <FileText className="h-10 w-10 mb-2" />
+                  <p className="font-black uppercase tracking-widest">No credit purchases found</p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+          <DialogFooter className="pt-4 border-t border-white/5">
+            <Button onClick={() => setIsCreditPurchasesDialogOpen(false)} className="w-full h-12 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-black">
+              {renderBoth('close')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <AddCreditSaleDialog
         isOpen={isAddCreditSaleDialogOpen}
         onClose={() => setIsAddCreditSaleDialogOpen(false)}

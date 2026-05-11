@@ -327,7 +327,16 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           }));
           setCustomers(formattedCustomers);
         }
-        if (salesData) setSales(salesData);
+        if (salesData) {
+          const linkedSales = salesData.map(s => ({
+            ...s,
+            customer: customersData?.find(c => c.id === s.customer_id) || null,
+            grandTotal: s.grand_total,
+            paymentMethod: s.payment_method,
+            paidAmount: s.paid_amount
+          }));
+          setSales(linkedSales);
+        }
         if (vendorsData) setVendors(vendorsData);
         if (purchasesData) setPurchases(purchasesData);
       } catch (error) {
@@ -545,27 +554,39 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const updateCustomerBalance = async (customerId: string, amount: number) => {
     try {
+      console.log(`Updating balance for customer ${customerId} by amount ${amount}`);
       const customer = customers.find(c => c.id === customerId);
-      if (!customer) return;
+      if (!customer) {
+        console.error('Customer not found for balance update:', customerId);
+        return;
+      }
 
-      const newBalance = customer.outstanding_balance + amount;
+      const newBalance = (customer.outstanding_balance || 0) + amount;
+      console.log(`New balance will be: ${newBalance}`);
+      
       const { error } = await supabase
         .from('customers')
         .update({ outstanding_balance: newBalance })
         .eq('id', customerId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase update balance error:', error);
+        throw error;
+      }
 
       setCustomers(prev => prev.map(c =>
         c.id === customerId ? { ...c, outstanding_balance: newBalance } : c
       ));
+      console.log('Balance updated successfully in both DB and state');
     } catch (error) {
       console.error('Error updating customer balance:', error);
+      showError('Failed to update customer balance');
     }
   };
 
   const addSale = async (sale: Sale) => {
     try {
+      console.log('Adding sale to Supabase:', sale.id);
       const { error } = await supabase
         .from('sales')
         .insert({
@@ -580,9 +601,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           split_details: sale.splitDetails || null
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase add sale error:', error);
+        throw error;
+      }
 
       setSales(prev => [...prev, sale]);
+      console.log('Sale added successfully');
 
       // Update stock levels
       for (const item of sale.items) {

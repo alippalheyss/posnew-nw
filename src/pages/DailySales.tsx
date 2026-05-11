@@ -46,7 +46,7 @@ const DailySales = () => {
     });
   };
 
-  const filteredSales = filterSalesByDate(sales.filter(s => s.paymentMethod !== 'credit'));
+  const filteredSales = filterSalesByDate(sales);
 
   const handlePrintReceipt = (sale: Sale) => {
     const currency = settings.shop.currency;

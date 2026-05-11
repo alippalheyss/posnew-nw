@@ -133,7 +133,7 @@ const CreditInvoices = () => {
     printContent(htmlContent);
   };
 
-  const creditSales = sales.filter(s => s.paymentMethod === 'credit');
+  const creditSales = sales.filter(s => s.paymentMethod === 'credit' || (s.paymentMethod === 'split' && (s.balance || 0) > 0));
   const filteredSales = creditSales.filter(s => 
     s.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     s.customer?.name_dv.includes(searchTerm) ||

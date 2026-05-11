@@ -82,7 +82,7 @@ const POS = () => {
   const [isUnitSelectionDialogOpen, setIsUnitSelectionDialogOpen] = useState(false);
   const [productForUnitSelection, setProductForUnitSelection] = useState<Product | null>(null);
   
-  const [splitEntries, setSplitEntries] = useState<Array<{ id: string, amount: number, method: 'Cash' | 'Card' | 'Transfer' }>>([
+  const [splitEntries, setSplitEntries] = useState<Array<{ id: string, amount: number, method: 'Cash' | 'Card' | 'Transfer' | 'Credit', customerId?: string }>>([
     { id: '1', amount: 0, method: 'Cash' }
   ]);
 
@@ -380,25 +380,30 @@ const POS = () => {
       paidAmount: paidAmount,
       balance: balance,
     };
-    addSale(newSale);
+    try {
+      await addSale(newSale);
 
-    if (activeCart.customer) {
-      if (pointsToRedeem > 0) {
-        redeemLoyaltyPoints(activeCart.customer.id, pointsToRedeem);
+      if (activeCart.customer) {
+        if (pointsToRedeem > 0) {
+          await redeemLoyaltyPoints(activeCart.customer.id, pointsToRedeem);
+        }
+        const pointsEarned = Math.floor(grandTotal / 100);
+        if (pointsEarned > 0) {
+          await awardLoyaltyPoints(activeCart.customer.id, pointsEarned);
+        }
       }
-      const pointsEarned = Math.floor(grandTotal / 100);
-      if (pointsEarned > 0) {
-        awardLoyaltyPoints(activeCart.customer.id, pointsEarned);
-      }
-    }
 
-    showSuccess(t('cash_payment_successful'));
-    if (settings.printing.printMode === 'auto') {
-      handlePrintReceipt(newSale);
+      showSuccess(t('cash_payment_successful'));
+      if (settings.printing.printMode === 'auto') {
+        handlePrintReceipt(newSale);
+      }
+      clearActiveCart();
+      setPaidAmount(0);
+      setIsCashDialogOpen(false);
+    } catch (error) {
+      console.error('Error processing cash payment:', error);
+      showError('Failed to save sale');
     }
-    clearActiveCart();
-    setPaidAmount(0);
-    setIsCashDialogOpen(false);
   };
 
   const processCreditPayment = () => {
@@ -423,25 +428,30 @@ const POS = () => {
       grandTotal: grandTotal,
       paymentMethod: 'credit' as const,
     };
-    addSale(newSale);
+    try {
+      await addSale(newSale);
 
-    if (activeCart.customer) {
-      if (pointsToRedeem > 0) {
-        redeemLoyaltyPoints(activeCart.customer.id, pointsToRedeem);
+      if (activeCart.customer) {
+        if (pointsToRedeem > 0) {
+          await redeemLoyaltyPoints(activeCart.customer.id, pointsToRedeem);
+        }
+        await updateCustomerBalance(activeCart.customer.id, grandTotal);
+        const pointsEarned = Math.floor(grandTotal / 100);
+        if (pointsEarned > 0) {
+          await awardLoyaltyPoints(activeCart.customer.id, pointsEarned);
+        }
       }
-      updateCustomerBalance(activeCart.customer.id, grandTotal);
-      const pointsEarned = Math.floor(grandTotal / 100);
-      if (pointsEarned > 0) {
-        awardLoyaltyPoints(activeCart.customer.id, pointsEarned);
-      }
-    }
 
-    showSuccess(t('credit_sale_successful'));
-    if (settings.printing.printMode === 'auto') {
-      handlePrintReceipt(newSale);
+      showSuccess(t('credit_sale_successful'));
+      if (settings.printing.printMode === 'auto') {
+        handlePrintReceipt(newSale);
+      }
+      clearActiveCart();
+      setIsCreditDialogOpen(false);
+    } catch (error) {
+      console.error('Error processing credit payment:', error);
+      showError('Failed to save credit sale');
     }
-    clearActiveCart();
-    setIsCreditDialogOpen(false);
   };
 
   const processTransferPayment = () => {
@@ -527,33 +537,56 @@ const POS = () => {
     setSplitEntries(splitEntries.map(e => e.id === id ? { ...e, amount } : e));
   };
 
-  const updateSplitMethod = (id: string, method: 'Cash' | 'Card' | 'Transfer') => {
+  const updateSplitMethod = (id: string, method: 'Cash' | 'Card' | 'Transfer' | 'Credit') => {
     setSplitEntries(splitEntries.map(e => e.id === id ? { ...e, method } : e));
+  };
+
+  const updateSplitCustomer = (id: string, customerId: string) => {
+    setSplitEntries(splitEntries.map(e => e.id === id ? { ...e, customerId } : e));
   };
 
   const splitTotal = splitEntries.reduce((sum, e) => sum + e.amount, 0);
   const splitRemaining = grandTotal - splitTotal;
 
-  const processSplitPayment = () => {
+  const processSplitPayment = async () => {
     if (Math.abs(splitRemaining) > 0.01) {
       showError(t('total_mismatch_error'));
       return;
     }
 
-    const newSale = {
+    const newSale: Sale = {
       id: `sale-${Date.now()}`,
       date: new Date().toISOString().split('T')[0],
       customer: activeCart?.customer || null,
       items: activeCart?.items || [],
       grandTotal: grandTotal,
-      paymentMethod: 'split' as any,
+      paymentMethod: 'split',
+      paidAmount: splitEntries.filter(e => e.method !== 'Credit').reduce((sum, e) => sum + e.amount, 0),
+      balance: splitEntries.filter(e => e.method === 'Credit').reduce((sum, e) => sum + e.amount, 0),
       splitDetails: splitEntries
     };
 
-    setSales(prev => [...prev, newSale]);
-    showSuccess(t('split_payment_successful'));
-    clearActiveCart();
-    setIsSplitDialogOpen(false);
+    try {
+      await addSale(newSale);
+      
+      // Update balances for any credit portions
+      for (const entry of splitEntries) {
+        if (entry.method === 'Credit' && entry.customerId) {
+          await updateCustomerBalance(entry.customerId, entry.amount);
+        }
+      }
+
+      showSuccess(t('split_payment_successful'));
+      if (settings.printing.printMode === 'auto') {
+        handlePrintReceipt(newSale);
+      }
+      clearActiveCart();
+      setIsSplitDialogOpen(false);
+      setSplitEntries([{ id: '1', amount: 0, method: 'Cash' }]);
+    } catch (error) {
+      console.error('Error processing split payment:', error);
+      showError('Failed to save split payment');
+    }
   };
 
   const renderBoth = (key: string, options?: any) => (
@@ -1070,21 +1103,39 @@ const POS = () => {
                           className="text-right h-10 font-bold bg-white/5 border-white/10 text-white"
                         />
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <Label className="text-[10px] uppercase opacity-50 text-right">{renderBoth('payment_method')}</Label>
-                        <Select value={entry.method} onValueChange={(val: any) => updateSplitMethod(entry.id, val)}>
-                          <SelectTrigger className="h-10 text-right font-bold bg-white/5 border-white/10 text-white">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
-                            <SelectItem value="Cash">{renderBothString('cash')}</SelectItem>
-                            <SelectItem value="Card">{renderBothString('card')}</SelectItem>
-                            <SelectItem value="Transfer">{renderBothString('transfer')}</SelectItem>
-                          </SelectContent>
-                        </Select>
+                          <Select value={entry.method} onValueChange={(val: any) => updateSplitMethod(entry.id, val)}>
+                            <SelectTrigger className="h-10 text-right font-bold bg-white/5 border-white/10 text-white">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
+                              <SelectItem value="Cash">{renderBothString('cash')}</SelectItem>
+                              <SelectItem value="Card">{renderBothString('card')}</SelectItem>
+                              <SelectItem value="Transfer">{renderBothString('transfer')}</SelectItem>
+                              <SelectItem value="Credit">{renderBothString('credit')}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
+                      
+                      {entry.method === 'Credit' && (
+                        <div className="flex flex-col gap-1">
+                          <Label className="text-[10px] uppercase opacity-50 text-right">{renderBoth('select_customer')}</Label>
+                          <Select 
+                            value={entry.customerId} 
+                            onValueChange={(val) => updateSplitCustomer(entry.id, val)}
+                          >
+                            <SelectTrigger className="h-10 text-right font-bold bg-white/5 border-white/10 text-white">
+                              <SelectValue placeholder="Choose customer..." />
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#0a0a1a] border-white/10 text-white max-h-[200px]">
+                              {customers.map(c => (
+                                <SelectItem key={c.id} value={c.id}>{c.name_dv} ({c.name_en})</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                     </div>
-                  </div>
                 ))}
               </div>
             </ScrollArea>

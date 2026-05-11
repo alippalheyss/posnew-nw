@@ -572,21 +572,19 @@ const POS = () => {
         {/* Top bar: Category & Search */}
         <div className="h-20 px-8 flex items-center justify-between border-b border-white/5 bg-[#050510]/50 backdrop-blur-sm">
           <div className="flex items-center gap-3">
-             <div className="flex items-center bg-white/5 rounded-full p-1 border border-white/10">
-                {['DRINKS', 'FOOD', 'HARDWARE', 'COSMETICS', 'OTHER', 'ALL'].map((cat) => (
-                   <Button 
-                     key={cat}
-                     variant={selectedCategory === cat ? "default" : "ghost"} 
-                     size="sm" 
-                     onClick={() => setSelectedCategory(cat)}
-                     className={cn(
-                       "rounded-full px-4 text-[10px] font-black transition-all",
-                       selectedCategory === cat ? "bg-primary text-white shadow-[0_0_10px_rgba(0,132,255,0.3)]" : "text-white/40 hover:text-white"
-                     )}
-                   >
-                     {cat}
-                   </Button>
-                ))}
+             <div className="flex items-center gap-2">
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger className="w-[180px] h-10 rounded-xl bg-white/5 border-white/10 text-[10px] font-black uppercase text-white">
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#0a0a1a] border-white/10 text-white font-faruma">
+                    {['ALL', 'DRINKS', 'FOOD', 'HARDWARE', 'COSMETICS', 'OTHER'].map((cat) => (
+                      <SelectItem key={cat} value={cat} className="text-[10px] font-black uppercase hover:bg-primary/20">
+                        {cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
              </div>
              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10">
                 <Trash2 className="h-4 w-4 text-white/40" />

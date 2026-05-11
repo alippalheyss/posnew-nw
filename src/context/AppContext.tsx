@@ -595,9 +595,27 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         showSuccess('Customer added successfully');
         return data;
       }
-    } catch (error) {
-      console.error('Error adding customer:', error);
+    } catch (err: any) {
+      if (err.code === '23505') {
+        // Customer already exists, fetch it
+        const { data: existing, error: fetchError } = await supabase
+          .from('customers')
+          .select('*, settlement_history (*)')
+          .eq('code', customer.code)
+          .single();
+        
+        if (existing) {
+          setCustomers(prev => {
+            if (prev.some(c => c.id === existing.id)) return prev;
+            return [...prev, existing];
+          });
+          showSuccess('Customer already exists, imported details');
+          return existing;
+        }
+      }
+      console.error('Error adding customer:', err);
       showError('Failed to save customer to database');
+      return null;
     }
   };
 

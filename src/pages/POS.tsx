@@ -745,25 +745,6 @@ const POS = () => {
       <div className="w-[600px] flex flex-col bg-[#0a0a1a]/80 backdrop-blur-xl border-l border-white/5 shadow-2xl z-20">
         {/* Cart Header */}
         <div className="p-6 pb-2">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-2">
-              <div className="bg-primary/20 p-2 rounded-lg">
-                 <ShoppingCart className="h-5 w-5 text-primary" />
-              </div>
-              <h2 className="text-xl font-black text-white">{renderBoth('cart')}</h2>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={createNewCart} 
-                className="h-8 border-white/10 hover:bg-white/5 text-xs font-bold gap-2 text-white"
-              >
-                <PlusCircle className="h-4 w-4 text-primary" /> {renderBoth('add_new_cart')}
-              </Button>
-            </div>
-          </div>
-
           {/* Cart Tabs */}
           <div className="flex flex-wrap gap-2 mb-4">
             {[...openCarts.values()].map(cart => (

@@ -677,7 +677,7 @@ const POS = () => {
       </div>
 
       {/* Cart Section - Left Side in RTL */}
-      <div className="w-[600px] flex flex-col bg-[#0a0a1a]/80 backdrop-blur-xl border-r border-white/5 shadow-2xl z-20">
+      <div className="w-[520px] flex flex-col bg-[#0a0a1a]/80 backdrop-blur-xl border-l border-white/5 shadow-2xl z-20">
         {/* Cart Header */}
         <div className="p-6 pb-2">
           <div className="flex justify-between items-center mb-6">
@@ -741,13 +741,13 @@ const POS = () => {
               {activeCart.items.map((item) => (
                 <div key={`${item.id}-${item.selected_unit}`} className="group relative bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl p-2 transition-all">
                   <div className="flex justify-between items-start mb-1">
-                    <div className="text-right flex-1 min-w-0">
-                      <p className="text-[15px] font-black text-white leading-tight mb-0.5">{item.name_dv}</p>
-                      <p className="text-[11px] font-bold text-white/40 leading-tight uppercase truncate">{item.name_en}</p>
-                      <div className="flex items-center gap-2 mt-1.5">
-                         <span className="text-[12px] font-black text-primary">{settings.shop.currency} {item.price.toFixed(2)}</span>
+                    <div className="text-right flex-1 min-w-0 pr-1">
+                      <p className="text-[18px] font-black text-white leading-tight mb-1">{item.name_dv}</p>
+                      <p className="text-[13px] font-bold text-white/50 leading-tight uppercase mb-2">{item.name_en}</p>
+                      <div className="flex items-center gap-2">
+                         <span className="text-[14px] font-black text-primary">{settings.shop.currency} {item.price.toFixed(2)}</span>
                          {item.selected_unit && item.selected_unit !== 'Piece' && (
-                           <Badge variant="outline" className="text-[7px] border-primary/30 text-primary uppercase font-black px-1 py-0 h-3 leading-none">{item.selected_unit}</Badge>
+                           <Badge variant="outline" className="text-[9px] border-primary/30 text-primary uppercase font-black px-1.5 py-0.5 h-auto leading-none">{item.selected_unit}</Badge>
                          )}
                       </div>
                     </div>

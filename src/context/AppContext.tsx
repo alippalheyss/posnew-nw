@@ -563,18 +563,23 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           name_dv: customerData.name_dv,
           name_en: customerData.name_en,
           phone: customerData.phone,
-          email: customerData.email,
-          credit_limit: customerData.credit_limit,
-          loyalty_points: customerData.loyalty_points,
-          outstanding_balance: customerData.outstanding_balance
+          email: customerData.email || '',
+          credit_limit: Number(customerData.credit_limit) || 0,
+          loyalty_points: Number(customerData.loyalty_points) || 0,
+          outstanding_balance: Number(customerData.outstanding_balance) || 0
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error adding customer:', error);
+        throw error;
+      }
 
       if (data) {
         setCustomers(prev => [...prev, data]);
+        showSuccess('Customer added successfully');
+        return data;
       }
     } catch (error) {
       console.error('Error adding customer:', error);

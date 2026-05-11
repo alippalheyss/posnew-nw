@@ -626,7 +626,7 @@ const POS = () => {
 
         {/* Product Grid */}
         <ScrollArea className="flex-1 p-4 custom-scrollbar">
-           <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2">
+           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
               {displayProducts.map((product) => {
                 const isLowStock = product.stock_shop < LOW_STOCK_THRESHOLD;
                 const cardColors = [
@@ -677,7 +677,7 @@ const POS = () => {
       </div>
 
       {/* Cart Section - Left Side in RTL */}
-      <div className="w-[520px] flex flex-col bg-[#0a0a1a]/80 backdrop-blur-xl border-l border-white/5 shadow-2xl z-20">
+      <div className="w-[600px] flex flex-col bg-[#0a0a1a]/80 backdrop-blur-xl border-l border-white/5 shadow-2xl z-20">
         {/* Cart Header */}
         <div className="p-6 pb-2">
           <div className="flex justify-between items-center mb-6">
@@ -1211,9 +1211,11 @@ const POS = () => {
       <CustomerAddDialog 
         isOpen={isAddCustomerDialogOpen}
         onClose={() => setIsAddCustomerDialogOpen(false)}
-        onAdd={(newCustomer) => {
-          addCustomer(newCustomer);
-          updateActiveCart(prev => ({ ...prev, customer: newCustomer }));
+        onAdd={async (newCustomer) => {
+          const addedCustomer = await addCustomer(newCustomer);
+          if (addedCustomer) {
+            updateActiveCart(prev => ({ ...prev, customer: addedCustomer }));
+          }
         }}
       />
 

@@ -1103,22 +1103,22 @@ const POS = () => {
                           className="text-right h-10 font-bold bg-white/5 border-white/10 text-white"
                         />
                       </div>
-                          <Select value={entry.method} onValueChange={(val: any) => updateSplitMethod(entry.id, val)}>
-                            <SelectTrigger className="h-10 text-right font-bold bg-white/5 border-white/10 text-white">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
-                              <SelectItem value="Cash">{renderBothString('cash')}</SelectItem>
-                              <SelectItem value="Card">{renderBothString('card')}</SelectItem>
-                              <SelectItem value="Transfer">{renderBothString('transfer')}</SelectItem>
-                              <SelectItem value="Credit">{renderBothString('credit')}</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      <div className="flex flex-col gap-1">
+                        <Label className="text-[10px] uppercase opacity-50 text-right">{renderBoth('payment_method')}</Label>
+                        <Select value={entry.method} onValueChange={(val: any) => updateSplitMethod(entry.id, val)}>
+                          <SelectTrigger className="h-10 text-right font-bold bg-white/5 border-white/10 text-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
+                            <SelectItem value="Cash">{renderBothString('cash')}</SelectItem>
+                            <SelectItem value="Card">{renderBothString('card')}</SelectItem>
+                            <SelectItem value="Transfer">{renderBothString('transfer')}</SelectItem>
+                            <SelectItem value="Credit">{renderBothString('credit')}</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                      
                       {entry.method === 'Credit' && (
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-1 mt-2">
                           <Label className="text-[10px] uppercase opacity-50 text-right">{renderBoth('select_customer')}</Label>
                           <Select 
                             value={entry.customerId} 

@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useAppContext } from '@/context/AppContext';
+import { Button } from './ui/button';
 
 const Sidebar = () => {
   const { t } = useTranslation();

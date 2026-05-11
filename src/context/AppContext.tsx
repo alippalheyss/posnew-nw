@@ -597,24 +597,29 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       }
     } catch (err: any) {
       if (err.code === '23505') {
-        // Customer already exists, fetch it
+        // Customer already exists, fetch it with a simpler query first
         const { data: existing, error: fetchError } = await supabase
           .from('customers')
-          .select('*, settlement_history (*)')
+          .select('*')
           .eq('code', customer.code)
-          .single();
+          .maybeSingle();
         
         if (existing) {
+          // If we have history locally, preserve it or just set empty
+          const fullCustomer = { ...existing, settlement_history: [] };
+          
           setCustomers(prev => {
-            if (prev.some(c => c.id === existing.id)) return prev;
-            return [...prev, existing];
+            if (prev.some(c => c.id === fullCustomer.id)) return prev;
+            return [...prev, fullCustomer];
           });
-          showSuccess('Customer already exists, imported details');
-          return existing;
+          showSuccess('Customer already exists, using existing details');
+          return fullCustomer;
+        } else if (fetchError) {
+           console.error('Fetch error after conflict:', fetchError);
         }
       }
-      console.error('Error adding customer:', err);
-      showError('Failed to save customer to database');
+      console.error('Detailed error adding customer:', err);
+      showError('Failed to save customer: ' + (err.message || 'Unknown error'));
       return null;
     }
   };

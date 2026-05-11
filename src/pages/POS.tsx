@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, ShoppingCart, XCircle, PlusCircle, Trash2, Heart, ArrowLeft, Users, Plus, Minus, AlertTriangle, Receipt, DollarSign, UserPlus, ArrowRightLeft } from 'lucide-react';
+import { Search, ShoppingCart, XCircle, PlusCircle, Trash2, Heart, ArrowLeft, Users, Plus, Minus, AlertTriangle, Receipt, DollarSign, UserPlus, ArrowRightLeft, RefreshCcw } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -48,7 +48,8 @@ const POS = () => {
     addCustomer,
     addPendingTransfer,
     pendingTransfers,
-    resolvePendingTransfer
+    resolvePendingTransfer,
+    refreshCustomers
   } = useAppContext();
 
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
@@ -595,11 +596,20 @@ const POS = () => {
           </div>
 
           <div className="flex items-center gap-3">
-             <Button 
-               variant="ghost" 
-               size="icon" 
-               onClick={() => setIsPendingTransfersDialogOpen(true)}
-               className="relative h-11 w-11 rounded-xl bg-white/5 border border-white/10 hover:bg-yellow-500/20 hover:text-yellow-500 text-white/40"
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={refreshCustomers}
+                className="h-11 w-11 rounded-xl bg-white/5 border border-white/10 hover:bg-primary/20 hover:text-primary text-white/40"
+                title="Sync All Customers"
+              >
+                <RefreshCcw className="h-5 w-5" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setIsPendingTransfersDialogOpen(true)}
+                className="relative h-11 w-11 rounded-xl bg-white/5 border border-white/10 hover:bg-yellow-500/20 hover:text-yellow-500 text-white/40"
              >
                <ArrowRightLeft className="h-5 w-5" />
                {pendingTransfers.length > 0 && (
@@ -777,11 +787,6 @@ const POS = () => {
                             <Badge variant="outline" className="text-[9px] border-primary/30 text-primary uppercase font-black px-1.5 py-0.5 h-auto leading-none">{item.selected_unit}</Badge>
                           )}
                         </div>
-                      </div>
-                      
-                      {/* Subtotal moved here if needed, but keeping it simple as requested */}
-                      <div className="text-[14px] font-black text-white/40 mt-1">
-                        TOTAL: {settings.shop.currency} {(item.price * item.qty).toFixed(2)}
                       </div>
                     </div>
                   </div>

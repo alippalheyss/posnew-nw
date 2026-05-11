@@ -234,6 +234,7 @@ interface AppContextType {
   resolvePendingTransfer: (id: string, action: 'cash' | 'credit') => Promise<void>;
   sidebarCollapsed: boolean;
   setSidebarCollapsed: (collapsed: boolean) => void;
+  refreshCustomers: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -269,6 +270,28 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     return [];
   });
 
+  const refreshCustomers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*, settlement_history (*)')
+        .order('name_en', { ascending: true });
+
+      if (error) throw error;
+
+      if (data) {
+        const formatted = data.map(c => ({
+          ...c,
+          settlement_history: c.settlement_history || []
+        }));
+        setCustomers(formatted);
+      }
+    } catch (error) {
+      console.error('Error refreshing customers:', error);
+      showError('Failed to refresh customers');
+    }
+  };
+
   // Initial Data Fetching from Supabase
   useEffect(() => {
     const fetchData = async () => {
@@ -281,8 +304,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           { data: purchasesData }
         ] = await Promise.all([
           supabase.from('products').select('*'),
-          supabase.from('customers').select('*, settlement_history (*)'),
-          supabase.from('sales').select('*'),
+          supabase.from('customers').select('*, settlement_history (*)').order('name_en', { ascending: true }),
+          supabase.from('sales').select('*').order('date', { ascending: false }).limit(1000),
           supabase.from('vendors').select('*'),
           supabase.from('purchases').select('*')
         ]);
@@ -992,7 +1015,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       addPendingTransfer,
       resolvePendingTransfer,
       sidebarCollapsed,
-      setSidebarCollapsed
+      setSidebarCollapsed,
+      refreshCustomers
     }}>
       {children}
     </AppContext.Provider>

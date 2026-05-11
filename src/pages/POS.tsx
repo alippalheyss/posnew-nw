@@ -647,32 +647,8 @@ const POS = () => {
              </div>
           </div>
 
-          {/* Left Section: Cart Controls & Transfers */}
+          {/* Left Section: Transfers */}
           <div className="flex items-center gap-3">
-             <div className="flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/10">
-                <div className="flex items-center gap-3 px-4 py-1.5 bg-primary/20 rounded-xl text-primary border border-primary/20">
-                   <ShoppingCart className="h-4 w-4" />
-                   <div className="flex flex-col items-start leading-none gap-0.5">
-                      <span className="text-[8px] font-black uppercase text-primary/60 tracking-tighter">(Cart)</span>
-                      <span className="text-[10px] font-black">{t('cart')}</span>
-                   </div>
-                </div>
-                
-                <div className="w-px h-8 bg-white/10 mx-1" />
-                
-                <Button 
-                  onClick={createNewCart}
-                  variant="ghost"
-                  className="h-10 px-4 text-white hover:bg-white/10 rounded-xl flex items-center gap-3 group transition-all"
-                >
-                   <PlusCircle className="h-5 w-5 text-white/40 group-hover:text-white transition-colors" />
-                   <div className="flex flex-col items-end leading-none gap-0.5">
-                      <span className="text-[10px] font-black">{t('add_new_cart')}</span>
-                      <span className="text-[8px] font-black uppercase text-white/30 tracking-tighter">(Add New Cart)</span>
-                   </div>
-                </Button>
-             </div>
-             
              <Button 
                variant="ghost" 
                size="icon" 
@@ -745,6 +721,29 @@ const POS = () => {
       <div className="w-[600px] flex flex-col bg-[#0a0a1a]/80 backdrop-blur-xl border-l border-white/5 shadow-2xl z-20">
         {/* Cart Header */}
         <div className="p-6 pb-2">
+          <div className="flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/10 mb-6">
+            <div className="flex items-center gap-3 px-4 py-1.5 bg-primary/20 rounded-xl text-primary border border-primary/20">
+                <ShoppingCart className="h-4 w-4" />
+                <div className="flex flex-col items-start leading-none gap-0.5">
+                  <span className="text-[8px] font-black uppercase text-primary/60 tracking-tighter">(Cart)</span>
+                  <span className="text-[10px] font-black">{t('cart')}</span>
+                </div>
+            </div>
+            
+            <div className="w-px h-8 bg-white/10 mx-1" />
+            
+            <Button 
+              onClick={createNewCart}
+              variant="ghost"
+              className="h-10 px-4 text-white hover:bg-white/10 rounded-xl flex items-center gap-3 group transition-all"
+            >
+                <PlusCircle className="h-5 w-5 text-white/40 group-hover:text-white transition-colors" />
+                <div className="flex flex-col items-end leading-none gap-0.5">
+                  <span className="text-[10px] font-black">{t('add_new_cart')}</span>
+                  <span className="text-[8px] font-black uppercase text-white/30 tracking-tighter">(Add New Cart)</span>
+                </div>
+            </Button>
+          </div>
           {/* Cart Tabs */}
           <div className="flex flex-wrap gap-2 mb-4">
             {[...openCarts.values()].map(cart => (

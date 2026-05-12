@@ -356,8 +356,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
               grandTotal: Number(s.grand_total || 0),
               paymentMethod: String(s.payment_method || 'cash').toLowerCase(),
               paidAmount: Number(s.paid_amount || 0),
-              balance: Number(s.balance || 0),
-              splitDetails: splitDetails
+              balance: Number(s.balance || 0)
             };
           });
           
@@ -632,8 +631,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           grand_total: Number(sale.grandTotal),
           payment_method: String(sale.paymentMethod).toLowerCase(),
           paid_amount: sale.paidAmount !== undefined ? Number(sale.paidAmount) : null,
-          balance: sale.balance !== undefined ? Number(sale.balance) : null,
-          split_details: sale.splitDetails || null
+          balance: sale.balance !== undefined ? Number(sale.balance) : null
         }]);
 
       if (error) {

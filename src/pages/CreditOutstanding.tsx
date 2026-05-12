@@ -599,7 +599,7 @@ const CreditOutstanding = () => {
           <ScrollArea className="h-[450px] mt-4 pr-4">
             <div className="space-y-4">
               {selectedCustomerCreditSales.length > 0 ? (
-                {[...selectedCustomerCreditSales].reverse().map((sale) => {
+                [...selectedCustomerCreditSales].reverse().map((sale) => {
                   const splitEntry = sale.splitDetails?.find((d: any) => d.customerId === selectedCustomerForAction?.id && d.method?.toLowerCase() === 'credit');
                   const isSplit = !!splitEntry;
                   const displayAmount = isSplit ? splitEntry.amount : sale.grandTotal;
@@ -631,7 +631,7 @@ const CreditOutstanding = () => {
                       </div>
                     </div>
                   );
-                })}
+                })
               ) : (
                 <div className="flex flex-col items-center justify-center h-40 opacity-20">
                   <FileText className="h-10 w-10 mb-2" />

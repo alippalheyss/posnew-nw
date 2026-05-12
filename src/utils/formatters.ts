@@ -58,30 +58,45 @@ export const formatTime = (date: string | Date): string => {
     const timePart = date.split(' ')[1];
     if (timePart && timePart.includes(':')) {
       const parts = timePart.split(':');
-      // Return HH:mm if seconds are not needed, or HH:mm:ss
       return `${parts[0]}:${parts[1]}${parts[2] ? ':' + parts[2] : ''}`;
     }
+  }
+
+  // Handle ISO T format
+  if (typeof date === 'string' && date.includes('T')) {
+    const timePart = date.split('T')[1].split('.')[0];
+    const parts = timePart.split(':');
+    return `${parts[0]}:${parts[1]}${parts[2] ? ':' + parts[2] : ''}`;
   }
 
   const d = new Date(date);
   if (isNaN(d.getTime())) return '';
   
-  return d.toLocaleTimeString('en-GB', { 
-    hour: '2-digit', 
-    minute: '2-digit', 
-    second: '2-digit',
-    hour12: false 
-  });
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const seconds = String(d.getSeconds()).padStart(2, '0');
+  
+  return `${hours}:${minutes}:${seconds}`;
 };
 
 export const formatDateTime = (date: string | Date): string => {
   if (!date) return '';
+  
   // If it's our standard YYYY-MM-DD HH:mm:ss string
   if (typeof date === 'string' && date.includes(' ')) {
     const [datePart, timePart] = date.split(' ');
     const [y, m, d] = datePart.split('-');
     return `${d}-${m}-${y} ${timePart}`;
   }
+
+  // Handle ISO T format
+  if (typeof date === 'string' && date.includes('T')) {
+    const [datePart, timePartFull] = date.split('T');
+    const timePart = timePartFull.split('.')[0];
+    const [y, m, d] = datePart.split('-');
+    return `${d}-${m}-${y} ${timePart}`;
+  }
+  
   return `${formatDate(date)} ${formatTime(date)}`;
 };
 

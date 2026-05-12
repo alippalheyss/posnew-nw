@@ -8,8 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ShoppingCart, PlusCircle, Minus, Trash2, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, ArrowLeft, Plus } from 'lucide-react';
-import { formatDate, toISODate } from '@/utils/formatters';
-import { formatDate, toISODate, formatTime } from '@/utils/formatters';
+import { formatDate, toISODate, toISODatetime, formatTime, formatDateTime } from '@/utils/formatters';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -395,7 +394,7 @@ const POS = () => {
 
     const newSale = {
       id: crypto.randomUUID(),
-      date: toISODate(),
+      date: toISODatetime(),
       customer: activeCart.customer,
       items: activeCart.items,
       grandTotal: grandTotal,
@@ -445,7 +444,7 @@ const POS = () => {
 
     const newSale = {
       id: crypto.randomUUID(),
-      date: toISODate(),
+      date: toISODatetime(),
       customer: activeCart.customer!,
       items: activeCart.items,
       grandTotal: grandTotal,
@@ -486,7 +485,7 @@ const POS = () => {
     if (!activeCart || activeCart.items.length === 0) return;
     
     addPendingTransfer({
-      date: toISODate(),
+      date: toISODatetime(),
       customer: activeCart.customer,
       tempCustomerName: !activeCart.customer ? customerSearchTerm : null,
       items: activeCart.items,
@@ -617,7 +616,7 @@ const POS = () => {
 
     const newSale: Sale = {
       id: crypto.randomUUID(),
-      date: toISODate(),
+      date: toISODatetime(),
       customer: activeCart?.customer || null,
       items: activeCart?.items || [],
       grandTotal: grandTotal,

@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { PencilLine, CalendarDays, Printer, Trash2, Filter, ChevronRight, Receipt, DollarSign, CreditCard, ArrowRightLeft, TrendingUp } from 'lucide-react';
 import { useAppContext, Product, Customer, CartItem, Sale } from '@/context/AppContext';
+import { formatDate, formatTime, toISODate } from '@/utils/formatters';
 import SaleEditDialog from '@/components/SaleEditDialog'; 
 import { showSuccess } from '@/utils/toast';
 import { printContent } from '@/utils/printHelper';
@@ -24,10 +25,10 @@ const DailySales = () => {
   const { pendingTransfers, resolvePendingTransfer } = useAppContext();
 
   const filterSalesByDate = (salesList: Sale[]) => {
-    const todayStr = new Date().toLocaleDateString('sv-SE');
+    const todayStr = toISODate();
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toLocaleDateString('sv-SE');
+    const yesterdayStr = toISODate(yesterday);
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -87,7 +88,7 @@ const DailySales = () => {
           <div class="info">
             ${settings.shop.shopAddress}<br/>
             Tel: ${settings.shop.shopPhone}<br/>
-            ${sale.date} | ${sale.id}
+            ${formatDate(sale.date)} ${sale.created_at ? formatTime(sale.created_at) : ''} | ${sale.id}
           </div>
           <div class="separator"></div>
           ${itemsHtml}

@@ -18,6 +18,8 @@ import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from "@/components/ui/progress";
+import { formatDate, formatTime } from '@/utils/formatters';
 
 interface Settlement {
   id: string;
@@ -358,7 +360,7 @@ const CreditOutstanding = () => {
                     <div key={s.id} className="min-w-[220px] bg-[#0a0a1a] border border-white/5 hover:border-green-500/30 rounded-3xl p-4 text-right transition-all group">
                        <div className="flex items-center justify-between mb-3">
                           <CheckCircle2 className="h-4 w-4 text-green-500" />
-                          <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">{s.date}</span>
+                          <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">{formatDate(s.date)} {formatTime(s.date)}</span>
                        </div>
                        <p className="font-black text-white text-sm truncate mb-1">{s.customerName}</p>
                        <p className="text-xl font-black text-green-500">{settings.shop.currency} {s.amount_paid.toFixed(0)}</p>
@@ -429,18 +431,25 @@ const CreditOutstanding = () => {
 
                      <div className="bg-red-500/5 p-4 rounded-2xl border border-red-500/10 mb-6 text-right group-hover:bg-red-500/10 transition-all">
                         <p className="text-[8px] font-black text-red-500/40 uppercase tracking-widest mb-1">Total Due</p>
-                        <p 
-                          onClick={() => toggleTotalReveal(customer.id)}
-                          className={cn(
-                            "text-2xl font-black text-red-500 cursor-pointer transition-all duration-300",
+                        <div className="flex justify-between items-end mb-1">
+                          <span className={cn(
+                            "text-2xl font-black cursor-pointer transition-all duration-300",
+                            customer.outstanding_balance > (customer.credit_limit || 0) ? "text-red-500" : "text-white",
                             !revealedTotals.has(customer.id) && "blur-md select-none"
-                          )}
-                        >
-                          {settings.shop.currency} {(customer.outstanding_balance || 0).toFixed(2)}
-                        </p>
+                          )} onClick={() => toggleTotalReveal(customer.id)}>
+                            {settings.shop.currency} {(customer.outstanding_balance || 0).toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="space-y-1.5 mt-3">
+                          <Progress value={Math.min(100, (customer.outstanding_balance / (customer.credit_limit || 1)) * 100)} className="h-1.5 bg-white/5" />
+                          <div className="flex justify-between text-[9px] font-bold opacity-30 uppercase tracking-tighter">
+                             <span>Limit: {settings.shop.currency} {customer.credit_limit.toFixed(2)}</span>
+                             <span>{Math.round((customer.outstanding_balance / (customer.credit_limit || 1)) * 100)}% Used</span>
+                          </div>
+                        </div>
                         <div className="flex items-center justify-end gap-2 text-[10px] text-white/20 mt-2 font-bold">
                            <Clock className="h-3 w-3" />
-                           <span>LAST SETTLED: {customer.settlement_history.length > 0 ? customer.settlement_history[customer.settlement_history.length - 1].date : 'NONE'}</span>
+                           <span>LAST SETTLED: {customer.settlement_history.length > 0 ? formatDate(customer.settlement_history[customer.settlement_history.length - 1].date) : 'NONE'}</span>
                         </div>
                      </div>
 
@@ -547,7 +556,7 @@ const CreditOutstanding = () => {
                 [...selectedCustomerForAction.settlement_history].reverse().map((settlement, idx) => (
                   <div key={settlement.id || idx} className="p-4 rounded-2xl bg-white/5 border border-white/5 text-right relative overflow-hidden group">
                     <div className="flex justify-between items-center mb-2">
-                       <span className="text-[10px] font-mono text-white/20">{settlement.date}</span>
+                       <span className="text-[10px] font-mono text-white/20">{formatDate(settlement.date)} {formatTime(settlement.date)}</span>
                        <span className="text-sm font-black text-green-500">+{settings.shop.currency} {settlement.amount_paid.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center text-[10px] font-bold text-white/40">
@@ -590,7 +599,7 @@ const CreditOutstanding = () => {
                   <div key={sale.id} className="p-4 rounded-2xl bg-white/5 border border-white/5 text-right">
                     <div className="flex justify-between items-center mb-3">
                        <Badge variant="outline" className="border-orange-500/30 text-orange-500 text-[8px] font-black">{sale.id}</Badge>
-                       <span className="text-[10px] font-mono text-white/40">{sale.date}</span>
+                       <span className="text-[10px] font-mono text-white/40">{formatDate(sale.date)} {formatTime(sale.date)}</span>
                     </div>
                     <div className="space-y-2 mb-3">
                       {sale.items.map((item: any, i: number) => (

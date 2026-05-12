@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, ShoppingCart, XCircle, PlusCircle, Trash2, Heart, ArrowLeft, Users, Plus, Minus, AlertTriangle, Receipt, DollarSign, UserPlus, ArrowRightLeft, RefreshCcw } from 'lucide-react';
+import { ShoppingCart, PlusCircle, Minus, Trash2, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, ArrowLeft, Plus } from 'lucide-react';
+import { formatDate, toISODate } from '@/utils/formatters';
+import { formatDate, toISODate, formatTime } from '@/utils/formatters';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -18,6 +20,7 @@ import LoyaltyRedemptionDialog from '@/components/LoyaltyRedemptionDialog';
 import UnitSelectionDialog from '@/components/UnitSelectionDialog';
 import CustomerAddDialog from '@/components/CustomerAddDialog';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from "@/components/ui/progress";
 import { printContent } from '@/utils/printHelper';
 
 interface Cart {
@@ -79,6 +82,7 @@ const POS = () => {
   const [isLoyaltyRedemptionDialogOpen, setIsLoyaltyRedemptionDialogOpen] = useState(false);
   const [creditDialogStep, setCreditDialogStep] = useState<1 | 2>(1);
   const [isExpiryDialogOpen, setIsExpiryDialogOpen] = useState(false);
+  const [expiryDiscountPercent, setExpiryDiscountPercent] = useState<number>(10);
   const [selectedProductForExpiry, setSelectedProductForExpiry] = useState<Product | null>(null);
   const [isUnitSelectionDialogOpen, setIsUnitSelectionDialogOpen] = useState(false);
   const [productForUnitSelection, setProductForUnitSelection] = useState<Product | null>(null);
@@ -98,7 +102,6 @@ const POS = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger shortcuts if user is typing in an input (except search)
       if (document.activeElement?.tagName === 'INPUT' && document.activeElement !== searchInputRef.current) {
         if (e.key === 'Escape') {
           (document.activeElement as HTMLElement).blur();
@@ -303,7 +306,8 @@ const POS = () => {
 
   const confirmExpiryDiscount = () => {
     if (selectedProductForExpiry) {
-      addToCart(selectedProductForExpiry, 0.9);
+      const discountFactor = (100 - expiryDiscountPercent) / 100;
+      addToCart(selectedProductForExpiry, discountFactor);
       setIsExpiryDialogOpen(false);
       setSelectedProductForExpiry(null);
       showSuccess(t('expiry_discount_applied'));
@@ -314,7 +318,16 @@ const POS = () => {
     updateActiveCart(prevCart => ({
       ...prevCart,
       items: prevCart.items.map((item) =>
-        item.id === id ? { ...item, qty: item.qty + delta } : item
+        item.id === id ? { ...item, qty: Math.max(0, item.qty + delta) } : item
+      ).filter(item => item.qty > 0),
+    }));
+  };
+
+  const setCartItemQty = (id: string, qty: number) => {
+    updateActiveCart(prevCart => ({
+      ...prevCart,
+      items: prevCart.items.map((item) =>
+        item.id === id ? { ...item, qty: Math.max(0, qty) } : item
       ).filter(item => item.qty > 0),
     }));
   };
@@ -359,7 +372,7 @@ const POS = () => {
     const matchesCategory = selectedCategory === 'ALL' || product.category === selectedCategory;
     
     return matchesSearch && matchesCategory;
-  }).slice(0, 50); // Optimization: only show first 50 matches initially
+  }).slice(0, 50); 
 
   const processCashPayment = async () => {
     if (!activeCart || activeCart.items.length === 0) {
@@ -373,7 +386,7 @@ const POS = () => {
 
     const newSale = {
       id: `sale-${Date.now()}`,
-      date: new Date().toLocaleDateString('sv-SE'),
+      date: toISODate(),
       customer: activeCart.customer,
       items: activeCart.items,
       grandTotal: grandTotal,
@@ -423,7 +436,7 @@ const POS = () => {
 
     const newSale = {
       id: `sale-${Date.now()}`,
-      date: new Date().toLocaleDateString('sv-SE'),
+      date: toISODate(),
       customer: activeCart.customer!,
       items: activeCart.items,
       grandTotal: grandTotal,
@@ -464,7 +477,7 @@ const POS = () => {
     if (!activeCart || activeCart.items.length === 0) return;
     
     addPendingTransfer({
-      date: new Date().toLocaleDateString('sv-SE'),
+      date: toISODate(),
       customer: activeCart.customer,
       tempCustomerName: !activeCart.customer ? customerSearchTerm : null,
       items: activeCart.items,
@@ -517,6 +530,7 @@ const POS = () => {
           ${logoHtml}
           <div style="font-weight: bold;">${settings.shop.shopName}</div>
           <div>${settings.shop.shopAddress}</div>
+          <div style="font-size: 10px;">Tel: ${settings.shop.shopPhone}<br/>${formatDate(sale.date)} ${formatTime(new Date(sale.date))} | ${sale.id}</div>
           <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
           ${itemsHtml}
           <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
@@ -530,7 +544,6 @@ const POS = () => {
     printContent(htmlContent, settings);
   };
 
-  // Split Bill Logic
   const addSplitEntry = () => {
     setSplitEntries([...splitEntries, { id: Date.now().toString(), amount: 0, method: 'Cash' }]);
   };
@@ -562,7 +575,7 @@ const POS = () => {
 
     const newSale: Sale = {
       id: `sale-${Date.now()}`,
-      date: new Date().toLocaleDateString('sv-SE'),
+      date: toISODate(),
       customer: activeCart?.customer || null,
       items: activeCart?.items || [],
       grandTotal: grandTotal,
@@ -575,7 +588,6 @@ const POS = () => {
     try {
       await addSale(newSale);
       
-      // Update balances for any credit portions
       for (const entry of splitEntries) {
         if (entry.method === 'Credit' && entry.customerId) {
           await updateCustomerBalance(entry.customerId, entry.amount);
@@ -607,11 +619,8 @@ const POS = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#050510] font-faruma selection:bg-primary/30 text-white" dir="rtl">
-      {/* Main Content - Products Grid (Right Side in RTL) */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar: Category & Search */}
         <div className="h-20 px-8 flex items-center justify-between border-b border-white/5 bg-[#050510]/50 backdrop-blur-sm">
-          {/* Right Section: Category & Favorites */}
           <div className="flex items-center gap-3">
              <div className="flex items-center gap-2">
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
@@ -632,7 +641,6 @@ const POS = () => {
              </Button>
           </div>
 
-          {/* Middle Section: Search */}
           <div className="flex-1 max-w-xl mx-8">
              <div className="relative">
                 <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
@@ -647,7 +655,6 @@ const POS = () => {
              </div>
           </div>
 
-          {/* Left Section: Transfers */}
           <div className="flex items-center gap-3">
              <Button 
                variant="ghost" 
@@ -665,7 +672,6 @@ const POS = () => {
           </div>
         </div>
 
-        {/* Product Grid */}
         <ScrollArea className="flex-1 p-4 custom-scrollbar">
            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
               {displayProducts.map((product) => {
@@ -717,9 +723,7 @@ const POS = () => {
         </ScrollArea>
       </div>
 
-      {/* Cart Section - Left Side in RTL */}
       <div className="w-[600px] flex flex-col bg-[#0a0a1a]/80 backdrop-blur-xl border-l border-white/5 shadow-2xl z-20">
-        {/* Cart Header */}
         <div className="p-6 pb-2">
           <div className="flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/10 mb-6">
             <div className="flex items-center gap-3 px-4 py-1.5 bg-primary/20 rounded-xl text-primary border border-primary/20">
@@ -744,7 +748,6 @@ const POS = () => {
                 </div>
             </Button>
           </div>
-          {/* Cart Tabs */}
           <div className="flex flex-wrap gap-2 mb-4">
             {[...openCarts.values()].map(cart => (
               <div key={cart.id} className="relative group">
@@ -774,7 +777,6 @@ const POS = () => {
           </div>
         </div>
 
-        {/* Cart Items */}
         <ScrollArea className="flex-1 px-6 custom-scrollbar">
           {(!activeCart || activeCart.items.length === 0) ? (
             <div className="flex flex-col items-center justify-center h-[400px] opacity-20">
@@ -786,29 +788,33 @@ const POS = () => {
               {activeCart.items.map((item) => (
                 <div key={`${item.id}-${item.selected_unit}`} className="group relative bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl p-3 transition-all">
                   <div className="flex gap-4 items-start">
-                    {/* Left side: Price & Quantity (Green Area) */}
                     <div className="flex flex-col gap-2 items-start">
                       <div className="text-[16px] font-black text-primary whitespace-nowrap">
                         {settings.shop.currency} {item.price.toFixed(2)}
                       </div>
-                      <div className="flex items-center gap-1 bg-black/40 rounded-lg p-0.5 border border-white/5 h-8">
+                      <div className="flex items-center gap-1 bg-black/40 rounded-lg p-0.5 border border-white/5 h-10">
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-6 w-6 text-white/40 hover:text-white"
+                          className="h-8 w-8 text-white/40 hover:text-white"
                           onClick={() => updateCartItemQty(item.id, -1)}
-                        ><Minus className="h-3 w-3" /></Button>
-                        <span className="w-8 text-center text-[13px] font-black text-white">{item.qty}</span>
+                        ><Minus className="h-4 w-4" /></Button>
+                        <Input
+                          type="number"
+                          value={item.qty}
+                          onChange={(e) => setCartItemQty(item.id, parseFloat(e.target.value) || 0)}
+                          onFocus={handleFocus}
+                          className="w-14 text-center text-[14px] font-black text-white bg-transparent border-none h-8 p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-6 w-6 text-white/40 hover:text-white"
+                          className="h-8 w-8 text-white/40 hover:text-white"
                           onClick={() => updateCartItemQty(item.id, 1)}
-                        ><Plus className="h-3 w-3" /></Button>
+                        ><Plus className="h-4 w-4" /></Button>
                       </div>
                     </div>
 
-                    {/* Right side: Name & Info */}
                     <div className="flex-1 text-right min-w-0">
                       <div className="flex justify-between items-start mb-1">
                         <button 
@@ -833,7 +839,6 @@ const POS = () => {
           )}
         </ScrollArea>
 
-        {/* Totals & Checkout */}
         <div className="p-6 bg-black/40 border-t border-white/5 space-y-4">
           <div className="space-y-2">
             <div className="flex justify-between text-xs font-bold text-white/40">
@@ -891,7 +896,6 @@ const POS = () => {
         </div>
       </div>
 
-      {/* Dialogs */}
       <LoyaltyRedemptionDialog 
         isOpen={isLoyaltyRedemptionDialogOpen}
         onClose={() => setIsLoyaltyRedemptionDialogOpen(false)}
@@ -1052,9 +1056,21 @@ const POS = () => {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="bg-orange-500/10 p-4 rounded-lg border border-orange-500/20 my-4 text-right">
-              <p className="text-xs text-orange-400 font-bold mb-1 uppercase tracking-wider">{renderBoth('discount_offer')}</p>
-              <p className="text-lg font-black text-orange-300">10% {t('discount')}</p>
+            <div className="bg-orange-500/10 p-4 rounded-lg border border-orange-500/20 my-4 text-right flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="relative w-24">
+                  <Input 
+                    type="number"
+                    value={expiryDiscountPercent}
+                    onChange={(e) => setExpiryDiscountPercent(parseFloat(e.target.value) || 0)}
+                    onFocus={handleFocus}
+                    className="bg-white/5 border-orange-500/30 text-orange-300 font-black h-10 pr-8 text-right"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-400 font-black">%</span>
+                </div>
+                <p className="text-xs text-orange-400 font-bold uppercase tracking-wider">{renderBoth('discount_offer')}</p>
+              </div>
+              <p className="text-lg font-black text-orange-300">{expiryDiscountPercent}% {t('discount')}</p>
             </div>
 
             <DialogFooter className="flex flex-row-reverse justify-between gap-4 mt-6">
@@ -1208,7 +1224,6 @@ const POS = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Awaiting Transfer Dialog */}
       <Dialog open={isAwaitingTransferDialogOpen} onOpenChange={setIsAwaitingTransferDialogOpen}>
         <DialogContent className="sm:max-w-[400px] font-faruma bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
           <DialogHeader>
@@ -1308,7 +1323,6 @@ const POS = () => {
         }}
       />
 
-      {/* Pending Transfers Dialog in POS */}
       <Dialog open={isPendingTransfersDialogOpen} onOpenChange={setIsPendingTransfersDialogOpen}>
         <DialogContent className="sm:max-w-[600px] font-faruma bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
           <DialogHeader>
@@ -1335,7 +1349,7 @@ const POS = () => {
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-black text-white">{transfer.customer?.name_dv || transfer.tempCustomerName || 'Guest'}</p>
-                        <p className="text-[10px] font-bold text-white/40">{new Date(transfer.date).toLocaleString()}</p>
+                        <p className="text-[10px] font-bold text-white/40">{formatDate(transfer.date)} {formatTime(new Date(transfer.date))}</p>
                       </div>
                     </div>
                     <div className="text-right">

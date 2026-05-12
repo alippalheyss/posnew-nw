@@ -14,6 +14,7 @@ import { Download, PlusCircle, Receipt, Building2, Calculator, ArrowUpRight, Arr
 import { useAppContext, Purchase, Vendor, PurchaseItem, Product } from '@/context/AppContext';
 import { Badge } from '@/components/ui/badge';
 import { showSuccess, showError } from '@/utils/toast';
+import { formatDate } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
 
@@ -277,10 +278,10 @@ const GSTReports = () => {
                                     ) : (
                                         filteredPurchases.map((purchase) => (
                                             <TableRow key={purchase.id} className="border-white/5 hover:bg-white/5 transition-colors group">
-                                                <TableCell className="text-right font-mono text-xs text-white/40">{purchase.date}</TableCell>
+                                                <TableCell className="text-right font-medium">{formatDate(purchase.date)}</TableCell>
                                                 <TableCell className="text-right font-black text-white">{purchase.billNumber || '-'}</TableCell>
                                                 <TableCell className="text-right text-sm font-bold text-white/60">{purchase.vendorName}</TableCell>
-                                                <TableCell className="text-right font-bold">{settings.shop.currency} {purchase.amount.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right font-medium">{settings.shop.currency} {purchase.amount.toFixed(2)}</TableCell>
                                                 <TableCell className="text-right font-black text-orange-500">{settings.shop.currency} {purchase.gstAmount.toFixed(2)}</TableCell>
                                                 <TableCell className="text-right font-black text-primary">
                                                     {settings.shop.currency} {(purchase.amount + purchase.gstAmount).toFixed(2)}

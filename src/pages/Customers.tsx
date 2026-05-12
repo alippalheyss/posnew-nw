@@ -11,14 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from '@/components/ui/label';
 import CustomerAddDialog from '@/components/CustomerAddDialog';
 import { useAppContext, Customer } from '@/context/AppContext';
-import { showSuccess, showError } from '@/utils/toast';
-import { cn } from '@/lib/utils';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Progress } from "@/components/ui/progress";
+import { formatDate } from '@/utils/formatters';
 
 const Customers = () => {
   const { t } = useTranslation();
@@ -149,24 +143,37 @@ const Customers = () => {
                          </div>
                        )}
                     </div>
+                     <div className="space-y-4 mb-6">
+                        <div className="space-y-2">
+                           <div className="flex justify-between text-[10px] font-black uppercase tracking-wider mb-1">
+                              <span className="text-primary">{settings.shop.currency} {customer.outstanding_balance.toFixed(2)}</span>
+                              <span className="text-white/30">Used Credit</span>
+                           </div>
+                           <Progress value={Math.min(100, (customer.outstanding_balance / (customer.credit_limit || 1)) * 100)} className="h-1.5 bg-white/5" />
+                           <div className="flex justify-between text-[9px] font-bold opacity-30">
+                              <span>Limit: {settings.shop.currency} {customer.credit_limit.toFixed(2)}</span>
+                              <span>{Math.round((customer.outstanding_balance / (customer.credit_limit || 1)) * 100)}%</span>
+                           </div>
+                        </div>
 
-                    <div className="grid grid-cols-2 gap-3 mb-6">
-                       <div className="bg-white/5 p-3 rounded-2xl border border-white/5 text-right">
-                          <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-1">{renderBoth('credit_limit')}</p>
-                          <p className="text-sm font-black text-orange-500">{settings.shop.currency} {customer.credit_limit.toFixed(0)}</p>
-                       </div>
-                       <div className="bg-white/5 p-3 rounded-2xl border border-white/5 text-right">
-                          <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-1">{renderBoth('loyalty_points')}</p>
-                          <p className="text-sm font-black text-blue-400">{(customer.loyalty_points || 0).toFixed(0)} <span className="text-[8px] font-normal opacity-50">PTS</span></p>
-                       </div>
-                    </div>
+                        <div className="grid grid-cols-2 gap-3">
+                           <div className="bg-white/5 p-3 rounded-2xl border border-white/5 text-right">
+                              <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-1">{renderBoth('loyalty_points')}</p>
+                              <p className="text-sm font-black text-blue-400">{(customer.loyalty_points || 0).toFixed(0)} <span className="text-[8px] font-normal opacity-50">PTS</span></p>
+                           </div>
+                           <div className="bg-white/5 p-3 rounded-2xl border border-white/5 text-right">
+                              <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-1">{renderBoth('credit_limit')}</p>
+                              <p className="text-sm font-black text-orange-500">{settings.shop.currency} {customer.credit_limit.toFixed(0)}</p>
+                           </div>
+                        </div>
+                     </div>
 
-                    <Button 
-                      onClick={() => handleEditClick(customer)}
-                      className="w-full bg-white/5 hover:bg-white/10 text-white text-[10px] font-black h-10 rounded-xl border border-white/10 transition-all uppercase tracking-widest"
-                    >
-                      View Details & Edit
-                    </Button>
+                     <Button 
+                       onClick={() => handleEditClick(customer)}
+                       className="w-full bg-white/5 hover:bg-white/10 text-white text-[10px] font-black h-10 rounded-xl border border-white/10 transition-all uppercase tracking-widest"
+                     >
+                       View Details & Edit
+                     </Button>
                  </div>
               </CardContent>
             </Card>

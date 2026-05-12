@@ -35,12 +35,13 @@ const DailySales = () => {
     thirtyDaysAgo.setHours(0, 0, 0, 0);
 
     return salesList.filter(sale => {
-      const saleDateStr = typeof sale.date === 'string' ? sale.date : new Date(sale.date).toLocaleDateString('sv-SE');
+      if (!sale.date) return false;
+      const saleDateStr = typeof sale.date === 'string' ? sale.date : toISODate(new Date(sale.date));
       
       if (dateFilter === 'today') return saleDateStr === todayStr;
       if (dateFilter === 'yesterday') return saleDateStr === yesterdayStr;
       if (dateFilter === 'last30') {
-        const saleDate = new Date(sale.date);
+        const saleDate = new Date(saleDateStr);
         saleDate.setHours(0, 0, 0, 0);
         return saleDate.getTime() >= thirtyDaysAgo.getTime();
       }

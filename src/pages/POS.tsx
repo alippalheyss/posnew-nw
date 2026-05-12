@@ -1056,21 +1056,42 @@ const POS = () => {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="bg-orange-500/10 p-4 rounded-lg border border-orange-500/20 my-4 text-right flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <div className="relative w-24">
-                  <Input 
-                    type="number"
-                    value={expiryDiscountPercent}
-                    onChange={(e) => setExpiryDiscountPercent(parseFloat(e.target.value) || 0)}
-                    onFocus={handleFocus}
-                    className="bg-white/5 border-orange-500/30 text-orange-300 font-black h-10 pr-8 text-right"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-400 font-black">%</span>
+            <div className="bg-orange-500/10 p-4 rounded-lg border border-orange-500/20 my-4 text-right">
+              <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center">
+                  <p className="text-xs text-orange-400 font-bold uppercase tracking-wider">{renderBoth('discount_offer')}</p>
+                  <p className="text-lg font-black text-orange-300">{expiryDiscountPercent}% {t('discount')}</p>
                 </div>
-                <p className="text-xs text-orange-400 font-bold uppercase tracking-wider">{renderBoth('discount_offer')}</p>
+                
+                <div className="grid grid-cols-3 gap-2">
+                  {[20, 30, 50].map((pct) => (
+                    <Button
+                      key={pct}
+                      variant="outline"
+                      onClick={() => setExpiryDiscountPercent(pct)}
+                      className={cn(
+                        "h-12 border-orange-500/30 font-black text-lg",
+                        expiryDiscountPercent === pct ? "bg-orange-500 text-white" : "text-orange-500 hover:bg-orange-500/20"
+                      )}
+                    >
+                      {pct}%
+                    </Button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-3 mt-2">
+                  <div className="relative w-full">
+                    <Input 
+                      type="number"
+                      value={expiryDiscountPercent}
+                      onChange={(e) => setExpiryDiscountPercent(parseFloat(e.target.value) || 0)}
+                      onFocus={handleFocus}
+                      className="bg-white/5 border-orange-500/30 text-orange-300 font-black h-12 pr-10 text-right text-xl"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-orange-400 font-black text-lg">%</span>
+                  </div>
+                </div>
               </div>
-              <p className="text-lg font-black text-orange-300">{expiryDiscountPercent}% {t('discount')}</p>
             </div>
 
             <DialogFooter className="flex flex-row-reverse justify-between gap-4 mt-6">

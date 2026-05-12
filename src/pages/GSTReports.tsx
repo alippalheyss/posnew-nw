@@ -45,18 +45,28 @@ const GSTReports = () => {
     };
 
     const filterByRange = (dateStr: string) => {
+        if (!dateStr) return false;
         const date = new Date(dateStr);
         const now = new Date();
-        if (timeRange === 'today') return date.toDateString() === now.toDateString();
-        if (timeRange === 'this_month') return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-        if (timeRange === 'this_year') return date.getFullYear() === now.getFullYear();
+        
+        // Use local date parts for comparison to avoid timezone shifts
+        const dYear = date.getFullYear();
+        const dMonth = date.getMonth();
+        const dDay = date.getDate();
+        
+        const nYear = now.getFullYear();
+        const nMonth = now.getMonth();
+        const nDay = now.getDate();
+
+        if (timeRange === 'today') return dYear === nYear && dMonth === nMonth && dDay === nDay;
+        if (timeRange === 'this_month') return dMonth === nMonth && dYear === nYear;
+        if (timeRange === 'this_year') return dYear === nYear;
 
         if (timeRange.startsWith('q')) {
             const quarter = parseInt(timeRange.substring(1));
-            const year = now.getFullYear();
             const startMonth = (quarter - 1) * 3;
             const endMonth = startMonth + 2;
-            return date.getFullYear() === year && date.getMonth() >= startMonth && date.getMonth() <= endMonth;
+            return dYear === nYear && dMonth >= startMonth && dMonth <= endMonth;
         }
 
         return true;

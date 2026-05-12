@@ -588,28 +588,29 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const addSale = async (sale: Sale) => {
     try {
-      console.log('Adding sale to Supabase:', sale.id);
+      console.log('Adding sale to Supabase:', sale.id, sale.paymentMethod);
+      
       const { error } = await supabase
         .from('sales')
-        .insert({
+        .insert([{
           id: sale.id,
-          date: sale.date || new Date().toLocaleDateString('sv-SE'),
+          date: sale.date || toISODate(),
           customer_id: sale.customer?.id || null,
           items: sale.items,
-          grand_total: sale.grandTotal,
-          payment_method: sale.paymentMethod,
-          paid_amount: sale.paidAmount || 0,
-          balance: sale.balance || 0,
+          grand_total: Number(sale.grandTotal),
+          payment_method: String(sale.paymentMethod),
+          paid_amount: Number(sale.paidAmount || 0),
+          balance: Number(sale.balance || 0),
           split_details: sale.splitDetails || null
-        });
+        }]);
 
       if (error) {
         console.error('Supabase add sale error:', error);
         throw error;
       }
 
-      setSales(prev => [...prev, sale]);
-      console.log('Sale added successfully');
+      setSales(prev => [sale, ...prev]);
+      console.log('Sale added successfully to both DB and local state');
 
       // Update stock levels
       for (const item of sale.items) {
@@ -618,6 +619,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           await updateStock(product.id, product.stock_shop - item.qty);
         }
       }
+      
+      // Full refresh to ensure everything is in sync
+      await fetchData();
     } catch (error) {
       console.error('Error adding sale:', error);
       showError('Failed to save sale to database');
@@ -853,7 +857,19 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       setProducts(prev => prev.map(p =>
         p.id === updatedProduct.id ? updatedProduct : p
       ));
-      console.log('Product updated successfully');
+      console.log('Product updated successfully in local state');
+      
+      // Force refresh from DB to ensure local state is perfectly in sync
+      const { data: freshProduct, error: fetchError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', updatedProduct.id)
+        .single();
+        
+      if (!fetchError && freshProduct) {
+        setProducts(prev => prev.map(p => p.id === updatedProduct.id ? freshProduct : p));
+        console.log('Product refreshed from DB successfully');
+      }
     } catch (error) {
       console.error('Error updating product:', error);
       showError('Failed to update product in database');

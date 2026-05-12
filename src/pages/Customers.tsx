@@ -13,6 +13,12 @@ import CustomerAddDialog from '@/components/CustomerAddDialog';
 import { useAppContext, Customer } from '@/context/AppContext';
 import { Progress } from "@/components/ui/progress";
 import { formatDate } from '@/utils/formatters';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Customers = () => {
   const { t } = useTranslation();

@@ -385,7 +385,7 @@ const POS = () => {
     }
 
     const newSale = {
-      id: `sale-${Date.now()}`,
+      id: crypto.randomUUID(),
       date: toISODate(),
       customer: activeCart.customer,
       items: activeCart.items,
@@ -435,7 +435,7 @@ const POS = () => {
     }
 
     const newSale = {
-      id: `sale-${Date.now()}`,
+      id: crypto.randomUUID(),
       date: toISODate(),
       customer: activeCart.customer!,
       items: activeCart.items,
@@ -574,7 +574,7 @@ const POS = () => {
     }
 
     const newSale: Sale = {
-      id: `sale-${Date.now()}`,
+      id: crypto.randomUUID(),
       date: toISODate(),
       customer: activeCart?.customer || null,
       items: activeCart?.items || [],

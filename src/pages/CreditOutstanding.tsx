@@ -599,26 +599,39 @@ const CreditOutstanding = () => {
           <ScrollArea className="h-[450px] mt-4 pr-4">
             <div className="space-y-4">
               {selectedCustomerCreditSales.length > 0 ? (
-                [...selectedCustomerCreditSales].reverse().map((sale) => (
-                  <div key={sale.id} className="p-4 rounded-2xl bg-white/5 border border-white/5 text-right">
-                    <div className="flex justify-between items-center mb-3">
-                       <Badge variant="outline" className="border-orange-500/30 text-orange-500 text-[8px] font-black">{sale.id}</Badge>
-                       <span className="text-[10px] font-mono text-white/40">{formatDate(sale.date)} {formatTime(sale.date)}</span>
-                    </div>
-                    <div className="space-y-2 mb-3">
-                      {sale.items.map((item: any, i: number) => (
-                        <div key={i} className="flex justify-between items-center text-xs">
-                          <span className="text-white/40">{item.qty} x {item.price.toFixed(2)}</span>
-                          <span className="font-bold">{item.name_dv}</span>
+                {[...selectedCustomerCreditSales].reverse().map((sale) => {
+                  const splitEntry = sale.splitDetails?.find((d: any) => d.customerId === selectedCustomerForAction?.id && d.method?.toLowerCase() === 'credit');
+                  const isSplit = !!splitEntry;
+                  const displayAmount = isSplit ? splitEntry.amount : sale.grandTotal;
+
+                  return (
+                    <div key={sale.id} className="p-4 rounded-2xl bg-white/5 border border-white/5 text-right relative overflow-hidden group">
+                      {isSplit && (
+                        <div className="absolute top-0 left-0 bg-blue-500/20 text-blue-500 text-[8px] font-black px-3 py-1 rounded-br-xl uppercase tracking-widest z-10">
+                          Split Bill
                         </div>
-                      ))}
+                      )}
+                      <div className="flex justify-between items-center mb-3">
+                         <Badge variant="outline" className="border-orange-500/30 text-orange-500 text-[8px] font-black">{sale.id}</Badge>
+                         <span className="text-[10px] font-mono text-white/40">{formatDate(sale.date)} {formatTime(sale.date)}</span>
+                      </div>
+                      <div className="space-y-2 mb-3">
+                        {sale.items.map((item: any, i: number) => (
+                          <div key={i} className="flex justify-between items-center text-xs">
+                            <span className="text-white/40">{item.qty} x {item.price.toFixed(2)}</span>
+                            <span className="font-bold">{item.name_dv}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="pt-3 border-t border-white/5 flex justify-between items-center">
+                         <span className="text-sm font-black text-white">{settings.shop.currency} {displayAmount.toFixed(2)}</span>
+                         <span className="text-[10px] font-black text-white/20 uppercase">
+                           {isSplit ? 'Your Portion' : 'Total Invoice'}
+                         </span>
+                      </div>
                     </div>
-                    <div className="pt-3 border-t border-white/5 flex justify-between items-center">
-                       <span className="text-sm font-black text-white">{settings.shop.currency} {sale.grandTotal.toFixed(2)}</span>
-                       <span className="text-[10px] font-black text-white/20 uppercase">Total Invoice</span>
-                    </div>
-                  </div>
-                ))
+                  );
+                })}
               ) : (
                 <div className="flex flex-col items-center justify-center h-40 opacity-20">
                   <FileText className="h-10 w-10 mb-2" />

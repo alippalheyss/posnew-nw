@@ -329,12 +329,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           setCustomers(formattedCustomers);
         }
         if (salesData) {
+          console.log(`Successfully fetched ${salesData.length} sales from Supabase`);
           const linkedSales = salesData.map(s => ({
             ...s,
             customer: customersData?.find(c => c.id === s.customer_id) || null,
-            grandTotal: s.grand_total,
-            paymentMethod: s.payment_method,
-            paidAmount: s.paid_amount,
+            grandTotal: Number(s.grand_total),
+            paymentMethod: String(s.payment_method),
+            paidAmount: Number(s.paid_amount || 0),
             splitDetails: s.split_details
           }));
           setSales(linkedSales);
@@ -836,17 +837,29 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const updateProduct = async (updatedProduct: Product) => {
     try {
-      console.log('Updating product in Supabase:', updatedProduct.id, updatedProduct.expiry_date);
+      console.log('Updating product in Supabase:', updatedProduct.id);
+      
+      // Clean data for Supabase update - convert undefined to null and ensure numbers
+      const cleanData = {
+        name_dv: updatedProduct.name_dv,
+        name_en: updatedProduct.name_en,
+        price: Number(updatedProduct.price),
+        stock_shop: Number(updatedProduct.stock_shop),
+        stock_godown: Number(updatedProduct.stock_godown),
+        barcode: updatedProduct.barcode,
+        item_code: updatedProduct.item_code,
+        category: updatedProduct.category,
+        is_zero_tax: !!updatedProduct.is_zero_tax,
+        expiry_date: updatedProduct.expiry_date || null,
+        image: updatedProduct.image || '',
+        cost_price: updatedProduct.cost_price ? Number(updatedProduct.cost_price) : null,
+        last_purchase_date: updatedProduct.last_purchase_date || null,
+        units: updatedProduct.units || null
+      };
+
       const { error } = await supabase
         .from('products')
-        .update({
-          ...updatedProduct,
-          // Explicitly ensure numeric fields are numbers
-          price: Number(updatedProduct.price),
-          stock_shop: Number(updatedProduct.stock_shop),
-          stock_godown: Number(updatedProduct.stock_godown),
-          cost_price: updatedProduct.cost_price ? Number(updatedProduct.cost_price) : null
-        })
+        .update(cleanData)
         .eq('id', updatedProduct.id);
 
       if (error) {

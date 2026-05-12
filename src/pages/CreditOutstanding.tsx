@@ -104,7 +104,7 @@ const CreditOutstanding = () => {
       const settlement: Settlement = {
         id: `set-${Date.now()}`,
         amount_paid: paymentAmount,
-        date: new Date().toLocaleDateString('sv-SE'),
+        date: toISODate(),
         previous_outstanding: previousOutstanding,
         new_outstanding: newOutstanding,
       };
@@ -116,7 +116,7 @@ const CreditOutstanding = () => {
       setPaymentAmount('');
       showSuccess(t('settlement_successful'));
     } else {
-      showError(t('error_updating_stock'));
+      showError(t('invalid_payment_amount'));
     }
   };
 
@@ -500,23 +500,26 @@ const CreditOutstanding = () => {
             </div>
             <div className="space-y-2">
               <div className="flex justify-between items-end">
-                <Button 
-                  variant="link" 
-                  onClick={() => setPaymentAmount(selectedCustomerForAction?.outstanding_balance || '')}
-                  className="p-0 h-auto text-[10px] text-primary font-black uppercase"
-                >
-                  SETTLE FULL AMOUNT
-                </Button>
                 <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('amount_to_pay')}</Label>
               </div>
               <Input
                 type="number"
                 value={paymentAmount}
-                onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || '')}
+                onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
                 className="text-right h-14 bg-white/5 border-primary rounded-xl text-2xl font-black text-white focus:ring-0"
                 autoFocus
                 placeholder="0.00"
               />
+              <div className="flex justify-end mt-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setPaymentAmount(selectedCustomerForAction?.outstanding_balance || 0)}
+                  className="text-[10px] font-black text-primary hover:bg-primary/10 h-7 px-3 rounded-full border border-primary/20"
+                >
+                  {renderBoth('pay_all_outstanding')}
+                </Button>
+              </div>
             </div>
             <div className="space-y-2">
               <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('new_outstanding')}</Label>

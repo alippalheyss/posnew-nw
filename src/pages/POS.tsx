@@ -621,7 +621,7 @@ const POS = () => {
       customer: activeCart?.customer || null,
       items: activeCart?.items || [],
       grandTotal: grandTotal,
-      paymentMethod: 'split',
+      paymentMethod: 'credit',
       paidAmount: splitEntries.filter(e => e.method !== 'Credit').reduce((sum, e) => sum + e.amount, 0),
       balance: splitEntries.filter(e => e.method === 'Credit').reduce((sum, e) => sum + e.amount, 0),
       splitDetails: splitEntries

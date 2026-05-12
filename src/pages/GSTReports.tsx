@@ -125,7 +125,7 @@ const GSTReports = () => {
         const { subtotal, gstAmount } = calculateGstFromTotal(total);
 
         const purchase: Purchase = {
-            id: `purch-${Date.now()}`,
+            id: crypto.randomUUID(),
             vendorId: vendor.id,
             vendorName: vendor.name_dv || vendor.name_en,
             billNumber: newPurchase.billNumber,
@@ -311,16 +311,18 @@ const GSTReports = () => {
 
             {/* Add Purchase Dialog */}
             <Dialog open={isAddPurchaseDialogOpen} onOpenChange={setIsAddPurchaseDialogOpen}>
-                <DialogContent className="sm:max-w-[500px] font-faruma bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
-                    <DialogHeader>
-                        <DialogTitle className="text-right text-2xl font-black">{renderBoth('record_local_purchase')}</DialogTitle>
+                <DialogContent className="sm:max-w-[500px] font-faruma glass-dark border-white/10 text-white p-0 overflow-hidden" dir="rtl">
+                    <DialogHeader className="p-6 pb-2">
+                        <DialogTitle className="text-right text-2xl font-black flex items-center justify-end gap-3">
+                            {renderBoth('record_local_purchase')} <PlusCircle className="h-6 w-6 text-primary" />
+                        </DialogTitle>
                         <DialogDescription className="text-right text-white/40">{renderBoth('record_purchase_description')}</DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-6 py-6">
+                    <div className="p-6 space-y-6">
                         <div className="space-y-2">
                             <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('select_vendor')}*</Label>
                             <Select value={newPurchase.vendorId} onValueChange={(val) => setNewPurchase({ ...newPurchase, vendorId: val })}>
-                                <SelectTrigger className="w-full bg-white/5 border-white/10 text-right h-12 rounded-xl">
+                                <SelectTrigger className="w-full bg-white/5 border-white/10 text-right h-14 rounded-2xl font-bold">
                                     <SelectValue placeholder="Choose Vendor" />
                                 </SelectTrigger>
                                 <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
@@ -346,37 +348,44 @@ const GSTReports = () => {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('bill_number')}</Label>
-                                <Input value={newPurchase.billNumber} onChange={(e) => setNewPurchase({ ...newPurchase, billNumber: e.target.value })} className="text-right h-12 bg-white/5 border-white/10 rounded-xl font-mono" />
+                                <Input value={newPurchase.billNumber} onChange={(e) => setNewPurchase({ ...newPurchase, billNumber: e.target.value })} className="text-right h-14 bg-white/5 border-white/10 rounded-2xl font-black" />
                             </div>
                             <div className="space-y-2">
                                 <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('date')}</Label>
-                                <Input type="date" value={newPurchase.date} onChange={(e) => setNewPurchase({ ...newPurchase, date: e.target.value })} className="text-right h-12 bg-white/5 border-white/10 rounded-xl" />
+                                <Input type="date" value={newPurchase.date} onChange={(e) => setNewPurchase({ ...newPurchase, date: e.target.value })} className="text-right h-14 bg-white/5 border-white/10 rounded-2xl font-black" />
                             </div>
                         </div>
 
                         <div className="space-y-2">
                             <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('total_amount_incl_gst')}*</Label>
-                            <Input 
-                              type="number" 
-                              value={newPurchase.totalAmount} 
-                              onChange={(e) => setNewPurchase({ ...newPurchase, totalAmount: e.target.value })} 
-                              onFocus={handleFocus}
-                              className="text-right h-14 bg-white/5 border-white/10 rounded-xl text-2xl font-black text-primary" 
-                              placeholder="0.00"
-                            />
-                            <p className="text-[10px] text-white/20 text-right italic">GST (6%) will be automatically calculated from this total.</p>
+                            <div className="relative">
+                               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-black text-white/20">{settings.shop.currency}</span>
+                               <Input 
+                                 type="number" 
+                                 value={newPurchase.totalAmount} 
+                                 onChange={(e) => setNewPurchase({ ...newPurchase, totalAmount: e.target.value })} 
+                                 className="text-right h-16 bg-white/5 border-primary/30 focus:border-primary rounded-2xl font-black text-2xl pl-16" 
+                                 placeholder="0.00"
+                               />
+                            </div>
+                            {newPurchase.totalAmount && (
+                                <div className="flex justify-between items-center px-2 py-1">
+                                    <span className="text-[10px] font-black text-orange-500 uppercase">GST (6%): {settings.shop.currency} {calculateGstFromTotal(parseFloat(newPurchase.totalAmount)).gstAmount.toFixed(2)}</span>
+                                    <p className="text-[9px] text-white/20 italic">GST will be automatically calculated from this total</p>
+                                </div>
+                            )}
                         </div>
 
                         <div className="space-y-2">
                             <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('description')}</Label>
-                            <Input value={newPurchase.description} onChange={(e) => setNewPurchase({ ...newPurchase, description: e.target.value })} className="text-right h-12 bg-white/5 border-white/10 rounded-xl" />
+                            <Input value={newPurchase.description} onChange={(e) => setNewPurchase({ ...newPurchase, description: e.target.value })} className="text-right h-14 bg-white/5 border-white/10 rounded-2xl font-bold" />
                         </div>
                     </div>
-                    <DialogFooter className="gap-3 pt-4 border-t border-white/5">
-                        <Button variant="ghost" onClick={() => setIsAddPurchaseDialogOpen(false)} className="flex-1 h-12 border-white/10 hover:bg-white/5 text-white">
+                    <DialogFooter className="p-6 pt-2 bg-white/5 border-t border-white/5 flex gap-3">
+                        <Button variant="ghost" onClick={() => setIsAddPurchaseDialogOpen(false)} className="flex-1 h-12 rounded-xl font-black uppercase tracking-widest text-xs border border-white/10 hover:bg-white/5">
                             {renderBoth('cancel')}
                         </Button>
-                        <Button onClick={handleAddPurchase} className="flex-1 h-12 bg-primary hover:bg-primary/90 font-black">
+                        <Button onClick={handleAddPurchase} className="flex-1 h-12 rounded-xl btn-gradient-blue font-black uppercase tracking-widest text-xs shadow-lg shadow-blue-500/20">
                             {renderBoth('save_purchase')}
                         </Button>
                     </DialogFooter>

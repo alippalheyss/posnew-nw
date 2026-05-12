@@ -337,17 +337,40 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
               saleDate = saleDate.split(' ')[0]; // Take YYYY-MM-DD part
             }
             
+            // Handle potentially stringified JSON fields
+            let items = s.items;
+            if (typeof items === 'string') {
+              try { items = JSON.parse(items); } catch (e) { items = []; }
+            }
+            
+            let splitDetails = s.split_details;
+            if (typeof splitDetails === 'string') {
+              try { splitDetails = JSON.parse(splitDetails); } catch (e) { splitDetails = null; }
+            }
+
+            const customer = customersData?.find(c => c.id.toLowerCase() === s.customer_id?.toLowerCase()) || null;
+            
             return {
               ...s,
-              date: s.date, // Keep full date in state
-              customer: customersData?.find(c => c.id === s.customer_id) || null,
+              date: s.date,
+              items: Array.isArray(items) ? items : [],
+              customer: customer,
               grandTotal: Number(s.grand_total || 0),
               paymentMethod: String(s.payment_method || 'cash').toLowerCase(),
               paidAmount: Number(s.paid_amount || 0),
               balance: Number(s.balance || 0),
-              splitDetails: s.split_details
+              splitDetails: splitDetails
             };
           });
+          
+          if (linkedSales.length > 0) {
+            console.log('First linked sale sample:', {
+              id: linkedSales[0].id,
+              itemCount: linkedSales[0].items.length,
+              customerName: linkedSales[0].customer?.name_en
+            });
+          }
+          
           setSales(linkedSales);
         }
         if (vendorsData) setVendors(vendorsData);

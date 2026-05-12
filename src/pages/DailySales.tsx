@@ -39,26 +39,41 @@ const DailySales = () => {
   }, [sales]);
 
   const filterSalesByDate = (salesList: Sale[]) => {
-    const todayStr = toISODate();
+    const now = new Date();
+    const todayY = now.getFullYear();
+    const todayM = now.getMonth();
+    const todayD = now.getDate();
+
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = toISODate(yesterday);
+    const yesterdayY = yesterday.getFullYear();
+    const yesterdayM = yesterday.getMonth();
+    const yesterdayD = yesterday.getDate();
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     thirtyDaysAgo.setHours(0, 0, 0, 0);
 
     return salesList.filter(sale => {
+      if (!sale.date) return false;
       const saleDateStr = extractDateOnly(sale.date);
+      const saleDate = new Date(saleDateStr);
       
-      if (dateFilter === 'today') return saleDateStr === todayStr;
-      if (dateFilter === 'yesterday') return saleDateStr === yesterdayStr;
+      const sY = saleDate.getFullYear();
+      const sM = saleDate.getMonth();
+      const sD = saleDate.getDate();
+      
+      if (dateFilter === 'today') {
+        return sY === todayY && sM === todayM && sD === todayD;
+      }
+      if (dateFilter === 'yesterday') {
+        return sY === yesterdayY && sM === yesterdayM && sD === yesterdayD;
+      }
       if (dateFilter === 'last30') {
-        const saleDate = new Date(saleDateStr);
         saleDate.setHours(0, 0, 0, 0);
         return saleDate.getTime() >= thirtyDaysAgo.getTime();
       }
-      return true;
+      return true; // 'all'
     });
   };
 

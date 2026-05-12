@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { PencilLine, CalendarDays, Printer, Trash2, Filter, ChevronRight, Receipt, DollarSign, CreditCard, ArrowRightLeft, TrendingUp } from 'lucide-react';
 import { useAppContext, Product, Customer, CartItem, Sale } from '@/context/AppContext';
-import { formatDate, formatTime, toISODate } from '@/utils/formatters';
+import { formatDate, formatTime, toISODate, extractDateOnly } from '@/utils/formatters';
 import SaleEditDialog from '@/components/SaleEditDialog'; 
 import { showSuccess } from '@/utils/toast';
 import { printContent } from '@/utils/printHelper';
@@ -35,9 +35,7 @@ const DailySales = () => {
     thirtyDaysAgo.setHours(0, 0, 0, 0);
 
     return salesList.filter(sale => {
-      if (!sale.date) return false;
-      // Extract YYYY-MM-DD from full timestamp if needed
-      const saleDateStr = (typeof sale.date === 'string' ? sale.date : toISODate(new Date(sale.date))).split(' ')[0];
+      const saleDateStr = extractDateOnly(sale.date);
       
       if (dateFilter === 'today') return saleDateStr === todayStr;
       if (dateFilter === 'yesterday') return saleDateStr === yesterdayStr;

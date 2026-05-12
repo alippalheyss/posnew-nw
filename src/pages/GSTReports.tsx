@@ -14,7 +14,7 @@ import { Download, PlusCircle, Receipt, Building2, Calculator, ArrowUpRight, Arr
 import { useAppContext, Purchase, Vendor, PurchaseItem, Product } from '@/context/AppContext';
 import { Badge } from '@/components/ui/badge';
 import { showSuccess, showError } from '@/utils/toast';
-import { formatDate } from '@/utils/formatters';
+import { formatDate, extractDateOnly } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
 
@@ -45,9 +45,8 @@ const GSTReports = () => {
     };
 
     const filterByRange = (dateStr: string) => {
-        if (!dateStr) return false;
-        // Extract YYYY-MM-DD from full timestamp if needed
-        const pureDateStr = dateStr.split(' ')[0];
+        const pureDateStr = extractDateOnly(dateStr);
+        if (!pureDateStr) return false;
         const date = new Date(pureDateStr);
         const now = new Date();
         

@@ -302,82 +302,83 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
-  // Initial Data Fetching from Supabase
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [
-          { data: productsData },
-          { data: customersData },
-          { data: salesData },
-          { data: vendorsData },
-          { data: purchasesData },
-          { data: settlementsData }
-        ] = await Promise.all([
-          supabase.from('products').select('*'),
-          supabase.from('customers').select('*').order('name_en', { ascending: true }),
-          supabase.from('sales').select('*').order('date', { ascending: false }).limit(1000),
-          supabase.from('vendors').select('*'),
-          supabase.from('purchases').select('*'),
-          supabase.from('settlements').select('*')
-        ]);
+  // Central data fetching from Supabase
+  const fetchData = async () => {
+    try {
+      const [
+        { data: productsData },
+        { data: customersData },
+        { data: salesData },
+        { data: vendorsData },
+        { data: purchasesData },
+        { data: settlementsData }
+      ] = await Promise.all([
+        supabase.from('products').select('*'),
+        supabase.from('customers').select('*').order('name_en', { ascending: true }),
+        supabase.from('sales').select('*').order('date', { ascending: false }).limit(1000),
+        supabase.from('vendors').select('*'),
+        supabase.from('purchases').select('*'),
+        supabase.from('settlements').select('*')
+      ]);
 
-        if (productsData) setProducts(productsData);
-        if (customersData) {
-          const formattedCustomers = customersData.map(c => ({
-            ...c,
-            settlement_history: settlementsData?.filter(s => s.customer_id === c.id) || []
-          }));
-          setCustomers(formattedCustomers);
-        }
-        if (salesData) {
-          console.log(`Successfully fetched ${salesData.length} sales from Supabase`);
-          const linkedSales = salesData.map(s => {
-            const saleDate = extractDateOnly(s.date);
-            
-            // Handle potentially stringified JSON fields
-            let items = s.items;
-            if (typeof items === 'string') {
-              try { items = JSON.parse(items); } catch (e) { items = []; }
-            }
-            
-            let splitDetails = s.split_details;
-            if (typeof splitDetails === 'string') {
-              try { splitDetails = JSON.parse(splitDetails); } catch (e) { splitDetails = null; }
-            }
-
-            const customer = customersData?.find(c => c.id.toLowerCase() === s.customer_id?.toLowerCase()) || null;
-            
-            return {
-              ...s,
-              date: s.date,
-              items: Array.isArray(items) ? items : [],
-              customer: customer,
-              grandTotal: Number(s.grand_total || 0),
-              paymentMethod: String(s.payment_method || 'cash').toLowerCase(),
-              paidAmount: Number(s.paid_amount || 0),
-              balance: Number(s.balance || 0)
-            };
-          });
+      if (productsData) setProducts(productsData);
+      if (customersData) {
+        const formattedCustomers = customersData.map(c => ({
+          ...c,
+          settlement_history: settlementsData?.filter(s => s.customer_id === c.id) || []
+        }));
+        setCustomers(formattedCustomers);
+      }
+      if (salesData) {
+        console.log(`Successfully fetched ${salesData.length} sales from Supabase`);
+        const linkedSales = salesData.map(s => {
+          const saleDate = extractDateOnly(s.date);
           
-          if (linkedSales.length > 0) {
-            console.log('First linked sale sample:', {
-              id: linkedSales[0].id,
-              itemCount: linkedSales[0].items.length,
-              customerName: linkedSales[0].customer?.name_en
-            });
+          // Handle potentially stringified JSON fields
+          let items = s.items;
+          if (typeof items === 'string') {
+            try { items = JSON.parse(items); } catch (e) { items = []; }
           }
           
-          setSales(linkedSales);
-        }
-        if (vendorsData) setVendors(vendorsData);
-        if (purchasesData) setPurchases(purchasesData);
-      } catch (error) {
-        console.error('Error fetching data from Supabase:', error);
-        showError('Failed to fetch data from database');
-      }
-    };
+          let splitDetails = s.split_details;
+          if (typeof splitDetails === 'string') {
+            try { splitDetails = JSON.parse(splitDetails); } catch (e) { splitDetails = null; }
+          }
 
+          const customer = customersData?.find(c => c.id.toLowerCase() === s.customer_id?.toLowerCase()) || null;
+          
+          return {
+            ...s,
+            date: s.date,
+            items: Array.isArray(items) ? items : [],
+            customer: customer,
+            grandTotal: Number(s.grand_total || 0),
+            paymentMethod: String(s.payment_method || 'cash').toLowerCase(),
+            paidAmount: Number(s.paid_amount || 0),
+            balance: Number(s.balance || 0)
+          };
+        });
+        
+        if (linkedSales.length > 0) {
+          console.log('First linked sale sample:', {
+            id: linkedSales[0].id,
+            itemCount: linkedSales[0].items.length,
+            customerName: linkedSales[0].customer?.name_en
+          });
+        }
+        
+        setSales(linkedSales);
+      }
+      if (vendorsData) setVendors(vendorsData);
+      if (purchasesData) setPurchases(purchasesData);
+    } catch (error) {
+      console.error('Error fetching data from Supabase:', error);
+      // Don't show error toast on background refresh
+    }
+  };
+
+  // Initial Data Fetching from Supabase
+  useEffect(() => {
     fetchData();
   }, []);
 

@@ -379,7 +379,15 @@ const POS = () => {
       showError(t('cart_empty_error'));
       return;
     }
-    if (typeof paidAmount !== 'number' || paidAmount < grandTotal) {
+
+    // Auto-fill paid amount if empty or 0
+    let finalPaidAmount = paidAmount;
+    if (!finalPaidAmount || finalPaidAmount === 0 || finalPaidAmount === '') {
+      finalPaidAmount = grandTotal;
+      setPaidAmount(grandTotal);
+    }
+
+    if (finalPaidAmount < grandTotal) {
       showError(t('insufficient_payment_error'));
       return;
     }
@@ -391,7 +399,7 @@ const POS = () => {
       items: activeCart.items,
       grandTotal: grandTotal,
       paymentMethod: 'cash' as const,
-      paidAmount: paidAmount,
+      paidAmount: finalPaidAmount,
       balance: balance,
     };
     try {
@@ -930,6 +938,11 @@ const POS = () => {
                 value={paidAmount}
                 onChange={(e) => setPaidAmount(parseFloat(e.target.value) || '')}
                 onFocus={handleFocus}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    processCashPayment();
+                  }
+                }}
                 className="text-right h-14 bg-white/5 border-white/10 text-2xl font-black focus:border-primary transition-all text-white"
                 autoFocus
               />

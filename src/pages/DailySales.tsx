@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -23,6 +23,20 @@ const DailySales = () => {
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'last30'>('today');
   const [activeTab, setActiveTab] = useState<'sales' | 'pending'>('sales');
   const { pendingTransfers, resolvePendingTransfer } = useAppContext();
+
+  useEffect(() => {
+    const todayStr = toISODate();
+    console.log('DailySales: Today is', todayStr);
+    console.log('DailySales: Total sales in context:', sales.length);
+    if (sales.length > 0) {
+      console.log('DailySales: Sample sales dates:', sales.slice(0, 5).map(s => ({ 
+        id: s.id, 
+        rawDate: s.date, 
+        extracted: extractDateOnly(s.date),
+        matchToday: extractDateOnly(s.date) === todayStr
+      })));
+    }
+  }, [sales]);
 
   const filterSalesByDate = (salesList: Sale[]) => {
     const todayStr = toISODate();

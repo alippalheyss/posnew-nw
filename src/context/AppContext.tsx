@@ -1002,14 +1002,18 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const updateVendor = async (vendor: Vendor) => {
     try {
+      // Remove metadata fields that shouldn't be in the update payload
+      const { id, created_at, ...updateData } = vendor as any;
+      
       const { error } = await supabase
         .from('vendors')
-        .update(vendor)
+        .update(updateData)
         .eq('id', vendor.id);
 
       if (error) throw error;
 
       setVendors(prev => prev.map(v => v.id === vendor.id ? vendor : v));
+      console.log('Vendor updated successfully');
     } catch (error) {
       console.error('Error updating vendor:', error);
       showError('Failed to update vendor');

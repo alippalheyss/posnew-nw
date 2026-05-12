@@ -4,6 +4,8 @@ import React, { createContext, useState, useContext, ReactNode, useEffect } from
 import { showError, showSuccess } from '@/utils/toast';
 import { supabase } from '@/lib/supabase';
 
+import { toISODatetime, extractDateOnly } from '@/utils/formatters';
+
 export interface Product {
   id: string;
   name_dv: string;
@@ -331,11 +333,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         if (salesData) {
           console.log(`Successfully fetched ${salesData.length} sales from Supabase`);
           const linkedSales = salesData.map(s => {
-            // Robustly extract YYYY-MM-DD from any date format
-            let saleDate = s.date;
-            if (typeof saleDate === 'string' && saleDate.includes(' ')) {
-              saleDate = saleDate.split(' ')[0]; // Take YYYY-MM-DD part
-            }
+            const saleDate = extractDateOnly(s.date);
             
             // Handle potentially stringified JSON fields
             let items = s.items;

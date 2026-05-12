@@ -370,7 +370,19 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         setSales(linkedSales);
       }
       if (vendorsData) setVendors(vendorsData);
-      if (purchasesData) setPurchases(purchasesData);
+      if (purchasesData) {
+        const mappedPurchases = purchasesData.map(p => ({
+          id: p.id,
+          date: p.date,
+          vendorId: p.vendor_id,
+          vendorName: p.vendor_name,
+          billNumber: p.bill_number,
+          amount: Number(p.amount || 0),
+          gstAmount: Number(p.gst_amount || 0),
+          items: p.items || []
+        }));
+        setPurchases(mappedPurchases);
+      }
     } catch (error) {
       console.error('Error fetching data from Supabase:', error);
       // Don't show error toast on background refresh
@@ -968,7 +980,16 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     try {
       const { error } = await supabase
         .from('purchases')
-        .insert(purchase);
+        .insert([{
+          id: purchase.id,
+          date: purchase.date,
+          vendor_id: purchase.vendorId,
+          vendor_name: purchase.vendorName,
+          bill_number: purchase.billNumber,
+          amount: purchase.amount,
+          gst_amount: purchase.gstAmount,
+          items: purchase.items
+        }]);
 
       if (error) throw error;
 

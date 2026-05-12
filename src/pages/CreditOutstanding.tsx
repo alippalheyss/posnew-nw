@@ -72,7 +72,8 @@ const CreditOutstanding = () => {
 
   const selectedCustomerCreditSales = sales.filter(s =>
     (s.customer?.id === selectedCustomerForAction?.id && s.paymentMethod?.toLowerCase() === 'credit') ||
-    (s.paymentMethod?.toLowerCase() === 'split' && s.splitDetails?.some((d: any) => d.method?.toLowerCase() === 'credit' && d.customerId === selectedCustomerForAction?.id))
+    ((s.paymentMethod?.toLowerCase() === 'split' || s.paymentMethod?.toLowerCase() === 'credit') && 
+     s.splitDetails?.some((d: any) => d.method?.toLowerCase() === 'credit' && d.customerId === selectedCustomerForAction?.id))
   );
 
   const handleSettlePaymentClick = (customer: Customer) => {

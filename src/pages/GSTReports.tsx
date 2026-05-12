@@ -277,7 +277,7 @@ const GSTReports = () => {
                                         <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Bill #</TableHead>
                                         <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Vendor</TableHead>
                                         <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Amount (Excl.)</TableHead>
-                                        <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">GST (6%)</TableHead>
+                                        <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">GST ({settings.shop.taxRate}%)</TableHead>
                                         <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Total</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -370,7 +370,7 @@ const GSTReports = () => {
                             </div>
                             {newPurchase.totalAmount && (
                                 <div className="flex justify-between items-center px-2 py-1">
-                                    <span className="text-[10px] font-black text-orange-500 uppercase">GST (6%): {settings.shop.currency} {calculateGstFromTotal(parseFloat(newPurchase.totalAmount)).gstAmount.toFixed(2)}</span>
+                                    <span className="text-[10px] font-black text-orange-500 uppercase">GST ({settings.shop.taxRate}%): {settings.shop.currency} {calculateGstFromTotal(parseFloat(newPurchase.totalAmount)).gstAmount.toFixed(2)}</span>
                                     <p className="text-[9px] text-white/20 italic">GST will be automatically calculated from this total</p>
                                 </div>
                             )}

@@ -52,6 +52,17 @@ export const formatDate = (date: string | Date): string => {
 
 export const formatTime = (date: string | Date): string => {
   if (!date) return '';
+  
+  // If it's a string with a space (YYYY-MM-DD HH:mm:ss), take the time part directly
+  if (typeof date === 'string' && date.includes(' ')) {
+    const timePart = date.split(' ')[1];
+    if (timePart && timePart.includes(':')) {
+      const parts = timePart.split(':');
+      // Return HH:mm if seconds are not needed, or HH:mm:ss
+      return `${parts[0]}:${parts[1]}${parts[2] ? ':' + parts[2] : ''}`;
+    }
+  }
+
   const d = new Date(date);
   if (isNaN(d.getTime())) return '';
   
@@ -65,6 +76,12 @@ export const formatTime = (date: string | Date): string => {
 
 export const formatDateTime = (date: string | Date): string => {
   if (!date) return '';
+  // If it's our standard YYYY-MM-DD HH:mm:ss string
+  if (typeof date === 'string' && date.includes(' ')) {
+    const [datePart, timePart] = date.split(' ');
+    const [y, m, d] = datePart.split('-');
+    return `${d}-${m}-${y} ${timePart}`;
+  }
   return `${formatDate(date)} ${formatTime(date)}`;
 };
 

@@ -117,7 +117,7 @@ const DailySales = () => {
           <div class="info">
             ${settings.shop.shopAddress}<br/>
             Tel: ${settings.shop.shopPhone}<br/>
-            ${formatDate(sale.date)} ${sale.created_at ? formatTime(sale.created_at) : ''} | ${sale.id}
+            ${formatDate(sale.date)} ${formatTime(sale.date)} | ${sale.id}
           </div>
           <div class="separator"></div>
           ${itemsHtml}
@@ -283,7 +283,7 @@ const DailySales = () => {
                               </Badge>
                            </div>
                            <div className="flex items-center justify-end gap-2 text-xs font-bold text-white/40">
-                              <span>{new Date(sale.date).toLocaleString()}</span>
+                              <span>{formatDateTime(sale.date)}</span>
                               <span className="h-1 w-1 rounded-full bg-white/10" />
                               <span>{sale.items.length} ITEMS</span>
                            </div>
@@ -345,7 +345,7 @@ const DailySales = () => {
                         </div>
                         <div className="text-right">
                            <p className="text-lg font-black text-white">{transfer.customer?.name_dv || transfer.tempCustomerName || 'Guest'}</p>
-                           <p className="text-xs font-bold text-white/40">{new Date(transfer.date).toLocaleString()}</p>
+                           <p className="text-xs font-bold text-white/40">{formatDateTime(transfer.date)}</p>
                         </div>
                      </div>
 

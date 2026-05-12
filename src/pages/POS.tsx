@@ -538,7 +538,7 @@ const POS = () => {
           ${logoHtml}
           <div style="font-weight: bold;">${settings.shop.shopName}</div>
           <div>${settings.shop.shopAddress}</div>
-          <div style="font-size: 10px;">Tel: ${settings.shop.shopPhone}<br/>${formatDate(sale.date)} ${formatTime(new Date(sale.date))} | ${sale.id}</div>
+          <div style="font-size: 10px;">Tel: ${settings.shop.shopPhone}<br/>${formatDate(sale.date)} ${formatTime(sale.date)} | ${sale.id}</div>
           <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
           ${itemsHtml}
           <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
@@ -1197,7 +1197,7 @@ const POS = () => {
                               <SelectValue placeholder="Choose customer..." />
                             </SelectTrigger>
                             <SelectContent className="bg-[#0a0a1a] border-white/10 text-white max-h-[200px]">
-                              {customers.map(c => (
+                              {customers.filter(c => (c.credit_limit || 0) > 0).map(c => (
                                 <SelectItem key={c.id} value={c.id}>{c.name_dv} ({c.name_en})</SelectItem>
                               ))}
                             </SelectContent>
@@ -1383,7 +1383,7 @@ const POS = () => {
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-black text-white">{transfer.customer?.name_dv || transfer.tempCustomerName || 'Guest'}</p>
-                        <p className="text-[10px] font-bold text-white/40">{formatDate(transfer.date)} {formatTime(new Date(transfer.date))}</p>
+                        <p className="text-[10px] font-bold text-white/40">{formatDateTime(transfer.date)}</p>
                       </div>
                     </div>
                     <div className="text-right">

@@ -46,7 +46,9 @@ const GSTReports = () => {
 
     const filterByRange = (dateStr: string) => {
         if (!dateStr) return false;
-        const date = new Date(dateStr);
+        // Extract YYYY-MM-DD from full timestamp if needed
+        const pureDateStr = dateStr.split(' ')[0];
+        const date = new Date(pureDateStr);
         const now = new Date();
         
         // Use local date parts for comparison to avoid timezone shifts

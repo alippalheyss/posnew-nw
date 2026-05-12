@@ -36,7 +36,8 @@ const DailySales = () => {
 
     return salesList.filter(sale => {
       if (!sale.date) return false;
-      const saleDateStr = typeof sale.date === 'string' ? sale.date : toISODate(new Date(sale.date));
+      // Extract YYYY-MM-DD from full timestamp if needed
+      const saleDateStr = (typeof sale.date === 'string' ? sale.date : toISODate(new Date(sale.date))).split(' ')[0];
       
       if (dateFilter === 'today') return saleDateStr === todayStr;
       if (dateFilter === 'yesterday') return saleDateStr === yesterdayStr;

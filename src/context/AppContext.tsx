@@ -330,14 +330,24 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         }
         if (salesData) {
           console.log(`Successfully fetched ${salesData.length} sales from Supabase`);
-          const linkedSales = salesData.map(s => ({
-            ...s,
-            customer: customersData?.find(c => c.id === s.customer_id) || null,
-            grandTotal: Number(s.grand_total),
-            paymentMethod: String(s.payment_method),
-            paidAmount: Number(s.paid_amount || 0),
-            splitDetails: s.split_details
-          }));
+          const linkedSales = salesData.map(s => {
+            // Robustly extract YYYY-MM-DD from any date format
+            let saleDate = s.date;
+            if (typeof saleDate === 'string' && saleDate.includes(' ')) {
+              saleDate = saleDate.split(' ')[0]; // Take YYYY-MM-DD part
+            }
+            
+            return {
+              ...s,
+              date: s.date, // Keep full date in state
+              customer: customersData?.find(c => c.id === s.customer_id) || null,
+              grandTotal: Number(s.grand_total || 0),
+              paymentMethod: String(s.payment_method || 'cash').toLowerCase(),
+              paidAmount: Number(s.paid_amount || 0),
+              balance: Number(s.balance || 0),
+              splitDetails: s.split_details
+            };
+          });
           setSales(linkedSales);
         }
         if (vendorsData) setVendors(vendorsData);
@@ -595,13 +605,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         .from('sales')
         .insert([{
           id: sale.id,
-          date: sale.date || toISODate(),
+          date: toISODatetime(), // Use full timestamp for sorting and accuracy
           customer_id: sale.customer?.id || null,
           items: sale.items,
           grand_total: Number(sale.grandTotal),
-          payment_method: String(sale.paymentMethod),
-          paid_amount: Number(sale.paidAmount || 0),
-          balance: Number(sale.balance || 0),
+          payment_method: String(sale.paymentMethod).toLowerCase(),
+          paid_amount: sale.paidAmount !== undefined ? Number(sale.paidAmount) : null,
+          balance: sale.balance !== undefined ? Number(sale.balance) : null,
           split_details: sale.splitDetails || null
         }]);
 

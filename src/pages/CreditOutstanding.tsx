@@ -123,7 +123,7 @@ const CreditOutstanding = () => {
 
 
   const handleDownloadCreditReport = (customer: Customer) => {
-    const customerSales = sales.filter(s => s.customer?.id === customer.id && s.paymentMethod === 'credit');
+    const customerSales = sales.filter(s => s.customer?.id === customer.id && s.paymentMethod?.toLowerCase() === 'credit');
     if (customerSales.length === 0) {
       showError(t('no_credit_purchases'));
       return;

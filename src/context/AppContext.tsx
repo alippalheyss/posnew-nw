@@ -611,18 +611,18 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       }
 
       setSales(prev => [sale, ...prev]);
-      console.log('Sale added successfully to both DB and local state');
+      console.log('Sale added successfully to local state');
 
-      // Update stock levels
-      for (const item of sale.items) {
+      // Update stock levels asynchronously without blocking the UI
+      Promise.all(sale.items.map(async (item) => {
         const product = products.find(p => p.id === item.id);
         if (product) {
           await updateStock(product.id, product.stock_shop - item.qty);
         }
-      }
+      })).catch(err => console.error('Error updating stock after sale:', err));
       
-      // Full refresh to ensure everything is in sync
-      await fetchData();
+      // Do NOT await fetchData() here as it slows down the sale process significantly
+      fetchData(); // Run in background
     } catch (error) {
       console.error('Error adding sale:', error);
       showError('Failed to save sale to database');
@@ -857,14 +857,28 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         units: updatedProduct.units || null
       };
 
-      const { error } = await supabase
+      if (!supabase) {
+        showError('Supabase is not initialized');
+        return;
+      }
+
+      const { data, error, count } = await supabase
         .from('products')
         .update(cleanData)
-        .eq('id', updatedProduct.id);
+        .eq('id', updatedProduct.id)
+        .select();
+
+      console.log('Update result:', { error, count, data });
 
       if (error) {
-        console.error('Supabase product update error:', error);
+        console.error('Supabase product update error details:', error);
+        showError(`DB Error: ${error.message}`);
         throw error;
+      }
+
+      if (!data || data.length === 0) {
+        console.warn('No rows updated. Product ID might not exist in DB.');
+        showError('Product not found in database');
       }
 
       setProducts(prev => prev.map(p =>

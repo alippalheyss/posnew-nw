@@ -87,9 +87,10 @@ const POS = () => {
   const [isUnitSelectionDialogOpen, setIsUnitSelectionDialogOpen] = useState(false);
   const [productForUnitSelection, setProductForUnitSelection] = useState<Product | null>(null);
   
-  const [splitEntries, setSplitEntries] = useState<Array<{ id: string, amount: number, method: 'Cash' | 'Card' | 'Transfer' | 'Credit', customerId?: string }>>([
-    { id: '1', amount: 0, method: 'Cash' }
-  ]);
+  const [splitStep, setSplitStep] = useState<1 | 2>(1);
+  const [selectedSplitCustomerIds, setSelectedSplitCustomerIds] = useState<string[]>([]);
+  const [splitSearchTerm, setSplitSearchTerm] = useState('');
+  const [splitEntries, setSplitEntries] = useState<Array<{ id: string, amount: number, method: 'Cash' | 'Card' | 'Transfer' | 'Credit', customerId?: string }>>([]);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -552,8 +553,41 @@ const POS = () => {
     printContent(htmlContent, settings);
   };
 
+  const toggleSplitCustomer = (id: string) => {
+    setSelectedSplitCustomerIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const moveToAllocation = () => {
+    if (selectedSplitCustomerIds.length === 0) {
+      showError('Please select at least one customer');
+      return;
+    }
+    const equalAmount = grandTotal / selectedSplitCustomerIds.length;
+    const newEntries = selectedSplitCustomerIds.map(id => ({
+      id: crypto.randomUUID(),
+      amount: Number(equalAmount.toFixed(2)),
+      method: 'Credit' as const,
+      customerId: id
+    }));
+    
+    // Adjust last entry for precision
+    const sum = newEntries.reduce((s, e) => s + e.amount, 0);
+    if (Math.abs(sum - grandTotal) > 0.001) {
+      newEntries[newEntries.length - 1].amount += (grandTotal - sum);
+    }
+    
+    setSplitEntries(newEntries);
+    setSplitStep(2);
+  };
+
+  const backToSelection = () => {
+    setSplitStep(1);
+  };
+
   const addSplitEntry = () => {
-    setSplitEntries([...splitEntries, { id: Date.now().toString(), amount: 0, method: 'Cash' }]);
+    setSplitEntries([...splitEntries, { id: crypto.randomUUID(), amount: 0, method: 'Cash' }]);
   };
 
   const removeSplitEntry = (id: string) => {
@@ -1122,142 +1156,177 @@ const POS = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isSplitDialogOpen} onOpenChange={setIsSplitDialogOpen}>
-        <DialogContent className="sm:max-w-[550px] font-faruma glass-dark text-white border-white/10 max-h-[90vh] flex flex-col p-0 overflow-hidden" dir="rtl">
-          <DialogHeader className="p-6 pb-2 text-right">
-            <DialogTitle className="text-xl flex items-center justify-end gap-2 text-white font-black">
-              <Users className="h-5 w-5 text-primary" /> {renderBoth('split_bill')}
+      <Dialog open={isSplitDialogOpen} onOpenChange={(open) => {
+        setIsSplitDialogOpen(open);
+        if (!open) {
+          setSplitStep(1);
+          setSelectedSplitCustomerIds([]);
+          setSplitSearchTerm('');
+        }
+      }}>
+        <DialogContent className="sm:max-w-[500px] font-faruma glass-dark text-white border-white/10 p-0 overflow-hidden" dir="rtl">
+          <DialogHeader className="p-6 pb-2">
+            <DialogTitle className="text-right text-2xl font-black flex items-center justify-end gap-3">
+              (Split Bill) {t('split_bill')} <Users className="h-6 w-6 text-primary" />
             </DialogTitle>
-            <DialogDescription className="text-right text-white/50">
-              {renderBoth('split_bill_description')}
+            <DialogDescription className="text-right text-white/40">
+              {splitStep === 1 ? t('select_customers_to_split') : t('allocate_amounts')}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="p-6 flex-1 overflow-hidden flex flex-col gap-6">
-            <div className="bg-primary/10 p-4 rounded-lg border border-primary/20">
-              <div className="flex justify-between items-center mb-2 border-b border-white/5 pb-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setIsAddCustomerDialogOpen(true)}
-                  className="text-[10px] h-6 px-2 text-green-500 hover:text-green-400 hover:bg-green-500/10 font-black"
-                >
-                  <UserPlus className="h-3 w-3 ml-1" /> {renderBoth('add_customer')}
-                </Button>
-                <span className="text-xs font-bold opacity-40 uppercase tracking-widest">Customer Actions</span>
+          {splitStep === 1 ? (
+            <div className="flex flex-col h-[600px]">
+              <div className="px-6 py-2">
+                <div className="relative">
+                  <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
+                  <Input 
+                    placeholder={renderBothString('search_customers')}
+                    value={splitSearchTerm}
+                    onChange={(e) => setSplitSearchTerm(e.target.value)}
+                    className="w-full bg-white/5 border-white/10 rounded-2xl pr-12 h-14 text-right font-bold focus:border-primary/50 transition-all"
+                  />
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-black text-primary">{settings.shop.currency} {grandTotal.toFixed(2)}</span>
-                <span className="text-sm font-bold opacity-60 uppercase tracking-wider">{renderBoth('total_to_split')}</span>
-              </div>
-            </div>
 
-            <ScrollArea className="flex-1 pr-4">
-              <div className="space-y-4">
-                {splitEntries.map((entry, idx) => (
-                  <div key={entry.id} className="p-4 border rounded-lg bg-white/5 border-white/5 flex flex-col gap-3">
-                    <div className="flex justify-between items-center">
-                      <Button variant="ghost" size="sm" onClick={() => removeSplitEntry(entry.id)} className="h-6 w-6 p-0 text-red-500">
-                        <XCircle className="h-4 w-4" />
-                      </Button>
-                      <span className="font-black text-sm">{renderBoth('person')} {idx + 1}</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex flex-col gap-1">
-                        <Label className="text-[10px] uppercase opacity-50 text-right">{renderBoth('amount')}</Label>
-                        <Input
-                          type="number"
-                          value={entry.amount}
-                          onChange={(e) => updateSplitAmount(entry.id, parseFloat(e.target.value) || 0)}
-                          className="text-right h-10 font-bold bg-white/5 border-white/10 text-white"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <Label className="text-[10px] uppercase opacity-50 text-right">{renderBoth('payment_method')}</Label>
-                        <Select value={entry.method} onValueChange={(val: any) => updateSplitMethod(entry.id, val)}>
-                          <SelectTrigger className="h-10 text-right font-bold bg-white/5 border-white/10 text-white">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
-                            <SelectItem value="Cash">{renderBothString('cash')}</SelectItem>
-                            <SelectItem value="Card">{renderBothString('card')}</SelectItem>
-                            <SelectItem value="Transfer">{renderBothString('transfer')}</SelectItem>
-                            <SelectItem value="Credit">{renderBothString('credit')}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {entry.method === 'Credit' && (
-                        <div className="flex flex-col gap-1 mt-2">
-                          <Label className="text-[10px] uppercase opacity-50 text-right">{renderBoth('select_customer')}</Label>
-                          <Select 
-                            value={entry.customerId} 
-                            onValueChange={(val) => updateSplitCustomer(entry.id, val)}
-                          >
-                            <SelectTrigger className="h-10 text-right font-bold bg-white/5 border-white/10 text-white">
-                              <SelectValue placeholder="Choose customer..." />
-                            </SelectTrigger>
-                            <SelectContent className="bg-[#0a0a1a] border-white/10 text-white max-h-[200px]">
-                              {customers.filter(c => (c.credit_limit || 0) > 0).map(c => (
-                                <SelectItem key={c.id} value={c.id}>{c.name_dv} ({c.name_en})</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+              <ScrollArea className="flex-1 px-6 py-4">
+                <div className="space-y-3">
+                  {customers
+                    .filter(c => (c.credit_limit || 0) > 0)
+                    .filter(c => 
+                      c.name_dv.includes(splitSearchTerm) || 
+                      c.name_en.toLowerCase().includes(splitSearchTerm.toLowerCase()) ||
+                      c.code.includes(splitSearchTerm)
+                    )
+                    .map(customer => {
+                      const isSelected = selectedSplitCustomerIds.includes(customer.id);
+                      return (
+                        <div 
+                          key={customer.id}
+                          onClick={() => toggleSplitCustomer(customer.id)}
+                          className={cn(
+                            "p-4 rounded-[2rem] border transition-all cursor-pointer flex items-center justify-between gap-4",
+                            isSelected 
+                              ? "bg-primary border-primary shadow-lg shadow-primary/20 scale-[0.98]" 
+                              : "bg-white/5 border-white/5 hover:border-white/10"
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
+                              isSelected ? "bg-white border-white text-primary" : "border-white/20"
+                            )}>
+                              {isSelected && <Plus className="h-4 w-4 rotate-45" />}
+                            </div>
+                          </div>
+                          
+                          <div className="flex-1 text-right">
+                            <div className="flex items-center justify-end gap-2 mb-0.5">
+                              <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest">{customer.code}</span>
+                              <span className="text-[10px] font-bold opacity-40">•</span>
+                              <span className="text-sm font-black text-white">{customer.name_en}</span>
+                            </div>
+                            <h4 className="text-lg font-black text-white leading-tight">{customer.name_dv}</h4>
+                            <Badge variant="outline" className="mt-2 bg-black/20 border-white/10 text-[9px] font-black py-0 px-2 h-5">
+                              {settings.shop.currency} {customer.outstanding_balance.toFixed(2)}
+                            </Badge>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
+                      );
+                    })}
+                </div>
+              </ScrollArea>
 
-            <div className="pt-4 border-t border-white/5 flex flex-col gap-4">
-              <div className="flex justify-between items-center px-2">
-                <span className={cn(
-                  "text-lg font-black",
-                  Math.abs(splitRemaining) < 0.01 ? "text-green-500" : "text-red-500"
-                )}>
-                  {settings.shop.currency} {Math.abs(splitRemaining).toFixed(2)}
-                  {splitRemaining < -0.01 && <span className="text-[10px] ml-1 uppercase">(Extra)</span>}
-                </span>
-                <span className="text-sm font-bold opacity-60 uppercase tracking-wider">{renderBoth('remaining_amount')}</span>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3">
-                <Button 
-                  variant="outline" 
-                  onClick={addSplitEntry} 
-                  className="border-dashed border-2 py-6 border-white/10 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-white/50"
-                >
-                  <PlusCircle className="h-4 w-4" /> {renderBoth('add_person')}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    const newId = Date.now().toString();
-                    setSplitEntries([...splitEntries, { id: newId, amount: splitRemaining > 0 ? splitRemaining : 0, method: 'Credit' }]);
-                  }} 
-                  className="border-dashed border-2 py-6 border-blue-500/10 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-500/5 transition-all flex items-center justify-center gap-2 text-white/50"
-                >
-                  <Users className="h-4 w-4" /> {renderBoth('add_credit_customer')}
-                </Button>
+              <div className="p-6 bg-white/5 border-t border-white/10">
+                <div className="flex justify-between items-center mb-4">
+                   <div className="text-right">
+                      <p className="text-[10px] font-black text-white/30 uppercase tracking-widest leading-none mb-1">TOTAL TO SPLIT</p>
+                      <p className="text-2xl font-black text-primary">{settings.shop.currency} {grandTotal.toFixed(2)}</p>
+                   </div>
+                   <div className="text-left">
+                      <p className="text-[10px] font-black text-white/30 uppercase tracking-widest leading-none mb-1">SELECTED</p>
+                      <p className="text-2xl font-black text-white">{selectedSplitCustomerIds.length}</p>
+                   </div>
+                </div>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setIsSplitDialogOpen(false)} className="flex-1 border-white/10 h-14 rounded-2xl font-black text-white hover:bg-white/5 uppercase tracking-widest text-xs">
+                    {t('cancel')}
+                  </Button>
+                  <Button 
+                    onClick={moveToAllocation} 
+                    disabled={selectedSplitCustomerIds.length === 0}
+                    className="flex-1 btn-gradient-blue h-14 rounded-2xl font-black text-white shadow-xl shadow-blue-500/20 uppercase tracking-widest text-xs"
+                  >
+                    {t('next')}
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex flex-col h-[600px]">
+              <ScrollArea className="flex-1 px-6 py-6">
+                <div className="space-y-4">
+                  {splitEntries.map((entry) => {
+                    const customer = customers.find(c => c.id === entry.customerId);
+                    return (
+                      <div key={entry.id} className="p-5 rounded-3xl bg-white/5 border border-white/5 flex items-center justify-between gap-4 group hover:bg-white/10 transition-all">
+                        <div className="flex items-center gap-4">
+                           <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-white/20 uppercase">{settings.shop.currency}</span>
+                              <Input
+                                type="number"
+                                value={entry.amount}
+                                onChange={(e) => updateSplitAmount(entry.id, parseFloat(e.target.value) || 0)}
+                                onFocus={handleFocus}
+                                className="w-32 h-14 bg-black/40 border-white/10 rounded-2xl pl-10 text-right text-xl font-black focus:border-primary transition-all text-white"
+                              />
+                           </div>
+                        </div>
+                        
+                        <div className="flex-1 text-right">
+                           <h4 className="text-lg font-black text-white mb-0.5">{customer?.name_dv}</h4>
+                           <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">{customer?.name_en}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
 
-          <DialogFooter className="p-6 pt-2 border-t border-white/5 flex justify-between gap-3">
-            <Button variant="outline" onClick={() => setIsSplitDialogOpen(false)} className="flex-1 border-white/10 hover:bg-white/5 text-white">
-              {renderBoth('cancel')}
-            </Button>
-            <Button 
-              onClick={processSplitPayment} 
-              disabled={Math.abs(splitRemaining) > 0.01 || splitEntries.length === 0}
-              className="flex-1 btn-gradient-blue text-white"
-            >
-              {renderBoth('confirm_split_payment')}
-            </Button>
-          </DialogFooter>
+              <div className="p-6 bg-white/5 border-t border-white/10">
+                <div className="grid grid-cols-2 gap-6 mb-6">
+                   <div className="text-right">
+                      <p className="text-[10px] font-black text-white/30 uppercase tracking-widest leading-none mb-1">(TARGET TOTAL)</p>
+                      <p className="text-2xl font-black text-white">{settings.shop.currency} {grandTotal.toFixed(2)}</p>
+                   </div>
+                   <div className="text-left">
+                      <p className="text-[10px] font-black text-white/30 uppercase tracking-widest leading-none mb-1">(TOTAL ALLOCATED)</p>
+                      <p className={cn(
+                        "text-2xl font-black transition-all",
+                        Math.abs(splitRemaining) < 0.01 ? "text-green-500" : "text-red-500"
+                      )}>
+                        {settings.shop.currency} {splitTotal.toFixed(2)}
+                      </p>
+                   </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button variant="ghost" onClick={backToSelection} className="h-14 w-14 rounded-2xl border border-white/10 text-white hover:bg-white/5">
+                    <ArrowLeft className="h-5 w-5" />
+                  </Button>
+                  <Button 
+                    onClick={processSplitPayment} 
+                    disabled={Math.abs(splitRemaining) > 0.01 || splitEntries.length === 0}
+                    className="flex-1 btn-gradient-blue h-14 rounded-2xl font-black text-white shadow-xl shadow-blue-500/20 uppercase tracking-widest text-xs"
+                  >
+                    (Confirm Split Payment) {t('confirm_split_payment')}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
+
       <Dialog open={isAwaitingTransferDialogOpen} onOpenChange={setIsAwaitingTransferDialogOpen}>
         <DialogContent className="sm:max-w-[400px] font-faruma bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
           <DialogHeader>

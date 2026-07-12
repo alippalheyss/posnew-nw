@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ShoppingCart, PlusCircle, Minus, Trash2, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, ArrowLeft, Plus } from 'lucide-react';
-import { formatDate, toISODate, toISODatetime, formatTime, formatDateTime } from '@/utils/formatters';
+import { formatDate, toISODate } from '@/utils/formatters';
+import { formatDate, toISODate, formatTime } from '@/utils/formatters';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -76,7 +77,7 @@ const POS = () => {
   const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
     event.target.select();
   };
-  
+
   const [pointsToRedeem, setPointsToRedeem] = useState<number>(0);
   const [isLoyaltyRedemptionDialogOpen, setIsLoyaltyRedemptionDialogOpen] = useState(false);
   const [creditDialogStep, setCreditDialogStep] = useState<1 | 2>(1);
@@ -85,7 +86,7 @@ const POS = () => {
   const [selectedProductForExpiry, setSelectedProductForExpiry] = useState<Product | null>(null);
   const [isUnitSelectionDialogOpen, setIsUnitSelectionDialogOpen] = useState(false);
   const [productForUnitSelection, setProductForUnitSelection] = useState<Product | null>(null);
-  
+
   const [splitStep, setSplitStep] = useState<1 | 2>(1);
   const [selectedSplitCustomerIds, setSelectedSplitCustomerIds] = useState<string[]>([]);
   const [splitSearchTerm, setSplitSearchTerm] = useState('');
@@ -363,16 +364,16 @@ const POS = () => {
   const balance = typeof paidAmount === 'number' ? paidAmount - grandTotal : -grandTotal;
 
   const displayProducts = products.filter(product => {
-    const matchesSearch = !searchTerm || 
+    const matchesSearch = !searchTerm ||
       product.name_dv.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.barcode.includes(searchTerm) ||
       product.item_code.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
     const matchesCategory = selectedCategory === 'ALL' || product.category === selectedCategory;
-    
+
     return matchesSearch && matchesCategory;
-  }).slice(0, 50); 
+  }).slice(0, 50);
 
   const processCashPayment = async () => {
     if (!activeCart || activeCart.items.length === 0) {
@@ -394,7 +395,7 @@ const POS = () => {
 
     const newSale = {
       id: crypto.randomUUID(),
-      date: toISODatetime(),
+      date: toISODate(),
       customer: activeCart.customer,
       items: activeCart.items,
       grandTotal: grandTotal,
@@ -444,7 +445,7 @@ const POS = () => {
 
     const newSale = {
       id: crypto.randomUUID(),
-      date: toISODatetime(),
+      date: toISODate(),
       customer: activeCart.customer!,
       items: activeCart.items,
       grandTotal: grandTotal,
@@ -483,9 +484,9 @@ const POS = () => {
 
   const processTransferPayment = () => {
     if (!activeCart || activeCart.items.length === 0) return;
-    
+
     addPendingTransfer({
-      date: toISODatetime(),
+      date: toISODate(),
       customer: activeCart.customer,
       tempCustomerName: !activeCart.customer ? customerSearchTerm : null,
       items: activeCart.items,
@@ -553,7 +554,7 @@ const POS = () => {
   };
 
   const toggleSplitCustomer = (id: string) => {
-    setSelectedSplitCustomerIds(prev => 
+    setSelectedSplitCustomerIds(prev =>
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
@@ -570,13 +571,13 @@ const POS = () => {
       method: 'Credit' as const,
       customerId: id
     }));
-    
+
     // Adjust last entry for precision
     const sum = newEntries.reduce((s, e) => s + e.amount, 0);
     if (Math.abs(sum - grandTotal) > 0.001) {
       newEntries[newEntries.length - 1].amount += (grandTotal - sum);
     }
-    
+
     setSplitEntries(newEntries);
     setSplitStep(2);
   };
@@ -607,7 +608,6 @@ const POS = () => {
 
   const splitTotal = splitEntries.reduce((sum, e) => sum + e.amount, 0);
   const splitRemaining = grandTotal - splitTotal;
-
   const processSplitPayment = async () => {
     if (Math.abs(splitRemaining) > 0.01) {
       showError(t('total_mismatch_error'));
@@ -616,7 +616,7 @@ const POS = () => {
 
     const newSale: Sale = {
       id: crypto.randomUUID(),
-      date: toISODatetime(),
+      date: toISODate(),
       customer: activeCart?.customer || null,
       items: activeCart?.items || [],
       grandTotal: grandTotal,
@@ -628,7 +628,7 @@ const POS = () => {
 
     try {
       await addSale(newSale);
-      
+
       for (const entry of splitEntries) {
         if (entry.method === 'Credit' && entry.customerId) {
           await updateCustomerBalance(entry.customerId, entry.amount);
@@ -663,104 +663,104 @@ const POS = () => {
       <div className="flex-1 flex flex-col min-w-0">
         <div className="h-20 px-8 flex items-center justify-between border-b border-white/5 bg-[#050510]/50 backdrop-blur-sm">
           <div className="flex items-center gap-3">
-             <div className="flex items-center gap-2">
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className="w-[180px] h-10 rounded-xl bg-white/5 border-white/10 text-[10px] font-black uppercase text-white">
-                    <SelectValue placeholder="Category" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#0a0a1a] border-white/10 text-white font-faruma">
-                    {['ALL', 'DRINKS', 'FOOD', 'HARDWARE', 'COSMETICS', 'OTHER'].map((cat) => (
-                      <SelectItem key={cat} value={cat} className="text-[10px] font-black uppercase hover:bg-primary/20">
-                        {cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-             </div>
-             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10">
-                <Heart className="h-4 w-4 text-white/40" />
-             </Button>
+            <div className="flex items-center gap-2">
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-[180px] h-10 rounded-xl bg-white/5 border-white/10 text-[10px] font-black uppercase text-white">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#0a0a1a] border-white/10 text-white font-faruma">
+                  {['ALL', 'DRINKS', 'FOOD', 'HARDWARE', 'COSMETICS', 'OTHER'].map((cat) => (
+                    <SelectItem key={cat} value={cat} className="text-[10px] font-black uppercase hover:bg-primary/20">
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10">
+              <Heart className="h-4 w-4 text-white/40" />
+            </Button>
           </div>
 
           <div className="flex-1 max-w-xl mx-8">
-             <div className="relative">
-                <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
-                <Input 
-                   ref={searchInputRef}
-                   placeholder="...Search by name, code or barcode"
-                   value={searchTerm}
-                   onChange={(e) => setSearchTerm(e.target.value)}
-                   className="w-full bg-white/5 border-white/10 rounded-xl px-10 text-right font-bold h-11 focus:border-primary/50 focus:ring-0 transition-all placeholder:text-white/10 text-white"
-                   dir="rtl"
-                />
-             </div>
+            <div className="relative">
+              <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
+              <Input
+                ref={searchInputRef}
+                placeholder="...Search by name, code or barcode"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-white/5 border-white/10 rounded-xl px-10 text-right font-bold h-11 focus:border-primary/50 focus:ring-0 transition-all placeholder:text-white/10 text-white"
+                dir="rtl"
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
-             <Button 
-               variant="ghost" 
-               size="icon" 
-               onClick={() => setIsPendingTransfersDialogOpen(true)}
-               className="relative h-11 w-11 rounded-xl bg-white/5 border border-white/10 hover:bg-yellow-500/20 hover:text-yellow-500 text-white/40"
-             >
-               <ArrowRightLeft className="h-5 w-5" />
-               {pendingTransfers.length > 0 && (
-                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 text-[#050510] rounded-full text-[10px] font-black flex items-center justify-center border-2 border-[#050510]">
-                   {pendingTransfers.length}
-                 </span>
-               )}
-             </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsPendingTransfersDialogOpen(true)}
+              className="relative h-11 w-11 rounded-xl bg-white/5 border border-white/10 hover:bg-yellow-500/20 hover:text-yellow-500 text-white/40"
+            >
+              <ArrowRightLeft className="h-5 w-5" />
+              {pendingTransfers.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 text-[#050510] rounded-full text-[10px] font-black flex items-center justify-center border-2 border-[#050510]">
+                  {pendingTransfers.length}
+                </span>
+              )}
+            </Button>
           </div>
         </div>
 
         <ScrollArea className="flex-1 p-4 custom-scrollbar">
-           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-              {displayProducts.map((product) => {
-                const isLowStock = product.stock_shop < LOW_STOCK_THRESHOLD;
-                const cardColors = [
-                  'bg-blue-600', 'bg-red-600', 'bg-purple-600', 'bg-orange-600', 'bg-pink-600', 'bg-indigo-600'
-                ];
-                const colorClass = cardColors[Math.abs(product.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % cardColors.length];
-                
-                return (
-                  <div 
-                    key={product.id}
-                    onClick={() => handleProductSelection(product)}
-                    className="group bg-[#0a0a1a] hover:bg-[#0f0f25] border border-white/5 rounded-xl p-2 transition-all cursor-pointer relative"
-                  >
-                    <div className={cn(
-                      "aspect-square rounded-lg mb-2 flex items-center justify-center overflow-hidden relative border border-white/5",
-                      product.image ? "bg-white" : colorClass
-                    )}>
-                       {product.image ? (
-                         <img src={product.image} alt={product.name_dv} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                       ) : (
-                         <div className="text-white font-black text-lg uppercase tracking-tighter text-center px-2 leading-tight drop-shadow-lg">
-                            {product.name_en}
-                         </div>
-                       )}
-                       {isLowStock && (
-                         <Badge className="absolute top-2 right-2 bg-red-500 text-white border-none text-[8px] font-black px-1.5 py-0 rounded-full shadow-lg uppercase tracking-widest">
-                           LOW
-                         </Badge>
-                       )}
-                    </div>
-                    
-                    <div className="text-center px-1">
-                       <h3 className="text-xs font-black text-white leading-tight truncate mb-0.5">{product.name_dv}</h3>
-                       <p className="text-[8px] font-bold text-white/30 truncate uppercase tracking-widest mb-2">{product.name_en}</p>
-                       
-                       <div className="flex items-center justify-center gap-1.5">
-                          <span className="text-[11px] font-black text-primary leading-none">{settings.shop.currency} {product.price.toFixed(2)}</span>
-                          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white scale-0 group-hover:scale-100 transition-transform shadow-[0_0_15px_rgba(0,132,255,0.5)]">
-                             <PlusCircle className="h-4 w-4" />
-                          </div>
-                       </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+            {displayProducts.map((product) => {
+              const isLowStock = product.stock_shop < LOW_STOCK_THRESHOLD;
+              const cardColors = [
+                'bg-blue-600', 'bg-red-600', 'bg-purple-600', 'bg-orange-600', 'bg-pink-600', 'bg-indigo-600'
+              ];
+              const colorClass = cardColors[Math.abs(product.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % cardColors.length];
+
+              return (
+                <div
+                  key={product.id}
+                  onClick={() => handleProductSelection(product)}
+                  className="group bg-[#0a0a1a] hover:bg-[#0f0f25] border border-white/5 rounded-xl p-2 transition-all cursor-pointer relative"
+                >
+                  <div className={cn(
+                    "aspect-square rounded-lg mb-2 flex items-center justify-center overflow-hidden relative border border-white/5",
+                    product.image ? "bg-white" : colorClass
+                  )}>
+                    {product.image ? (
+                      <img src={product.image} alt={product.name_dv} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                    ) : (
+                      <div className="text-white font-black text-lg uppercase tracking-tighter text-center px-2 leading-tight drop-shadow-lg">
+                        {product.name_en}
+                      </div>
+                    )}
+                    {isLowStock && (
+                      <Badge className="absolute top-2 right-2 bg-red-500 text-white border-none text-[8px] font-black px-1.5 py-0 rounded-full shadow-lg uppercase tracking-widest">
+                        LOW
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="text-center px-1">
+                    <h3 className="text-xs font-black text-white leading-tight truncate mb-0.5">{product.name_dv}</h3>
+                    <p className="text-[8px] font-bold text-white/30 truncate uppercase tracking-widest mb-2">{product.name_en}</p>
+
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="text-[11px] font-black text-primary leading-none">{settings.shop.currency} {product.price.toFixed(2)}</span>
+                      <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white scale-0 group-hover:scale-100 transition-transform shadow-[0_0_15px_rgba(0,132,255,0.5)]">
+                        <PlusCircle className="h-4 w-4" />
+                      </div>
                     </div>
                   </div>
-                );
-              })}
-           </div>
+                </div>
+              );
+            })}
+          </div>
         </ScrollArea>
       </div>
 
@@ -768,25 +768,25 @@ const POS = () => {
         <div className="p-6 pb-2">
           <div className="flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/10 mb-6">
             <div className="flex items-center gap-3 px-4 py-1.5 bg-primary/20 rounded-xl text-primary border border-primary/20">
-                <ShoppingCart className="h-4 w-4" />
-                <div className="flex flex-col items-start leading-none gap-0.5">
-                  <span className="text-[8px] font-black uppercase text-primary/60 tracking-tighter">(Cart)</span>
-                  <span className="text-[10px] font-black">{t('cart')}</span>
-                </div>
+              <ShoppingCart className="h-4 w-4" />
+              <div className="flex flex-col items-start leading-none gap-0.5">
+                <span className="text-[8px] font-black uppercase text-primary/60 tracking-tighter">(Cart)</span>
+                <span className="text-[10px] font-black">{t('cart')}</span>
+              </div>
             </div>
-            
+
             <div className="w-px h-8 bg-white/10 mx-1" />
-            
-            <Button 
+
+            <Button
               onClick={createNewCart}
               variant="ghost"
               className="h-10 px-4 text-white hover:bg-white/10 rounded-xl flex items-center gap-3 group transition-all"
             >
-                <PlusCircle className="h-5 w-5 text-white/40 group-hover:text-white transition-colors" />
-                <div className="flex flex-col items-end leading-none gap-0.5">
-                  <span className="text-[10px] font-black">{t('add_new_cart')}</span>
-                  <span className="text-[8px] font-black uppercase text-white/30 tracking-tighter">(Add New Cart)</span>
-                </div>
+              <PlusCircle className="h-5 w-5 text-white/40 group-hover:text-white transition-colors" />
+              <div className="flex flex-col items-end leading-none gap-0.5">
+                <span className="text-[10px] font-black">{t('add_new_cart')}</span>
+                <span className="text-[8px] font-black uppercase text-white/30 tracking-tighter">(Add New Cart)</span>
+              </div>
             </Button>
           </div>
           <div className="flex flex-wrap gap-2 mb-4">
@@ -798,8 +798,8 @@ const POS = () => {
                   onClick={() => switchCart(cart.id)}
                   className={cn(
                     "h-8 px-4 text-[10px] font-black rounded-full transition-all",
-                    activeCartId === cart.id 
-                      ? "bg-primary text-white shadow-[0_0_15px_rgba(0,132,255,0.3)]" 
+                    activeCartId === cart.id
+                      ? "bg-primary text-white shadow-[0_0_15px_rgba(0,132,255,0.3)]"
                       : "border-white/10 text-white/40 hover:text-white hover:border-white/20"
                   )}
                 >
@@ -834,9 +834,9 @@ const POS = () => {
                         {settings.shop.currency} {item.price.toFixed(2)}
                       </div>
                       <div className="flex items-center gap-1 bg-black/40 rounded-lg p-0.5 border border-white/5 h-10">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-8 w-8 text-white/40 hover:text-white"
                           onClick={() => updateCartItemQty(item.id, -1)}
                         ><Minus className="h-4 w-4" /></Button>
@@ -847,9 +847,9 @@ const POS = () => {
                           onFocus={handleFocus}
                           className="w-14 text-center text-[14px] font-black text-white bg-transparent border-none h-8 p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-8 w-8 text-white/40 hover:text-white"
                           onClick={() => updateCartItemQty(item.id, 1)}
                         ><Plus className="h-4 w-4" /></Button>
@@ -858,7 +858,7 @@ const POS = () => {
 
                     <div className="flex-1 text-right min-w-0">
                       <div className="flex justify-between items-start mb-1">
-                        <button 
+                        <button
                           onClick={() => removeFromCart(item.id)}
                           className="text-white/20 hover:text-red-500 transition-colors p-1"
                         >
@@ -899,19 +899,19 @@ const POS = () => {
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <Button 
+            <Button
               onClick={() => setIsSplitDialogOpen(true)}
               className="h-10 bg-[#2d5a5a] hover:bg-[#3d6a6a] text-white border border-white/5 text-[10px] font-black uppercase tracking-widest gap-2"
             >
               <Users className="h-4 w-4 text-primary" /> SPLIT BILL
             </Button>
-            <Button 
+            <Button
               onClick={clearActiveCart}
               className="h-10 bg-[#5a2d2d] hover:bg-[#6a3d3d] text-white border border-white/5 text-[10px] font-black uppercase tracking-widest gap-2"
             >
               <Trash2 className="h-4 w-4 text-red-500" /> CLEAR
             </Button>
-            <Button 
+            <Button
               onClick={() => {
                 setTransferAmount(grandTotal);
                 setIsAwaitingTransferDialogOpen(true);
@@ -920,7 +920,7 @@ const POS = () => {
             >
               <Receipt className="h-4 w-4 text-blue-400" /> AWAITING TRANSFER
             </Button>
-            <Button 
+            <Button
               onClick={() => { setCreditDialogStep(1); setIsCreditDialogOpen(true); }}
               className="h-10 bg-[#5a4d2d] hover:bg-[#6a5d3d] text-[#f39c12] border border-[#f39c12]/20 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-500/10"
             >
@@ -928,7 +928,7 @@ const POS = () => {
             </Button>
           </div>
 
-          <Button 
+          <Button
             onClick={() => setIsCashDialogOpen(true)}
             className="w-full h-14 btn-gradient-purple text-white text-lg font-black uppercase tracking-[0.2em] shadow-xl shadow-purple-500/30"
           >
@@ -937,7 +937,7 @@ const POS = () => {
         </div>
       </div>
 
-      <LoyaltyRedemptionDialog 
+      <LoyaltyRedemptionDialog
         isOpen={isLoyaltyRedemptionDialogOpen}
         onClose={() => setIsLoyaltyRedemptionDialogOpen(false)}
         availablePoints={activeCart?.customer?.loyalty_points || 0}
@@ -1006,15 +1006,15 @@ const POS = () => {
             {creditDialogStep === 1 ? (
               <>
                 <div className="flex gap-2 mb-4">
-                  <Input 
+                  <Input
                     placeholder={renderBothString('search_customers')}
                     value={customerSearchTerm}
                     onChange={(e) => setCustomerSearchTerm(e.target.value)}
                     className="flex-1 text-right bg-white/5 border-white/10 text-white"
                   />
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
+                  <Button
+                    variant="outline"
+                    size="icon"
                     onClick={() => setIsAddCustomerDialogOpen(true)}
                     className="h-10 w-10 border-white/10 bg-white/5 hover:bg-primary/20 text-primary"
                   >
@@ -1023,8 +1023,8 @@ const POS = () => {
                 </div>
                 <ScrollArea className="h-[300px] pr-4">
                   <div className="space-y-2">
-                    {customers.filter(c => 
-                      c.name_dv.includes(customerSearchTerm) || 
+                    {customers.filter(c =>
+                      c.name_dv.includes(customerSearchTerm) ||
                       c.name_en.toLowerCase().includes(customerSearchTerm.toLowerCase())
                     ).map((customer) => (
                       <div
@@ -1059,8 +1059,8 @@ const POS = () => {
             {creditDialogStep === 2 ? (
               <>
                 <Button variant="outline" onClick={() => setCreditDialogStep(1)} className="border-white/10 hover:bg-white/5 text-white">{renderBoth('change_customer')}</Button>
-                <Button 
-                  onClick={processCreditPayment} 
+                <Button
+                  onClick={processCreditPayment}
                   disabled={isProcessing}
                   className="flex-1 btn-gradient-blue text-white"
                 >
@@ -1095,7 +1095,7 @@ const POS = () => {
                 <AlertTriangle className="h-6 w-6" /> {renderBoth('item_near_expiry')}
               </DialogTitle>
               <DialogDescription className="text-white/50 mt-2 break-words text-sm leading-relaxed text-right">
-                {renderBoth('expiry_discount_message', { 
+                {renderBoth('expiry_discount_message', {
                   itemName: selectedProductForExpiry?.name_dv,
                   expiryDate: selectedProductForExpiry?.expiry_date ? new Date(selectedProductForExpiry.expiry_date).toLocaleDateString() : ''
                 })}
@@ -1108,7 +1108,7 @@ const POS = () => {
                   <p className="text-xs text-orange-400 font-bold uppercase tracking-wider">{renderBoth('discount_offer')}</p>
                   <p className="text-lg font-black text-orange-300">{expiryDiscountPercent}% {t('discount')}</p>
                 </div>
-                
+
                 <div className="grid grid-cols-3 gap-2">
                   {[20, 30, 50].map((pct) => (
                     <Button
@@ -1127,7 +1127,7 @@ const POS = () => {
 
                 <div className="flex items-center gap-3 mt-2">
                   <div className="relative w-full">
-                    <Input 
+                    <Input
                       type="number"
                       value={expiryDiscountPercent}
                       onChange={(e) => setExpiryDiscountPercent(parseFloat(e.target.value) || 0)}
@@ -1178,7 +1178,7 @@ const POS = () => {
               <div className="px-6 py-2">
                 <div className="relative">
                   <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
-                  <Input 
+                  <Input
                     placeholder={renderBothString('search_customers')}
                     value={splitSearchTerm}
                     onChange={(e) => setSplitSearchTerm(e.target.value)}
@@ -1191,21 +1191,21 @@ const POS = () => {
                 <div className="space-y-3">
                   {customers
                     .filter(c => (c.credit_limit || 0) > 0)
-                    .filter(c => 
-                      c.name_dv.includes(splitSearchTerm) || 
+                    .filter(c =>
+                      c.name_dv.includes(splitSearchTerm) ||
                       c.name_en.toLowerCase().includes(splitSearchTerm.toLowerCase()) ||
                       c.code.includes(splitSearchTerm)
                     )
                     .map(customer => {
                       const isSelected = selectedSplitCustomerIds.includes(customer.id);
                       return (
-                        <div 
+                        <div
                           key={customer.id}
                           onClick={() => toggleSplitCustomer(customer.id)}
                           className={cn(
                             "p-4 rounded-[2rem] border transition-all cursor-pointer flex items-center justify-between gap-4",
-                            isSelected 
-                              ? "bg-primary border-primary shadow-lg shadow-primary/20 scale-[0.98]" 
+                            isSelected
+                              ? "bg-primary border-primary shadow-lg shadow-primary/20 scale-[0.98]"
                               : "bg-white/5 border-white/5 hover:border-white/10"
                           )}
                         >
@@ -1217,7 +1217,7 @@ const POS = () => {
                               {isSelected && <Plus className="h-4 w-4 rotate-45" />}
                             </div>
                           </div>
-                          
+
                           <div className="flex-1 text-right">
                             <div className="flex items-center justify-end gap-2 mb-0.5">
                               <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest">{customer.code}</span>
@@ -1237,21 +1237,21 @@ const POS = () => {
 
               <div className="p-6 bg-white/5 border-t border-white/10">
                 <div className="flex justify-between items-center mb-4">
-                   <div className="text-right">
-                      <p className="text-[10px] font-black text-white/30 uppercase tracking-widest leading-none mb-1">TOTAL TO SPLIT</p>
-                      <p className="text-2xl font-black text-primary">{settings.shop.currency} {grandTotal.toFixed(2)}</p>
-                   </div>
-                   <div className="text-left">
-                      <p className="text-[10px] font-black text-white/30 uppercase tracking-widest leading-none mb-1">SELECTED</p>
-                      <p className="text-2xl font-black text-white">{selectedSplitCustomerIds.length}</p>
-                   </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-white/30 uppercase tracking-widest leading-none mb-1">TOTAL TO SPLIT</p>
+                    <p className="text-2xl font-black text-primary">{settings.shop.currency} {grandTotal.toFixed(2)}</p>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[10px] font-black text-white/30 uppercase tracking-widest leading-none mb-1">SELECTED</p>
+                    <p className="text-2xl font-black text-white">{selectedSplitCustomerIds.length}</p>
+                  </div>
                 </div>
                 <div className="flex gap-3">
                   <Button variant="outline" onClick={() => setIsSplitDialogOpen(false)} className="flex-1 border-white/10 h-14 rounded-2xl font-black text-white hover:bg-white/5 uppercase tracking-widest text-xs">
                     {t('cancel')}
                   </Button>
-                  <Button 
-                    onClick={moveToAllocation} 
+                  <Button
+                    onClick={moveToAllocation}
                     disabled={selectedSplitCustomerIds.length === 0}
                     className="flex-1 btn-gradient-blue h-14 rounded-2xl font-black text-white shadow-xl shadow-blue-500/20 uppercase tracking-widest text-xs"
                   >
@@ -1269,21 +1269,21 @@ const POS = () => {
                     return (
                       <div key={entry.id} className="p-5 rounded-3xl bg-white/5 border border-white/5 flex items-center justify-between gap-4 group hover:bg-white/10 transition-all">
                         <div className="flex items-center gap-4">
-                           <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-white/20 uppercase">{settings.shop.currency}</span>
-                              <Input
-                                type="number"
-                                value={entry.amount}
-                                onChange={(e) => updateSplitAmount(entry.id, parseFloat(e.target.value) || 0)}
-                                onFocus={handleFocus}
-                                className="w-32 h-14 bg-black/40 border-white/10 rounded-2xl pl-10 text-right text-xl font-black focus:border-primary transition-all text-white"
-                              />
-                           </div>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-white/20 uppercase">{settings.shop.currency}</span>
+                            <Input
+                              type="number"
+                              value={entry.amount}
+                              onChange={(e) => updateSplitAmount(entry.id, parseFloat(e.target.value) || 0)}
+                              onFocus={handleFocus}
+                              className="w-32 h-14 bg-black/40 border-white/10 rounded-2xl pl-10 text-right text-xl font-black focus:border-primary transition-all text-white"
+                            />
+                          </div>
                         </div>
-                        
+
                         <div className="flex-1 text-right">
-                           <h4 className="text-lg font-black text-white mb-0.5">{customer?.name_dv}</h4>
-                           <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">{customer?.name_en}</p>
+                          <h4 className="text-lg font-black text-white mb-0.5">{customer?.name_dv}</h4>
+                          <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">{customer?.name_en}</p>
                         </div>
                       </div>
                     );
@@ -1293,27 +1293,27 @@ const POS = () => {
 
               <div className="p-6 bg-white/5 border-t border-white/10">
                 <div className="grid grid-cols-2 gap-6 mb-6">
-                   <div className="text-right">
-                      <p className="text-[10px] font-black text-white/30 uppercase tracking-widest leading-none mb-1">(TARGET TOTAL)</p>
-                      <p className="text-2xl font-black text-white">{settings.shop.currency} {grandTotal.toFixed(2)}</p>
-                   </div>
-                   <div className="text-left">
-                      <p className="text-[10px] font-black text-white/30 uppercase tracking-widest leading-none mb-1">(TOTAL ALLOCATED)</p>
-                      <p className={cn(
-                        "text-2xl font-black transition-all",
-                        Math.abs(splitRemaining) < 0.01 ? "text-green-500" : "text-red-500"
-                      )}>
-                        {settings.shop.currency} {splitTotal.toFixed(2)}
-                      </p>
-                   </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-white/30 uppercase tracking-widest leading-none mb-1">(TARGET TOTAL)</p>
+                    <p className="text-2xl font-black text-white">{settings.shop.currency} {grandTotal.toFixed(2)}</p>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[10px] font-black text-white/30 uppercase tracking-widest leading-none mb-1">(TOTAL ALLOCATED)</p>
+                    <p className={cn(
+                      "text-2xl font-black transition-all",
+                      Math.abs(splitRemaining) < 0.01 ? "text-green-500" : "text-red-500"
+                    )}>
+                      {settings.shop.currency} {splitTotal.toFixed(2)}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex gap-3">
                   <Button variant="ghost" onClick={backToSelection} className="h-14 w-14 rounded-2xl border border-white/10 text-white hover:bg-white/5">
                     <ArrowLeft className="h-5 w-5" />
                   </Button>
-                  <Button 
-                    onClick={processSplitPayment} 
+                  <Button
+                    onClick={processSplitPayment}
                     disabled={Math.abs(splitRemaining) > 0.01 || splitEntries.length === 0}
                     className="flex-1 btn-gradient-blue h-14 rounded-2xl font-black text-white shadow-xl shadow-blue-500/20 uppercase tracking-widest text-xs"
                   >
@@ -1336,76 +1336,76 @@ const POS = () => {
               Enter the amount transferred by the customer.
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="py-8 space-y-4">
-             <div className="bg-white/5 p-4 rounded-2xl border border-white/5 text-right">
-                <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">Grand Total</p>
-                <p className="text-3xl font-black text-white">{settings.shop.currency} {grandTotal.toFixed(2)}</p>
-             </div>
-             
-             <div className="space-y-2">
-                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest pr-2">Transfer Amount</Label>
-                <div className="relative">
-                   <DollarSign className="absolute right-4 top-1/2 -translate-y-1/2 h-6 w-6 text-primary/40" />
-                   <Input 
-                     type="number" 
-                     value={transferAmount} 
-                     onChange={(e) => setTransferAmount(parseFloat(e.target.value) || 0)}
-                     onFocus={handleFocus}
-                     className="bg-white/5 border-primary h-16 rounded-2xl pr-14 text-3xl font-black text-white text-right"
-                     autoFocus
-                   />
-                </div>
-             </div>
 
-             <div className="space-y-2">
-                <div className="flex justify-between items-center pr-2">
-                   <Button 
-                     variant="ghost" 
-                     size="sm" 
-                     onClick={() => setIsAddCustomerDialogOpen(true)}
-                     className="text-[10px] h-6 px-2 text-green-500 hover:text-green-400 hover:bg-green-500/10 font-black"
-                   >
-                     <UserPlus className="h-3 w-3 ml-1" /> {renderBoth('add_customer')}
-                   </Button>
-                   <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">Select Customer or Enter Name</Label>
-                </div>
-                <Input 
-                  placeholder="Search or type name..."
-                  value={customerSearchTerm}
-                  onChange={(e) => setCustomerSearchTerm(e.target.value)}
-                  className="bg-white/5 border-white/10 h-12 text-right text-white"
+          <div className="py-8 space-y-4">
+            <div className="bg-white/5 p-4 rounded-2xl border border-white/5 text-right">
+              <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">Grand Total</p>
+              <p className="text-3xl font-black text-white">{settings.shop.currency} {grandTotal.toFixed(2)}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest pr-2">Transfer Amount</Label>
+              <div className="relative">
+                <DollarSign className="absolute right-4 top-1/2 -translate-y-1/2 h-6 w-6 text-primary/40" />
+                <Input
+                  type="number"
+                  value={transferAmount}
+                  onChange={(e) => setTransferAmount(parseFloat(e.target.value) || 0)}
+                  onFocus={handleFocus}
+                  className="bg-white/5 border-primary h-16 rounded-2xl pr-14 text-3xl font-black text-white text-right"
+                  autoFocus
                 />
-                <ScrollArea className="h-[150px] mt-2 border border-white/5 rounded-xl">
-                  <div className="p-2 space-y-1">
-                    {customers.filter(c => 
-                      c.name_dv.includes(customerSearchTerm) || 
-                      c.name_en.toLowerCase().includes(customerSearchTerm.toLowerCase())
-                    ).map(customer => (
-                      <div 
-                        key={customer.id}
-                        onClick={() => {
-                          updateActiveCart(prev => ({ ...prev, customer }));
-                          setCustomerSearchTerm(customer.name_dv);
-                        }}
-                        className={cn(
-                          "p-2 rounded-lg cursor-pointer text-right text-sm transition-all",
-                          activeCart?.customer?.id === customer.id ? "bg-primary text-white" : "bg-white/5 hover:bg-white/10 text-white/60"
-                        )}
-                      >
-                        {customer.name_dv}
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-             </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-center pr-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsAddCustomerDialogOpen(true)}
+                  className="text-[10px] h-6 px-2 text-green-500 hover:text-green-400 hover:bg-green-500/10 font-black"
+                >
+                  <UserPlus className="h-3 w-3 ml-1" /> {renderBoth('add_customer')}
+                </Button>
+                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">Select Customer or Enter Name</Label>
+              </div>
+              <Input
+                placeholder="Search or type name..."
+                value={customerSearchTerm}
+                onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                className="bg-white/5 border-white/10 h-12 text-right text-white"
+              />
+              <ScrollArea className="h-[150px] mt-2 border border-white/5 rounded-xl">
+                <div className="p-2 space-y-1">
+                  {customers.filter(c =>
+                    c.name_dv.includes(customerSearchTerm) ||
+                    c.name_en.toLowerCase().includes(customerSearchTerm.toLowerCase())
+                  ).map(customer => (
+                    <div
+                      key={customer.id}
+                      onClick={() => {
+                        updateActiveCart(prev => ({ ...prev, customer }));
+                        setCustomerSearchTerm(customer.name_dv);
+                      }}
+                      className={cn(
+                        "p-2 rounded-lg cursor-pointer text-right text-sm transition-all",
+                        activeCart?.customer?.id === customer.id ? "bg-primary text-white" : "bg-white/5 hover:bg-white/10 text-white/60"
+                      )}
+                    >
+                      {customer.name_dv}
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
           </div>
 
           <DialogFooter className="gap-3">
             <Button variant="ghost" onClick={() => setIsAwaitingTransferDialogOpen(false)} className="flex-1 border-white/10 text-white">
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={processTransferPayment}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-black"
             >
@@ -1414,7 +1414,7 @@ const POS = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <CustomerAddDialog 
+      <CustomerAddDialog
         isOpen={isAddCustomerDialogOpen}
         onClose={() => setIsAddCustomerDialogOpen(false)}
         onAdd={async (newCustomer) => {
@@ -1440,7 +1440,7 @@ const POS = () => {
             <div className="space-y-3">
               {pendingTransfers.length === 0 ? (
                 <div className="h-40 flex flex-col items-center justify-center text-white/20 uppercase tracking-widest font-black text-sm">
-                   No pending transfers
+                  No pending transfers
                 </div>
               ) : (
                 pendingTransfers.map((transfer) => (
@@ -1459,14 +1459,14 @@ const POS = () => {
                       <p className="text-lg font-black text-yellow-500">{settings.shop.currency} {transfer.grandTotal.toFixed(2)}</p>
                     </div>
                     <div className="flex gap-2">
-                      <Button 
+                      <Button
                         size="sm"
                         onClick={() => resolvePendingTransfer(transfer.id, 'cash')}
                         className="bg-green-600 hover:bg-green-700 text-white text-[10px] font-black px-3 h-9"
                       >
                         CASH
                       </Button>
-                      <Button 
+                      <Button
                         size="sm"
                         onClick={() => resolvePendingTransfer(transfer.id, 'credit')}
                         className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black px-3 h-9"

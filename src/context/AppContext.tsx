@@ -422,17 +422,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   }, [pendingTransfers]);
 
   const [settings, setSettings] = useState<AppSettings>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('app_settings');
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {
-          console.error('Error parsing settings from localStorage', e);
-        }
-      }
-    }
-    return {
+    const defaultSettings: AppSettings = {
       shop: {
         shopName: 'My Retail Shop',
         shopAddress: 'Male, Maldives',
@@ -496,6 +486,28 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         useQzTray: false,
       },
     };
+
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('app_settings');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          return {
+            ...defaultSettings,
+            ...parsed,
+            shop: { ...defaultSettings.shop, ...(parsed.shop || {}) },
+            accounting: { ...defaultSettings.accounting, ...(parsed.accounting || {}) },
+            software: { ...defaultSettings.software, ...(parsed.software || {}) },
+            general: { ...defaultSettings.general, ...(parsed.general || {}) },
+            reports: { ...defaultSettings.reports, ...(parsed.reports || {}) },
+            printing: { ...defaultSettings.printing, ...(parsed.printing || {}) },
+          };
+        } catch (e) {
+          console.error('Error parsing settings from localStorage', e);
+        }
+      }
+    }
+    return defaultSettings;
   });
 
   useEffect(() => {
@@ -627,6 +639,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     } catch (error) {
       console.error('Error updating customer balance:', error);
       showError('Failed to update customer balance');
+      throw error;
     }
   };
 
@@ -668,6 +681,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     } catch (error) {
       console.error('Error adding sale:', error);
       showError('Failed to save sale to database');
+      throw error;
     }
   };
 

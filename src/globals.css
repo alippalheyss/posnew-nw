@@ -54,17 +54,22 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 }
 
 @layer utilities {
   .glass {
     @apply bg-white/5 backdrop-blur-md border border-white/10;
+    transform: translateZ(0);
   }
   .glass-dark {
     @apply bg-black/40 backdrop-blur-xl border border-white/5;
+    transform: translateZ(0);
   }
   .text-neon-blue {
     color: #00d2ff;

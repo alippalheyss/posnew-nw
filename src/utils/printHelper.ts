@@ -53,8 +53,8 @@ export const printViaIframe = (htmlContent: string) => {
 /**
  * Universal print function that chooses the method based on settings.
  */
-export const printContent = async (htmlContent: string, settings: any) => {
-  if (settings.printing.useQzTray && settings.printing.printerName) {
+export const printContent = async (htmlContent: string, settings?: any) => {
+  if (settings?.printing?.useQzTray && settings?.printing?.printerName) {
     try {
       await printViaQz(htmlContent, settings.printing.printerName);
       return;

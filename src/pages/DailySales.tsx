@@ -139,7 +139,7 @@ const DailySales = () => {
         </body>
       </html>
     `;
-    printContent(htmlContent);
+    printContent(htmlContent, settings);
   };
 
   const handleEditSale = (sale: Sale) => {

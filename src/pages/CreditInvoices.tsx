@@ -130,7 +130,7 @@ const CreditInvoices = () => {
         </body>
       </html>
     `;
-    printContent(htmlContent);
+    printContent(htmlContent, settings);
   };
 
   const creditSales = sales.filter(s => s.paymentMethod?.toLowerCase() === 'credit' || (s.paymentMethod?.toLowerCase() === 'split' && (s.balance || 0) > 0));

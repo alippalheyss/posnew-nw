@@ -63,11 +63,7 @@ const GSTReports = () => {
     };
 
 
-    const filteredVendors = vendors.filter(v =>
-        v.name_dv.toLowerCase().includes(vendorSearchQuery.toLowerCase()) ||
-        v.name_en.toLowerCase().includes(vendorSearchQuery.toLowerCase()) ||
-        v.code.toLowerCase().includes(vendorSearchQuery.toLowerCase())
-    );
+
 
     const filteredSales = sales.filter(s => filterByRange(s.date));
     const filteredPurchases = purchases.filter(p => filterByRange(p.date));

@@ -160,7 +160,9 @@ interface GeneralSettings {
   receiptPrinterEnabled: boolean;
   defaultDiscount: number;
   enableLoyaltyProgram: boolean;
-  loyaltyPointsRate: number;
+  loyaltyAmountPerPoint: number;
+  loyaltyPointsValue: number;
+  loyaltyMinRedeemPoints: number;
 }
 
 interface ReportSettings {
@@ -475,7 +477,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         receiptPrinterEnabled: true,
         defaultDiscount: 0,
         enableLoyaltyProgram: false,
-        loyaltyPointsRate: 1,
+        loyaltyAmountPerPoint: 20,
+        loyaltyPointsValue: 100,
+        loyaltyMinRedeemPoints: 1000,
       },
       reports: {
         invoiceHeader: 'INVOICE',
@@ -715,8 +719,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         }
       })).catch(err => console.error('Error updating stock after sale:', err));
       
-      // Do NOT await fetchData() here as it slows down the sale process significantly
-      fetchData(); // Run in background
+      // Do NOT await fetchData() here to prevent race conditions with optimistic state
     } catch (error) {
       console.error('Error adding sale:', error);
       showError('Failed to save sale to database');

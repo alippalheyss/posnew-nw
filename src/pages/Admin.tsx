@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { ChevronDown, ChevronUp, Upload, Image as ImageIcon, Trash2, Settings, Landmark, Monitor, Layout, FileText, Printer, Building2, X, Edit, UserPlus, Shield, Database, Languages, Palette, Globe, CreditCard, Receipt, Percent, LogOut } from 'lucide-react';
+import { ChevronDown, ChevronUp, Upload, Image as ImageIcon, Trash2, Settings, Landmark, Monitor, Layout, FileText, Printer, Building2, X, Edit, UserPlus, Shield, Database, Languages, Palette, Globe, CreditCard, Receipt, Percent, LogOut, Gift } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/AppContext';
@@ -240,6 +240,68 @@ const Admin = () => {
                                 value={accountingSettings.creditLimit} 
                                 onChange={(e) => handleSettingsChange('accounting', 'creditLimit', parseFloat(e.target.value))}
                                 className="bg-white/5 border-white/10 h-12 rounded-xl text-right font-bold pr-10"
+                              />
+                           </div>
+                        </div>
+                     </div>
+                  </CardContent>
+                )}
+             </Card>
+
+             {/* Loyalty Settings */}
+             <Card className="bg-[#0a0a1a] border-white/5 rounded-3xl overflow-hidden shadow-2xl">
+                <SectionHeader 
+                  id="generalSettings" 
+                  icon={Gift} 
+                  title="Loyalty Program Settings" 
+                  expanded={expandedSections.generalSettings} 
+                />
+                {expandedSections.generalSettings && (
+                  <CardContent className="p-8 space-y-8 animate-in fade-in slide-in-from-top-4 duration-300">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+                           <Gift className="h-5 w-5 text-primary" />
+                           <div className="text-right">
+                              <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest mb-2 block">Enable Loyalty Program</Label>
+                              <Switch 
+                                checked={generalSettings.enableLoyaltyProgram} 
+                                onCheckedChange={(val) => handleSettingsChange('general', 'enableLoyaltyProgram', val)}
+                                className="data-[state=checked]:bg-primary"
+                              />
+                           </div>
+                        </div>
+                        <div className="space-y-2">
+                           <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest">Amount to earn 1 Point</Label>
+                           <div className="relative">
+                              <Input 
+                                type="number"
+                                value={generalSettings.loyaltyAmountPerPoint || 20} 
+                                onChange={(e) => handleSettingsChange('general', 'loyaltyAmountPerPoint', parseFloat(e.target.value))}
+                                className="bg-white/5 border-white/10 h-12 rounded-xl text-right font-bold"
+                              />
+                           </div>
+                        </div>
+                     </div>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-2">
+                           <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest">Points for 1 {shopSettings.currency} discount</Label>
+                           <div className="relative">
+                              <Input 
+                                type="number"
+                                value={generalSettings.loyaltyPointsValue || 100} 
+                                onChange={(e) => handleSettingsChange('general', 'loyaltyPointsValue', parseFloat(e.target.value))}
+                                className="bg-white/5 border-white/10 h-12 rounded-xl text-right font-bold"
+                              />
+                           </div>
+                        </div>
+                        <div className="space-y-2">
+                           <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest">Minimum Points to Redeem</Label>
+                           <div className="relative">
+                              <Input 
+                                type="number"
+                                value={generalSettings.loyaltyMinRedeemPoints || 1000} 
+                                onChange={(e) => handleSettingsChange('general', 'loyaltyMinRedeemPoints', parseFloat(e.target.value))}
+                                className="bg-white/5 border-white/10 h-12 rounded-xl text-right font-bold"
                               />
                            </div>
                         </div>

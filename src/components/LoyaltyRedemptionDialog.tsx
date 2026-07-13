@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Gift } from "lucide-react";
+import { useAppContext } from "@/context/AppContext";
 
 interface LoyaltyRedemptionDialogProps {
     isOpen: boolean;
@@ -22,7 +23,12 @@ const LoyaltyRedemptionDialog: React.FC<LoyaltyRedemptionDialogProps> = ({
     onRedeem
 }) => {
     const { t } = useTranslation();
+    const { settings } = useAppContext();
     const [redeemAmount, setRedeemAmount] = useState<string>('');
+
+    const loyaltyPointsValue = settings.general.loyaltyPointsValue || 100;
+    const loyaltyMinRedeemPoints = settings.general.loyaltyMinRedeemPoints || 1000;
+    const currency = settings.shop.currency;
 
     // Reset when opened
     useEffect(() => {
@@ -40,13 +46,15 @@ const LoyaltyRedemptionDialog: React.FC<LoyaltyRedemptionDialogProps> = ({
     };
 
     const handleMaxClick = () => {
-        // Max points user can use is limited by their balance AND the cart total
-        const maxUse = Math.min(availablePoints, maxRedeemableAmount);
+        // Max points user can use is limited by their balance AND the cart total (which is in currency, so we convert maxRedeemableAmount to points)
+        const maxPointsForCart = maxRedeemableAmount * loyaltyPointsValue;
+        const maxUse = Math.min(availablePoints, maxPointsForCart);
         setRedeemAmount(maxUse.toString());
     };
 
     const currentPoints = parseInt(redeemAmount) || 0;
-    const isValid = currentPoints > 0 && currentPoints <= availablePoints && currentPoints <= maxRedeemableAmount;
+    const currentDiscountValue = currentPoints / loyaltyPointsValue;
+    const isValid = currentPoints >= loyaltyMinRedeemPoints && currentPoints <= availablePoints && currentDiscountValue <= maxRedeemableAmount;
 
     const renderBoth = (key: string, options?: any) => (
         <>
@@ -78,7 +86,7 @@ const LoyaltyRedemptionDialog: React.FC<LoyaltyRedemptionDialogProps> = ({
                             <Label htmlFor="points" className="text-sm font-bold text-black dark:text-white ">
                                 {renderBoth('points_to_use')}
                             </Label>
-                            <span className="text-xs text-black dark:text-white ">1 Point = {1} MVR</span>
+                            <span className="text-xs font-bold text-primary">{loyaltyPointsValue} Points = 1 {currency}</span>
                         </div>
                         <div className="flex gap-2">
                             <Input
@@ -87,18 +95,30 @@ const LoyaltyRedemptionDialog: React.FC<LoyaltyRedemptionDialogProps> = ({
                                 value={redeemAmount}
                                 onChange={(e) => setRedeemAmount(e.target.value)}
                                 className="text-right text-lg font-bold"
-                                placeholder="0"
+                                placeholder={loyaltyMinRedeemPoints.toString()}
                                 autoFocus
                             />
                             <Button onClick={handleMaxClick} variant="secondary" className="font-bold">
                                 {renderBoth('all')}
                             </Button>
                         </div>
-                        {currentPoints > maxRedeemableAmount && (
-                            <p className="text-xs text-red-500 text-right font-semibold">
-                                {renderBoth('cannot_exceed_cart_total')} ({maxRedeemableAmount})
-                            </p>
-                        )}
+                        <div className="flex justify-between items-center mt-1">
+                            {currentPoints > 0 && (
+                                <p className="text-sm font-bold text-green-500">
+                                    Discount: {currency} {currentDiscountValue.toFixed(2)}
+                                </p>
+                            )}
+                            {currentDiscountValue > maxRedeemableAmount && (
+                                <p className="text-xs text-red-500 text-right font-semibold">
+                                    {renderBoth('cannot_exceed_cart_total')}
+                                </p>
+                            )}
+                            {currentPoints > 0 && currentPoints < loyaltyMinRedeemPoints && (
+                                <p className="text-xs text-orange-500 text-right font-semibold">
+                                    Minimum {loyaltyMinRedeemPoints} points required
+                                </p>
+                            )}
+                        </div>
                     </div>
                 </div>
 

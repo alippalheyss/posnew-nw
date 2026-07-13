@@ -346,7 +346,8 @@ const POS = () => {
     const zeroTaxTotal = currentItems.filter(i => i.is_zero_tax).reduce((sum, item) => sum + item.price * item.qty, 0);
     const subtotalNoDiscount = taxableTotal + zeroTaxTotal;
 
-    const loyaltyDiscount = pointsToRedeem;
+    const loyaltyPointsValue = settings.general.loyaltyPointsValue || 100;
+    const loyaltyDiscount = pointsToRedeem / loyaltyPointsValue;
     const grandTotalValue = Math.max(0, subtotalNoDiscount - loyaltyDiscount);
 
     const gstRate = settings.shop.taxRate / 100;
@@ -407,12 +408,15 @@ const POS = () => {
       await addSale(newSale);
 
       if (activeCart.customer) {
-        if (pointsToRedeem > 0) {
-          await redeemLoyaltyPoints(activeCart.customer.id, pointsToRedeem);
-        }
-        const pointsEarned = Math.floor(grandTotal / 100);
-        if (pointsEarned > 0) {
-          await awardLoyaltyPoints(activeCart.customer.id, pointsEarned);
+        if (settings.general.enableLoyaltyProgram) {
+          if (pointsToRedeem > 0) {
+            await redeemLoyaltyPoints(activeCart.customer.id, pointsToRedeem);
+          }
+          const loyaltyAmountPerPoint = settings.general.loyaltyAmountPerPoint || 20;
+          const pointsEarned = Math.floor(grandTotal / loyaltyAmountPerPoint);
+          if (pointsEarned > 0) {
+            await awardLoyaltyPoints(activeCart.customer.id, pointsEarned);
+          }
         }
       }
 
@@ -458,13 +462,16 @@ const POS = () => {
       await addSale(newSale);
 
       if (activeCart.customer) {
-        if (pointsToRedeem > 0) {
-          await redeemLoyaltyPoints(activeCart.customer.id, pointsToRedeem);
-        }
         await updateCustomerBalance(activeCart.customer.id, grandTotal);
-        const pointsEarned = Math.floor(grandTotal / 100);
-        if (pointsEarned > 0) {
-          await awardLoyaltyPoints(activeCart.customer.id, pointsEarned);
+        if (settings.general.enableLoyaltyProgram) {
+          if (pointsToRedeem > 0) {
+            await redeemLoyaltyPoints(activeCart.customer.id, pointsToRedeem);
+          }
+          const loyaltyAmountPerPoint = settings.general.loyaltyAmountPerPoint || 20;
+          const pointsEarned = Math.floor(grandTotal / loyaltyAmountPerPoint);
+          if (pointsEarned > 0) {
+            await awardLoyaltyPoints(activeCart.customer.id, pointsEarned);
+          }
         }
       }
 

@@ -31,13 +31,18 @@ export const printViaIframe = (htmlContent: string) => {
   doc.close();
 
   // Wait for resources to load if any
+  let printed = false;
   const print = () => {
+    if (printed) return;
+    printed = true;
     iframe.contentWindow?.focus();
     iframe.contentWindow?.print();
     
     // Remove the iframe after some time to allow printing to start
     setTimeout(() => {
-      document.body.removeChild(iframe);
+      if (document.body.contains(iframe)) {
+        document.body.removeChild(iframe);
+      }
     }, 1000);
   };
 

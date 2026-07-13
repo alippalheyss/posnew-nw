@@ -295,6 +295,31 @@ const Admin = () => {
                            </div>
                         </div>
                      </div>
+                     <div className="space-y-4">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10 gap-4">
+                           <div className="flex items-center gap-3">
+                             <Printer className="h-5 w-5 text-primary" />
+                             <div>
+                               <Label className="text-sm font-bold text-white mb-1 block">QZ Tray Direct Printing</Label>
+                               <p className="text-xs text-white/50">Print silently by bypassing the browser dialog. Requires QZ Tray.</p>
+                             </div>
+                           </div>
+                           <div className="flex items-center gap-4">
+                             {printingSettings.useQzTray && (
+                               <Input 
+                                 placeholder="Exact Printer Name" 
+                                 className="w-[200px] bg-white/10 border-white/10 text-white placeholder:text-white/30"
+                                 value={printingSettings.printerName || ''}
+                                 onChange={(e) => handleSettingsChange('printing', 'printerName', e.target.value)}
+                               />
+                             )}
+                             <Switch 
+                               checked={printingSettings.useQzTray} 
+                               onCheckedChange={(checked) => handleSettingsChange('printing', 'useQzTray', checked)} 
+                             />
+                           </div>
+                        </div>
+                     </div>
                   </CardContent>
                 )}
              </Card>

@@ -4,13 +4,15 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, History, DollarSign, ShoppingBag, PlusCircle, Download, FileText, User, Activity, TrendingDown, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Search, History, DollarSign, ShoppingBag, PlusCircle, Download, FileText, User, Activity, TrendingDown, Clock, CheckCircle2, AlertCircle, Edit } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import AddCreditSaleDialog from '@/components/AddCreditSaleDialog';
+import SaleEditDialog from '@/components/SaleEditDialog';
+import { supabase } from '@/lib/supabase';
 import { useAppContext, Product, Sale, Customer } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
 import { showSuccess, showError } from '@/utils/toast';
@@ -61,6 +63,40 @@ const CreditOutstanding = () => {
   const [isAddCreditSaleDialogOpen, setIsAddCreditSaleDialogOpen] = useState(false);
   const [selectedCustomerForAction, setSelectedCustomerForAction] = useState<Customer | null>(null);
   const [paymentAmount, setPaymentAmount] = useState<number | ''>('');
+  
+  const [isEditSaleDialogOpen, setIsEditSaleDialogOpen] = useState(false);
+  const [editingSale, setEditingSale] = useState<Sale | null>(null);
+
+  const handleEditSale = (sale: Sale) => {
+    setEditingSale(sale);
+    setIsEditSaleDialogOpen(true);
+  };
+
+  const handleSaveSaleUpdate = async (updatedSale: Sale) => {
+    try {
+      const { error } = await supabase
+        .from('sales')
+        .update({
+          items: updatedSale.items,
+          grand_total: updatedSale.grandTotal,
+          payment_method: updatedSale.paymentMethod,
+          paid_amount: updatedSale.paidAmount,
+          balance: updatedSale.balance,
+          invoice_number: updatedSale.invoiceNumber
+        })
+        .eq('id', updatedSale.id);
+
+      if (error) throw error;
+
+      setSales(prevSales => prevSales.map(s => s.id === updatedSale.id ? updatedSale : s));
+      showSuccess(t('sale_updated_successfully') || 'Sale updated successfully');
+      setIsEditSaleDialogOpen(false);
+      setEditingSale(null);
+    } catch (error) {
+      console.error('Error updating sale:', error);
+      showError(t('error_updating_sale') || 'Failed to update sale');
+    }
+  };
 
   const filteredCustomers = customers.filter(customer =>
     (customer.outstanding_balance > 0 || searchTerm) && (
@@ -612,7 +648,12 @@ const CreditOutstanding = () => {
                         </div>
                       )}
                       <div className="flex justify-between items-center mb-3">
-                         <Badge variant="outline" className="border-orange-500/30 text-orange-500 text-[8px] font-black">{sale.id}</Badge>
+                         <div className="flex items-center gap-2">
+                           <Badge variant="outline" className="border-orange-500/30 text-orange-500 text-[8px] font-black">{sale.invoiceNumber || sale.id}</Badge>
+                           <Button variant="ghost" size="icon" className="h-6 w-6 text-white/40 hover:text-white hover:bg-white/10 rounded-full" onClick={(e) => { e.stopPropagation(); handleEditSale(sale); }}>
+                             <Edit className="h-3 w-3" />
+                           </Button>
+                         </div>
                          <span className="text-[10px] font-mono text-white/40">{formatDate(sale.date)} {formatTime(sale.date)}</span>
                       </div>
                       <div className="space-y-2 mb-3">
@@ -653,6 +694,15 @@ const CreditOutstanding = () => {
         onClose={() => setIsAddCreditSaleDialogOpen(false)}
         onAdd={handleAddCreditSale}
       />
+
+      {editingSale && (
+        <SaleEditDialog
+          isOpen={isEditSaleDialogOpen}
+          onClose={() => setIsEditSaleDialogOpen(false)}
+          sale={editingSale}
+          onSave={handleSaveSaleUpdate}
+        />
+      )}
     </div>
   );
 };

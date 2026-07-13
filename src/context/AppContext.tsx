@@ -68,6 +68,8 @@ export interface Sale {
   paymentMethod: 'cash' | 'credit' | 'card' | 'mobile';
   paidAmount?: number;
   balance?: number;
+  invoiceNumber?: string;
+  splitDetails?: any[];
 }
 
 export interface Vendor {
@@ -237,7 +239,10 @@ interface AppContextType {
   resolvePendingTransfer: (id: string, action: 'cash' | 'credit') => Promise<void>;
   sidebarCollapsed: boolean;
   setSidebarCollapsed: (collapsed: boolean) => void;
-  refreshCustomers: () => Promise<void>;
+  isPurchaseWindowOpen: boolean;
+  setIsPurchaseWindowOpen: (open: boolean) => void;
+  isPurchaseWindowMinimized: boolean;
+  setIsPurchaseWindowMinimized: (minimized: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -355,7 +360,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
             grandTotal: Number(s.grand_total || 0),
             paymentMethod: String(s.payment_method || 'cash').toLowerCase(),
             paidAmount: Number(s.paid_amount || 0),
-            balance: Number(s.balance || 0)
+            balance: Number(s.balance || 0),
+            invoiceNumber: s.invoice_number,
+            splitDetails: splitDetails
           };
         });
         
@@ -420,6 +427,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   useEffect(() => {
     localStorage.setItem('pending_transfers', JSON.stringify(pendingTransfers));
   }, [pendingTransfers]);
+
+  const [isPurchaseWindowOpen, setIsPurchaseWindowOpen] = useState(false);
+  const [isPurchaseWindowMinimized, setIsPurchaseWindowMinimized] = useState(false);
 
   const [settings, setSettings] = useState<AppSettings>(() => {
     const defaultSettings: AppSettings = {
@@ -643,21 +653,50 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
+  const generateInvoiceNumber = (dateStr: string, isCredit: boolean, existingSales: Sale[]) => {
+    const prefix = isCredit ? 'CRINV/' : 'INV/';
+    const date = new Date(dateStr);
+    const year = date.getFullYear().toString().slice(-2);
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    
+    const prefixStr = `${prefix}${year}/${month}/`;
+    
+    let maxSeq = 0;
+    existingSales.forEach(s => {
+      if (s.invoiceNumber && s.invoiceNumber.startsWith(prefixStr)) {
+        const seqStr = s.invoiceNumber.slice(prefixStr.length);
+        const seq = parseInt(seqStr, 10);
+        if (!isNaN(seq) && seq > maxSeq) {
+          maxSeq = seq;
+        }
+      }
+    });
+    
+    const nextSeq = (maxSeq + 1).toString().padStart(3, '0');
+    return `${prefixStr}${nextSeq}`;
+  };
+
   const addSale = async (sale: Sale) => {
     try {
-      console.log('Adding sale to Supabase:', sale.id, sale.paymentMethod);
+      const isCredit = String(sale.paymentMethod).toLowerCase() === 'credit';
+      const invoiceNumber = sale.invoiceNumber || generateInvoiceNumber(sale.date, isCredit, sales);
+      const saleWithInvoice = { ...sale, invoiceNumber };
+
+      console.log('Adding sale to Supabase:', saleWithInvoice.id, saleWithInvoice.paymentMethod, saleWithInvoice.invoiceNumber);
       
       const { error } = await supabase
         .from('sales')
         .insert([{
-          id: sale.id,
+          id: saleWithInvoice.id,
           date: toISODatetime(), // Use full timestamp for sorting and accuracy
-          customer_id: sale.customer?.id || null,
-          items: sale.items,
-          grand_total: Number(sale.grandTotal),
-          payment_method: String(sale.paymentMethod).toLowerCase(),
-          paid_amount: sale.paidAmount !== undefined ? Number(sale.paidAmount) : null,
-          balance: sale.balance !== undefined ? Number(sale.balance) : null
+          customer_id: saleWithInvoice.customer?.id || null,
+          items: saleWithInvoice.items,
+          grand_total: Number(saleWithInvoice.grandTotal),
+          payment_method: String(saleWithInvoice.paymentMethod).toLowerCase(),
+          paid_amount: saleWithInvoice.paidAmount !== undefined ? Number(saleWithInvoice.paidAmount) : null,
+          balance: saleWithInvoice.balance !== undefined ? Number(saleWithInvoice.balance) : null,
+          invoice_number: saleWithInvoice.invoiceNumber,
+          split_details: saleWithInvoice.splitDetails || null
         }]);
 
       if (error) {
@@ -665,7 +704,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         throw error;
       }
 
-      setSales(prev => [sale, ...prev]);
+      setSales(prev => [saleWithInvoice, ...prev]);
       console.log('Sale added successfully to local state');
 
       // Update stock levels asynchronously without blocking the UI
@@ -1195,6 +1234,10 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       resolvePendingTransfer,
       sidebarCollapsed,
       setSidebarCollapsed,
+      isPurchaseWindowOpen,
+      setIsPurchaseWindowOpen,
+      isPurchaseWindowMinimized,
+      setIsPurchaseWindowMinimized,
       refreshCustomers
     }}>
       {children}

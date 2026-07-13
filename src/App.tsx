@@ -21,6 +21,7 @@ import SalesReports from "./pages/SalesReports";
 import ExpiryAlerts from "./pages/ExpiryAlerts";
 import GSTReports from "./pages/GSTReports";
 import ShrinkageReport from "./pages/ShrinkageReport";
+import LocalPurchaseWindow from "./components/LocalPurchaseWindow";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <AuthProvider>
+        <LocalPurchaseWindow />
         <BrowserRouter>
           <Routes>
             {/* Public Route */}

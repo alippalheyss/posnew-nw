@@ -60,7 +60,7 @@ const CreditInvoices = () => {
     const htmlContent = `
       <html>
         <head>
-          <title>Credit Invoice ${sale.id}</title>
+          <title>Credit Invoice ${sale.invoiceNumber || sale.id}</title>
           <style>
             body { font-family: sans-serif; padding: 40px; color: #333; }
             .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
@@ -93,7 +93,7 @@ const CreditInvoices = () => {
               ${sale.customer?.name_dv} (${sale.customer?.name_en})<br/>
               Code: ${sale.customer?.code}<br/>
               Date: ${sale.date}<br/>
-              Invoice #: ${sale.id}
+              Invoice #: ${sale.invoiceNumber || sale.id}
             </div>
           </div>
           <table>
@@ -201,7 +201,7 @@ const CreditInvoices = () => {
                       </div>
                       <div className="text-right">
                          <div className="flex items-center justify-end gap-3 mb-1">
-                            <span className="text-lg font-black text-white">{sale.id}</span>
+                            <span className="text-lg font-black text-white">{sale.invoiceNumber || sale.id}</span>
                             <Badge className="bg-orange-500 text-white border-none text-[8px] font-black uppercase tracking-widest px-2 py-0.5">
                                CREDIT
                             </Badge>

@@ -20,20 +20,9 @@ import * as XLSX from 'xlsx';
 
 const GSTReports = () => {
     const { t } = useTranslation();
-    const { sales, purchases, addPurchase, settings, vendors, products } = useAppContext();
-    const [isAddPurchaseDialogOpen, setIsAddPurchaseDialogOpen] = useState(false);
+    const { sales, purchases, settings, setIsPurchaseWindowOpen } = useAppContext();
     const [timeRange, setTimeRange] = useState('this_month');
-
-    // Form state for new purchase
-    const [newPurchase, setNewPurchase] = useState({
-        vendorId: '',
-        billNumber: '',
-        description: '',
-        date: new Date().toISOString().split('T')[0],
-        totalAmount: '' 
-    });
-
-    const [vendorSearchQuery, setVendorSearchQuery] = useState('');
+    
     const renderBoth = (key: string, options?: any) => (
         <>
             {t(key, options)} ({t(key, { ...options, lng: 'en' })})
@@ -104,49 +93,6 @@ const GSTReports = () => {
 
     const totalPurchases = filteredPurchases.reduce((sum, p) => sum + p.amount, 0);
 
-    const calculateGstFromTotal = (total: number) => {
-        const taxRate = settings.shop.taxRate / 100;
-        const gstAmount = total - (total / (1 + taxRate));
-        const subtotal = total - gstAmount;
-        return { subtotal, gstAmount };
-    };
-
-
-    const handleAddPurchase = () => {
-        if (!newPurchase.vendorId || !newPurchase.totalAmount) {
-            showError(t('fill_all_fields_error'));
-            return;
-        }
-
-        const vendor = vendors.find(v => v.id === newPurchase.vendorId);
-        if (!vendor) return;
-
-        const total = parseFloat(newPurchase.totalAmount);
-        const { subtotal, gstAmount } = calculateGstFromTotal(total);
-
-        const purchase: Purchase = {
-            id: crypto.randomUUID(),
-            vendorId: vendor.id,
-            vendorName: vendor.name_dv || vendor.name_en,
-            billNumber: newPurchase.billNumber,
-            description: newPurchase.description,
-            amount: subtotal,
-            gstAmount: gstAmount,
-            date: newPurchase.date,
-            items: [] 
-        };
-
-        addPurchase(purchase);
-        setIsAddPurchaseDialogOpen(false);
-        setNewPurchase({
-            vendorId: '',
-            billNumber: '',
-            description: '',
-            date: new Date().toISOString().split('T')[0],
-            totalAmount: ''
-        });
-        showSuccess(t('purchase_added_successfully'));
-    };
 
     const exportToExcel = () => {
         const data = [
@@ -209,7 +155,7 @@ const GSTReports = () => {
                     <Button onClick={exportToExcel} variant="outline" className="gap-2 border-white/10 hover:bg-white/5 h-11 px-6 rounded-xl">
                         <Download className="h-4 w-4" /> {renderBoth('download_excel')}
                     </Button>
-                    <Button onClick={() => setIsAddPurchaseDialogOpen(true)} className="gap-2 bg-primary hover:bg-primary/90 h-11 px-6 rounded-xl font-black shadow-[0_0_20px_rgba(0,132,255,0.3)]">
+                    <Button onClick={() => setIsPurchaseWindowOpen(true)} className="gap-2 bg-primary hover:bg-primary/90 h-11 px-6 rounded-xl font-black shadow-[0_0_20px_rgba(0,132,255,0.3)]">
                         <PlusCircle className="h-4 w-4" /> {renderBoth('record_local_purchase')}
                     </Button>
                 </div>
@@ -308,89 +254,6 @@ const GSTReports = () => {
                     </Card>
                 </div>
             </ScrollArea>
-
-            {/* Add Purchase Dialog */}
-            <Dialog open={isAddPurchaseDialogOpen} onOpenChange={setIsAddPurchaseDialogOpen}>
-                <DialogContent className="sm:max-w-[500px] font-faruma glass-dark border-white/10 text-white p-0 overflow-hidden" dir="rtl">
-                    <DialogHeader className="p-6 pb-2">
-                        <DialogTitle className="text-right text-2xl font-black flex items-center justify-end gap-3">
-                            {renderBoth('record_local_purchase')} <PlusCircle className="h-6 w-6 text-primary" />
-                        </DialogTitle>
-                        <DialogDescription className="text-right text-white/40">{renderBoth('record_purchase_description')}</DialogDescription>
-                    </DialogHeader>
-                    <div className="p-6 space-y-6">
-                        <div className="space-y-2">
-                            <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('select_vendor')}*</Label>
-                            <Select value={newPurchase.vendorId} onValueChange={(val) => setNewPurchase({ ...newPurchase, vendorId: val })}>
-                                <SelectTrigger className="w-full bg-white/5 border-white/10 text-right h-14 rounded-2xl font-bold">
-                                    <SelectValue placeholder="Choose Vendor" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
-                                    <div className="p-2 sticky top-0 bg-[#0a0a1a] border-b border-white/5 z-10">
-                                        <Input 
-                                          placeholder="Search vendors..." 
-                                          value={vendorSearchQuery}
-                                          onChange={(e) => setVendorSearchQuery(e.target.value)}
-                                          className="h-9 bg-white/5 border-white/10 text-right"
-                                        />
-                                    </div>
-                                    <ScrollArea className="h-40">
-                                        {filteredVendors.map(v => (
-                                            <SelectItem key={v.id} value={v.id} className="text-right hover:bg-white/5">
-                                                {v.name_dv || v.name_en}
-                                            </SelectItem>
-                                        ))}
-                                    </ScrollArea>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('bill_number')}</Label>
-                                <Input value={newPurchase.billNumber} onChange={(e) => setNewPurchase({ ...newPurchase, billNumber: e.target.value })} className="text-right h-14 bg-white/5 border-white/10 rounded-2xl font-black" />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('date')}</Label>
-                                <Input type="date" value={newPurchase.date} onChange={(e) => setNewPurchase({ ...newPurchase, date: e.target.value })} className="text-right h-14 bg-white/5 border-white/10 rounded-2xl font-black" />
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('total_amount_incl_gst')}*</Label>
-                            <div className="relative">
-                               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-black text-white/20">{settings.shop.currency}</span>
-                               <Input 
-                                 type="number" 
-                                 value={newPurchase.totalAmount} 
-                                 onChange={(e) => setNewPurchase({ ...newPurchase, totalAmount: e.target.value })} 
-                                 className="text-right h-16 bg-white/5 border-primary/30 focus:border-primary rounded-2xl font-black text-2xl pl-16" 
-                                 placeholder="0.00"
-                               />
-                            </div>
-                            {newPurchase.totalAmount && (
-                                <div className="flex justify-between items-center px-2 py-1">
-                                    <span className="text-[10px] font-black text-orange-500 uppercase">GST ({settings.shop.taxRate}%): {settings.shop.currency} {calculateGstFromTotal(parseFloat(newPurchase.totalAmount)).gstAmount.toFixed(2)}</span>
-                                    <p className="text-[9px] text-white/20 italic">GST will be automatically calculated from this total</p>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('description')}</Label>
-                            <Input value={newPurchase.description} onChange={(e) => setNewPurchase({ ...newPurchase, description: e.target.value })} className="text-right h-14 bg-white/5 border-white/10 rounded-2xl font-bold" />
-                        </div>
-                    </div>
-                    <DialogFooter className="p-6 pt-2 bg-white/5 border-t border-white/5 flex gap-3">
-                        <Button variant="ghost" onClick={() => setIsAddPurchaseDialogOpen(false)} className="flex-1 h-12 rounded-xl font-black uppercase tracking-widest text-xs border border-white/10 hover:bg-white/5">
-                            {renderBoth('cancel')}
-                        </Button>
-                        <Button onClick={handleAddPurchase} className="flex-1 h-12 rounded-xl btn-gradient-blue font-black uppercase tracking-widest text-xs shadow-lg shadow-blue-500/20">
-                            {renderBoth('save_purchase')}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
         </div>
     );
 };

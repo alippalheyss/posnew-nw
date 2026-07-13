@@ -98,7 +98,7 @@ const DailySales = () => {
     const htmlContent = `
       <html>
         <head>
-          <title>Receipt ${sale.id}</title>
+          <title>Receipt ${sale.invoiceNumber || sale.id}</title>
           <style>
             @media print {
               @page { margin: 0; size: ${settings.printing.thermalPrinterWidth === '58mm' ? '58mm' : '80mm'} auto; }
@@ -117,7 +117,7 @@ const DailySales = () => {
           <div class="info">
             ${settings.shop.shopAddress}<br/>
             Tel: ${settings.shop.shopPhone}<br/>
-            ${formatDate(sale.date)} ${formatTime(sale.date)} | ${sale.id}
+            ${formatDate(sale.date)} ${formatTime(sale.date)} | ${sale.invoiceNumber || sale.id}
           </div>
           <div class="separator"></div>
           ${itemsHtml}
@@ -277,7 +277,7 @@ const DailySales = () => {
                         </div>
                         <div className="text-right">
                            <div className="flex items-center justify-end gap-3 mb-1">
-                              <span className="text-lg font-black text-white">{sale.id}</span>
+                              <span className="text-lg font-black text-white">{sale.invoiceNumber || sale.id}</span>
                               <Badge className="bg-primary/20 text-primary border-none text-[8px] font-black uppercase tracking-widest px-2 py-0.5">
                                  {sale.paymentMethod}
                               </Badge>

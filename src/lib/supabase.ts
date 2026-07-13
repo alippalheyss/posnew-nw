@@ -99,6 +99,8 @@ export interface Database {
                     payment_method: string;
                     paid_amount: number | null;
                     balance: number | null;
+                    invoice_number: string | null;
+                    split_details: any;
                     created_at: string;
                 };
                 Insert: Omit<Database['public']['Tables']['sales']['Row'], 'id' | 'created_at'>;

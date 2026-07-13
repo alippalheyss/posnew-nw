@@ -539,7 +539,7 @@ const POS = () => {
           ${logoHtml}
           <div style="font-weight: bold;">${settings.shop.shopName}</div>
           <div>${settings.shop.shopAddress}</div>
-          <div style="font-size: 10px;">Tel: ${settings.shop.shopPhone}<br/>${formatDate(sale.date)} ${formatTime(sale.date)} | ${sale.id}</div>
+          <div style="font-size: 10px;">Tel: ${settings.shop.shopPhone}<br/>${formatDate(sale.date)} ${formatTime(sale.date)} | ${sale.invoiceNumber || sale.id}</div>
           <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
           ${itemsHtml}
           <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>

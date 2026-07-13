@@ -74,6 +74,8 @@ CREATE TABLE IF NOT EXISTS public.sales (
     payment_method TEXT NOT NULL CHECK (payment_method IN ('cash', 'credit', 'card', 'mobile')),
     paid_amount DECIMAL(10, 2),
     balance DECIMAL(10, 2),
+    invoice_number TEXT,
+    split_details JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

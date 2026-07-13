@@ -135,7 +135,7 @@ const SaleEditDialog: React.FC<SaleEditDialogProps> = ({ isOpen, onClose, sale, 
             {renderBoth('edit_sale')} <Receipt className="h-6 w-6 text-primary" />
           </DialogTitle>
           <DialogDescription className="text-white/40">
-            Sale ID: {editedSale.id} | Date: {editedSale.date}
+            Sale ID: {editedSale.invoiceNumber || editedSale.id} | Date: {editedSale.date}
           </DialogDescription>
         </DialogHeader>
 

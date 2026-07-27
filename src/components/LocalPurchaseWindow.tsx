@@ -32,7 +32,7 @@ const LocalPurchaseWindow = () => {
   const [vendorSearchQuery, setVendorSearchQuery] = useState('');
 
   const filteredVendors = vendors.filter(v => 
-    v.name_en.toLowerCase().includes(vendorSearchQuery.toLowerCase()) || 
+    v.name_en?.toLowerCase().includes(vendorSearchQuery.toLowerCase()) || 
     v.name_dv?.toLowerCase().includes(vendorSearchQuery.toLowerCase())
   );
 

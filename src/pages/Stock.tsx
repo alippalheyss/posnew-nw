@@ -66,7 +66,7 @@ const Stock = () => {
   };
 
   const handleSaveStockUpdate = (updatedStockItem: Product) => {
-    updateStock(updatedStockItem.id, updatedStockItem.stock_shop);
+    updateProduct(updatedStockItem);
     setIsStockUpdateDialogOpen(false);
     setUpdatingStockItem(null);
   };

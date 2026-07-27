@@ -318,14 +318,16 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         { data: salesData },
         { data: vendorsData },
         { data: purchasesData },
-        { data: settlementsData }
+        { data: settlementsData },
+        { data: settingsData }
       ] = await Promise.all([
         supabase.from('products').select('*'),
         supabase.from('customers').select('*').order('name_en', { ascending: true }),
         supabase.from('sales').select('*').order('date', { ascending: false }).limit(1000),
         supabase.from('vendors').select('*'),
         supabase.from('purchases').select('*'),
-        supabase.from('settlements').select('*')
+        supabase.from('settlements').select('*'),
+        supabase.from('settings').select('*')
       ]);
 
       if (productsData) setProducts(productsData);
@@ -391,6 +393,17 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           items: p.items || []
         }));
         setPurchases(mappedPurchases);
+      }
+      if (settingsData && settingsData.length > 0) {
+        setSettings(prev => {
+          const newSettings = { ...prev } as any;
+          settingsData.forEach(row => {
+            if (newSettings[row.category]) {
+              newSettings[row.category] = { ...newSettings[row.category], ...row.settings };
+            }
+          });
+          return newSettings as AppSettings;
+        });
       }
     } catch (error) {
       console.error('Error fetching data from Supabase:', error);
@@ -872,11 +885,29 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
-  const updateSettings = (category: keyof AppSettings, newSettings: any) => {
+  const updateSettings = async (category: keyof AppSettings, newSettings: any) => {
     setSettings(prev => ({
       ...prev,
       [category]: { ...prev[category], ...newSettings }
     }));
+    try {
+      const { data: existing } = await supabase.from('settings').select('id').eq('category', category).maybeSingle();
+      
+      // Merge with existing settings state to avoid losing unupdated fields
+      const payload = {
+        category,
+        settings: { ...settings[category], ...newSettings },
+        updated_at: new Date().toISOString()
+      };
+      
+      if (existing) {
+        await supabase.from('settings').update(payload).eq('id', existing.id);
+      } else {
+        await supabase.from('settings').insert({ ...payload, id: crypto.randomUUID() });
+      }
+    } catch (error) {
+      console.error('Error saving settings to cloud:', error);
+    }
   };
 
   const getNextCustomerCode = () => {
@@ -1003,9 +1034,27 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const addProduct = async (product: Product) => {
     try {
+      const cleanData = {
+        id: product.id,
+        name_dv: product.name_dv,
+        name_en: product.name_en,
+        price: Number(product.price),
+        stock_shop: Number(product.stock_shop),
+        stock_godown: Number(product.stock_godown),
+        barcode: product.barcode,
+        item_code: product.item_code,
+        category: product.category,
+        is_zero_tax: !!product.is_zero_tax,
+        expiry_date: product.expiry_date || null,
+        image: product.image || '',
+        cost_price: product.cost_price ? Number(product.cost_price) : null,
+        last_purchase_date: product.last_purchase_date || null,
+        units: product.units || null
+      };
+
       const { error } = await supabase
         .from('products')
-        .insert(product);
+        .insert(cleanData);
 
       if (error) throw error;
 

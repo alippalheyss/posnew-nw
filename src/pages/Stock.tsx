@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import StockUpdateDialog from '@/components/StockUpdateDialog';
 import StockTransferDialog from '@/components/StockTransferDialog';
 import ProductDialog from '@/components/ProductDialog';
+import QuickStockDialog from '@/components/QuickStockDialog';
 import { useAppContext, Product } from '@/context/AppContext';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -28,6 +29,7 @@ const Stock = () => {
   const [isStockUpdateDialogOpen, setIsStockUpdateDialogOpen] = useState(false);
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
   const [isProductDialog, setIsProductDialog] = useState(false);
+  const [isQuickStockOpen, setIsQuickStockOpen] = useState(false);
   const [updatingStockItem, setUpdatingStockItem] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [transferDirection, setTransferDirection] = useState<'to_godown' | 'to_shop'>('to_godown');
@@ -104,6 +106,9 @@ const Stock = () => {
         </div>
 
         <div className="flex gap-3">
+           <Button onClick={() => setIsQuickStockOpen(true)} className="gap-2 bg-primary hover:bg-primary/90 h-10 px-6 rounded-xl font-black shadow-[0_0_20px_rgba(0,132,255,0.3)]">
+               <PackagePlus className="h-4 w-4" /> Quick Stock
+           </Button>
            <div className="bg-white/5 rounded-xl p-1 border border-white/10 flex gap-1">
               {['all', 'low', 'warning', 'high'].map((filter) => (
                 <Button 
@@ -234,6 +239,11 @@ const Stock = () => {
           initialDirection={transferDirection}
         />
       )}
+
+      <QuickStockDialog
+        isOpen={isQuickStockOpen}
+        onClose={() => setIsQuickStockOpen(false)}
+      />
 
       {editingProduct && (
         <ProductDialog

@@ -91,7 +91,7 @@ const LocalPurchaseWindow = () => {
 
   if (isPurchaseWindowMinimized) {
     return (
-      <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 bg-[#0a0a1a]/95 backdrop-blur-xl border border-primary/30 p-3 rounded-2xl shadow-2xl shadow-primary/20 animate-in slide-in-from-bottom-5">
+      <div className="fixed bottom-4 right-4 z-[100] flex items-center gap-3 bg-[#0a0a1a]/95 backdrop-blur-xl border border-primary/30 p-3 rounded-2xl shadow-2xl shadow-primary/20 animate-in slide-in-from-bottom-5">
         <div className="flex items-center gap-2 px-2 border-r border-white/10 mr-1 pr-3">
           <ShoppingBag className="w-5 h-5 text-primary" />
           <div className="flex flex-col">
@@ -138,7 +138,7 @@ const LocalPurchaseWindow = () => {
               <SelectTrigger className="w-full bg-white/5 border-white/10 text-right h-12 rounded-xl font-bold">
                 <SelectValue placeholder="Choose Vendor" />
               </SelectTrigger>
-              <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
+              <SelectContent className="bg-[#0a0a1a] border-white/10 text-white !z-[110]">
                 <div className="p-2 sticky top-0 bg-[#0a0a1a] border-b border-white/5 z-10">
                   <Input 
                     placeholder="Search vendors..." 

@@ -370,8 +370,8 @@ const CreditOutstanding = () => {
   return (
     <div className="p-6 font-faruma flex flex-col h-full bg-[#050510] text-white overflow-hidden" dir="rtl">
       {/* Header & Overview */}
-      <div className="mb-8">
-        <div>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+        <div className="lg:col-span-3">
            <div className="flex justify-between items-center mb-6">
               <div className="text-right">
                  <h1 className="text-3xl font-black text-white flex items-center justify-end gap-3">
@@ -407,6 +407,28 @@ const CreditOutstanding = () => {
               </div>
            </ScrollArea>
         </div>
+
+        <Card className="bg-[#0a0a1a] border-white/5 rounded-[2rem] p-6 relative overflow-hidden group border-orange-500/20">
+           <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-orange-500/10 transition-all" />
+           <div className="flex justify-between items-center mb-6">
+              <AlertCircle className="h-6 w-6 text-orange-500" />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-white/20 hover:text-white"
+                onClick={() => setIsOutstandingVisible(!isOutstandingVisible)}
+              >
+                <History className={cn("h-4 w-4", !isOutstandingVisible && "opacity-50")} />
+              </Button>
+           </div>
+           <div className="text-right">
+              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Total Outstanding</p>
+              <p className={cn("text-3xl font-black text-white transition-all", !isOutstandingVisible && "blur-lg select-none")}>
+                {settings.shop.currency} {customers.reduce((sum, c) => sum + (c.outstanding_balance || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 0 })}
+              </p>
+              <p className="text-[10px] text-orange-500/60 mt-2 font-black uppercase tracking-widest">Across {filteredCustomers.length} Accounts</p>
+           </div>
+        </Card>
       </div>
 
       {/* Search & Actions Bar */}

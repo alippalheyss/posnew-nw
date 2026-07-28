@@ -156,20 +156,6 @@ const CreditInvoices = () => {
            </h1>
            <p className="text-sm text-white/40 mt-1">Manage and track all outstanding credit sales</p>
         </div>
-
-        <div className="flex gap-3">
-           <div className="bg-white/5 rounded-xl p-3 border border-white/10 flex items-center gap-4">
-              <div className="text-right">
-                 <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Total Outstanding</p>
-                 <p className="text-xl font-black text-orange-500">
-                    {settings.shop.currency} {creditSales.reduce((acc, s) => acc + s.grandTotal, 0).toLocaleString()}
-                 </p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500">
-                 <AlertCircle className="h-6 w-6" />
-              </div>
-           </div>
-        </div>
       </div>
 
       {/* Search Bar */}

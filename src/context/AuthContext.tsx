@@ -60,6 +60,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Cache for deduplicating concurrent fetchUserData requests
+const pendingUserRequests = new Map<string, Promise<User | null>>();
+
 // Default admin permissions (all true)
 const adminPermissions: UserPermissions = {
     canAccessPOS: true,
@@ -113,33 +116,44 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Fetch user data from Supabase users table
     const fetchUserData = async (authUserId: string): Promise<User | null> => {
-        try {
-            const { data, error } = await supabase
-                .from('users')
-                .select('*')
-                .eq('id', authUserId)
-                .single();
-
-            if (error) {
-                console.error('Error fetching user data:', error);
-                return null;
-            }
-
-            return {
-                id: data.id,
-                username: data.username,
-                name_en: data.name_en,
-                name_dv: data.name_dv,
-                role: data.role,
-                permissions: data.permissions,
-                isActive: data.is_active,
-                createdAt: data.created_at,
-                lastLogin: data.last_login,
-            };
-        } catch (error) {
-            console.error('Error in fetchUserData:', error);
-            return null;
+        if (pendingUserRequests.has(authUserId)) {
+            return pendingUserRequests.get(authUserId)!;
         }
+
+        const request = (async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', authUserId)
+                    .single();
+
+                if (error) {
+                    console.error('Error fetching user data:', error);
+                    return null;
+                }
+
+                return {
+                    id: data.id,
+                    username: data.username,
+                    name_en: data.name_en,
+                    name_dv: data.name_dv,
+                    role: data.role,
+                    permissions: data.permissions,
+                    isActive: data.is_active,
+                    createdAt: data.created_at,
+                    lastLogin: data.last_login,
+                };
+            } catch (error) {
+                console.error('Error in fetchUserData:', error);
+                return null;
+            } finally {
+                pendingUserRequests.delete(authUserId);
+            }
+        })();
+
+        pendingUserRequests.set(authUserId, request);
+        return request;
     };
 
     // Load auth state on mount

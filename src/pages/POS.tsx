@@ -176,14 +176,6 @@ const POS = () => {
     }
   }, [activeCartId, openCarts.size]);
 
-  useEffect(() => {
-    if (activeCart) {
-      localStorage.setItem('customer_display_sync', JSON.stringify({
-        cart: activeCart,
-        timestamp: Date.now()
-      }));
-    }
-  }, [activeCart]);
 
   const createNewCart = () => {
     const newCartId = `cart-${Date.now()}`;
@@ -373,6 +365,22 @@ const POS = () => {
 
   const { subtotal, gstAmount, grandTotal, subtotalNoDiscount, loyaltyDiscount } = calculateTotals();
   const balance = typeof paidAmount === 'number' ? paidAmount - grandTotal : -grandTotal;
+
+  useEffect(() => {
+    if (activeCart) {
+      localStorage.setItem('customer_display_sync', JSON.stringify({
+        cart: activeCart,
+        totals: {
+          subtotal,
+          gstAmount,
+          grandTotal,
+          subtotalNoDiscount,
+          loyaltyDiscount
+        },
+        timestamp: Date.now()
+      }));
+    }
+  }, [activeCart, subtotal, gstAmount, grandTotal, subtotalNoDiscount, loyaltyDiscount]);
 
   const displayProducts = products.filter(product => {
     const matchesSearch = !searchTerm ||

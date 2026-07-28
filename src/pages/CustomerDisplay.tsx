@@ -10,6 +10,7 @@ export default function CustomerDisplay() {
   const { settings, products } = useAppContext();
   const { t } = useTranslation();
   const [activeCart, setActiveCart] = useState<Cart | null>(null);
+  const [cartTotals, setCartTotals] = useState<any>(null);
   const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
   const [isIdle, setIsIdle] = useState(true);
   const [adIndex, setAdIndex] = useState(0);
@@ -38,8 +39,9 @@ export default function CustomerDisplay() {
     const saved = localStorage.getItem('customer_display_sync');
     if (saved) {
       try {
-        const { cart, timestamp } = JSON.parse(saved);
+        const { cart, timestamp, totals } = JSON.parse(saved);
         setActiveCart(cart);
+        if (totals) setCartTotals(totals);
         setLastUpdate(timestamp || Date.now());
       } catch (e) {
         console.error('Error parsing customer_display_sync', e);
@@ -49,8 +51,9 @@ export default function CustomerDisplay() {
     const handleStorage = (e: StorageEvent) => {
       if (e.key === 'customer_display_sync' && e.newValue) {
         try {
-          const { cart, timestamp } = JSON.parse(e.newValue);
+          const { cart, timestamp, totals } = JSON.parse(e.newValue);
           setActiveCart(cart);
+          if (totals) setCartTotals(totals);
           setLastUpdate(timestamp || Date.now());
           setIsIdle(false);
         } catch (error) {
@@ -92,20 +95,10 @@ export default function CustomerDisplay() {
     );
   }
 
-  const calculateSubtotal = () => {
-    if (!activeCart) return 0;
-    return activeCart.items.reduce((total, item: any) => {
-      const price = Number(item.price) || 0;
-      const quantity = Number(item.qty) || 0;
-      const discount = Number(item.discount) || 0;
-      return total + ((price * quantity) - discount);
-    }, 0);
-  };
-
-  const gstRate = Number(settings.shop.taxRate) || 0;
-  const subtotal = calculateSubtotal();
-  const gstAmount = subtotal * (gstRate / 100);
-  const grandTotal = subtotal + gstAmount;
+  const subtotal = cartTotals?.subtotal || 0;
+  const gstAmount = cartTotals?.gstAmount || 0;
+  const grandTotal = cartTotals?.grandTotal || 0;
+  const gstRate = settings.shop.taxRate || 0;
 
   if (isIdle || !activeCart || activeCart.items.length === 0) {
     const currentAd = combinedAds ? combinedAds[adIndex] : null;

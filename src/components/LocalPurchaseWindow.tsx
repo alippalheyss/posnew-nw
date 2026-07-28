@@ -7,6 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { Calendar as CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { showSuccess, showError } from '@/utils/toast';
 
 const LocalPurchaseWindow = () => {
@@ -169,12 +174,34 @@ const LocalPurchaseWindow = () => {
             </div>
             <div className="space-y-2">
               <Label className="text-right block text-xs font-black uppercase tracking-widest text-white/40">{t('date') || 'Date'}</Label>
-              <Input 
-                type="date" 
-                value={newPurchase.date} 
-                onChange={(e) => setNewPurchase({ ...newPurchase, date: e.target.value })} 
-                className="text-right h-12 bg-white/5 border-white/10 rounded-xl font-bold" 
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full text-right h-12 bg-white/5 border-white/10 rounded-xl font-bold justify-between",
+                      !newPurchase.date && "text-muted-foreground"
+                    )}
+                  >
+                    {newPurchase.date ? format(new Date(newPurchase.date), "PPP") : <span>Pick a date</span>}
+                    <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 z-[120]" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={newPurchase.date ? new Date(newPurchase.date) : undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                         const offset = date.getTimezoneOffset();
+                         date = new Date(date.getTime() - (offset*60*1000));
+                         setNewPurchase({ ...newPurchase, date: date.toISOString().split('T')[0] })
+                      }
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 

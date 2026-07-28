@@ -75,7 +75,8 @@ const ExpiryUpdateDialog: React.FC<ExpiryUpdateDialogProps> = ({ isOpen, onClose
       const match = products.find(p => 
         p.barcode === searchQuery || 
         p.item_code.toLowerCase() === searchQuery.toLowerCase() ||
-        p.name_en.toLowerCase() === searchQuery.toLowerCase()
+        p.name_en.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.name_dv.toLowerCase().includes(searchQuery.toLowerCase())
       );
       
       if (match) {

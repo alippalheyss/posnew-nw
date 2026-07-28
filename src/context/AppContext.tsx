@@ -1105,8 +1105,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           id: purchase.id,
           date: purchase.date,
           vendor_id: purchase.vendorId,
-          vendor: purchase.vendorName,
+          vendor: purchase.vendor,
           bill_number: purchase.billNumber,
+          description: purchase.description,
           amount: purchase.amount,
           gst_amount: purchase.gstAmount,
           items: purchase.items

@@ -16,11 +16,22 @@ export default function CustomerDisplay() {
 
   const idleTimeoutMs = (settings.general.customerDisplayIdleTimeout || 10) * 60 * 1000;
 
-  // Filter products for ads (prefer those with images)
-  const adProducts = useMemo(() => {
-    const withImages = products.filter(p => p.image);
-    return withImages.length > 0 ? withImages : products.slice(0, 10);
-  }, [products]);
+  // Combine custom offers and regular products for the ad playlist
+  const combinedAds = useMemo(() => {
+    const customOffers = settings.general.customerDisplayOffers || [];
+    const withImages = products.filter(p => p.image).slice(0, 5); // Take up to 5 products
+    
+    const productAds = withImages.map(p => ({
+      isProduct: true as const,
+      image: p.image,
+      title: p.name_dv,
+      subtitle: p.name_en,
+      price: p.price
+    }));
+
+    const playlist = [...customOffers, ...productAds];
+    return playlist.length > 0 ? playlist : null;
+  }, [settings.general.customerDisplayOffers, products]);
 
   useEffect(() => {
     // Read initial state
@@ -65,13 +76,13 @@ export default function CustomerDisplay() {
   }, [lastUpdate, idleTimeoutMs, activeCart]);
 
   useEffect(() => {
-    if (isIdle && adProducts.length > 0) {
+    if (isIdle && combinedAds) {
       const interval = setInterval(() => {
-        setAdIndex(prev => (prev + 1) % adProducts.length);
+        setAdIndex(prev => (prev + 1) % combinedAds.length);
       }, 5000); // Switch ad every 5 seconds
       return () => clearInterval(interval);
     }
-  }, [isIdle, adProducts]);
+  }, [isIdle, combinedAds]);
 
   if (!settings.general.enableCustomerDisplay) {
     return (
@@ -92,7 +103,7 @@ export default function CustomerDisplay() {
   const grandTotal = subtotal + gstAmount;
 
   if (isIdle || !activeCart || activeCart.items.length === 0) {
-    const adProduct = adProducts[adIndex];
+    const currentAd = combinedAds ? combinedAds[adIndex] : null;
     return (
       <div className="min-h-screen bg-[#050510] flex flex-col items-center justify-center text-white p-8 relative overflow-hidden font-faruma" dir="rtl">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-[#050510] to-orange-500/10 opacity-50" />
@@ -101,39 +112,64 @@ export default function CustomerDisplay() {
           <img src={settings.shop.logo} alt="Shop Logo" className="absolute top-8 right-8 max-h-24 object-contain rounded-2xl drop-shadow-2xl z-10" />
         )}
 
-        <div className="z-10 max-w-4xl w-full text-center space-y-12 animate-in fade-in zoom-in duration-1000">
+        <div className="z-10 max-w-5xl w-full text-center space-y-12 animate-in fade-in zoom-in duration-1000">
           <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400 mb-8 tracking-tight drop-shadow-lg">
             Welcome to {settings.shop.shopName}
           </h1>
           
-          {adProduct && (
-            <Card className="bg-white/5 border-white/10 p-12 rounded-[3rem] backdrop-blur-xl shadow-2xl overflow-hidden relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-              <div className="flex flex-col md:flex-row items-center gap-12 relative z-10">
-                <div className="w-full md:w-1/2 aspect-square relative rounded-3xl overflow-hidden bg-[#0a0a1a] flex items-center justify-center border border-white/5 shadow-inner">
-                  {adProduct.image ? (
-                    <img src={adProduct.image} alt={adProduct.name_en} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-1000" />
-                  ) : (
-                    <ImageIcon className="h-32 w-32 text-white/10" />
-                  )}
-                  <div className="absolute top-4 right-4 bg-orange-500 text-white px-4 py-1 rounded-full font-black text-sm uppercase tracking-widest shadow-lg">
-                    Featured
+          {currentAd && (
+            <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
+              {('isProduct' in currentAd) ? (
+                // Product Ad
+                <Card className="bg-white/5 border-white/10 p-12 rounded-[3rem] backdrop-blur-xl shadow-2xl overflow-hidden relative group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                  <div className="flex flex-col md:flex-row items-center gap-12 relative z-10">
+                    <div className="w-full md:w-1/2 aspect-square relative rounded-3xl overflow-hidden bg-[#0a0a1a] flex items-center justify-center border border-white/5 shadow-inner">
+                      {currentAd.image ? (
+                        <img src={currentAd.image} alt={currentAd.subtitle} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-1000" />
+                      ) : (
+                        <ImageIcon className="h-32 w-32 text-white/10" />
+                      )}
+                      <div className="absolute top-4 right-4 bg-orange-500 text-white px-4 py-1 rounded-full font-black text-sm uppercase tracking-widest shadow-lg">
+                        Featured Product
+                      </div>
+                    </div>
+                    <div className="w-full md:w-1/2 text-right space-y-6">
+                      <div>
+                        <h2 className="text-5xl font-black text-white leading-tight mb-2">{currentAd.title}</h2>
+                        <h3 className="text-2xl text-white/60 font-bold">{currentAd.subtitle}</h3>
+                      </div>
+                      <div className="pt-6 border-t border-white/10">
+                        <p className="text-sm font-black text-orange-400 uppercase tracking-widest mb-1">Price</p>
+                        <p className="text-6xl font-black text-primary drop-shadow-md">
+                          <span className="text-3xl text-white/50">{settings.shop.currency}</span> {currentAd.price?.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
                   </div>
+                </Card>
+              ) : currentAd.type === 'image' ? (
+                // Custom Image Offer
+                <div className="rounded-[3rem] overflow-hidden shadow-2xl border border-white/10 relative">
+                   <img src={currentAd.image} className="w-full max-h-[60vh] object-contain bg-black/50" alt="Special Offer" />
                 </div>
-                <div className="w-full md:w-1/2 text-right space-y-6">
-                  <div>
-                    <h2 className="text-5xl font-black text-white leading-tight mb-2">{adProduct.name_dv}</h2>
-                    <h3 className="text-2xl text-white/60 font-bold">{adProduct.name_en}</h3>
-                  </div>
-                  <div className="pt-6 border-t border-white/10">
-                    <p className="text-sm font-black text-orange-400 uppercase tracking-widest mb-1">Price</p>
-                    <p className="text-6xl font-black text-primary drop-shadow-md">
-                      <span className="text-3xl text-white/50">{settings.shop.currency}</span> {adProduct.price.toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Card>
+              ) : (
+                // Custom Text Offer
+                <Card className="bg-gradient-to-br from-primary/20 via-[#0a0a1a] to-orange-500/20 border-white/10 p-16 rounded-[3rem] backdrop-blur-xl shadow-2xl">
+                   <div className="space-y-8 flex flex-col items-center justify-center text-center">
+                      <h2 className="text-6xl font-black text-white leading-tight drop-shadow-lg">{currentAd.title}</h2>
+                      {currentAd.subtitle && (
+                        <h3 className="text-3xl text-white/80 font-bold">{currentAd.subtitle}</h3>
+                      )}
+                      {currentAd.priceText && (
+                        <div className="mt-8 inline-block bg-orange-500 text-white text-4xl font-black px-12 py-4 rounded-full shadow-[0_0_40px_rgba(249,115,22,0.4)] transform hover:scale-105 transition-transform">
+                          {currentAd.priceText}
+                        </div>
+                      )}
+                   </div>
+                </Card>
+              )}
+            </div>
           )}
         </div>
       </div>

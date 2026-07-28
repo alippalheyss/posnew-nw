@@ -15,6 +15,8 @@ import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/AppContext';
 import { useAuth, User } from '@/context/AuthContext';
 import UserDialog from '@/components/UserDialog';
+import CustomerDisplayOfferDialog from '@/components/CustomerDisplayOfferDialog';
+import { CustomerDisplayOffer } from '@/context/AppContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
 
@@ -31,6 +33,7 @@ const Admin = () => {
   const reportSettings = settings.reports;
   const printingSettings = settings.printing;
 
+  const [isOfferDialogOpen, setIsOfferDialogOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     shopSettings: true,
     accountingSettings: false,
@@ -92,6 +95,26 @@ const Admin = () => {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleDatabaseUploadClick = () => {
+    document.getElementById('database-upload')?.click();
+  };
+
+  const handleAddOffer = (offer: CustomerDisplayOffer) => {
+    const currentOffers = generalSettings.customerDisplayOffers || [];
+    if (currentOffers.length >= 5) {
+      showError('Maximum 5 custom offers allowed');
+      return;
+    }
+    handleSettingsChange('general', 'customerDisplayOffers', [...currentOffers, offer]);
+    showSuccess('Offer added successfully');
+  };
+
+  const handleRemoveOffer = (id: string) => {
+    const currentOffers = generalSettings.customerDisplayOffers || [];
+    handleSettingsChange('general', 'customerDisplayOffers', currentOffers.filter(o => o.id !== id));
+    showSuccess('Offer removed');
   };
 
   const renderBoth = (key: string, options?: any) => (
@@ -354,6 +377,49 @@ const Admin = () => {
                                 className="bg-white/5 border-white/10 h-12 rounded-xl text-right font-bold pr-10"
                               />
                            </div>
+                        </div>
+                     </div>
+                     
+                     <div className="pt-6 border-t border-white/5 space-y-4">
+                        <div className="flex justify-between items-center">
+                           <Button onClick={() => setIsOfferDialogOpen(true)} className="bg-primary hover:bg-primary/90 text-white rounded-xl">
+                             Add Custom Offer
+                           </Button>
+                           <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest block text-right">
+                             Custom Offers (Ad Mode)
+                           </Label>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                           {(generalSettings.customerDisplayOffers || []).map((offer, idx) => (
+                             <div key={offer.id || idx} className="bg-white/5 border border-white/10 rounded-2xl p-4 relative group">
+                               <Button 
+                                 variant="destructive" 
+                                 size="icon" 
+                                 className="absolute -top-2 -right-2 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                 onClick={() => handleRemoveOffer(offer.id)}
+                               >
+                                 <Trash2 className="h-4 w-4" />
+                               </Button>
+                               
+                               {offer.type === 'image' ? (
+                                 <div className="aspect-video w-full rounded-xl overflow-hidden bg-black/50">
+                                   <img src={offer.image} className="w-full h-full object-cover" alt="Custom offer" />
+                                 </div>
+                               ) : (
+                                 <div className="aspect-video w-full rounded-xl bg-primary/10 border border-primary/20 flex flex-col items-center justify-center text-center p-4">
+                                   <h4 className="font-black text-xl text-white mb-1">{offer.title}</h4>
+                                   {offer.subtitle && <p className="text-white/60 text-sm mb-2">{offer.subtitle}</p>}
+                                   {offer.priceText && <div className="bg-orange-500 text-white text-xs font-black px-2 py-1 rounded-md">{offer.priceText}</div>}
+                                 </div>
+                               )}
+                             </div>
+                           ))}
+                           {(generalSettings.customerDisplayOffers || []).length === 0 && (
+                             <div className="col-span-full text-center py-8 text-white/40 border border-dashed border-white/10 rounded-2xl">
+                               No custom offers added yet. Click "Add Custom Offer" to create one.
+                             </div>
+                           )}
                         </div>
                      </div>
                   </CardContent>
@@ -627,6 +693,11 @@ const Admin = () => {
          open={userDialogOpen}
          onOpenChange={(open) => setUserDialogOpen(open)}
          user={selectedUser}
+       />
+       <CustomerDisplayOfferDialog 
+         open={isOfferDialogOpen} 
+         onOpenChange={setIsOfferDialogOpen} 
+         onSave={handleAddOffer} 
        />
     </div>
   );

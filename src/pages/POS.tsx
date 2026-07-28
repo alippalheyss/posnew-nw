@@ -478,11 +478,7 @@ const POS = () => {
           if (pointsToRedeem > 0) {
             await redeemLoyaltyPoints(activeCart.customer.id, pointsToRedeem);
           }
-          const loyaltyAmountPerPoint = settings.general.loyaltyAmountPerPoint || 20;
-          const pointsEarned = Math.floor(grandTotal / loyaltyAmountPerPoint);
-          if (pointsEarned > 0) {
-            await awardLoyaltyPoints(activeCart.customer.id, pointsEarned);
-          }
+          // Note: Loyalty points are NOT awarded on credit sales. They are awarded upon settlement.
         }
       }
 

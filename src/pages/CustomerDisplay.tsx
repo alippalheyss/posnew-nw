@@ -86,7 +86,7 @@ export default function CustomerDisplay() {
     return activeCart.items.reduce((total, item) => total + ((item.price * item.quantity) - (item.discount || 0)), 0);
   };
 
-  const gstRate = settings.shop.taxRate;
+  const gstRate = settings.shop.taxRate || 0;
   const subtotal = calculateSubtotal();
   const gstAmount = subtotal * (gstRate / 100);
   const grandTotal = subtotal + gstAmount;
@@ -141,9 +141,9 @@ export default function CustomerDisplay() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050510] flex text-white font-faruma overflow-hidden" dir="rtl">
+    <div className="h-screen w-full bg-[#050510] flex text-white font-faruma overflow-hidden" dir="rtl">
       {/* Items List */}
-      <div className="flex-1 flex flex-col p-8 border-l border-white/10 relative">
+      <div className="flex-1 flex flex-col p-8 border-l border-white/10 relative min-h-0">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
         
         <div className="flex items-center justify-between mb-8 relative z-10">
@@ -161,7 +161,7 @@ export default function CustomerDisplay() {
           )}
         </div>
 
-        <ScrollArea className="flex-1 -mx-4 px-4 custom-scrollbar relative z-10">
+        <ScrollArea className="flex-1 min-h-0 -mx-4 px-4 custom-scrollbar relative z-10">
           <div className="space-y-4 pb-4">
             {activeCart.items.map((item, index) => (
               <Card key={`${item.productId}-${index}`} className="bg-[#0a0a1a] border-white/5 p-6 rounded-3xl animate-in slide-in-from-right-4 fade-in duration-300 shadow-lg group">

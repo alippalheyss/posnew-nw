@@ -892,6 +892,14 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
       if (customerError) throw customerError;
 
+      if (settings.general.enableLoyaltyProgram) {
+        const loyaltyAmountPerPoint = settings.general.loyaltyAmountPerPoint || 20;
+        const pointsEarned = Math.floor(settlement.amount_paid / loyaltyAmountPerPoint);
+        if (pointsEarned > 0) {
+          await awardLoyaltyPoints(customerId, pointsEarned);
+        }
+      }
+
       setCustomers(prev => prev.map(c =>
         c.id === customerId ? {
           ...c,

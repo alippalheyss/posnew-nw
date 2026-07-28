@@ -94,9 +94,9 @@ export default function CustomerDisplay() {
 
   const calculateSubtotal = () => {
     if (!activeCart) return 0;
-    return activeCart.items.reduce((total, item) => {
+    return activeCart.items.reduce((total, item: any) => {
       const price = Number(item.price) || 0;
-      const quantity = Number(item.quantity) || 0;
+      const quantity = Number(item.qty) || 0;
       const discount = Number(item.discount) || 0;
       return total + ((price * quantity) - discount);
     }, 0);
@@ -202,47 +202,63 @@ export default function CustomerDisplay() {
           )}
         </div>
 
-        <div className="flex-1 min-h-0 relative z-10 -mx-4 px-4">
-          <ScrollArea className="absolute inset-0 custom-scrollbar">
-            <div className="space-y-4 pb-4">
-            {activeCart.items.map((item, index) => (
-              <Card key={`${item.productId}-${index}`} className="bg-[#0a0a1a] border-white/5 p-6 rounded-3xl animate-in slide-in-from-right-4 fade-in duration-300 shadow-lg group">
-                <div className="flex justify-between items-center gap-6">
-                  <div className="flex items-center gap-6 flex-1">
-                    <div className="h-20 w-20 bg-white/5 rounded-2xl flex items-center justify-center overflow-hidden border border-white/10 flex-shrink-0">
-                      {item.image ? (
-                        <img src={item.image} alt={item.name_en} className="w-full h-full object-cover" />
-                      ) : (
-                        <Tag className="h-8 w-8 text-white/20" />
+        <div className="flex-1 min-h-0 relative z-10 w-full overflow-hidden flex flex-col justify-center">
+          <div className={cn(
+            "grid gap-4 w-full max-h-full",
+            activeCart.items.length > 12 ? "grid-cols-3" : activeCart.items.length > 6 ? "grid-cols-2" : "grid-cols-1"
+          )}>
+            {activeCart.items.map((item: any, index) => {
+              const isDense = activeCart.items.length > 6;
+              const isVeryDense = activeCart.items.length > 12;
+              
+              return (
+                <Card key={`${item.productId || item.id}-${index}`} className={cn(
+                  "bg-[#0a0a1a] border-white/5 shadow-lg group overflow-hidden",
+                  isVeryDense ? "p-3 rounded-xl" : isDense ? "p-4 rounded-2xl" : "p-6 rounded-3xl"
+                )}>
+                  <div className="flex justify-between items-center gap-4">
+                    <div className="flex items-center gap-4 flex-1 overflow-hidden">
+                      {!isVeryDense && (
+                        <div className={cn(
+                          "bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 flex-shrink-0",
+                          isDense ? "h-12 w-12 rounded-xl" : "h-20 w-20 rounded-2xl"
+                        )}>
+                          {item.image ? (
+                            <img src={item.image} alt={item.name_en} className="w-full h-full object-cover" />
+                          ) : (
+                            <Tag className={isDense ? "h-5 w-5 text-white/20" : "h-8 w-8 text-white/20"} />
+                          )}
+                        </div>
                       )}
+                      <div className="min-w-0">
+                        <h3 className={cn("font-bold text-white group-hover:text-primary transition-colors truncate", isVeryDense ? "text-lg" : isDense ? "text-xl" : "text-2xl mb-1")}>{item.name_dv}</h3>
+                        {!isVeryDense && <p className={cn("text-white/50 truncate", isDense ? "text-sm" : "text-lg")}>{item.name_en}</p>}
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-2xl font-bold text-white mb-1 group-hover:text-primary transition-colors">{item.name_dv}</h3>
-                      <p className="text-white/50 text-lg">{item.name_en}</p>
+                    
+                    <div className={cn("flex items-center text-right shrink-0", isVeryDense ? "gap-4" : isDense ? "gap-6" : "gap-12")}>
+                      <div>
+                        <p className={cn("font-black text-white/40 uppercase tracking-widest", isVeryDense ? "hidden" : "text-[10px] mb-1")}>Qty</p>
+                        <p className={cn("font-bold", isVeryDense ? "text-lg" : isDense ? "text-xl" : "text-2xl")}>{item.qty}x</p>
+                      </div>
+                      {!isVeryDense && (
+                        <div>
+                          <p className={cn("font-black text-white/40 uppercase tracking-widest text-[10px] mb-1")}>Price</p>
+                          <p className={cn("font-bold", isDense ? "text-xl" : "text-2xl")}>{Number(item.price).toFixed(2)}</p>
+                        </div>
+                      )}
+                      <div className={isDense ? "w-24" : "w-32"}>
+                        <p className={cn("font-black text-white/40 uppercase tracking-widest", isVeryDense ? "hidden" : "text-[10px] mb-1")}>Total</p>
+                        <p className={cn("font-black text-primary", isVeryDense ? "text-xl" : isDense ? "text-2xl" : "text-3xl")}>
+                          {((Number(item.price) * Number(item.qty)) - (Number(item.discount) || 0)).toFixed(2)}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-12 text-right">
-                    <div>
-                      <p className="text-sm font-black text-white/40 uppercase tracking-widest mb-1">Qty</p>
-                      <p className="text-2xl font-bold">{item.quantity}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-black text-white/40 uppercase tracking-widest mb-1">Price</p>
-                      <p className="text-2xl font-bold">{item.price.toFixed(2)}</p>
-                    </div>
-                    <div className="w-32">
-                      <p className="text-sm font-black text-white/40 uppercase tracking-widest mb-1">Total</p>
-                      <p className="text-3xl font-black text-primary">
-                        {((item.price * item.quantity) - (item.discount || 0)).toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-            </div>
-          </ScrollArea>
+                </Card>
+              );
+            })}
+          </div>
         </div>
       </div>
 

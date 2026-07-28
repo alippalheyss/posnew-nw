@@ -21,6 +21,7 @@ import SalesReports from "./pages/SalesReports";
 import ExpiryAlerts from "./pages/ExpiryAlerts";
 import GSTReports from "./pages/GSTReports";
 import ShrinkageReport from "./pages/ShrinkageReport";
+import CustomerDisplay from "./pages/CustomerDisplay";
 import LocalPurchaseWindow from "./components/LocalPurchaseWindow";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
           <Routes>
             {/* Public Route */}
             <Route path="/login" element={<Login />} />
+            <Route path="/customer-display" element={<CustomerDisplay />} />
 
             {/* Protected Routes */}
             <Route

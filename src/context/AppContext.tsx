@@ -163,6 +163,8 @@ interface GeneralSettings {
   loyaltyAmountPerPoint: number;
   loyaltyPointsValue: number;
   loyaltyMinRedeemPoints: number;
+  enableCustomerDisplay: boolean;
+  customerDisplayIdleTimeout: number;
 }
 
 interface ReportSettings {
@@ -509,6 +511,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         loyaltyAmountPerPoint: 20,
         loyaltyPointsValue: 100,
         loyaltyMinRedeemPoints: 1000,
+        enableCustomerDisplay: true,
+        customerDisplayIdleTimeout: 10,
       },
       reports: {
         invoiceHeader: 'INVOICE',

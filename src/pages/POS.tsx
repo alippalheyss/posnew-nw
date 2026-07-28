@@ -176,6 +176,15 @@ const POS = () => {
     }
   }, [activeCartId, openCarts.size]);
 
+  useEffect(() => {
+    if (activeCart) {
+      localStorage.setItem('customer_display_sync', JSON.stringify({
+        cart: activeCart,
+        timestamp: Date.now()
+      }));
+    }
+  }, [activeCart]);
+
   const createNewCart = () => {
     const newCartId = `cart-${Date.now()}`;
     const nextNum = openCarts.size + 1;

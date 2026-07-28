@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { ChevronDown, ChevronUp, Upload, Image as ImageIcon, Trash2, Settings, Landmark, Monitor, Layout, FileText, Printer, Building2, X, Edit, UserPlus, Shield, Database, Languages, Palette, Globe, CreditCard, Receipt, Percent, LogOut, Gift } from 'lucide-react';
+import { ChevronDown, ChevronUp, Upload, Image as ImageIcon, Trash2, Settings, Landmark, Monitor, Layout, FileText, Printer, Building2, X, Edit, UserPlus, Shield, Database, Languages, Palette, Globe, CreditCard, Receipt, Percent, LogOut, Gift, Clock } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/AppContext';
@@ -327,6 +327,31 @@ const Admin = () => {
                                 value={generalSettings.loyaltyMinRedeemPoints || 1000} 
                                 onChange={(e) => handleSettingsChange('general', 'loyaltyMinRedeemPoints', parseFloat(e.target.value))}
                                 className="bg-white/5 border-white/10 h-12 rounded-xl text-right font-bold"
+                              />
+                           </div>
+                        </div>
+                     </div>
+                     <div className="pt-6 border-t border-white/5 grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+                           <Monitor className="h-5 w-5 text-primary" />
+                           <div className="text-right">
+                              <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest mb-2 block">Enable Customer Display</Label>
+                              <Switch 
+                                checked={generalSettings.enableCustomerDisplay ?? true} 
+                                onCheckedChange={(val) => handleSettingsChange('general', 'enableCustomerDisplay', val)}
+                                className="data-[state=checked]:bg-primary"
+                              />
+                           </div>
+                        </div>
+                        <div className="space-y-2">
+                           <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest">Idle Timeout (Minutes)</Label>
+                           <div className="relative">
+                              <Clock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
+                              <Input 
+                                type="number"
+                                value={generalSettings.customerDisplayIdleTimeout || 10} 
+                                onChange={(e) => handleSettingsChange('general', 'customerDisplayIdleTimeout', parseFloat(e.target.value))}
+                                className="bg-white/5 border-white/10 h-12 rounded-xl text-right font-bold pr-10"
                               />
                            </div>
                         </div>

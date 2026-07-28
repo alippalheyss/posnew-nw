@@ -20,9 +20,16 @@ export default function CustomerDisplay() {
   // Combine custom offers and regular products for the ad playlist
   const combinedAds = useMemo(() => {
     const customOffers = settings.general.customerDisplayOffers || [];
-    const withImages = products.filter(p => p.image).slice(0, 5); // Take up to 5 products
     
-    const productAds = withImages.map(p => ({
+    // Get products with images, fallback to top 10 products if none have images
+    let adProductsList = products.filter(p => p.image);
+    if (adProductsList.length === 0) {
+      adProductsList = products.slice(0, 10);
+    } else {
+      adProductsList = adProductsList.slice(0, 10);
+    }
+    
+    const productAds = adProductsList.map(p => ({
       isProduct: true as const,
       image: p.image,
       title: p.name_dv,
@@ -30,7 +37,24 @@ export default function CustomerDisplay() {
       price: p.price
     }));
 
-    const playlist = [...customOffers, ...productAds];
+    let playlist: any[] = [];
+    
+    if (customOffers.length > 0) {
+      if (productAds.length > 0) {
+        // Interleave custom offers with product ads so offers show up very frequently (50% of the time)
+        let offerIdx = 0;
+        for (let i = 0; i < productAds.length; i++) {
+          playlist.push(customOffers[offerIdx % customOffers.length]);
+          playlist.push(productAds[i]);
+          offerIdx++;
+        }
+      } else {
+        playlist = [...customOffers];
+      }
+    } else {
+      playlist = [...productAds];
+    }
+    
     return playlist.length > 0 ? playlist : null;
   }, [settings.general.customerDisplayOffers, products]);
 

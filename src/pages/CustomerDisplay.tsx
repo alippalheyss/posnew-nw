@@ -14,6 +14,7 @@ export default function CustomerDisplay() {
   const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
   const [isIdle, setIsIdle] = useState(true);
   const [adIndex, setAdIndex] = useState(0);
+  const [isPosActive, setIsPosActive] = useState(() => localStorage.getItem('pos_active') === 'true');
 
   const idleTimeoutMs = (settings.general.customerDisplayIdleTimeout || 10) * 60 * 1000;
 
@@ -83,6 +84,8 @@ export default function CustomerDisplay() {
         } catch (error) {
           console.error("Error parsing cart update from localStorage", error);
         }
+      } else if (e.key === 'pos_active') {
+        setIsPosActive(e.newValue === 'true');
       }
     };
 
@@ -124,7 +127,7 @@ export default function CustomerDisplay() {
   const grandTotal = cartTotals?.grandTotal || 0;
   const gstRate = settings.shop.taxRate || 0;
 
-  if (isIdle || !activeCart || activeCart.items.length === 0) {
+  if (!isPosActive || isIdle || !activeCart || activeCart.items.length === 0) {
     const currentAd = combinedAds ? combinedAds[adIndex] : null;
     return (
       <div className="min-h-screen bg-[#050510] flex flex-col items-center justify-center text-white p-8 relative overflow-hidden font-faruma" dir="rtl">

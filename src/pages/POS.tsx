@@ -103,6 +103,15 @@ const POS = () => {
   }, [activeCartId]);
 
   useEffect(() => {
+    localStorage.setItem('pos_active', 'true');
+    window.dispatchEvent(new Event('storage'));
+    return () => {
+      localStorage.setItem('pos_active', 'false');
+      window.dispatchEvent(new Event('storage'));
+    };
+  }, []);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (document.activeElement?.tagName === 'INPUT' && document.activeElement !== searchInputRef.current) {
         if (e.key === 'Escape') {

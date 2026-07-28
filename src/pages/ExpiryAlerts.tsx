@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -9,12 +9,15 @@ import { format, isPast, parseISO, addDays } from 'date-fns';
 import { AlertCircle, CheckCircle2, AlertTriangle, Clock, Calendar, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import ExpiryUpdateDialog from '@/components/ExpiryUpdateDialog';
 
 const ExpiryAlerts = () => {
   const { t } = useTranslation();
   const { products } = useAppContext();
   const today = new Date();
   const thirtyDaysFromNow = addDays(today, 30);
+  const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
 
   const expiringProducts = products.filter(product => {
     if (!product.expiry_date) return false;
@@ -40,6 +43,11 @@ const ExpiryAlerts = () => {
              {renderBoth('expiry_alerts')} <ShieldAlert className="h-8 w-8 text-red-500" />
            </h1>
            <p className="text-sm text-white/40 mt-1">{renderBoth('expiry_alerts_description')}</p>
+        </div>
+        <div className="flex gap-3">
+           <Button onClick={() => setIsUpdateDialogOpen(true)} className="gap-2 bg-primary hover:bg-primary/90 h-10 px-6 rounded-xl font-black shadow-[0_0_20px_rgba(0,132,255,0.3)] text-white uppercase tracking-widest">
+               <Calendar className="h-4 w-4" /> Update Expiry Dates
+           </Button>
         </div>
       </div>
 
@@ -113,6 +121,10 @@ const ExpiryAlerts = () => {
           </div>
         )}
       </ScrollArea>
+      <ExpiryUpdateDialog 
+        isOpen={isUpdateDialogOpen}
+        onClose={() => setIsUpdateDialogOpen(false)}
+      />
     </div>
   );
 };

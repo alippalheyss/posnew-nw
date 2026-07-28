@@ -574,8 +574,8 @@ const Admin = () => {
        </ScrollArea>
 
        <UserDialog 
-         isOpen={userDialogOpen}
-         onClose={() => setUserDialogOpen(false)}
+         open={userDialogOpen}
+         onOpenChange={(open) => setUserDialogOpen(open)}
          user={selectedUser}
        />
     </div>

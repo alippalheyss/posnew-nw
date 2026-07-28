@@ -56,6 +56,7 @@ const POS = () => {
   } = useAppContext();
 
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState<boolean>(false);
 
   const cartCounter = useRef(openCarts.size);
   const [searchTerm, setSearchTerm] = useState('');
@@ -372,8 +373,9 @@ const POS = () => {
       product.item_code.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesCategory = selectedCategory === 'ALL' || product.category === selectedCategory;
+    const matchesFavorite = !showFavoritesOnly || favoriteProductIds.includes(product.id);
 
-    return matchesSearch && matchesCategory;
+    return matchesSearch && matchesCategory && matchesFavorite;
   }).slice(0, 50);
 
   const processCashPayment = async () => {
@@ -684,8 +686,16 @@ const POS = () => {
                 </SelectContent>
               </Select>
             </div>
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10">
-              <Heart className="h-4 w-4 text-white/40" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              className={cn(
+                "h-10 w-10 rounded-xl border border-white/10 transition-all",
+                showFavoritesOnly ? "bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30" : "bg-white/5 hover:bg-white/10 text-white/40"
+              )}
+            >
+              <Heart className={cn("h-4 w-4", showFavoritesOnly ? "fill-current text-yellow-500" : "text-white/40")} />
             </Button>
           </div>
 

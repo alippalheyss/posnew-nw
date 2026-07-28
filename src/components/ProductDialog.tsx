@@ -89,7 +89,32 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
             const file = e.target.files[0];
             const reader = new FileReader();
             reader.onloadend = () => {
-                setImagePreviewUrl(reader.result as string);
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const max_size = 800;
+
+                    if (width > height) {
+                        if (width > max_size) {
+                            height *= max_size / width;
+                            width = max_size;
+                        }
+                    } else {
+                        if (height > max_size) {
+                            width *= max_size / height;
+                            height = max_size;
+                        }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(img, 0, 0, width, height);
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                    setImagePreviewUrl(compressedBase64);
+                };
+                img.src = reader.result as string;
             };
             reader.readAsDataURL(file);
         }

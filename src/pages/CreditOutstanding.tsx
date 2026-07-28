@@ -21,7 +21,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from "@/components/ui/progress";
-import { formatDate, formatTime } from '@/utils/formatters';
+import { formatDate, formatTime, formatCurrency, toISODate } from '@/utils/formatters';
 
 interface Settlement {
   id: string;

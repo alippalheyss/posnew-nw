@@ -416,7 +416,23 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     fetchData();
   }, []);
 
-  const [favoriteProductIds, setFavoriteProductIds] = useState<string[]>([]);
+  const [favoriteProductIds, setFavoriteProductIds] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('favorite_products');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error('Error parsing favorite_products', e);
+        }
+      }
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('favorite_products', JSON.stringify(favoriteProductIds));
+  }, [favoriteProductIds]);
 
   const [openCarts, setOpenCarts] = useState<Map<string, Cart>>(() => {
     if (typeof window !== 'undefined') {

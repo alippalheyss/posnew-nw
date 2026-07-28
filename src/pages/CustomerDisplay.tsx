@@ -94,10 +94,15 @@ export default function CustomerDisplay() {
 
   const calculateSubtotal = () => {
     if (!activeCart) return 0;
-    return activeCart.items.reduce((total, item) => total + ((item.price * item.quantity) - (item.discount || 0)), 0);
+    return activeCart.items.reduce((total, item) => {
+      const price = Number(item.price) || 0;
+      const quantity = Number(item.quantity) || 0;
+      const discount = Number(item.discount) || 0;
+      return total + ((price * quantity) - discount);
+    }, 0);
   };
 
-  const gstRate = settings.shop.taxRate || 0;
+  const gstRate = Number(settings.shop.taxRate) || 0;
   const subtotal = calculateSubtotal();
   const gstAmount = subtotal * (gstRate / 100);
   const grandTotal = subtotal + gstAmount;
@@ -197,8 +202,9 @@ export default function CustomerDisplay() {
           )}
         </div>
 
-        <ScrollArea className="flex-1 min-h-0 -mx-4 px-4 custom-scrollbar relative z-10">
-          <div className="space-y-4 pb-4">
+        <div className="flex-1 min-h-0 relative z-10 -mx-4 px-4">
+          <ScrollArea className="absolute inset-0 custom-scrollbar">
+            <div className="space-y-4 pb-4">
             {activeCart.items.map((item, index) => (
               <Card key={`${item.productId}-${index}`} className="bg-[#0a0a1a] border-white/5 p-6 rounded-3xl animate-in slide-in-from-right-4 fade-in duration-300 shadow-lg group">
                 <div className="flex justify-between items-center gap-6">
@@ -235,8 +241,9 @@ export default function CustomerDisplay() {
                 </div>
               </Card>
             ))}
-          </div>
-        </ScrollArea>
+            </div>
+          </ScrollArea>
+        </div>
       </div>
 
       {/* Totals Sidebar */}

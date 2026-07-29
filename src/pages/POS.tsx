@@ -919,7 +919,7 @@ const POS = () => {
           )}
         </ScrollArea>
 
-        <div className="p-6 bg-black/40 border-t border-border space-y-4">
+        <div className="p-6 bg-muted border-t border-border space-y-4">
           <div className="space-y-2">
             <div className="flex justify-between text-xs font-bold text-muted-foreground">
               <span>{renderBoth('subtotal')}</span>
@@ -931,7 +931,7 @@ const POS = () => {
             </div>
             <div className="flex justify-between items-end pt-2">
               <span className="text-sm font-black text-foreground uppercase tracking-tighter">{renderBoth('grand_total')}</span>
-              <span className="text-4xl font-black text-neon-blue leading-none">
+              <span className="text-4xl font-black text-primary leading-none">
                 {settings.shop.currency} {grandTotal.toFixed(2)}
               </span>
             </div>
@@ -940,28 +940,28 @@ const POS = () => {
           <div className="grid grid-cols-2 gap-2">
             <Button
               onClick={() => setIsSplitDialogOpen(true)}
-              className="h-10 bg-[#2d5a5a] hover:bg-[#3d6a6a] text-foreground border border-border text-[10px] font-black uppercase tracking-widest gap-2"
+              className="h-10 bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 dark:text-teal-400 border border-teal-500/20 text-[10px] font-black uppercase tracking-widest gap-2"
             >
-              <Users className="h-4 w-4 text-primary" /> SPLIT BILL
+              <Users className="h-4 w-4" /> SPLIT BILL
             </Button>
             <Button
               onClick={clearActiveCart}
-              className="h-10 bg-[#5a2d2d] hover:bg-[#6a3d3d] text-foreground border border-border text-[10px] font-black uppercase tracking-widest gap-2"
+              className="h-10 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 text-[10px] font-black uppercase tracking-widest gap-2"
             >
-              <Trash2 className="h-4 w-4 text-red-500" /> CLEAR
+              <Trash2 className="h-4 w-4" /> CLEAR
             </Button>
             <Button
               onClick={() => {
                 setTransferAmount(grandTotal);
                 setIsAwaitingTransferDialogOpen(true);
               }}
-              className="h-10 bg-[#2d3a5a] hover:bg-[#3d4a6a] text-foreground border border-border text-[10px] font-black uppercase tracking-widest gap-2"
+              className="h-10 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[10px] font-black uppercase tracking-widest gap-2"
             >
-              <Receipt className="h-4 w-4 text-blue-400" /> AWAITING TRANSFER
+              <Receipt className="h-4 w-4" /> AWAITING TRANSFER
             </Button>
             <Button
               onClick={() => { setCreditDialogStep(1); setIsCreditDialogOpen(true); }}
-              className="h-10 bg-[#5a4d2d] hover:bg-[#6a5d3d] text-[#f39c12] border border-[#f39c12]/20 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-500/10"
+              className="h-10 bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/20 text-[10px] font-black uppercase tracking-widest gap-2"
             >
               CREDIT SALE
             </Button>
@@ -969,7 +969,7 @@ const POS = () => {
 
           <Button
             onClick={() => setIsCashDialogOpen(true)}
-            className="w-full h-14 btn-gradient-purple text-foreground text-lg font-black uppercase tracking-[0.2em] shadow-xl shadow-purple-500/30"
+            className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground text-lg font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/30"
           >
             {renderBoth('checkout')}
           </Button>

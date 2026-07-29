@@ -127,7 +127,7 @@ export default function CustomerDisplay() {
   const grandTotal = cartTotals?.grandTotal || 0;
   const gstRate = settings.shop.taxRate || 0;
 
-  if (!isPosActive || isIdle || !activeCart || activeCart.items.length === 0) {
+  if (isIdle || !activeCart || activeCart.items.length === 0) {
     const currentAd = combinedAds ? combinedAds[adIndex] : null;
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center text-foreground p-8 relative overflow-hidden font-faruma" dir="rtl">

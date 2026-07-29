@@ -70,34 +70,34 @@ const SalesReports = () => {
   );
 
   const StatCard = ({ title, stats, icon: Icon, color, profit }: any) => (
-    <Card className="bg-[#0a0a1a] border-white/5 hover:border-primary/30 transition-all rounded-[2rem] overflow-hidden group">
+    <Card className="bg-card border-border hover:border-primary/30 transition-all rounded-[2rem] overflow-hidden group">
       <CardContent className="p-6 text-right">
         <div className="flex justify-between items-center mb-6">
-          <div className={cn("p-3 rounded-2xl bg-white/5 border border-white/10 group-hover:scale-110 transition-transform", color)}>
+          <div className={cn("p-3 rounded-2xl bg-muted border border-border group-hover:scale-110 transition-transform", color)}>
             <Icon className="h-6 w-6" />
           </div>
-          <p className="text-white/40 text-[10px] font-black uppercase tracking-widest">{title}</p>
+          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">{title}</p>
         </div>
         
         <div className="space-y-1 mb-6">
-           <p className="text-3xl font-black text-white">
+           <p className="text-3xl font-black text-foreground">
              {settings.shop.currency} {stats.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
            </p>
            <div className="flex items-center justify-end gap-2">
-              <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">{stats.count} TRANSACTIONS</span>
-              <Activity className="h-3 w-3 text-white/10" />
+              <span className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest">{stats.count} TRANSACTIONS</span>
+              <Activity className="h-3 w-3 text-foreground/10" />
            </div>
         </div>
 
         {profit && (
-          <div className="pt-4 border-t border-white/5 flex justify-between items-center">
+          <div className="pt-4 border-t border-border flex justify-between items-center">
              <div className="flex items-center gap-1 text-green-500">
                 <ArrowUpRight className="h-3 w-3" />
                 <span className="text-[10px] font-black">{profit.margin.toFixed(1)}% MARGIN</span>
              </div>
              <div className="text-right">
-                <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">EST. PROFIT</p>
-                <p className="text-sm font-black text-white">{settings.shop.currency} {profit.profit.toLocaleString()}</p>
+                <p className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest">EST. PROFIT</p>
+                <p className="text-sm font-black text-foreground">{settings.shop.currency} {profit.profit.toLocaleString()}</p>
              </div>
           </div>
         )}
@@ -106,14 +106,14 @@ const SalesReports = () => {
   );
 
   return (
-    <div className="p-6 font-faruma flex flex-col h-full bg-[#050510] text-white overflow-hidden" dir="rtl">
+    <div className="p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div className="text-right">
-           <h1 className="text-3xl font-black text-white flex items-center justify-end gap-3">
+           <h1 className="text-3xl font-black text-foreground flex items-center justify-end gap-3">
              {renderBoth('sales_reports')} <BarChart3 className="h-8 w-8 text-primary" />
            </h1>
-           <p className="text-sm text-white/40 mt-1">{renderBoth('sales_reports_description')}</p>
+           <p className="text-sm text-muted-foreground mt-1">{renderBoth('sales_reports_description')}</p>
         </div>
       </div>
 
@@ -128,44 +128,44 @@ const SalesReports = () => {
 
           {/* Performance Analysis */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-             <Card className="bg-[#0a0a1a] border-white/5 rounded-[2rem] p-8">
+             <Card className="bg-card border-border rounded-[2rem] p-8">
                 <CardHeader className="p-0 mb-6 flex flex-row items-center justify-between">
-                   <CardTitle className="text-xl font-black text-white flex items-center gap-2">
+                   <CardTitle className="text-xl font-black text-foreground flex items-center gap-2">
                       <Activity className="h-5 w-5 text-primary" /> Monthly Growth
                    </CardTitle>
                 </CardHeader>
-                <div className="h-60 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-3xl bg-white/5">
-                   <p className="text-white/20 font-black uppercase tracking-widest">Chart Visualisation Placeholder</p>
-                   <p className="text-[10px] text-white/10 mt-2 font-bold">UPGRADE TO PRO FOR ADVANCED ANALYTICS</p>
+                <div className="h-60 flex flex-col items-center justify-center border-2 border-dashed border-border rounded-3xl bg-muted">
+                   <p className="text-muted-foreground/50 font-black uppercase tracking-widest">Chart Visualisation Placeholder</p>
+                   <p className="text-[10px] text-foreground/10 mt-2 font-bold">UPGRADE TO PRO FOR ADVANCED ANALYTICS</p>
                 </div>
              </Card>
 
-             <Card className="bg-[#0a0a1a] border-white/5 rounded-[2rem] p-8">
+             <Card className="bg-card border-border rounded-[2rem] p-8">
                 <CardHeader className="p-0 mb-6 flex flex-row items-center justify-between">
-                   <CardTitle className="text-xl font-black text-white flex items-center gap-2">
+                   <CardTitle className="text-xl font-black text-foreground flex items-center gap-2">
                       <ShoppingBag className="h-5 w-5 text-orange-500" /> Key Insights
                    </CardTitle>
                 </CardHeader>
                 <div className="space-y-4">
-                   <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-between">
+                   <div className="p-4 bg-muted rounded-2xl border border-border flex items-center justify-between">
                       <ArrowUpRight className="h-5 w-5 text-green-500" />
                       <div className="text-right">
-                         <p className="text-sm font-black text-white">Highest Revenue Day</p>
-                         <p className="text-[10px] text-white/40 uppercase font-bold tracking-widest">Saturday, May 3rd</p>
+                         <p className="text-sm font-black text-foreground">Highest Revenue Day</p>
+                         <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Saturday, May 3rd</p>
                       </div>
                    </div>
-                   <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-between">
+                   <div className="p-4 bg-muted rounded-2xl border border-border flex items-center justify-between">
                       <TrendingUp className="h-5 w-5 text-blue-500" />
                       <div className="text-right">
-                         <p className="text-sm font-black text-white">Best Selling Category</p>
-                         <p className="text-[10px] text-white/40 uppercase font-bold tracking-widest">Soft Drinks & Beverages</p>
+                         <p className="text-sm font-black text-foreground">Best Selling Category</p>
+                         <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Soft Drinks & Beverages</p>
                       </div>
                    </div>
-                   <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-between">
+                   <div className="p-4 bg-muted rounded-2xl border border-border flex items-center justify-between">
                       <Activity className="h-5 w-5 text-purple-500" />
                       <div className="text-right">
-                         <p className="text-sm font-black text-white">Average Basket Value</p>
-                         <p className="text-[10px] text-white/40 uppercase font-bold tracking-widest">{settings.shop.currency} 45.50</p>
+                         <p className="text-sm font-black text-foreground">Average Basket Value</p>
+                         <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{settings.shop.currency} 45.50</p>
                       </div>
                    </div>
                 </div>

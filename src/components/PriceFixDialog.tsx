@@ -54,7 +54,7 @@ const PriceFixDialog: React.FC<PriceFixDialogProps> = ({ isOpen, priceUpdate, on
                     {/* Product Info */}
                     <div className="bg-gray-50 p-3 rounded-lg border">
                         <p className="text-right font-bold text-lg mb-1">{priceUpdate.product.name_dv}</p>
-                        <p className="text-right text-sm text-black dark:text-white ">{priceUpdate.product.name_en}</p>
+                        <p className="text-right text-sm text-black dark:text-foreground ">{priceUpdate.product.name_en}</p>
                     </div>
 
                     {/* Price Comparison */}
@@ -88,7 +88,7 @@ const PriceFixDialog: React.FC<PriceFixDialogProps> = ({ isOpen, priceUpdate, on
                             <span className={profitMargin < 10 ? "text-red-600" : profitMargin < 20 ? "text-yellow-600" : "text-green-600"}>
                                 {t('profit_margin')}: {profitMargin.toFixed(1)}%
                             </span>
-                            <span className="text-black dark:text-white ">
+                            <span className="text-black dark:text-foreground ">
                                 {t('minimum_recommended')}: MVR {priceUpdate.recommendedSellingPrice.toFixed(2)}
                             </span>
                         </div>

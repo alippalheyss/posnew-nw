@@ -77,13 +77,13 @@ const LoyaltyRedemptionDialog: React.FC<LoyaltyRedemptionDialogProps> = ({
 
                 <div className="py-4 space-y-4">
                     <div className="bg-primary/10 p-4 rounded-lg text-center">
-                        <p className="text-sm text-black dark:text-white mb-1">{renderBoth('available_points')}</p>
+                        <p className="text-sm text-black dark:text-foreground mb-1">{renderBoth('available_points')}</p>
                         <p className="text-3xl font-black text-primary">{availablePoints}</p>
                     </div>
 
                     <div className="space-y-2">
                         <div className="flex justify-between items-center">
-                            <Label htmlFor="points" className="text-sm font-bold text-black dark:text-white ">
+                            <Label htmlFor="points" className="text-sm font-bold text-black dark:text-foreground ">
                                 {renderBoth('points_to_use')}
                             </Label>
                             <span className="text-xs font-bold text-primary">{loyaltyPointsValue} Points = 1 {currency}</span>
@@ -129,7 +129,7 @@ const LoyaltyRedemptionDialog: React.FC<LoyaltyRedemptionDialogProps> = ({
                     <Button
                         onClick={handleRedeem}
                         disabled={!isValid}
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-foreground"
                     >
                         {renderBoth('apply_discount')}
                     </Button>

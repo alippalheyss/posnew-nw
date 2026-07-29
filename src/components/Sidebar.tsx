@@ -4,7 +4,7 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Home, Package, Boxes, Users, DollarSign, Settings, BarChart, 
-  Receipt, CalendarDays, AlertTriangle, Building2, LogOut, FileText, ChevronRight, ChevronLeft, Activity
+  Receipt, CalendarDays, AlertTriangle, Building2, LogOut, FileText, ChevronRight, ChevronLeft, Activity, Pin, PinOff
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
@@ -45,38 +45,38 @@ const Sidebar = () => {
   const navItems = allNavItems.filter(item => can(item.permission));
 
   return (
-    <div className={cn(
-      "flex flex-col h-screen border-l flex-shrink-0 font-faruma overflow-hidden z-[100] transition-all duration-300 group/sidebar",
-      sidebarCollapsed 
-        ? "absolute right-0 top-0 bottom-0 w-4 hover:w-[240px] bg-transparent hover:bg-[#050510] border-transparent hover:border-white/5 shadow-none hover:shadow-[-20px_0_50px_rgba(0,0,0,0.8)]" 
-        : "w-[280px] min-w-[280px] relative shadow-[20px_0_50px_rgba(0,0,0,0.5)] bg-[#050510] border-white/5"
-    )}>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-        className={cn(
-          "absolute top-1/2 -translate-y-1/2 z-[110] transition-colors",
-          sidebarCollapsed 
-            ? "-left-6 h-12 w-6 bg-primary/20 text-primary hover:bg-primary/40 rounded-l-xl border-y border-l border-white/10" 
-            : "left-0 h-12 w-4 bg-white/5 text-white/20 hover:text-white rounded-r-lg border-y border-r border-white/10"
-        )}
-      >
-        {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-3 w-3" />}
-      </Button>
+    <>
+      <div className={cn("flex-shrink-0 transition-all duration-300 hidden md:block", sidebarCollapsed ? "w-20" : "w-[280px]")} />
+      <div className={cn(
+        "flex flex-col h-screen border-l font-faruma overflow-hidden z-[100] transition-all duration-300 group/sidebar shadow-[-20px_0_50px_rgba(0,0,0,0.5)] bg-background border-border fixed right-0 top-0 bottom-0",
+        sidebarCollapsed 
+          ? "w-20 hover:w-[280px]" 
+          : "w-[280px]"
+      )}>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          className={cn(
+            "absolute top-6 left-6 z-[110] transition-all h-8 w-8 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded-lg border border-border",
+            sidebarCollapsed ? "opacity-0 group-hover/sidebar:opacity-100" : "opacity-100"
+          )}
+        >
+          {sidebarCollapsed ? <Pin className="h-4 w-4" /> : <PinOff className="h-4 w-4" />}
+        </Button>
       {/* Branding */}
-      <div className={cn("p-8 pb-10 transition-opacity duration-300", sidebarCollapsed ? "hidden" : "block")}>
+      <div className={cn("p-8 pb-10 transition-all duration-300", sidebarCollapsed ? "opacity-0 group-hover/sidebar:opacity-100 px-8" : "opacity-100")}>
         <div className="flex items-center gap-4 mb-2">
-          <div className="w-12 h-12 bg-primary rounded-[1rem] flex items-center justify-center shadow-[0_0_30px_rgba(0,132,255,0.4)] rotate-3">
-            <span className="text-white text-xl font-black tracking-tighter -rotate-3">MV</span>
+          <div className="w-12 h-12 flex-shrink-0 bg-primary rounded-[1rem] flex items-center justify-center shadow-[0_0_30px_rgba(0,132,255,0.4)] rotate-3">
+            <span className="text-foreground text-xl font-black tracking-tighter -rotate-3">MV</span>
           </div>
-          <div className="text-right">
-            <h1 className="text-2xl font-black text-white leading-tight tracking-tighter">
+          <div className={cn("text-right whitespace-nowrap transition-all duration-300", sidebarCollapsed ? "w-0 overflow-hidden group-hover/sidebar:w-auto" : "w-auto")}>
+            <h1 className="text-2xl font-black text-foreground leading-tight tracking-tighter">
               {t('mvpos')}
             </h1>
             <div className="flex items-center justify-end gap-1.5 opacity-60">
                <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-               <p className="text-[10px] text-white font-bold uppercase tracking-widest">System Online</p>
+               <p className="text-[10px] text-foreground font-bold uppercase tracking-widest">System Online</p>
             </div>
           </div>
         </div>
@@ -94,8 +94,8 @@ const Sidebar = () => {
                   className={cn(
                     "flex items-center justify-between p-3.5 rounded-2xl transition-all group relative overflow-hidden",
                     isActive 
-                      ? "bg-white/5 text-white" 
-                      : "text-white/40 hover:text-white hover:bg-white/[0.02]"
+                      ? "bg-muted text-foreground" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
                   )}
                 >
                   {isActive && (
@@ -105,7 +105,7 @@ const Sidebar = () => {
                   <div className="flex items-center gap-4">
                     <div className={cn(
                       "h-9 w-9 rounded-xl flex items-center justify-center transition-all shrink-0",
-                      isActive ? "bg-primary text-white" : "bg-white/5 text-white/40 group-hover:bg-white/10 group-hover:text-white"
+                      isActive ? "bg-primary text-foreground" : "bg-muted text-muted-foreground group-hover:bg-muted/80 group-hover:text-foreground"
                     )}>
                        <item.icon className="h-4.5 w-4.5" />
                     </div>
@@ -127,19 +127,20 @@ const Sidebar = () => {
       </div>
 
       {/* Bottom User Section */}
-      <div className={cn("p-6 mt-auto border-t border-white/5 bg-white/[0.02]", sidebarCollapsed ? "hidden" : "block")}>
+      <div className={cn("p-6 mt-auto border-t border-border bg-muted/30", sidebarCollapsed ? "hidden" : "block")}>
         <div className="flex items-center justify-between mb-6 px-2">
           <div className="text-right">
             <p className="text-[9px] text-primary uppercase font-black tracking-widest mb-0.5">{currentUser?.role}</p>
-            <p className="text-sm font-black text-white truncate w-32">{currentUser?.name_dv}</p>
+            <p className="text-sm font-black text-foreground truncate w-32">{currentUser?.name_dv}</p>
           </div>
-          <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center relative">
-             <Users className="h-5 w-5 text-white/40" />
+          <div className="w-10 h-10 rounded-2xl bg-muted border border-border flex items-center justify-center relative">
+             <Users className="h-5 w-5 text-muted-foreground" />
              <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[#050510]" />
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

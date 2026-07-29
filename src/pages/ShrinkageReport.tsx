@@ -156,21 +156,21 @@ const ShrinkageReport = () => {
   const totalLoss = records.reduce((sum, r) => sum + r.totalLoss, 0);
 
   return (
-    <div className="p-6 font-faruma flex flex-col h-full bg-[#050510] text-white overflow-hidden" dir="rtl">
+    <div className="p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
       {/* Header Section */}
       <div className="flex justify-between items-center mb-8">
         <div className="text-right">
-           <h1 className="text-3xl font-black text-white flex items-center justify-end gap-3">
+           <h1 className="text-3xl font-black text-foreground flex items-center justify-end gap-3">
              Shrinkage Report <FileText className="h-8 w-8 text-red-500" />
            </h1>
-           <p className="text-sm text-white/40 mt-1">Track inventory losses due to damage, expiry, or theft</p>
+           <p className="text-sm text-muted-foreground mt-1">Track inventory losses due to damage, expiry, or theft</p>
         </div>
 
         <div className="flex gap-3">
            <Button 
              variant="outline" 
              onClick={exportToExcel}
-             className="gap-2 border-white/10 hover:bg-white/5 h-11 px-6 rounded-xl"
+             className="gap-2 border-border hover:bg-muted h-11 px-6 rounded-xl"
            >
              <Download className="h-4 w-4" /> EXPORT EXCEL
            </Button>
@@ -185,97 +185,97 @@ const ShrinkageReport = () => {
 
       {/* Stats Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-         <Card className="bg-[#0a0a1a] border-white/5 rounded-[2rem] p-6 relative overflow-hidden group">
+         <Card className="bg-card border-border rounded-[2rem] p-6 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/10 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-red-500/20 transition-all" />
             <div className="flex justify-between items-center mb-4">
                <TrendingDown className="h-5 w-5 text-red-500" />
-               <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Total Value Loss</span>
+               <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Total Value Loss</span>
             </div>
-            <p className="text-3xl font-black text-white">{settings.shop.currency} {totalLoss.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-            <p className="text-[10px] text-white/20 mt-1 font-bold uppercase tracking-widest">ACCUMULATED SHRINKAGE</p>
+            <p className="text-3xl font-black text-foreground">{settings.shop.currency} {totalLoss.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            <p className="text-[10px] text-muted-foreground/50 mt-1 font-bold uppercase tracking-widest">ACCUMULATED SHRINKAGE</p>
          </Card>
 
-         <Card className="bg-[#0a0a1a] border-white/5 rounded-[2rem] p-6 relative overflow-hidden group">
+         <Card className="bg-card border-border rounded-[2rem] p-6 relative overflow-hidden group">
             <div className="flex justify-between items-center mb-4">
                <AlertTriangle className="h-5 w-5 text-orange-500" />
-               <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Loss Incidents</span>
+               <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Loss Incidents</span>
             </div>
-            <p className="text-3xl font-black text-white">{records.length}</p>
-            <p className="text-[10px] text-white/20 mt-1 font-bold uppercase tracking-widest">TOTAL RECORDS</p>
+            <p className="text-3xl font-black text-foreground">{records.length}</p>
+            <p className="text-[10px] text-muted-foreground/50 mt-1 font-bold uppercase tracking-widest">TOTAL RECORDS</p>
          </Card>
 
-         <Card className="bg-[#0a0a1a] border-white/5 rounded-[2rem] p-6 relative overflow-hidden group">
+         <Card className="bg-card border-border rounded-[2rem] p-6 relative overflow-hidden group">
             <div className="flex justify-between items-center mb-4">
                <Package className="h-5 w-5 text-primary" />
-               <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Highest Loss Reason</span>
+               <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Highest Loss Reason</span>
             </div>
-            <p className="text-2xl font-black text-white uppercase truncate">
+            <p className="text-2xl font-black text-foreground uppercase truncate">
                {records.length > 0 ? records[0].reason : 'N/A'}
             </p>
-            <p className="text-[10px] text-white/20 mt-1 font-bold uppercase tracking-widest">BY FREQUENCY</p>
+            <p className="text-[10px] text-muted-foreground/50 mt-1 font-bold uppercase tracking-widest">BY FREQUENCY</p>
          </Card>
       </div>
 
       {/* Search Bar */}
       <div className="relative mb-8">
-         <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
+         <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
          <Input 
            placeholder="Search records by product or notes..."
            value={searchTerm}
            onChange={(e) => setSearchTerm(e.target.value)}
-           className="w-full bg-white/5 border-white/10 rounded-xl pr-12 h-14 text-right font-bold focus:border-primary/50 transition-all text-lg"
+           className="w-full bg-muted border-border rounded-xl pr-12 h-14 text-right font-bold focus:border-primary/50 transition-all text-lg"
          />
       </div>
 
       {/* Main Table Container */}
-      <Card className="bg-[#0a0a1a] border-white/5 rounded-[2rem] overflow-hidden shadow-2xl flex-1 flex flex-col">
-         <CardHeader className="border-b border-white/5 px-8 py-6 flex flex-row items-center justify-between">
+      <Card className="bg-card border-border rounded-[2rem] overflow-hidden shadow-2xl flex-1 flex flex-col">
+         <CardHeader className="border-b border-border px-8 py-6 flex flex-row items-center justify-between">
             <div className="flex items-center gap-2">
                <History className="h-5 w-5 text-primary" />
-               <span className="text-sm font-black text-white">Loss History Log</span>
+               <span className="text-sm font-black text-foreground">Loss History Log</span>
             </div>
-            <Badge className="bg-white/5 text-white/40 border-white/10 uppercase tracking-widest font-black text-[10px]">
+            <Badge className="bg-muted text-muted-foreground border-border uppercase tracking-widest font-black text-[10px]">
                {filteredRecords.length} ENTRIES
             </Badge>
          </CardHeader>
          <CardContent className="p-0 flex-1 overflow-hidden">
             <ScrollArea className="h-full custom-scrollbar">
                <Table dir="rtl">
-                  <TableHeader className="bg-white/5 sticky top-0 z-10">
-                     <TableRow className="border-white/5">
-                        <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Date</TableHead>
-                        <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Product</TableHead>
-                        <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Qty</TableHead>
-                        <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Reason</TableHead>
-                        <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Loss Value</TableHead>
-                        <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Actions</TableHead>
+                  <TableHeader className="bg-muted sticky top-0 z-10">
+                     <TableRow className="border-border">
+                        <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">Date</TableHead>
+                        <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">Product</TableHead>
+                        <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">Qty</TableHead>
+                        <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">Reason</TableHead>
+                        <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">Loss Value</TableHead>
+                        <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">Actions</TableHead>
                      </TableRow>
                   </TableHeader>
                   <TableBody>
                      {filteredRecords.length === 0 ? (
                         <TableRow>
-                           <TableCell colSpan={6} className="text-center py-20 text-white/20 font-black uppercase tracking-[0.2em]">
+                           <TableCell colSpan={6} className="text-center py-20 text-muted-foreground/50 font-black uppercase tracking-[0.2em]">
                               No loss records found
                            </TableCell>
                         </TableRow>
                      ) : (
                         filteredRecords.map((record) => (
-                           <TableRow key={record.id} className="border-white/5 hover:bg-white/5 transition-colors group">
-                              <TableCell className="text-right font-mono text-xs text-white/40">{record.date}</TableCell>
+                           <TableRow key={record.id} className="border-border hover:bg-muted transition-colors group">
+                              <TableCell className="text-right font-mono text-xs text-muted-foreground">{record.date}</TableCell>
                               <TableCell className="text-right">
                                  <div className="flex flex-col">
-                                    <span className="font-black text-white group-hover:text-primary transition-colors">{record.productName}</span>
-                                    <span className="text-[10px] text-white/40 uppercase font-bold">{record.location.toUpperCase()} STOCK</span>
+                                    <span className="font-black text-foreground group-hover:text-primary transition-colors">{record.productName}</span>
+                                    <span className="text-[10px] text-muted-foreground uppercase font-bold">{record.location.toUpperCase()} STOCK</span>
                                  </div>
                               </TableCell>
-                              <TableCell className="text-right font-black text-white">{record.qty}</TableCell>
+                              <TableCell className="text-right font-black text-foreground">{record.qty}</TableCell>
                               <TableCell className="text-right">
                                  <Badge className={cn(
                                     "border-none text-[8px] font-black uppercase px-2 py-0.5 rounded-full",
                                     record.reason === 'damaged' ? "bg-orange-500/20 text-orange-500" :
                                     record.reason === 'expired' ? "bg-red-500/20 text-red-500" :
                                     record.reason === 'stolen' ? "bg-purple-500/20 text-purple-500" :
-                                    "bg-white/10 text-white/40"
+                                    "bg-muted/80 text-muted-foreground"
                                  )}>
                                     {record.reason}
                                  </Badge>
@@ -304,22 +304,22 @@ const ShrinkageReport = () => {
 
       {/* Add Record Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] font-faruma bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
+        <DialogContent className="sm:max-w-[500px] font-faruma bg-card border-border text-foreground" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-right text-2xl font-black">Record Inventory Loss</DialogTitle>
-            <DialogDescription className="text-right text-white/40">Enter the details of the damaged or missing stock.</DialogDescription>
+            <DialogDescription className="text-right text-muted-foreground">Enter the details of the damaged or missing stock.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-6 py-6">
             <div className="space-y-2">
-              <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">Select Product*</Label>
+              <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">Select Product*</Label>
               <Select value={newRecord.productId} onValueChange={(val) => setNewRecord({ ...newRecord, productId: val })}>
-                <SelectTrigger className="w-full bg-white/5 border-white/10 text-right h-12 rounded-xl">
+                <SelectTrigger className="w-full bg-muted border-border text-right h-12 rounded-xl">
                   <SelectValue placeholder="Choose product..." />
                 </SelectTrigger>
-                <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
+                <SelectContent className="bg-card border-border text-foreground">
                   <ScrollArea className="h-40">
                     {products.map(p => (
-                      <SelectItem key={p.id} value={p.id} className="text-right hover:bg-white/5">
+                      <SelectItem key={p.id} value={p.id} className="text-right hover:bg-muted">
                         {p.name_dv} ({p.name_en})
                       </SelectItem>
                     ))}
@@ -330,33 +330,33 @@ const ShrinkageReport = () => {
 
             <div className="grid grid-cols-2 gap-4">
                <div className="space-y-2">
-                 <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">Quantity*</Label>
+                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">Quantity*</Label>
                  <Input 
                    type="number" 
                    value={newRecord.qty || ''} 
                    onChange={(e) => setNewRecord({ ...newRecord, qty: parseFloat(e.target.value) || 0 })} 
-                   className="text-right h-12 bg-white/5 border-white/10 rounded-xl"
+                   className="text-right h-12 bg-muted border-border rounded-xl"
                  />
                </div>
                <div className="space-y-2">
-                 <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">Date</Label>
+                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">Date</Label>
                  <Input 
                    type="date" 
                    value={newRecord.date} 
                    onChange={(e) => setNewRecord({ ...newRecord, date: e.target.value })} 
-                   className="text-right h-12 bg-white/5 border-white/10 rounded-xl"
+                   className="text-right h-12 bg-muted border-border rounded-xl"
                  />
                </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
                <div className="space-y-2">
-                 <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">Reason*</Label>
+                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">Reason*</Label>
                  <Select value={newRecord.reason} onValueChange={(val: any) => setNewRecord({ ...newRecord, reason: val })}>
-                    <SelectTrigger className="w-full bg-white/5 border-white/10 text-right h-12 rounded-xl">
+                    <SelectTrigger className="w-full bg-muted border-border text-right h-12 rounded-xl">
                        <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
+                    <SelectContent className="bg-card border-border text-foreground">
                        <SelectItem value="damaged" className="text-right">Damaged</SelectItem>
                        <SelectItem value="expired" className="text-right">Expired</SelectItem>
                        <SelectItem value="stolen" className="text-right">Stolen / Lost</SelectItem>
@@ -365,12 +365,12 @@ const ShrinkageReport = () => {
                  </Select>
                </div>
                <div className="space-y-2">
-                 <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">From Location*</Label>
+                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">From Location*</Label>
                  <Select value={newRecord.location} onValueChange={(val: any) => setNewRecord({ ...newRecord, location: val })}>
-                    <SelectTrigger className="w-full bg-white/5 border-white/10 text-right h-12 rounded-xl">
+                    <SelectTrigger className="w-full bg-muted border-border text-right h-12 rounded-xl">
                        <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
+                    <SelectContent className="bg-card border-border text-foreground">
                        <SelectItem value="shop" className="text-right">Shop Stock</SelectItem>
                        <SelectItem value="godown" className="text-right">Godown Stock</SelectItem>
                     </SelectContent>
@@ -379,17 +379,17 @@ const ShrinkageReport = () => {
             </div>
 
             <div className="space-y-2">
-               <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">Additional Notes</Label>
+               <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">Additional Notes</Label>
                <Input 
                  value={newRecord.notes} 
                  onChange={(e) => setNewRecord({ ...newRecord, notes: e.target.value })} 
-                 className="text-right h-12 bg-white/5 border-white/10 rounded-xl"
+                 className="text-right h-12 bg-muted border-border rounded-xl"
                  placeholder="Enter details..."
                />
             </div>
           </div>
-          <DialogFooter className="gap-3 pt-4 border-t border-white/5">
-            <Button variant="ghost" onClick={() => setIsAddDialogOpen(false)} className="flex-1 h-12 border-white/10 hover:bg-white/5 text-white">
+          <DialogFooter className="gap-3 pt-4 border-t border-border">
+            <Button variant="ghost" onClick={() => setIsAddDialogOpen(false)} className="flex-1 h-12 border-border hover:bg-muted text-foreground">
               CANCEL
             </Button>
             <Button onClick={handleAddRecord} className="flex-1 h-12 bg-red-600 hover:bg-red-700 font-black">

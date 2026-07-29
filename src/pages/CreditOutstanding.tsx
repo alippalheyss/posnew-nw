@@ -368,16 +368,16 @@ const CreditOutstanding = () => {
     .slice(0, 10);
 
   return (
-    <div className="p-6 font-faruma flex flex-col h-full bg-[#050510] text-white overflow-hidden" dir="rtl">
+    <div className="p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
       {/* Header & Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
         <div className="lg:col-span-3">
            <div className="flex justify-between items-center mb-6">
               <div className="text-right">
-                 <h1 className="text-3xl font-black text-white flex items-center justify-end gap-3">
+                 <h1 className="text-3xl font-black text-foreground flex items-center justify-end gap-3">
                    {renderBoth('credit_outstanding')} <DollarSign className="h-8 w-8 text-primary" />
                  </h1>
-                 <p className="text-sm text-white/40 mt-1">Manage receivables and track customer credit history</p>
+                 <p className="text-sm text-muted-foreground mt-1">Manage receivables and track customer credit history</p>
               </div>
               <div className="flex gap-2">
                  <Button onClick={() => setIsAddCreditSaleDialogOpen(true)} className="gap-2 bg-primary hover:bg-primary/90 h-11 px-6 rounded-xl font-black shadow-[0_0_20px_rgba(0,132,255,0.3)]">
@@ -389,17 +389,17 @@ const CreditOutstanding = () => {
            <ScrollArea className="h-[140px] overflow-hidden">
               <div className="flex gap-4 p-1">
                 {allSettlements.length === 0 ? (
-                  <div className="w-full h-24 flex items-center justify-center border-2 border-dashed border-white/5 rounded-3xl text-white/10 font-black uppercase tracking-widest text-[10px]">
+                  <div className="w-full h-24 flex items-center justify-center border-2 border-dashed border-border rounded-3xl text-foreground/10 font-black uppercase tracking-widest text-[10px]">
                      No recent settlements recorded
                   </div>
                 ) : (
                   allSettlements.map((s) => (
-                    <div key={s.id} className="min-w-[220px] bg-[#0a0a1a] border border-white/5 hover:border-green-500/30 rounded-3xl p-4 text-right transition-all group">
+                    <div key={s.id} className="min-w-[220px] bg-card border border-border hover:border-green-500/30 rounded-3xl p-4 text-right transition-all group">
                        <div className="flex items-center justify-between mb-3">
                           <CheckCircle2 className="h-4 w-4 text-green-500" />
-                          <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">{formatDate(s.date)} {formatTime(s.date)}</span>
+                          <span className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest">{formatDate(s.date)} {formatTime(s.date)}</span>
                        </div>
-                       <p className="font-black text-white text-sm truncate mb-1">{s.customerName}</p>
+                       <p className="font-black text-foreground text-sm truncate mb-1">{s.customerName}</p>
                        <p className="text-xl font-black text-green-500">{settings.shop.currency} {s.amount_paid.toFixed(0)}</p>
                     </div>
                   ))
@@ -408,22 +408,22 @@ const CreditOutstanding = () => {
            </ScrollArea>
         </div>
 
-        <Card className="bg-[#0a0a1a] border-white/5 rounded-[2rem] p-6 relative overflow-hidden group border-orange-500/20">
+        <Card className="bg-card border-border rounded-[2rem] p-6 relative overflow-hidden group border-orange-500/20">
            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-orange-500/10 transition-all" />
            <div className="flex justify-between items-center mb-6">
               <AlertCircle className="h-6 w-6 text-orange-500" />
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0 text-white/20 hover:text-white"
+                className="h-8 w-8 p-0 text-muted-foreground/50 hover:text-foreground"
                 onClick={() => setIsOutstandingVisible(!isOutstandingVisible)}
               >
                 <History className={cn("h-4 w-4", !isOutstandingVisible && "opacity-50")} />
               </Button>
            </div>
            <div className="text-right">
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Total Outstanding</p>
-              <p className={cn("text-3xl font-black text-white transition-all", !isOutstandingVisible && "blur-lg select-none")}>
+              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Total Outstanding</p>
+              <p className={cn("text-3xl font-black text-foreground transition-all", !isOutstandingVisible && "blur-lg select-none")}>
                 {settings.shop.currency} {customers.reduce((sum, c) => sum + (c.outstanding_balance || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 0 })}
               </p>
               <p className="text-[10px] text-orange-500/60 mt-2 font-black uppercase tracking-widest">Across {filteredCustomers.length} Accounts</p>
@@ -434,15 +434,15 @@ const CreditOutstanding = () => {
       {/* Search & Actions Bar */}
       <div className="flex flex-row-reverse gap-4 mb-8">
         <div className="relative flex-1">
-           <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
+           <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
            <Input 
              placeholder="Search by customer name or ID code..."
              value={searchTerm}
              onChange={(e) => setSearchTerm(e.target.value)}
-             className="w-full bg-white/5 border-white/10 rounded-xl pr-12 h-14 text-right font-bold focus:border-primary/50 transition-all text-lg"
+             className="w-full bg-muted border-border rounded-xl pr-12 h-14 text-right font-bold focus:border-primary/50 transition-all text-lg"
            />
         </div>
-        <Button onClick={exportAllOutstanding} variant="outline" className="h-14 px-6 rounded-xl border-white/10 hover:bg-white/5 gap-2">
+        <Button onClick={exportAllOutstanding} variant="outline" className="h-14 px-6 rounded-xl border-border hover:bg-muted gap-2">
            <Download className="h-4 w-4" /> EXPORT REPORT
         </Button>
       </div>
@@ -451,19 +451,19 @@ const CreditOutstanding = () => {
       <ScrollArea className="flex-1 custom-scrollbar">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-6">
           {filteredCustomers.map((customer) => (
-            <Card key={customer.id} className="bg-[#0a0a1a] border-white/5 hover:border-primary/30 transition-all rounded-[2rem] overflow-hidden group">
+            <Card key={customer.id} className="bg-card border-border hover:border-primary/30 transition-all rounded-[2rem] overflow-hidden group">
                <CardContent className="p-0">
                   <div className="p-6">
                      <div className="flex justify-between items-start mb-6">
-                        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 group-hover:bg-primary/10 group-hover:text-primary transition-all">
+                        <div className="w-12 h-12 rounded-2xl bg-muted border border-border flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all">
                            <User className="h-6 w-6" />
                         </div>
                         <Badge className="bg-primary/20 text-primary border-none text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">{customer.code}</Badge>
                      </div>
 
                      <div className="text-right mb-6">
-                        <h3 className="text-xl font-black text-white leading-tight mb-1">{customer.name_dv}</h3>
-                        <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">{customer.name_en}</p>
+                        <h3 className="text-xl font-black text-foreground leading-tight mb-1">{customer.name_dv}</h3>
+                        <p className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest">{customer.name_en}</p>
                      </div>
 
                      <div className="bg-red-500/5 p-4 rounded-2xl border border-red-500/10 mb-6 text-right group-hover:bg-red-500/10 transition-all">
@@ -471,20 +471,20 @@ const CreditOutstanding = () => {
                         <div className="flex justify-between items-end mb-1">
                           <span className={cn(
                             "text-2xl font-black cursor-pointer transition-all duration-300",
-                            customer.outstanding_balance > (customer.credit_limit || 0) ? "text-red-500" : "text-white",
+                            customer.outstanding_balance > (customer.credit_limit || 0) ? "text-red-500" : "text-foreground",
                             !revealedTotals.has(customer.id) && "blur-md select-none"
                           )} onClick={() => toggleTotalReveal(customer.id)}>
                             {settings.shop.currency} {(customer.outstanding_balance || 0).toFixed(2)}
                           </span>
                         </div>
                         <div className="space-y-1.5 mt-3">
-                          <Progress value={Math.min(100, (customer.outstanding_balance / (customer.credit_limit || 1)) * 100)} className="h-1.5 bg-white/5" />
+                          <Progress value={Math.min(100, (customer.outstanding_balance / (customer.credit_limit || 1)) * 100)} className="h-1.5 bg-muted" />
                           <div className="flex justify-between text-[9px] font-bold opacity-30 uppercase tracking-tighter">
                              <span>Limit: {settings.shop.currency} {customer.credit_limit.toFixed(2)}</span>
                              <span>{Math.round((customer.outstanding_balance / (customer.credit_limit || 1)) * 100)}% Used</span>
                           </div>
                         </div>
-                        <div className="flex items-center justify-end gap-2 text-[10px] text-white/20 mt-2 font-bold">
+                        <div className="flex items-center justify-end gap-2 text-[10px] text-muted-foreground/50 mt-2 font-bold">
                            <Clock className="h-3 w-3" />
                            <span>LAST SETTLED: {customer.settlement_history.length > 0 ? formatDate(customer.settlement_history[customer.settlement_history.length - 1].date) : 'NONE'}</span>
                         </div>
@@ -493,21 +493,21 @@ const CreditOutstanding = () => {
                      <div className="grid grid-cols-3 gap-2">
                         <Button 
                           onClick={() => handleSettlePaymentClick(customer)}
-                          className="bg-primary hover:bg-primary/90 text-white text-[9px] font-black h-10 rounded-xl transition-all uppercase px-1"
+                          className="bg-primary hover:bg-primary/90 text-foreground text-[9px] font-black h-10 rounded-xl transition-all uppercase px-1"
                         >
                           SETTLE
                         </Button>
                         <Button 
                           variant="ghost"
                           onClick={() => handleViewSettlementHistory(customer)}
-                          className="bg-white/5 hover:bg-white/10 text-white text-[9px] font-black h-10 rounded-xl border border-white/10 transition-all uppercase px-1"
+                          className="bg-muted hover:bg-muted/80 text-foreground text-[9px] font-black h-10 rounded-xl border border-border transition-all uppercase px-1"
                         >
                           HISTORY
                         </Button>
                         <Button 
                           variant="ghost"
                           onClick={() => handleViewCreditPurchases(customer)}
-                          className="bg-white/5 hover:bg-white/10 text-white text-[9px] font-black h-10 rounded-xl border border-white/10 transition-all uppercase px-1"
+                          className="bg-muted hover:bg-muted/80 text-foreground text-[9px] font-black h-10 rounded-xl border border-border transition-all uppercase px-1"
                         >
                           DETAILS
                         </Button>
@@ -521,29 +521,29 @@ const CreditOutstanding = () => {
 
       {/* Dialogs updated with dark theme styling... (Settle Payment, Settlement History, Credit Purchases) */}
       <Dialog open={isSettlePaymentDialogOpen} onOpenChange={setIsSettlePaymentDialogOpen}>
-        <DialogContent className="sm:max-w-[450px] font-faruma bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
+        <DialogContent className="sm:max-w-[450px] font-faruma bg-card border-border text-foreground" dir="rtl">
           <DialogHeader className="text-right">
             <DialogTitle className="text-2xl font-black">{renderBoth('settle_payment')}</DialogTitle>
-            <DialogDescription className="text-white/40">
+            <DialogDescription className="text-muted-foreground">
               {selectedCustomerForAction?.name_dv} ({selectedCustomerForAction?.name_en})
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6 py-6">
             <div className="space-y-2">
-              <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('current_outstanding')}</Label>
-              <div className="h-14 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center text-2xl font-black text-red-500">
+              <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('current_outstanding')}</Label>
+              <div className="h-14 bg-muted border border-border rounded-xl flex items-center justify-center text-2xl font-black text-red-500">
                 {settings.shop.currency} {(selectedCustomerForAction?.outstanding_balance || 0).toFixed(2)}
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between items-end">
-                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('amount_to_pay')}</Label>
+                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('amount_to_pay')}</Label>
               </div>
               <Input
                 type="number"
                 value={paymentAmount}
                 onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
-                className="text-right h-14 bg-white/5 border-primary rounded-xl text-2xl font-black text-white focus:ring-0"
+                className="text-right h-14 bg-muted border-primary rounded-xl text-2xl font-black text-foreground focus:ring-0"
                 autoFocus
                 placeholder="0.00"
               />
@@ -559,17 +559,17 @@ const CreditOutstanding = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('new_outstanding')}</Label>
+              <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('new_outstanding')}</Label>
               <div className={cn(
-                "h-12 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center font-black",
+                "h-12 bg-muted border border-border rounded-xl flex items-center justify-center font-black",
                 currentOutstandingAfterPayment > 0 ? "text-orange-500" : "text-green-500"
               )}>
                 {settings.shop.currency} {currentOutstandingAfterPayment.toFixed(2)}
               </div>
             </div>
           </div>
-          <DialogFooter className="gap-3 pt-4 border-t border-white/5">
-            <Button variant="ghost" onClick={() => setIsSettlePaymentDialogOpen(false)} className="flex-1 h-12 border-white/10 hover:bg-white/5 text-white">
+          <DialogFooter className="gap-3 pt-4 border-t border-border">
+            <Button variant="ghost" onClick={() => setIsSettlePaymentDialogOpen(false)} className="flex-1 h-12 border-border hover:bg-muted text-foreground">
               {renderBoth('cancel')}
             </Button>
             <Button onClick={processSettlement} disabled={!paymentAmount || paymentAmount <= 0} className="flex-1 h-12 bg-primary hover:bg-primary/90 font-black">
@@ -581,12 +581,12 @@ const CreditOutstanding = () => {
 
       {/* Settlement History Dialog */}
       <Dialog open={isSettlementHistoryDialogOpen} onOpenChange={setIsSettlementHistoryDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] font-faruma bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
+        <DialogContent className="sm:max-w-[500px] font-faruma bg-card border-border text-foreground" dir="rtl">
           <DialogHeader className="text-right">
             <DialogTitle className="text-2xl font-black flex items-center justify-end gap-3">
               {renderBoth('settlement_history')} <History className="h-6 w-6 text-primary" />
             </DialogTitle>
-            <DialogDescription className="text-right text-white/40">
+            <DialogDescription className="text-right text-muted-foreground">
               {selectedCustomerForAction?.name_dv} ({selectedCustomerForAction?.name_en})
             </DialogDescription>
           </DialogHeader>
@@ -594,12 +594,12 @@ const CreditOutstanding = () => {
             <div className="space-y-3">
               {selectedCustomerForAction?.settlement_history && selectedCustomerForAction.settlement_history.length > 0 ? (
                 [...selectedCustomerForAction.settlement_history].reverse().map((settlement, idx) => (
-                  <div key={settlement.id || idx} className="p-4 rounded-2xl bg-white/5 border border-white/5 text-right relative overflow-hidden group">
+                  <div key={settlement.id || idx} className="p-4 rounded-2xl bg-muted border border-border text-right relative overflow-hidden group">
                     <div className="flex justify-between items-center mb-2">
-                       <span className="text-[10px] font-mono text-white/20">{formatDate(settlement.date)} {formatTime(settlement.date)}</span>
+                       <span className="text-[10px] font-mono text-muted-foreground/50">{formatDate(settlement.date)} {formatTime(settlement.date)}</span>
                        <span className="text-sm font-black text-green-500">+{settings.shop.currency} {settlement.amount_paid.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between items-center text-[10px] font-bold text-white/40">
+                    <div className="flex justify-between items-center text-[10px] font-bold text-muted-foreground">
                        <span>NEW: {settlement.new_outstanding.toFixed(2)}</span>
                        <span>PREV: {settlement.previous_outstanding.toFixed(2)}</span>
                     </div>
@@ -613,8 +613,8 @@ const CreditOutstanding = () => {
               )}
             </div>
           </ScrollArea>
-          <DialogFooter className="pt-4 border-t border-white/5">
-            <Button onClick={() => setIsSettlementHistoryDialogOpen(false)} className="w-full h-12 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-black">
+          <DialogFooter className="pt-4 border-t border-border">
+            <Button onClick={() => setIsSettlementHistoryDialogOpen(false)} className="w-full h-12 bg-muted hover:bg-muted/80 text-foreground border border-border font-black">
               {renderBoth('close')}
             </Button>
           </DialogFooter>
@@ -623,12 +623,12 @@ const CreditOutstanding = () => {
 
       {/* Credit Purchases (Details) Dialog */}
       <Dialog open={isCreditPurchasesDialogOpen} onOpenChange={setIsCreditPurchasesDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] font-faruma bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
+        <DialogContent className="sm:max-w-[600px] font-faruma bg-card border-border text-foreground" dir="rtl">
           <DialogHeader className="text-right">
             <DialogTitle className="text-2xl font-black flex items-center justify-end gap-3">
               {renderBoth('credit_purchases')} <ShoppingBag className="h-6 w-6 text-orange-500" />
             </DialogTitle>
-            <DialogDescription className="text-right text-white/40">
+            <DialogDescription className="text-right text-muted-foreground">
               {selectedCustomerForAction?.name_dv} ({selectedCustomerForAction?.name_en})
             </DialogDescription>
           </DialogHeader>
@@ -641,7 +641,7 @@ const CreditOutstanding = () => {
                   const displayAmount = isSplit ? splitEntry.amount : sale.grandTotal;
 
                   return (
-                    <div key={sale.id} className="p-4 rounded-2xl bg-white/5 border border-white/5 text-right relative overflow-hidden group">
+                    <div key={sale.id} className="p-4 rounded-2xl bg-muted border border-border text-right relative overflow-hidden group">
                       {isSplit && (
                         <div className="absolute top-0 left-0 bg-blue-500/20 text-blue-500 text-[8px] font-black px-3 py-1 rounded-br-xl uppercase tracking-widest z-10">
                           Split Bill
@@ -650,23 +650,23 @@ const CreditOutstanding = () => {
                       <div className="flex justify-between items-center mb-3">
                          <div className="flex items-center gap-2">
                            <Badge variant="outline" className="border-orange-500/30 text-orange-500 text-[8px] font-black">{sale.invoiceNumber || sale.id}</Badge>
-                           <Button variant="ghost" size="icon" className="h-6 w-6 text-white/40 hover:text-white hover:bg-white/10 rounded-full" onClick={(e) => { e.stopPropagation(); handleEditSale(sale); }}>
+                           <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-full" onClick={(e) => { e.stopPropagation(); handleEditSale(sale); }}>
                              <Edit className="h-3 w-3" />
                            </Button>
                          </div>
-                         <span className="text-[10px] font-mono text-white/40">{formatDate(sale.date)} {formatTime(sale.date)}</span>
+                         <span className="text-[10px] font-mono text-muted-foreground">{formatDate(sale.date)} {formatTime(sale.date)}</span>
                       </div>
                       <div className="space-y-2 mb-3">
                         {sale.items.map((item: any, i: number) => (
                           <div key={i} className="flex justify-between items-center text-xs">
-                            <span className="text-white/40">{item.qty} x {item.price.toFixed(2)}</span>
+                            <span className="text-muted-foreground">{item.qty} x {item.price.toFixed(2)}</span>
                             <span className="font-bold">{item.name_dv}</span>
                           </div>
                         ))}
                       </div>
-                      <div className="pt-3 border-t border-white/5 flex justify-between items-center">
-                         <span className="text-sm font-black text-white">{settings.shop.currency} {displayAmount.toFixed(2)}</span>
-                         <span className="text-[10px] font-black text-white/20 uppercase">
+                      <div className="pt-3 border-t border-border flex justify-between items-center">
+                         <span className="text-sm font-black text-foreground">{settings.shop.currency} {displayAmount.toFixed(2)}</span>
+                         <span className="text-[10px] font-black text-muted-foreground/50 uppercase">
                            {isSplit ? 'Your Portion' : 'Total Invoice'}
                          </span>
                       </div>
@@ -681,8 +681,8 @@ const CreditOutstanding = () => {
               )}
             </div>
           </ScrollArea>
-          <DialogFooter className="pt-4 border-t border-white/5">
-            <Button onClick={() => setIsCreditPurchasesDialogOpen(false)} className="w-full h-12 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-black">
+          <DialogFooter className="pt-4 border-t border-border">
+            <Button onClick={() => setIsCreditPurchasesDialogOpen(false)} className="w-full h-12 bg-muted hover:bg-muted/80 text-foreground border border-border font-black">
               {renderBoth('close')}
             </Button>
           </DialogFooter>

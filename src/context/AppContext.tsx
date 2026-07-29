@@ -3,6 +3,7 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { showError, showSuccess } from '@/utils/toast';
 import { supabase } from '@/lib/supabase';
+import { useTheme } from '@/components/ThemeProvider';
 
 import { toISODatetime, extractDateOnly } from '@/utils/formatters';
 
@@ -262,6 +263,8 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { setTheme } = useTheme();
+  
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
@@ -923,6 +926,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       showError('Failed to record settlement');
     }
   };
+
+  useEffect(() => {
+    if (settings?.software?.theme) {
+      setTheme(settings.software.theme as any);
+    }
+  }, [settings?.software?.theme, setTheme]);
 
   const updateSettings = async (category: keyof AppSettings, newSettings: any) => {
     setSettings(prev => ({

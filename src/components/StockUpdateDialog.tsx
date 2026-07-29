@@ -57,12 +57,12 @@ const StockUpdateDialog: React.FC<StockUpdateDialogProps> = ({ isOpen, onClose, 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[450px] font-faruma bg-[#0a0a1a] border-white/10 text-white shadow-2xl" dir="rtl">
+      <DialogContent className="sm:max-w-[450px] font-faruma bg-card border-border text-foreground shadow-2xl" dir="rtl">
         <DialogHeader className="text-right">
           <DialogTitle className="text-2xl font-black flex items-center justify-end gap-3">
              {renderBoth('update_stock')} <Edit3 className="h-6 w-6 text-primary" />
           </DialogTitle>
-          <DialogDescription className="text-white/40">
+          <DialogDescription className="text-muted-foreground">
             {stockItem.name_dv} ({stockItem.name_en})
           </DialogDescription>
         </DialogHeader>
@@ -73,26 +73,26 @@ const StockUpdateDialog: React.FC<StockUpdateDialogProps> = ({ isOpen, onClose, 
                 onClick={() => setTarget('shop')}
                 className={cn(
                   "p-4 rounded-2xl border cursor-pointer transition-all text-right",
-                  target === 'shop' ? "bg-primary/10 border-primary shadow-lg shadow-primary/20" : "bg-white/5 border-white/5 opacity-50"
+                  target === 'shop' ? "bg-primary/10 border-primary shadow-lg shadow-primary/20" : "bg-muted border-border opacity-50"
                 )}
               >
-                 <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">{renderBoth('shop_stock')}</p>
-                 <p className="text-2xl font-black text-white">{stockItem.stock_shop}</p>
+                 <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest mb-1">{renderBoth('shop_stock')}</p>
+                 <p className="text-2xl font-black text-foreground">{stockItem.stock_shop}</p>
               </div>
               <div 
                 onClick={() => setTarget('godown')}
                 className={cn(
                   "p-4 rounded-2xl border cursor-pointer transition-all text-right",
-                  target === 'godown' ? "bg-primary/10 border-primary shadow-lg shadow-primary/20" : "bg-white/5 border-white/5 opacity-50"
+                  target === 'godown' ? "bg-primary/10 border-primary shadow-lg shadow-primary/20" : "bg-muted border-border opacity-50"
                 )}
               >
-                 <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">{renderBoth('godown_stock')}</p>
-                 <p className="text-2xl font-black text-white">{stockItem.stock_godown}</p>
+                 <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest mb-1">{renderBoth('godown_stock')}</p>
+                 <p className="text-2xl font-black text-foreground">{stockItem.stock_godown}</p>
               </div>
            </div>
 
            <div className="space-y-3">
-              <Label htmlFor="newStock" className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest pr-2">
+              <Label htmlFor="newStock" className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest pr-2">
                 {renderBoth('new_stock_quantity')}*
               </Label>
               <div className="relative">
@@ -102,19 +102,19 @@ const StockUpdateDialog: React.FC<StockUpdateDialogProps> = ({ isOpen, onClose, 
                    type="number"
                    value={editedStock}
                    onChange={(e) => setEditedStock(parseFloat(e.target.value) || '')} onFocus={handleFocus}
-                   className="bg-white/5 border-primary h-16 rounded-2xl pr-14 text-3xl font-black text-white focus:ring-0 text-right"
+                   className="bg-muted border-primary h-16 rounded-2xl pr-14 text-3xl font-black text-foreground focus:ring-0 text-right"
                    autoFocus
                    placeholder="0"
                  />
               </div>
-              <p className="text-[10px] text-white/20 text-right italic">
+              <p className="text-[10px] text-muted-foreground/50 text-right italic">
                 This will manually override the current {target === 'shop' ? 'Shop' : 'Godown'} stock value.
               </p>
            </div>
         </div>
 
-        <DialogFooter className="gap-3 pt-4 border-t border-white/5">
-          <Button variant="ghost" onClick={onClose} className="flex-1 h-12 border-white/10 hover:bg-white/5 text-white font-black uppercase tracking-widest">
+        <DialogFooter className="gap-3 pt-4 border-t border-border">
+          <Button variant="ghost" onClick={onClose} className="flex-1 h-12 border-border hover:bg-muted text-foreground font-black uppercase tracking-widest">
             {renderBoth('cancel')}
           </Button>
           <Button onClick={handleSave} disabled={typeof editedStock !== 'number' || editedStock < 0} className="flex-1 h-12 bg-primary hover:bg-primary/90 font-black uppercase tracking-widest shadow-[0_0_20px_rgba(0,132,255,0.3)]">

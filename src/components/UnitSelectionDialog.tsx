@@ -41,7 +41,7 @@ const UnitSelectionDialog: React.FC<UnitSelectionDialogProps> = ({ isOpen, onClo
                         <Button
                             key={index}
                             variant="outline"
-                            className="flex justify-between h-auto py-3 px-4 hover:bg-primary hover:text-white transition-colors group"
+                            className="flex justify-between h-auto py-3 px-4 hover:bg-primary hover:text-foreground transition-colors group"
                             onClick={() => {
                                 onSelect(unit.isBase ? null : unit); // Null means base unit
                                 onClose();

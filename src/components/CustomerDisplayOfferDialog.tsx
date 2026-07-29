@@ -92,20 +92,20 @@ export default function CustomerDisplayOfferDialog({ open, onOpenChange, onSave 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] font-faruma glass-dark text-white border-white/10" dir="rtl">
+      <DialogContent className="sm:max-w-[500px] font-faruma glass-dark text-foreground border-border" dir="rtl">
         <DialogHeader>
           <DialogTitle className="text-right text-2xl font-black">Add Custom Offer</DialogTitle>
-          <DialogDescription className="text-right text-white/50">Create a promotional offer for the customer display.</DialogDescription>
+          <DialogDescription className="text-right text-foreground/50">Create a promotional offer for the customer display.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4 text-right">
           <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest">Offer Type</Label>
+            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Offer Type</Label>
             <Select value={type} onValueChange={(v: 'image' | 'text') => setType(v)}>
-              <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl text-right font-bold" dir="rtl">
+              <SelectTrigger className="bg-muted border-border h-12 rounded-xl text-right font-bold" dir="rtl">
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
-              <SelectContent className="bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
+              <SelectContent className="bg-card border-border text-foreground" dir="rtl">
                 <SelectItem value="image" className="text-right"><span className="flex items-center justify-end gap-2"><ImageIcon className="h-4 w-4"/> Image Graphic</span></SelectItem>
                 <SelectItem value="text" className="text-right"><span className="flex items-center justify-end gap-2"><Type className="h-4 w-4"/> Custom Text</span></SelectItem>
               </SelectContent>
@@ -114,19 +114,19 @@ export default function CustomerDisplayOfferDialog({ open, onOpenChange, onSave 
 
           {type === 'image' ? (
             <div className="space-y-4">
-              <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest block text-right">Upload Graphic</Label>
+              <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right">Upload Graphic</Label>
               <div 
-                className="border-2 border-dashed border-white/10 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 cursor-pointer hover:bg-white/5 hover:border-primary/50 transition-all text-center"
+                className="border-2 border-dashed border-border rounded-2xl p-8 flex flex-col items-center justify-center gap-4 cursor-pointer hover:bg-muted hover:border-primary/50 transition-all text-center"
                 onClick={() => fileInputRef.current?.click()}
               >
                 {image ? (
                   <img src={image} alt="Preview" className="max-h-40 rounded-xl shadow-lg object-contain" />
                 ) : (
                   <>
-                    <Upload className="h-10 w-10 text-white/20" />
+                    <Upload className="h-10 w-10 text-muted-foreground/50" />
                     <div>
-                      <p className="font-bold text-white/80">Click to upload graphic</p>
-                      <p className="text-xs text-white/40 mt-1">PNG, JPG up to 5MB</p>
+                      <p className="font-bold text-foreground/80">Click to upload graphic</p>
+                      <p className="text-xs text-muted-foreground mt-1">PNG, JPG up to 5MB</p>
                     </div>
                   </>
                 )}
@@ -136,37 +136,37 @@ export default function CustomerDisplayOfferDialog({ open, onOpenChange, onSave 
           ) : (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest block text-right">Headline Title</Label>
+                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right">Headline Title</Label>
                 <Input 
                   value={title} 
                   onChange={e => setTitle(e.target.value)} 
                   placeholder="e.g. Weekend Special!"
-                  className="bg-white/5 border-white/10 h-12 rounded-xl text-right font-bold"
+                  className="bg-muted border-border h-12 rounded-xl text-right font-bold"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest block text-right">Subtitle (Optional)</Label>
+                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right">Subtitle (Optional)</Label>
                 <Input 
                   value={subtitle} 
                   onChange={e => setSubtitle(e.target.value)} 
                   placeholder="e.g. 50% off all soft drinks"
-                  className="bg-white/5 border-white/10 h-12 rounded-xl text-right font-bold"
+                  className="bg-muted border-border h-12 rounded-xl text-right font-bold"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-white/40 tracking-widest block text-right">Price Tag / Badge Text (Optional)</Label>
+                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right">Price Tag / Badge Text (Optional)</Label>
                 <Input 
                   value={priceText} 
                   onChange={e => setPriceText(e.target.value)} 
                   placeholder="e.g. Only $5.00!"
-                  className="bg-white/5 border-white/10 h-12 rounded-xl text-right font-bold"
+                  className="bg-muted border-border h-12 rounded-xl text-right font-bold"
                 />
               </div>
             </div>
           )}
         </div>
 
-        <DialogFooter className="gap-2 border-t border-white/10 pt-4">
+        <DialogFooter className="gap-2 border-t border-border pt-4">
           <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-xl">Cancel</Button>
           <Button onClick={handleSave} className="rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold">
             Add Offer

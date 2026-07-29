@@ -128,14 +128,14 @@ const Vendors = () => {
     );
 
     return (
-        <div className="p-6 font-faruma flex flex-col h-full bg-[#050510] text-white overflow-hidden" dir="rtl">
+        <div className="p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
             {/* Header Section */}
             <div className="flex justify-between items-center mb-8">
                 <div className="text-right">
-                    <h1 className="text-3xl font-black text-white flex items-center justify-end gap-3">
+                    <h1 className="text-3xl font-black text-foreground flex items-center justify-end gap-3">
                         {renderBoth('vendors')} <Building2 className="h-8 w-8 text-primary" />
                     </h1>
-                    <p className="text-sm text-white/40 mt-1">{renderBoth('manage_vendor_information')}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{renderBoth('manage_vendor_information')}</p>
                 </div>
                 <div className="flex gap-3">
                     <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }} className="gap-2 bg-primary hover:bg-primary/90 h-11 px-6 rounded-xl font-black shadow-[0_0_20px_rgba(0,132,255,0.3)]">
@@ -146,71 +146,71 @@ const Vendors = () => {
 
             {/* Search Bar */}
             <div className="relative mb-8">
-                <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
+                <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
                 <Input
                     placeholder={t('search_vendors')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full bg-white/5 border-white/10 rounded-xl pr-12 h-14 text-right font-bold focus:border-primary/50 transition-all text-lg"
+                    className="w-full bg-muted border-border rounded-xl pr-12 h-14 text-right font-bold focus:border-primary/50 transition-all text-lg"
                 />
             </div>
 
             {/* Vendors Table/List Container */}
-            <Card className="bg-[#0a0a1a] border-white/5 rounded-3xl overflow-hidden flex-1 flex flex-col shadow-2xl">
-                <CardHeader className="border-b border-white/5 px-6 py-4 flex flex-row items-center justify-between">
+            <Card className="bg-card border-border rounded-3xl overflow-hidden flex-1 flex flex-col shadow-2xl">
+                <CardHeader className="border-b border-border px-6 py-4 flex flex-row items-center justify-between">
                     <div className="flex items-center gap-2">
-                         <span className="text-xs font-black text-white/40 uppercase tracking-widest">{filteredVendors.length} VENDORS FOUND</span>
+                         <span className="text-xs font-black text-muted-foreground uppercase tracking-widest">{filteredVendors.length} VENDORS FOUND</span>
                     </div>
-                    <CardTitle className="text-lg font-black text-white flex items-center gap-2">
-                        Vendor Inventory <Info className="h-4 w-4 text-white/20" />
+                    <CardTitle className="text-lg font-black text-foreground flex items-center gap-2">
+                        Vendor Inventory <Info className="h-4 w-4 text-muted-foreground/50" />
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0 flex-1 overflow-hidden">
                     <ScrollArea className="h-full custom-scrollbar">
                         <Table dir="rtl">
-                            <TableHeader className="bg-white/5 sticky top-0 z-10">
-                                <TableRow className="border-white/5 hover:bg-transparent">
-                                    <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Code</TableHead>
-                                    <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Vendor Name</TableHead>
-                                    <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Contact</TableHead>
-                                    <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">TIN</TableHead>
-                                    <TableHead className="text-right font-black text-white/40 uppercase text-[10px] tracking-widest">Actions</TableHead>
+                            <TableHeader className="bg-muted sticky top-0 z-10">
+                                <TableRow className="border-border hover:bg-transparent">
+                                    <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">Code</TableHead>
+                                    <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">Vendor Name</TableHead>
+                                    <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">Contact</TableHead>
+                                    <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">TIN</TableHead>
+                                    <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {filteredVendors.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center py-20 text-white/20 font-black uppercase tracking-[0.2em]">
+                                        <TableCell colSpan={5} className="text-center py-20 text-muted-foreground/50 font-black uppercase tracking-[0.2em]">
                                             {searchTerm ? t('no_vendors_found') : t('no_vendors_yet')}
                                         </TableCell>
                                     </TableRow>
                                 ) : (
                                     filteredVendors.map((vendor) => (
-                                        <TableRow key={vendor.id} className="border-white/5 hover:bg-white/5 transition-colors group">
+                                        <TableRow key={vendor.id} className="border-border hover:bg-muted transition-colors group">
                                             <TableCell className="text-right">
                                                 <span className="font-mono text-sm text-primary font-black bg-primary/10 px-3 py-1 rounded-full">{vendor.code}</span>
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex flex-col">
-                                                   <span className="font-black text-white group-hover:text-primary transition-colors">{vendor.name_dv || vendor.name_en}</span>
-                                                   <span className="text-[10px] text-white/40 uppercase font-bold">{vendor.name_en}</span>
+                                                   <span className="font-black text-foreground group-hover:text-primary transition-colors">{vendor.name_dv || vendor.name_en}</span>
+                                                   <span className="text-[10px] text-muted-foreground uppercase font-bold">{vendor.name_en}</span>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex flex-col gap-1">
-                                                   <div className="flex items-center justify-end gap-2 text-xs font-bold text-white/60">
+                                                   <div className="flex items-center justify-end gap-2 text-xs font-bold text-muted-foreground/80">
                                                       <span>{vendor.phone}</span>
-                                                      <Phone className="h-3 w-3 text-white/20" />
+                                                      <Phone className="h-3 w-3 text-muted-foreground/50" />
                                                    </div>
                                                    {vendor.contact_person && (
-                                                     <div className="flex items-center justify-end gap-2 text-[10px] text-white/40">
+                                                     <div className="flex items-center justify-end gap-2 text-[10px] text-muted-foreground">
                                                         <span>{vendor.contact_person}</span>
-                                                        <User className="h-3 w-3 text-white/20" />
+                                                        <User className="h-3 w-3 text-muted-foreground/50" />
                                                      </div>
                                                    )}
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="text-right font-mono text-xs text-white/40">{vendor.tin_number || '-'}</TableCell>
+                                            <TableCell className="text-right font-mono text-xs text-muted-foreground">{vendor.tin_number || '-'}</TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex gap-2 justify-end">
                                                     <Button
@@ -242,49 +242,49 @@ const Vendors = () => {
 
             {/* Add/Edit Vendor Dialogs */}
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogContent className="sm:max-w-[600px] font-faruma bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
+                <DialogContent className="sm:max-w-[600px] font-faruma bg-card border-border text-foreground" dir="rtl">
                     <DialogHeader>
                         <DialogTitle className="text-right text-2xl font-black">{renderBoth('add_vendor')}</DialogTitle>
-                        <DialogDescription className="text-right text-white/40">{renderBoth('enter_vendor_details')}</DialogDescription>
+                        <DialogDescription className="text-right text-muted-foreground">{renderBoth('enter_vendor_details')}</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-6 py-6">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('vendor_name_en')}*</Label>
-                                <Input value={vendorForm.name_en} onChange={(e) => setVendorForm({ ...vendorForm, name_en: e.target.value })} className="text-right h-12 bg-white/5 border-white/10 rounded-xl" placeholder="e.g. STO" />
+                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('vendor_name_en')}*</Label>
+                                <Input value={vendorForm.name_en} onChange={(e) => setVendorForm({ ...vendorForm, name_en: e.target.value })} className="text-right h-12 bg-muted border-border rounded-xl" placeholder="e.g. STO" />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('vendor_name_dv')}</Label>
-                                <Input value={vendorForm.name_dv} onChange={(e) => setVendorForm({ ...vendorForm, name_dv: e.target.value })} className="text-right h-12 bg-white/5 border-white/10 rounded-xl" placeholder="އެސް.ޓީ.އޯ" />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('phone')}*</Label>
-                                <Input value={vendorForm.phone} onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })} className="text-right h-12 font-mono bg-white/5 border-white/10 rounded-xl" />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('contact_person')}</Label>
-                                <Input value={vendorForm.contact_person} onChange={(e) => setVendorForm({ ...vendorForm, contact_person: e.target.value })} className="text-right h-12 bg-white/5 border-white/10 rounded-xl" />
+                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('vendor_name_dv')}</Label>
+                                <Input value={vendorForm.name_dv} onChange={(e) => setVendorForm({ ...vendorForm, name_dv: e.target.value })} className="text-right h-12 bg-muted border-border rounded-xl" placeholder="އެސް.ޓީ.އޯ" />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('email')}</Label>
-                                <Input type="email" value={vendorForm.email} onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })} className="text-right h-12 bg-white/5 border-white/10 rounded-xl" />
+                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('phone')}*</Label>
+                                <Input value={vendorForm.phone} onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })} className="text-right h-12 font-mono bg-muted border-border rounded-xl" />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('tin_number')}</Label>
-                                <Input value={vendorForm.tin_number} onChange={(e) => setVendorForm({ ...vendorForm, tin_number: e.target.value })} className="text-right h-12 font-mono bg-white/5 border-white/10 rounded-xl" />
+                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('contact_person')}</Label>
+                                <Input value={vendorForm.contact_person} onChange={(e) => setVendorForm({ ...vendorForm, contact_person: e.target.value })} className="text-right h-12 bg-muted border-border rounded-xl" />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('email')}</Label>
+                                <Input type="email" value={vendorForm.email} onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })} className="text-right h-12 bg-muted border-border rounded-xl" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('tin_number')}</Label>
+                                <Input value={vendorForm.tin_number} onChange={(e) => setVendorForm({ ...vendorForm, tin_number: e.target.value })} className="text-right h-12 font-mono bg-muted border-border rounded-xl" />
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('address')}</Label>
-                            <Input value={vendorForm.address} onChange={(e) => setVendorForm({ ...vendorForm, address: e.target.value })} className="text-right h-12 bg-white/5 border-white/10 rounded-xl" />
+                            <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('address')}</Label>
+                            <Input value={vendorForm.address} onChange={(e) => setVendorForm({ ...vendorForm, address: e.target.value })} className="text-right h-12 bg-muted border-border rounded-xl" />
                         </div>
                     </div>
-                    <DialogFooter className="gap-3 pt-4 border-t border-white/5">
-                        <Button variant="ghost" onClick={() => setIsAddDialogOpen(false)} className="flex-1 h-12 border-white/10 hover:bg-white/5 text-white">
+                    <DialogFooter className="gap-3 pt-4 border-t border-border">
+                        <Button variant="ghost" onClick={() => setIsAddDialogOpen(false)} className="flex-1 h-12 border-border hover:bg-muted text-foreground">
                             {renderBoth('cancel')}
                         </Button>
                         <Button onClick={handleAddVendor} className="flex-1 h-12 bg-primary hover:bg-primary/90 font-black">
@@ -296,50 +296,50 @@ const Vendors = () => {
 
             {/* Edit Vendor Dialog */}
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogContent className="sm:max-w-[600px] font-faruma bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
+                <DialogContent className="sm:max-w-[600px] font-faruma bg-card border-border text-foreground" dir="rtl">
                     <DialogHeader>
                         <DialogTitle className="text-right text-2xl font-black">{renderBoth('edit_vendor')}</DialogTitle>
-                        <DialogDescription className="text-right text-white/40">{renderBoth('update_vendor_details')}</DialogDescription>
+                        <DialogDescription className="text-right text-muted-foreground">{renderBoth('update_vendor_details')}</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-6 py-6">
                         {/* Same form as Add Vendor */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('vendor_name_en')}*</Label>
-                                <Input value={vendorForm.name_en} onChange={(e) => setVendorForm({ ...vendorForm, name_en: e.target.value })} className="text-right h-12 bg-white/5 border-white/10 rounded-xl" />
+                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('vendor_name_en')}*</Label>
+                                <Input value={vendorForm.name_en} onChange={(e) => setVendorForm({ ...vendorForm, name_en: e.target.value })} className="text-right h-12 bg-muted border-border rounded-xl" />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('vendor_name_dv')}</Label>
-                                <Input value={vendorForm.name_dv} onChange={(e) => setVendorForm({ ...vendorForm, name_dv: e.target.value })} className="text-right h-12 bg-white/5 border-white/10 rounded-xl" />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('phone')}*</Label>
-                                <Input value={vendorForm.phone} onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })} className="text-right h-12 font-mono bg-white/5 border-white/10 rounded-xl" />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('contact_person')}</Label>
-                                <Input value={vendorForm.contact_person} onChange={(e) => setVendorForm({ ...vendorForm, contact_person: e.target.value })} className="text-right h-12 bg-white/5 border-white/10 rounded-xl" />
+                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('vendor_name_dv')}</Label>
+                                <Input value={vendorForm.name_dv} onChange={(e) => setVendorForm({ ...vendorForm, name_dv: e.target.value })} className="text-right h-12 bg-muted border-border rounded-xl" />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('email')}</Label>
-                                <Input type="email" value={vendorForm.email} onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })} className="text-right h-12 bg-white/5 border-white/10 rounded-xl" />
+                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('phone')}*</Label>
+                                <Input value={vendorForm.phone} onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })} className="text-right h-12 font-mono bg-muted border-border rounded-xl" />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('tin_number')}</Label>
-                                <Input value={vendorForm.tin_number} onChange={(e) => setVendorForm({ ...vendorForm, tin_number: e.target.value })} className="text-right h-12 font-mono bg-white/5 border-white/10 rounded-xl" />
+                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('contact_person')}</Label>
+                                <Input value={vendorForm.contact_person} onChange={(e) => setVendorForm({ ...vendorForm, contact_person: e.target.value })} className="text-right h-12 bg-muted border-border rounded-xl" />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('email')}</Label>
+                                <Input type="email" value={vendorForm.email} onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })} className="text-right h-12 bg-muted border-border rounded-xl" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('tin_number')}</Label>
+                                <Input value={vendorForm.tin_number} onChange={(e) => setVendorForm({ ...vendorForm, tin_number: e.target.value })} className="text-right h-12 font-mono bg-muted border-border rounded-xl" />
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('address')}</Label>
-                            <Input value={vendorForm.address} onChange={(e) => setVendorForm({ ...vendorForm, address: e.target.value })} className="text-right h-12 bg-white/5 border-white/10 rounded-xl" />
+                            <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('address')}</Label>
+                            <Input value={vendorForm.address} onChange={(e) => setVendorForm({ ...vendorForm, address: e.target.value })} className="text-right h-12 bg-muted border-border rounded-xl" />
                         </div>
                     </div>
-                    <DialogFooter className="gap-3 pt-4 border-t border-white/5">
-                        <Button variant="ghost" onClick={() => setIsEditDialogOpen(false)} className="flex-1 h-12 border-white/10 hover:bg-white/5 text-white">
+                    <DialogFooter className="gap-3 pt-4 border-t border-border">
+                        <Button variant="ghost" onClick={() => setIsEditDialogOpen(false)} className="flex-1 h-12 border-border hover:bg-muted text-foreground">
                             {renderBoth('cancel')}
                         </Button>
                         <Button onClick={handleEditVendor} className="flex-1 h-12 bg-primary hover:bg-primary/90 font-black">
@@ -351,18 +351,18 @@ const Vendors = () => {
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <DialogContent className="sm:max-w-[400px] font-faruma bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
+                <DialogContent className="sm:max-w-[400px] font-faruma bg-card border-border text-foreground" dir="rtl">
                     <DialogHeader>
                         <DialogTitle className="text-right text-2xl font-black text-red-500">{renderBoth('delete_vendor')}</DialogTitle>
-                        <DialogDescription className="text-right text-white/40">
+                        <DialogDescription className="text-right text-muted-foreground">
                             {t('delete_vendor_confirmation', { vendor: selectedVendor?.name_en })}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="mt-6 gap-3">
-                        <Button variant="ghost" onClick={() => setIsDeleteDialogOpen(false)} className="flex-1 h-12 border-white/10 hover:bg-white/5 text-white">
+                        <Button variant="ghost" onClick={() => setIsDeleteDialogOpen(false)} className="flex-1 h-12 border-border hover:bg-muted text-foreground">
                             {renderBoth('cancel')}
                         </Button>
-                        <Button onClick={handleDeleteVendor} className="flex-1 h-12 bg-red-600 hover:bg-red-700 font-black text-white">
+                        <Button onClick={handleDeleteVendor} className="flex-1 h-12 bg-red-600 hover:bg-red-700 font-black text-foreground">
                             {renderBoth('delete')}
                         </Button>
                     </DialogFooter>

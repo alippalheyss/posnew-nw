@@ -132,13 +132,13 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col font-faruma bg-[#0a0a1a] border-white/10 text-white" dir="rtl">
+            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col font-faruma bg-card border-border text-foreground" dir="rtl">
                 <DialogHeader className="text-right">
                     <DialogTitle className="text-2xl font-black flex items-center justify-end gap-3">
                         {product ? renderBoth('edit_product') : renderBoth('add_new_product')}
                         <Package className="h-6 w-6 text-primary" />
                     </DialogTitle>
-                    <DialogDescription className="text-white/40">
+                    <DialogDescription className="text-muted-foreground">
                         {renderBoth('product_details_description')}
                     </DialogDescription>
                 </DialogHeader>
@@ -147,12 +147,12 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         {/* Image Section */}
                         <div className="space-y-4">
-                            <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('product_image')}</Label>
-                            <div className="aspect-square rounded-3xl bg-white/5 border-2 border-dashed border-white/10 flex flex-col items-center justify-center relative overflow-hidden group">
+                            <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('product_image')}</Label>
+                            <div className="aspect-square rounded-3xl bg-muted border-2 border-dashed border-border flex flex-col items-center justify-center relative overflow-hidden group">
                                 {imagePreviewUrl ? (
                                     <img src={imagePreviewUrl} alt="Preview" className="w-full h-full object-cover" />
                                 ) : (
-                                    <ImageIcon className="h-12 w-12 text-white/10" />
+                                    <ImageIcon className="h-12 w-12 text-foreground/10" />
                                 )}
                                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                     <Label htmlFor="image-upload" className="cursor-pointer bg-primary px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/90 transition-all flex items-center gap-2">
@@ -166,37 +166,37 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                         {/* Basic Info Section */}
                         <div className="space-y-6">
                             <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('product_name')} (ދިވެހި)*</Label>
+                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('product_name')} (ދިވެހި)*</Label>
                                 <Input 
                                     value={editedProduct.name_dv} 
                                     onChange={(e) => updateField('name_dv', e.target.value)} 
-                                    className="bg-white/5 border-white/10 h-12 rounded-xl text-right font-bold focus:border-primary/50"
+                                    className="bg-muted border-border h-12 rounded-xl text-right font-bold focus:border-primary/50"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('product_name')} (English)*</Label>
+                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('product_name')} (English)*</Label>
                                 <Input 
                                     value={editedProduct.name_en} 
                                     onChange={(e) => updateField('name_en', e.target.value)} 
-                                    className="bg-white/5 border-white/10 h-12 rounded-xl text-right font-bold focus:border-primary/50"
+                                    className="bg-muted border-border h-12 rounded-xl text-right font-bold focus:border-primary/50"
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('item_code')}*</Label>
+                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('item_code')}*</Label>
                                     <div className="relative">
-                                       <Hash className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
-                                       <Input value={editedProduct.item_code} readOnly className="bg-white/5 border-white/10 h-11 rounded-xl text-right pr-10 font-mono text-sm opacity-50" />
+                                       <Hash className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+                                       <Input value={editedProduct.item_code} readOnly className="bg-muted border-border h-11 rounded-xl text-right pr-10 font-mono text-sm opacity-50" />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('barcode')}*</Label>
+                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('barcode')}*</Label>
                                     <div className="relative">
-                                       <Barcode className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/20" />
+                                       <Barcode className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
                                        <Input 
                                           value={editedProduct.barcode} 
                                           onChange={(e) => updateField('barcode', e.target.value)} 
-                                          className="bg-white/5 border-white/10 h-11 rounded-xl text-right pr-10 font-mono text-sm focus:border-primary/50" 
+                                          className="bg-muted border-border h-11 rounded-xl text-right pr-10 font-mono text-sm focus:border-primary/50" 
                                        />
                                     </div>
                                 </div>
@@ -204,12 +204,12 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                         </div>
                     </div>
 
-                    <Separator className="my-8 bg-white/5" />
+                    <Separator className="my-8 bg-muted" />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-6">
                             <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('price')}*</Label>
+                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('price')}*</Label>
                                 <div className="relative">
                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-primary">MVR</span>
                                    <Input 
@@ -217,18 +217,18 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                       value={editedProduct.price} 
                                       onChange={(e) => updateField('price', parseFloat(e.target.value) || 0)} 
                                       onFocus={handleFocus}
-                                      className="bg-white/5 border-white/10 h-14 rounded-2xl text-right pr-4 text-2xl font-black text-white focus:border-primary" 
+                                      className="bg-muted border-border h-14 rounded-2xl text-right pr-4 text-2xl font-black text-foreground focus:border-primary" 
                                    />
                                 </div>
                             </div>
 
                             <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('category')}</Label>
+                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('category')}</Label>
                                 <Select value={editedProduct.category} onValueChange={(val) => updateField('category', val)}>
-                                    <SelectTrigger className="bg-white/5 border-white/10 h-12 rounded-xl text-right">
+                                    <SelectTrigger className="bg-muted border-border h-12 rounded-xl text-right">
                                         <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-[#0a0a1a] border-white/10 text-white">
+                                    <SelectContent className="bg-card border-border text-foreground">
                                         <SelectItem value="DRINKS" className="text-right">DRINKS</SelectItem>
                                         <SelectItem value="FOOD" className="text-right">FOOD</SelectItem>
                                         <SelectItem value="HARDWARE" className="text-right">HARDWARE</SelectItem>
@@ -240,7 +240,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                         </div>
 
                         <div className="space-y-6">
-                           <div className="bg-white/5 p-6 rounded-3xl border border-white/5">
+                           <div className="bg-muted p-6 rounded-3xl border border-border">
                               <div className="flex items-center justify-between mb-4">
                                  <Switch 
                                     checked={editedProduct.is_zero_tax} 
@@ -249,20 +249,20 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                  />
                                  <Label className="font-black text-sm uppercase tracking-widest">Zero Tax Item</Label>
                               </div>
-                              <p className="text-[10px] text-white/20 text-right">Enable this if the item is GST exempt (e.g. basic food items).</p>
+                              <p className="text-[10px] text-muted-foreground/50 text-right">Enable this if the item is GST exempt (e.g. basic food items).</p>
                            </div>
 
                            <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-white/40 tracking-widest">{renderBoth('expiry_date')}</Label>
+                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('expiry_date')}</Label>
                                 <Popover>
                                     <PopoverTrigger asChild>
-                                        <Button variant="outline" className={cn("w-full justify-start text-right font-normal h-12 rounded-xl bg-white/5 border-white/10 hover:bg-white/10", !expiryDate && "text-muted-foreground")}>
+                                        <Button variant="outline" className={cn("w-full justify-start text-right font-normal h-12 rounded-xl bg-muted border-border hover:bg-muted/80", !expiryDate && "text-muted-foreground")}>
                                             {expiryDate ? format(expiryDate, "PPP") : <span>{renderBoth('pick_a_date')}</span>}
                                             <CalendarIcon className="mr-auto h-4 w-4 opacity-50" />
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0 bg-[#0a0a1a] border-white/10" align="start">
-                                        <Calendar mode="single" selected={expiryDate} onSelect={setExpiryDate} initialFocus className="text-white" />
+                                    <PopoverContent className="w-auto p-0 bg-card border-border" align="start">
+                                        <Calendar mode="single" selected={expiryDate} onSelect={setExpiryDate} initialFocus className="text-foreground" />
                                     </PopoverContent>
                                 </Popover>
                             </div>
@@ -270,8 +270,8 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                     </div>
                 </div>
 
-                <DialogFooter className="gap-3 pt-6 border-t border-white/5">
-                    <Button variant="ghost" onClick={onClose} className="flex-1 h-12 border-white/10 hover:bg-white/5 text-white font-black uppercase tracking-widest">
+                <DialogFooter className="gap-3 pt-6 border-t border-border">
+                    <Button variant="ghost" onClick={onClose} className="flex-1 h-12 border-border hover:bg-muted text-foreground font-black uppercase tracking-widest">
                         {renderBoth('cancel')}
                     </Button>
                     <Button onClick={handleSave} className="flex-1 h-12 bg-primary hover:bg-primary/90 font-black uppercase tracking-widest shadow-[0_0_20px_rgba(0,132,255,0.3)]">

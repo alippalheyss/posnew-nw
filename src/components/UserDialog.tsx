@@ -234,7 +234,7 @@ const UserDialog: React.FC<UserDialogProps> = ({ open, onOpenChange, user, onSav
 
                             {permissionGroups.map((group) => (
                                 <div key={group.title} className="space-y-3">
-                                    <h4 className="font-medium text-sm text-black dark:text-white dark:text-black dark:text-white ">
+                                    <h4 className="font-medium text-sm text-black dark:text-foreground dark:text-black dark:text-foreground ">
                                         {group.title}
                                     </h4>
                                     <div className="grid grid-cols-2 gap-3">

@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { PencilLine, CalendarDays, Printer, Trash2, Filter, ChevronRight, Receipt, DollarSign, CreditCard, ArrowRightLeft, TrendingUp } from 'lucide-react';
+import { PencilLine, CalendarDays, Printer, Trash2, Filter, ChevronRight, Receipt, DollarSign, CreditCard, ArrowRightLeft, TrendingUp, Download } from 'lucide-react';
 import { useAppContext, Product, Customer, CartItem, Sale } from '@/context/AppContext';
 import { formatDate, formatTime, formatDateTime, toISODate, extractDateOnly } from '@/utils/formatters';
 import SaleEditDialog from '@/components/SaleEditDialog'; 
@@ -14,6 +14,8 @@ import { showSuccess } from '@/utils/toast';
 import { printContent } from '@/utils/printHelper';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const DailySales = () => {
   const { t } = useTranslation();
@@ -153,6 +155,45 @@ const DailySales = () => {
     showSuccess(t('sale_updated_successfully'));
   };
 
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(20);
+    doc.text('Daily Sales Report', 14, 22);
+    
+    doc.setFontSize(11);
+    doc.text(`Date Filter: ${dateFilter.toUpperCase()}`, 14, 30);
+    doc.text(`Total Sales: ${settings.shop.currency} ${totalSalesAmount.toFixed(2)}`, 14, 36);
+    doc.text(`Total Transactions: ${filteredSales.length}`, 14, 42);
+
+    // Table Data
+    const tableColumn = ["ID", "Date", "Items", "Method", "Total"];
+    const tableRows: any[] = [];
+
+    filteredSales.forEach(sale => {
+      const saleData = [
+        sale.invoiceNumber || sale.id,
+        `${formatDate(sale.date)} ${formatTime(sale.date)}`,
+        sale.items.length,
+        sale.paymentMethod || 'Unknown',
+        `${settings.shop.currency} ${sale.grandTotal.toFixed(2)}`
+      ];
+      tableRows.push(saleData);
+    });
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 50,
+      theme: 'grid',
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [0, 132, 255] }
+    });
+
+    doc.save(`sales-report-${dateFilter}.pdf`);
+  };
+
   const totalSalesAmount = filteredSales.reduce((acc, sale) => acc + sale.grandTotal, 0);
 
   const renderBoth = (key: string, options?: any) => (
@@ -171,25 +212,25 @@ const DailySales = () => {
   };
 
   return (
-    <div className="p-6 font-faruma flex flex-col h-full bg-[#050510] text-white overflow-hidden" dir="rtl">
+    <div className="p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
       {/* Header Section */}
       <div className="flex justify-between items-center mb-8">
         <div className="text-right">
-           <h1 className="text-3xl font-black text-white flex items-center justify-end gap-3">
+           <h1 className="text-3xl font-black text-foreground flex items-center justify-end gap-3">
              {renderBoth('daily_sales')} <CalendarDays className="h-8 w-8 text-primary" />
            </h1>
-           <p className="text-sm text-white/40 mt-1">Review and manage your business transactions</p>
+           <p className="text-sm text-muted-foreground mt-1">Review and manage your business transactions</p>
         </div>
 
         <div className="flex gap-3">
-           <div className="bg-white/5 rounded-xl p-1 border border-white/10 flex gap-1">
+           <div className="bg-muted rounded-xl p-1 border border-border flex gap-1">
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={() => setActiveTab('sales')}
                 className={cn(
                   "px-4 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
-                  activeTab === 'sales' ? "bg-primary text-white" : "text-white/40 hover:text-white"
+                  activeTab === 'sales' ? "bg-primary text-foreground" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 Sales
@@ -200,13 +241,13 @@ const DailySales = () => {
                 onClick={() => setActiveTab('pending')}
                 className={cn(
                   "px-4 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
-                  activeTab === 'pending' ? "bg-yellow-500 text-white" : "text-white/40 hover:text-white"
+                  activeTab === 'pending' ? "bg-yellow-500 text-foreground" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 Pending ({pendingTransfers.length})
               </Button>
            </div>
-           <div className="bg-white/5 rounded-xl p-1 border border-white/10 flex gap-1">
+           <div className="bg-muted rounded-xl p-1 border border-border flex gap-1">
               {['today', 'yesterday', 'last30', 'all'].map((filter) => (
                 <Button 
                   key={filter}
@@ -215,46 +256,55 @@ const DailySales = () => {
                   onClick={() => setDateFilter(filter as any)}
                   className={cn(
                     "px-4 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
-                    dateFilter === filter ? "bg-white/10 text-white" : "text-white/40 hover:text-white"
+                    dateFilter === filter ? "bg-muted/80 text-foreground" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   {filter}
                 </Button>
               ))}
            </div>
+           <Button
+             variant="outline"
+             size="sm"
+             onClick={handleDownloadPDF}
+             className="bg-muted border-border hover:bg-muted/80 text-foreground gap-2"
+           >
+             <Download className="h-4 w-4" />
+             Download PDF
+           </Button>
         </div>
       </div>
 
       {/* Stats Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-         <Card className="bg-[#0a0a1a] border-white/5 rounded-3xl p-6 relative overflow-hidden group">
+         <Card className="bg-card border-border rounded-3xl p-6 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-primary/20 transition-all" />
             <div className="flex justify-between items-center mb-4">
                <DollarSign className="h-5 w-5 text-primary" />
-               <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Total Sales</span>
+               <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Total Sales</span>
             </div>
-            <p className="text-3xl font-black text-white">{settings.shop.currency} {totalSalesAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-            <p className="text-[10px] text-white/20 mt-1 font-bold uppercase tracking-widest">{dateFilter} SUMMARY</p>
+            <p className="text-3xl font-black text-foreground">{settings.shop.currency} {totalSalesAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            <p className="text-[10px] text-muted-foreground/50 mt-1 font-bold uppercase tracking-widest">{dateFilter} SUMMARY</p>
          </Card>
 
-         <Card className="bg-[#0a0a1a] border-white/5 rounded-3xl p-6 relative overflow-hidden group">
+         <Card className="bg-card border-border rounded-3xl p-6 relative overflow-hidden group">
             <div className="flex justify-between items-center mb-4">
                <Receipt className="h-5 w-5 text-purple-500" />
-               <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Total Transactions</span>
+               <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Total Transactions</span>
             </div>
-            <p className="text-3xl font-black text-white">{filteredSales.length}</p>
-            <p className="text-[10px] text-white/20 mt-1 font-bold uppercase tracking-widest">RECEIPTS ISSUED</p>
+            <p className="text-3xl font-black text-foreground">{filteredSales.length}</p>
+            <p className="text-[10px] text-muted-foreground/50 mt-1 font-bold uppercase tracking-widest">RECEIPTS ISSUED</p>
          </Card>
 
-         <Card className="bg-[#0a0a1a] border-white/5 rounded-3xl p-6 relative overflow-hidden group">
+         <Card className="bg-card border-border rounded-3xl p-6 relative overflow-hidden group">
             <div className="flex justify-between items-center mb-4">
                <TrendingUp className="h-5 w-5 text-green-500" />
-               <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Average Transaction</span>
+               <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Average Transaction</span>
             </div>
-            <p className="text-3xl font-black text-white">
+            <p className="text-3xl font-black text-foreground">
               {settings.shop.currency} {(filteredSales.length > 0 ? totalSalesAmount / filteredSales.length : 0).toFixed(2)}
             </p>
-            <p className="text-[10px] text-white/20 mt-1 font-bold uppercase tracking-widest">PER CUSTOMER</p>
+            <p className="text-[10px] text-muted-foreground/50 mt-1 font-bold uppercase tracking-widest">PER CUSTOMER</p>
          </Card>
       </div>
 
@@ -263,28 +313,28 @@ const DailySales = () => {
         <div className="space-y-4 pb-6">
           {activeTab === 'sales' ? (
             filteredSales.length === 0 ? (
-              <div className="h-60 flex flex-col items-center justify-center text-white/20 uppercase tracking-[0.2em] font-black">
+              <div className="h-60 flex flex-col items-center justify-center text-muted-foreground/50 uppercase tracking-[0.2em] font-black">
                  <Receipt className="h-16 w-16 mb-4 opacity-10" />
                  No sales recorded for this period
               </div>
             ) : (
               filteredSales.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale) => (
-                <Card key={sale.id} className="bg-[#0a0a1a] border-white/5 hover:border-primary/30 transition-all rounded-3xl p-6 group">
+                <Card key={sale.id} className="bg-card border-border hover:border-primary/30 transition-all rounded-3xl p-6 group">
                   <div className="flex items-center justify-between gap-6">
                      <div className="flex items-center gap-6">
-                        <div className="h-14 w-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                        <div className="h-14 w-14 rounded-2xl bg-muted border border-border flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                            <Receipt className="h-7 w-7" />
                         </div>
                         <div className="text-right">
                            <div className="flex items-center justify-end gap-3 mb-1">
-                              <span className="text-lg font-black text-white">{sale.invoiceNumber || sale.id}</span>
+                              <span className="text-lg font-black text-foreground">{sale.invoiceNumber || sale.id}</span>
                               <Badge className="bg-primary/20 text-primary border-none text-[8px] font-black uppercase tracking-widest px-2 py-0.5">
                                  {sale.paymentMethod}
                               </Badge>
                            </div>
-                           <div className="flex items-center justify-end gap-2 text-xs font-bold text-white/40">
+                           <div className="flex items-center justify-end gap-2 text-xs font-bold text-muted-foreground">
                               <span>{formatDateTime(sale.date)}</span>
-                              <span className="h-1 w-1 rounded-full bg-white/10" />
+                              <span className="h-1 w-1 rounded-full bg-muted/80" />
                               <span>{sale.items.length} ITEMS</span>
                            </div>
                         </div>
@@ -293,17 +343,17 @@ const DailySales = () => {
                      <div className="flex-1 flex justify-center">
                         <div className="flex items-center gap-2">
                           {sale.items.slice(0, 3).map((item, idx) => (
-                            <div key={idx} className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center text-[10px] font-black text-white/40">
+                            <div key={idx} className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center text-[10px] font-black text-muted-foreground">
                                {item.name_en.substring(0, 2).toUpperCase()}
                             </div>
                           ))}
-                          {sale.items.length > 3 && <span className="text-[10px] font-black text-white/20">+{sale.items.length - 3}</span>}
+                          {sale.items.length > 3 && <span className="text-[10px] font-black text-muted-foreground/50">+{sale.items.length - 3}</span>}
                         </div>
                      </div>
 
                      <div className="flex items-center gap-8">
                         <div className="text-right">
-                           <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">Grand Total</p>
+                           <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest mb-1">Grand Total</p>
                            <p className="text-2xl font-black text-primary">{settings.shop.currency} {sale.grandTotal.toFixed(2)}</p>
                         </div>
                         <div className="flex gap-2">
@@ -311,7 +361,7 @@ const DailySales = () => {
                              variant="ghost" 
                              size="icon" 
                              onClick={() => handlePrintReceipt(sale)}
-                             className="h-11 w-11 rounded-xl bg-white/5 border border-white/10 hover:bg-primary hover:text-white transition-all text-white/40"
+                             className="h-11 w-11 rounded-xl bg-muted border border-border hover:bg-primary hover:text-foreground transition-all text-muted-foreground"
                            >
                              <Printer className="h-4 w-4" />
                            </Button>
@@ -319,7 +369,7 @@ const DailySales = () => {
                              variant="ghost" 
                              size="icon" 
                              onClick={() => handleEditSale(sale)}
-                             className="h-11 w-11 rounded-xl bg-white/5 border border-white/10 hover:bg-blue-500 hover:text-white transition-all text-white/40"
+                             className="h-11 w-11 rounded-xl bg-muted border border-border hover:bg-blue-500 hover:text-foreground transition-all text-muted-foreground"
                            >
                              <PencilLine className="h-4 w-4" />
                            </Button>
@@ -331,7 +381,7 @@ const DailySales = () => {
             )
           ) : (
             pendingTransfers.length === 0 ? (
-              <div className="h-60 flex flex-col items-center justify-center text-white/20 uppercase tracking-[0.2em] font-black">
+              <div className="h-60 flex flex-col items-center justify-center text-muted-foreground/50 uppercase tracking-[0.2em] font-black">
                  <ArrowRightLeft className="h-16 w-16 mb-4 opacity-10" />
                  No pending transfers
               </div>
@@ -344,31 +394,31 @@ const DailySales = () => {
                            <ArrowRightLeft className="h-7 w-7" />
                         </div>
                         <div className="text-right">
-                           <p className="text-lg font-black text-white">{transfer.customer?.name_dv || transfer.tempCustomerName || 'Guest'}</p>
-                           <p className="text-xs font-bold text-white/40">{formatDateTime(transfer.date)}</p>
+                           <p className="text-lg font-black text-foreground">{transfer.customer?.name_dv || transfer.tempCustomerName || 'Guest'}</p>
+                           <p className="text-xs font-bold text-muted-foreground">{formatDateTime(transfer.date)}</p>
                         </div>
                      </div>
 
                      <div className="text-center">
-                        <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">Items</p>
-                        <p className="text-sm font-black text-white">{transfer.items.length}</p>
+                        <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest mb-1">Items</p>
+                        <p className="text-sm font-black text-foreground">{transfer.items.length}</p>
                      </div>
 
                      <div className="flex items-center gap-8">
                         <div className="text-right">
-                           <p className="text-[10px] font-black text-white/30 uppercase tracking-widest mb-1">Amount</p>
+                           <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest mb-1">Amount</p>
                            <p className="text-2xl font-black text-yellow-500">{settings.shop.currency} {transfer.grandTotal.toFixed(2)}</p>
                         </div>
                         <div className="flex gap-2">
                            <Button 
                              onClick={() => resolvePendingTransfer(transfer.id, 'cash')}
-                             className="bg-green-600 hover:bg-green-700 text-white font-black text-[10px] h-11 px-6 rounded-xl uppercase tracking-widest"
+                             className="bg-green-600 hover:bg-green-700 text-foreground font-black text-[10px] h-11 px-6 rounded-xl uppercase tracking-widest"
                            >
                              Confirm Cash
                            </Button>
                            <Button 
                              onClick={() => resolvePendingTransfer(transfer.id, 'credit')}
-                             className="bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] h-11 px-6 rounded-xl uppercase tracking-widest"
+                             className="bg-blue-600 hover:bg-blue-700 text-foreground font-black text-[10px] h-11 px-6 rounded-xl uppercase tracking-widest"
                              disabled={!transfer.customer}
                            >
                              Confirm Credit

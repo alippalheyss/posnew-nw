@@ -116,8 +116,8 @@ export default function CustomerDisplay() {
 
   if (!settings.general.enableCustomerDisplay) {
     return (
-      <div className="min-h-screen bg-[#050510] flex items-center justify-center text-white p-8">
-        <h1 className="text-3xl font-black text-white/50">Customer Display is disabled</h1>
+      <div className="min-h-screen bg-background flex items-center justify-center text-foreground p-8">
+        <h1 className="text-3xl font-black text-foreground/50">Customer Display is disabled</h1>
       </div>
     );
   }
@@ -130,7 +130,7 @@ export default function CustomerDisplay() {
   if (!isPosActive || isIdle || !activeCart || activeCart.items.length === 0) {
     const currentAd = combinedAds ? combinedAds[adIndex] : null;
     return (
-      <div className="min-h-screen bg-[#050510] flex flex-col items-center justify-center text-white p-8 relative overflow-hidden font-faruma" dir="rtl">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center text-foreground p-8 relative overflow-hidden font-faruma" dir="rtl">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-[#050510] to-orange-500/10 opacity-50" />
         
         {settings.shop.logo && (
@@ -146,28 +146,28 @@ export default function CustomerDisplay() {
             <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
               {('isProduct' in currentAd) ? (
                 // Product Ad
-                <Card className="bg-white/5 border-white/10 p-12 rounded-[3rem] backdrop-blur-xl shadow-2xl overflow-hidden relative group">
+                <Card className="bg-muted border-border p-12 rounded-[3rem] backdrop-blur-xl shadow-2xl overflow-hidden relative group">
                   <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                   <div className="flex flex-col md:flex-row items-center gap-12 relative z-10">
-                    <div className="w-full md:w-1/2 aspect-square relative rounded-3xl overflow-hidden bg-[#0a0a1a] flex items-center justify-center border border-white/5 shadow-inner">
+                    <div className="w-full md:w-1/2 aspect-square relative rounded-3xl overflow-hidden bg-card flex items-center justify-center border border-border shadow-inner">
                       {currentAd.image ? (
                         <img src={currentAd.image} alt={currentAd.subtitle} className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-1000" />
                       ) : (
-                        <ImageIcon className="h-32 w-32 text-white/10" />
+                        <ImageIcon className="h-32 w-32 text-foreground/10" />
                       )}
-                      <div className="absolute top-4 right-4 bg-orange-500 text-white px-4 py-1 rounded-full font-black text-sm uppercase tracking-widest shadow-lg">
+                      <div className="absolute top-4 right-4 bg-orange-500 text-foreground px-4 py-1 rounded-full font-black text-sm uppercase tracking-widest shadow-lg">
                         Featured Product
                       </div>
                     </div>
                     <div className="w-full md:w-1/2 text-right space-y-6">
                       <div>
-                        <h2 className="text-5xl font-black text-white leading-tight mb-2">{currentAd.title}</h2>
-                        <h3 className="text-2xl text-white/60 font-bold">{currentAd.subtitle}</h3>
+                        <h2 className="text-5xl font-black text-foreground leading-tight mb-2">{currentAd.title}</h2>
+                        <h3 className="text-2xl text-muted-foreground/80 font-bold">{currentAd.subtitle}</h3>
                       </div>
-                      <div className="pt-6 border-t border-white/10">
+                      <div className="pt-6 border-t border-border">
                         <p className="text-sm font-black text-orange-400 uppercase tracking-widest mb-1">Price</p>
                         <p className="text-6xl font-black text-primary drop-shadow-md">
-                          <span className="text-3xl text-white/50">{settings.shop.currency}</span> {currentAd.price?.toFixed(2)}
+                          <span className="text-3xl text-foreground/50">{settings.shop.currency}</span> {currentAd.price?.toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -175,19 +175,19 @@ export default function CustomerDisplay() {
                 </Card>
               ) : currentAd.type === 'image' ? (
                 // Custom Image Offer
-                <div className="rounded-[3rem] overflow-hidden shadow-2xl border border-white/10 relative">
+                <div className="rounded-[3rem] overflow-hidden shadow-2xl border border-border relative">
                    <img src={currentAd.image} className="w-full max-h-[60vh] object-contain bg-black/50" alt="Special Offer" />
                 </div>
               ) : (
                 // Custom Text Offer
-                <Card className="bg-gradient-to-br from-primary/20 via-[#0a0a1a] to-orange-500/20 border-white/10 p-16 rounded-[3rem] backdrop-blur-xl shadow-2xl">
+                <Card className="bg-gradient-to-br from-primary/20 via-[#0a0a1a] to-orange-500/20 border-border p-16 rounded-[3rem] backdrop-blur-xl shadow-2xl">
                    <div className="space-y-8 flex flex-col items-center justify-center text-center">
-                      <h2 className="text-6xl font-black text-white leading-tight drop-shadow-lg">{currentAd.title}</h2>
+                      <h2 className="text-6xl font-black text-foreground leading-tight drop-shadow-lg">{currentAd.title}</h2>
                       {currentAd.subtitle && (
-                        <h3 className="text-3xl text-white/80 font-bold">{currentAd.subtitle}</h3>
+                        <h3 className="text-3xl text-foreground/80 font-bold">{currentAd.subtitle}</h3>
                       )}
                       {currentAd.priceText && (
-                        <div className="mt-8 inline-block bg-orange-500 text-white text-4xl font-black px-12 py-4 rounded-full shadow-[0_0_40px_rgba(249,115,22,0.4)] transform hover:scale-105 transition-transform">
+                        <div className="mt-8 inline-block bg-orange-500 text-foreground text-4xl font-black px-12 py-4 rounded-full shadow-[0_0_40px_rgba(249,115,22,0.4)] transform hover:scale-105 transition-transform">
                           {currentAd.priceText}
                         </div>
                       )}
@@ -202,9 +202,9 @@ export default function CustomerDisplay() {
   }
 
   return (
-    <div className="h-screen w-full bg-[#050510] flex text-white font-faruma overflow-hidden" dir="rtl">
+    <div className="h-screen w-full bg-background flex text-foreground font-faruma overflow-hidden" dir="rtl">
       {/* Items List */}
-      <div className="flex-1 flex flex-col p-8 border-l border-white/10 relative min-h-0">
+      <div className="flex-1 flex flex-col p-8 border-l border-border relative min-h-0">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
         
         <div className="flex items-center justify-between mb-8 relative z-10">
@@ -214,7 +214,7 @@ export default function CustomerDisplay() {
             </div>
             <div>
               <h1 className="text-4xl font-black">Your Cart</h1>
-              <p className="text-white/50 text-lg">Current items in order</p>
+              <p className="text-foreground/50 text-lg">Current items in order</p>
             </div>
           </div>
           {settings.shop.logo && (
@@ -233,42 +233,42 @@ export default function CustomerDisplay() {
               
               return (
                 <Card key={`${item.productId || item.id}-${index}`} className={cn(
-                  "bg-[#0a0a1a] border-white/5 shadow-lg group overflow-hidden",
+                  "bg-card border-border shadow-lg group overflow-hidden",
                   isVeryDense ? "p-3 rounded-xl" : isDense ? "p-4 rounded-2xl" : "p-6 rounded-3xl"
                 )}>
                   <div className="flex justify-between items-center gap-4">
                     <div className="flex items-center gap-4 flex-1 overflow-hidden">
                       {!isVeryDense && (
                         <div className={cn(
-                          "bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 flex-shrink-0",
+                          "bg-muted flex items-center justify-center overflow-hidden border border-border flex-shrink-0",
                           isDense ? "h-12 w-12 rounded-xl" : "h-20 w-20 rounded-2xl"
                         )}>
                           {item.image ? (
                             <img src={item.image} alt={item.name_en} className="w-full h-full object-cover" />
                           ) : (
-                            <Tag className={isDense ? "h-5 w-5 text-white/20" : "h-8 w-8 text-white/20"} />
+                            <Tag className={isDense ? "h-5 w-5 text-muted-foreground/50" : "h-8 w-8 text-muted-foreground/50"} />
                           )}
                         </div>
                       )}
                       <div className="min-w-0">
-                        <h3 className={cn("font-bold text-white group-hover:text-primary transition-colors truncate", isVeryDense ? "text-lg" : isDense ? "text-xl" : "text-2xl mb-1")}>{item.name_dv}</h3>
-                        {!isVeryDense && <p className={cn("text-white/50 truncate", isDense ? "text-sm" : "text-lg")}>{item.name_en}</p>}
+                        <h3 className={cn("font-bold text-foreground group-hover:text-primary transition-colors truncate", isVeryDense ? "text-lg" : isDense ? "text-xl" : "text-2xl mb-1")}>{item.name_dv}</h3>
+                        {!isVeryDense && <p className={cn("text-foreground/50 truncate", isDense ? "text-sm" : "text-lg")}>{item.name_en}</p>}
                       </div>
                     </div>
                     
                     <div className={cn("flex items-center text-right shrink-0", isVeryDense ? "gap-4" : isDense ? "gap-6" : "gap-12")}>
                       <div>
-                        <p className={cn("font-black text-white/40 uppercase tracking-widest", isVeryDense ? "hidden" : "text-[10px] mb-1")}>Qty</p>
+                        <p className={cn("font-black text-muted-foreground uppercase tracking-widest", isVeryDense ? "hidden" : "text-[10px] mb-1")}>Qty</p>
                         <p className={cn("font-bold", isVeryDense ? "text-lg" : isDense ? "text-xl" : "text-2xl")}>{item.qty}x</p>
                       </div>
                       {!isVeryDense && (
                         <div>
-                          <p className={cn("font-black text-white/40 uppercase tracking-widest text-[10px] mb-1")}>Price</p>
+                          <p className={cn("font-black text-muted-foreground uppercase tracking-widest text-[10px] mb-1")}>Price</p>
                           <p className={cn("font-bold", isDense ? "text-xl" : "text-2xl")}>{Number(item.price).toFixed(2)}</p>
                         </div>
                       )}
                       <div className={isDense ? "w-24" : "w-32"}>
-                        <p className={cn("font-black text-white/40 uppercase tracking-widest", isVeryDense ? "hidden" : "text-[10px] mb-1")}>Total</p>
+                        <p className={cn("font-black text-muted-foreground uppercase tracking-widest", isVeryDense ? "hidden" : "text-[10px] mb-1")}>Total</p>
                         <p className={cn("font-black text-primary", isVeryDense ? "text-xl" : isDense ? "text-2xl" : "text-3xl")}>
                           {((Number(item.price) * Number(item.qty)) - (Number(item.discount) || 0)).toFixed(2)}
                         </p>
@@ -283,25 +283,25 @@ export default function CustomerDisplay() {
       </div>
 
       {/* Totals Sidebar */}
-      <div className="w-[450px] bg-[#0a0a1a] p-8 flex flex-col justify-end shadow-[-20px_0_40px_rgba(0,0,0,0.5)] z-20">
+      <div className="w-[450px] bg-card p-8 flex flex-col justify-end shadow-[-20px_0_40px_rgba(0,0,0,0.5)] z-20">
         <div className="space-y-6">
-          <div className="bg-white/5 rounded-[2rem] p-8 border border-white/10 space-y-6">
+          <div className="bg-muted rounded-[2rem] p-8 border border-border space-y-6">
             <div className="flex justify-between items-center">
-              <span className="text-xl text-white/60 font-bold uppercase tracking-wider">Subtotal</span>
+              <span className="text-xl text-muted-foreground/80 font-bold uppercase tracking-wider">Subtotal</span>
               <span className="text-2xl font-bold">{settings.shop.currency} {subtotal.toFixed(2)}</span>
             </div>
             
             <div className="flex justify-between items-center">
-              <span className="text-xl text-white/60 font-bold uppercase tracking-wider">GST ({gstRate}%)</span>
+              <span className="text-xl text-muted-foreground/80 font-bold uppercase tracking-wider">GST ({gstRate}%)</span>
               <span className="text-2xl font-bold text-orange-400">{settings.shop.currency} {gstAmount.toFixed(2)}</span>
             </div>
 
-            <div className="pt-6 border-t border-white/10">
+            <div className="pt-6 border-t border-border">
               <div className="flex justify-between items-end">
-                <span className="text-2xl text-white/60 font-black uppercase tracking-widest">Total to Pay</span>
+                <span className="text-2xl text-muted-foreground/80 font-black uppercase tracking-widest">Total to Pay</span>
                 <div className="text-right">
                   <span className="text-3xl text-primary font-black mr-2">{settings.shop.currency}</span>
-                  <span className="text-6xl font-black text-white">{grandTotal.toFixed(2)}</span>
+                  <span className="text-6xl font-black text-foreground">{grandTotal.toFixed(2)}</span>
                 </div>
               </div>
             </div>

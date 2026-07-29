@@ -69,7 +69,7 @@ const ProductPickerDialog: React.FC<ProductPickerDialogProps> = ({
 
                 {/* Search Input */}
                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-black dark:text-white " />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-black dark:text-foreground " />
                     <Input
                         placeholder={t('search_by_name_code_barcode')}
                         value={searchQuery}
@@ -80,7 +80,7 @@ const ProductPickerDialog: React.FC<ProductPickerDialogProps> = ({
                 </div>
 
                 {/* Selected Count */}
-                <div className="text-right text-sm text-black dark:text-white ">
+                <div className="text-right text-sm text-black dark:text-foreground ">
                     {t('selected')}: <span className="font-bold text-primary">{selectedProductIds.size}</span> {t('products')}
                 </div>
 
@@ -88,7 +88,7 @@ const ProductPickerDialog: React.FC<ProductPickerDialogProps> = ({
                 <ScrollArea className="h-[400px] border rounded-lg">
                     <div className="p-2 space-y-1">
                         {filteredProducts.length === 0 ? (
-                            <div className="text-center py-10 text-black dark:text-white ">
+                            <div className="text-center py-10 text-black dark:text-foreground ">
                                 {t('no_products_found')}
                             </div>
                         ) : (
@@ -107,8 +107,8 @@ const ProductPickerDialog: React.FC<ProductPickerDialogProps> = ({
                                     />
                                     <div className="flex-1 text-right">
                                         <div className="font-bold text-sm">{product.name_dv}</div>
-                                        <div className="text-xs text-black dark:text-white ">{product.name_en}</div>
-                                        <div className="text-xs text-black dark:text-white mt-1">
+                                        <div className="text-xs text-black dark:text-foreground ">{product.name_en}</div>
+                                        <div className="text-xs text-black dark:text-foreground mt-1">
                                             {t('item_code')}: {product.item_code} | {t('barcode')}: {product.barcode}
                                         </div>
                                     </div>
@@ -116,7 +116,7 @@ const ProductPickerDialog: React.FC<ProductPickerDialogProps> = ({
                                         <div className="text-sm font-mono font-bold text-primary">
                                             {product.price.toFixed(2)}
                                         </div>
-                                        <div className="text-xs text-black dark:text-white ">{t('selling_price')}</div>
+                                        <div className="text-xs text-black dark:text-foreground ">{t('selling_price')}</div>
                                     </div>
                                 </div>
                             ))

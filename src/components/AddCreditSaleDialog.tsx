@@ -151,12 +151,12 @@ const AddCreditSaleDialog: React.FC<AddCreditSaleDialogProps> = ({ isOpen, onClo
                   <Button
                     key={product.id}
                     variant="outline"
-                    className="flex flex-col h-auto p-2 text-center hover:bg-primary hover:text-white transition-colors"
+                    className="flex flex-col h-auto p-2 text-center hover:bg-primary hover:text-foreground transition-colors"
                     onClick={() => addToCart(product)}
                   >
                     <img src={product.image} alt={product.name_dv} className="w-10 h-10 object-cover mb-1 rounded-md" />
                     <p className="font-semibold text-[10px] break-words line-clamp-1">{product.name_dv}</p>
-                    <p className="text-[10px] text-black dark:text-white opacity-80 break-words line-clamp-1">({product.name_en})</p>
+                    <p className="text-[10px] text-black dark:text-foreground opacity-80 break-words line-clamp-1">({product.name_en})</p>
                     <p className="text-[10px] font-bold mt-1">{settings.shop.currency} {product.price.toFixed(2)}</p>
                   </Button>
                 ))}
@@ -219,13 +219,13 @@ const AddCreditSaleDialog: React.FC<AddCreditSaleDialogProps> = ({ isOpen, onClo
             <Separator className="mb-4" />
 
             <h4 className="font-semibold mb-2 text-right flex justify-between items-center">
-              <span className="text-xs text-black dark:text-white font-normal">{cartItems.length} {t('items')}</span>
+              <span className="text-xs text-black dark:text-foreground font-normal">{cartItems.length} {t('items')}</span>
               {renderBoth('cart')}
             </h4>
 
             <ScrollArea className="h-[250px] mb-4 bg-white dark:bg-gray-900 rounded-md border p-2">
               {cartItems.length === 0 ? (
-                <p className="text-center text-black dark:text-white py-10">{renderBoth('cart_empty')}</p>
+                <p className="text-center text-black dark:text-foreground py-10">{renderBoth('cart_empty')}</p>
               ) : (
                 <div className="space-y-2">
                   {cartItems.map((item) => (
@@ -235,7 +235,7 @@ const AddCreditSaleDialog: React.FC<AddCreditSaleDialogProps> = ({ isOpen, onClo
                       </Button>
                       <div className="flex-1 text-right mx-2 overflow-hidden">
                         <p className="font-medium text-xs truncate">{item.name_dv} ({item.name_en})</p>
-                        <p className="text-[10px] text-black dark:text-white ">{settings.shop.currency} {item.price.toFixed(2)}</p>
+                        <p className="text-[10px] text-black dark:text-foreground ">{settings.shop.currency} {item.price.toFixed(2)}</p>
                       </div>
                       <div className="flex items-center gap-1">
                         <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateCartItemQty(item.id, -1)}>-</Button>
@@ -250,11 +250,11 @@ const AddCreditSaleDialog: React.FC<AddCreditSaleDialogProps> = ({ isOpen, onClo
 
             <div className="mt-auto space-y-2 bg-white dark:bg-gray-900 p-4 rounded-lg border">
               <div className="flex justify-between text-sm">
-                <span className="text-black dark:text-white ">{renderBoth('subtotal')}:</span>
+                <span className="text-black dark:text-foreground ">{renderBoth('subtotal')}:</span>
                 <span className="font-medium">{settings.shop.currency} {subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-black dark:text-white ">GST ({settings.shop.taxRate}%):</span>
+                <span className="text-black dark:text-foreground ">GST ({settings.shop.taxRate}%):</span>
                 <span className="font-medium">{settings.shop.currency} {gstAmount.toFixed(2)}</span>
               </div>
               <Separator />

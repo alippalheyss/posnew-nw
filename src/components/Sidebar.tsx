@@ -46,7 +46,7 @@ const Sidebar = () => {
 
   return (
     <>
-      <div className={cn("flex-shrink-0 transition-all duration-300 hidden md:block", sidebarCollapsed ? "w-0" : "w-[280px]")} />
+      <div className={cn("flex-shrink-0 transition-all duration-300 hidden md:block", sidebarCollapsed ? "w-20" : "w-[280px]")} />
       <div className={cn(
         "flex flex-col h-screen border-l font-faruma overflow-hidden z-[100] transition-all duration-300 group/sidebar shadow-[-20px_0_50px_rgba(0,0,0,0.5)] bg-background border-border fixed right-0 top-0 bottom-0",
         sidebarCollapsed 
@@ -65,7 +65,7 @@ const Sidebar = () => {
           {sidebarCollapsed ? <Pin className="h-4 w-4" /> : <PinOff className="h-4 w-4" />}
         </Button>
       {/* Branding */}
-      <div className={cn("p-8 pb-10 transition-all duration-300", sidebarCollapsed ? "opacity-0 group-hover/sidebar:opacity-100 px-8" : "opacity-100")}>
+      <div className={cn("p-8 pb-10 transition-all duration-300", sidebarCollapsed ? "px-4" : "")}>
         <div className="flex items-center gap-4 mb-2">
           <div className="w-12 h-12 flex-shrink-0 bg-primary rounded-[1rem] flex items-center justify-center shadow-[0_0_30px_rgba(0,132,255,0.4)] rotate-3">
             <span className="text-foreground text-xl font-black tracking-tighter -rotate-3">MV</span>
@@ -83,7 +83,7 @@ const Sidebar = () => {
       </div>
 
       {/* Navigation */}
-      <div className={cn("flex-1 overflow-y-auto px-4 custom-scrollbar whitespace-nowrap", sidebarCollapsed ? "py-6 opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300 delay-75" : "")} dir="rtl">
+      <div className={cn("flex-1 overflow-y-auto px-4 custom-scrollbar whitespace-nowrap", sidebarCollapsed ? "py-6" : "")} dir="rtl">
         <ul className="space-y-1.5">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;

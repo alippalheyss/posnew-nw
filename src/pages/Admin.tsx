@@ -34,30 +34,16 @@ const Admin = () => {
   const printingSettings = settings.printing;
 
   const [isOfferDialogOpen, setIsOfferDialogOpen] = useState(false);
-  const [expandedSections, setExpandedSections] = useState({
-    shopSettings: true,
-    accountingSettings: false,
-    softwareSettings: false,
-    generalSettings: false,
-    reportSettings: false,
-    printingSettings: false,
-    userManagement: false,
-    dataManagement: false,
-  });
+  const [activeTab, setActiveTab] = useState('shopSettings');
 
   const [isClearingData, setIsClearingData] = useState(false);
   const { users, deleteUser } = useAuth();
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
-  const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
+  // const toggleSection = (section: string) => setActiveTab(section);
 
-  const handleSettingsChange = (category: keyof typeof expandedSections, field: string, value: any) => {
+  const handleSettingsChange = (category: string, field: string, value: any) => {
     updateSettings(category as any, { [field]: value });
   };
 

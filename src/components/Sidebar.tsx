@@ -46,7 +46,7 @@ const Sidebar = () => {
 
   return (
     <>
-      <div className={cn("flex-shrink-0 transition-all duration-300 hidden md:block", sidebarCollapsed ? "w-20" : "w-[280px]")} />
+      <div className={cn("flex-shrink-0 transition-all duration-300 hidden md:block", sidebarCollapsed ? "w-0" : "w-[280px]")} />
       <div className={cn(
         "flex flex-col h-screen border-l font-faruma overflow-hidden z-[100] transition-all duration-300 group/sidebar shadow-[-20px_0_50px_rgba(0,0,0,0.5)] bg-background border-border fixed right-0 top-0 bottom-0",
         sidebarCollapsed 

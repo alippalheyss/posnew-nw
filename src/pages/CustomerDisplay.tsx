@@ -131,6 +131,9 @@ export default function CustomerDisplay() {
     const currentAd = combinedAds ? combinedAds[adIndex] : null;
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center text-foreground p-8 relative overflow-hidden font-faruma" dir="rtl">
+        <div className="absolute top-0 left-0 bg-red-900 text-white p-4 z-50 text-xs font-mono" dir="ltr">
+          DEBUG: {activeCart ? `Cart ID: ${activeCart.id}, Items: ${activeCart.items.length}` : 'activeCart is null'}
+        </div>
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-[#050510] to-orange-500/10 opacity-50" />
         
         {settings.shop.logo && (

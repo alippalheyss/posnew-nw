@@ -964,21 +964,6 @@ const renderBothString = (key: string, options?: any) => {
               <Trash2 className="h-4 w-4" /> CLEAR
             </Button>
             <Button
-              variant="outline"
-              className="h-10 border border-primary/20 text-primary hover:bg-primary/10 text-[10px] font-black uppercase tracking-widest"
-              onClick={() => {
-                if (activeCart) {
-                  const data = JSON.stringify({ cart: activeCart, timestamp: Date.now() });
-                  localStorage.setItem('customer_display_sync', data);
-                  alert("FORCE SYNC SUCCESS! Data length: " + data.length);
-                } else {
-                  alert("ACTIVE CART IS NULL!");
-                }
-              }}
-            >
-              FORCE SYNC
-            </Button>
-            <Button
               onClick={() => {
                 setTransferAmount(grandTotal);
                 setIsAwaitingTransferDialogOpen(true);

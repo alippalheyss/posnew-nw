@@ -247,7 +247,6 @@ interface AppContextType {
   updateProductCostPrice: (productId: string, newCost: number, purchaseDate: string) => Promise<void>;
   calculateProfitMargin: (product: Product) => number;
   addSale: (sale: Sale) => Promise<void>;
-  deleteCustomer: (customerId: string) => Promise<void>;
   addCustomer: (customer: Customer) => Promise<Customer | void>;
   updateCustomer: (customer: Customer) => Promise<void>;
   pendingTransfers: any[];

@@ -131,14 +131,14 @@ export default function CustomerDisplay() {
     const currentAd = combinedAds ? combinedAds[adIndex] : null;
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center text-foreground p-8 relative overflow-hidden font-faruma" dir="rtl">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-[#050510] to-orange-500/10 opacity-50" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-orange-500/10 opacity-50" />
         
         {settings.shop.logo && (
           <img src={settings.shop.logo} alt="Shop Logo" className="absolute top-8 right-8 max-h-24 object-contain rounded-2xl drop-shadow-2xl z-10" />
         )}
 
         <div className="z-10 max-w-5xl w-full text-center space-y-12 animate-in fade-in zoom-in duration-1000">
-          <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400 mb-8 tracking-tight drop-shadow-lg">
+          <h1 className="text-6xl font-black text-foreground dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-primary dark:to-orange-400 mb-8 tracking-tight drop-shadow-lg">
             Welcome to {settings.shop.shopName}
           </h1>
           
@@ -180,7 +180,7 @@ export default function CustomerDisplay() {
                 </div>
               ) : (
                 // Custom Text Offer
-                <Card className="bg-gradient-to-br from-primary/20 via-[#0a0a1a] to-orange-500/20 border-border p-16 rounded-[3rem] backdrop-blur-xl shadow-2xl">
+                <Card className="bg-gradient-to-br from-primary/20 via-background to-orange-500/20 border-border p-16 rounded-[3rem] backdrop-blur-xl shadow-2xl">
                    <div className="space-y-8 flex flex-col items-center justify-center text-center">
                       <h2 className="text-6xl font-black text-foreground leading-tight drop-shadow-lg">{currentAd.title}</h2>
                       {currentAd.subtitle && (

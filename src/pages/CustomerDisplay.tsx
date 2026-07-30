@@ -138,7 +138,7 @@ export default function CustomerDisplay() {
         )}
 
         <div className="z-10 max-w-5xl w-full text-center space-y-12 animate-in fade-in zoom-in duration-1000">
-          <h1 className="text-6xl font-black text-foreground dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-primary dark:to-orange-400 mb-8 tracking-tight drop-shadow-lg">
+          <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-600 dark:to-orange-400 mb-8 tracking-tight drop-shadow-sm dark:drop-shadow-lg">
             Welcome to {settings.shop.shopName}
           </h1>
           

@@ -377,17 +377,23 @@ const POS = () => {
 
   useEffect(() => {
     if (activeCart) {
-      localStorage.setItem('customer_display_sync', JSON.stringify({
-        cart: activeCart,
-        totals: {
-          subtotal,
-          gstAmount,
-          grandTotal,
-          subtotalNoDiscount,
-          loyaltyDiscount
-        },
-        timestamp: Date.now()
-      }));
+      try {
+        const syncData = JSON.stringify({
+          cart: activeCart,
+          totals: {
+            subtotal,
+            gstAmount,
+            grandTotal,
+            subtotalNoDiscount,
+            loyaltyDiscount
+          },
+          timestamp: Date.now()
+        });
+        localStorage.setItem('customer_display_sync', syncData);
+      } catch (error) {
+        console.error("Failed to sync customer display:", error);
+        localStorage.setItem('customer_display_sync_error', String(error));
+      }
     }
   }, [activeCart, subtotal, gstAmount, grandTotal, subtotalNoDiscount, loyaltyDiscount]);
 
@@ -949,6 +955,21 @@ const POS = () => {
               className="h-10 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 text-[10px] font-black uppercase tracking-widest gap-2"
             >
               <Trash2 className="h-4 w-4" /> CLEAR
+            </Button>
+            <Button
+              variant="outline"
+              className="h-10 border border-primary/20 text-primary hover:bg-primary/10 text-[10px] font-black uppercase tracking-widest"
+              onClick={() => {
+                if (activeCart) {
+                  const data = JSON.stringify({ cart: activeCart, timestamp: Date.now() });
+                  localStorage.setItem('customer_display_sync', data);
+                  alert("FORCE SYNC SUCCESS! Data length: " + data.length);
+                } else {
+                  alert("ACTIVE CART IS NULL!");
+                }
+              }}
+            >
+              FORCE SYNC
             </Button>
             <Button
               onClick={() => {

@@ -247,7 +247,8 @@ interface AppContextType {
   updateProductCostPrice: (productId: string, newCost: number, purchaseDate: string) => Promise<void>;
   calculateProfitMargin: (product: Product) => number;
   addSale: (sale: Sale) => Promise<void>;
-  addCustomer: (customer: Customer) => Promise<void>;
+  deleteCustomer: (customerId: string) => Promise<void>;
+  addCustomer: (customer: Customer) => Promise<Customer | void>;
   updateCustomer: (customer: Customer) => Promise<void>;
   pendingTransfers: any[];
   addPendingTransfer: (transfer: any) => void;
@@ -257,7 +258,8 @@ interface AppContextType {
   isPurchaseWindowOpen: boolean;
   setIsPurchaseWindowOpen: (open: boolean) => void;
   isPurchaseWindowMinimized: boolean;
-  setIsPurchaseWindowMinimized: (minimized: boolean) => void;
+  setIsPurchaseWindowMinimized: React.Dispatch<React.SetStateAction<boolean>>;
+  refreshCustomers: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);

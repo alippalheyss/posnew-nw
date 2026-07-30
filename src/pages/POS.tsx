@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ShoppingCart, PlusCircle, Minus, Trash2, MonitorPlay, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, ArrowLeft, Plus } from 'lucide-react';
-import { formatDate, toISODate, formatTime } from '@/utils/formatters';
+import { formatDate, toISODate, formatTime, formatDateTime } from '@/utils/formatters';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -417,7 +417,7 @@ const POS = () => {
 
     // Auto-fill paid amount if empty or 0
     let finalPaidAmount = paidAmount;
-    if (!finalPaidAmount || finalPaidAmount === 0 || finalPaidAmount === '') {
+    if (!finalPaidAmount) {
       finalPaidAmount = grandTotal;
       setPaidAmount(grandTotal);
     }
@@ -1016,7 +1016,7 @@ const renderBothString = (key: string, options?: any) => {
         isOpen={isUnitSelectionDialogOpen}
         onClose={() => setIsUnitSelectionDialogOpen(false)}
         product={productForUnitSelection}
-        onSelect={(unit) => handleUnitSelection(unit)}
+        onSelect={(unit) => handleUnitSelection(unit.name)}
       />
 
       <Dialog open={isCashDialogOpen} onOpenChange={setIsCashDialogOpen}>

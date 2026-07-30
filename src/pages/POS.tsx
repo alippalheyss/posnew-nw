@@ -7,8 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ShoppingCart, PlusCircle, Minus, Trash2, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, ArrowLeft, Plus } from 'lucide-react';
-import { formatDate, toISODate } from '@/utils/formatters';
+import { ShoppingCart, PlusCircle, Minus, Trash2, MonitorPlay, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, ArrowLeft, Plus } from 'lucide-react';
 import { formatDate, toISODate, formatTime } from '@/utils/formatters';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
@@ -691,7 +690,7 @@ const POS = () => {
     </>
   );
 
-  const renderBothString = (key: string, options?: any) => {
+const renderBothString = (key: string, options?: any) => {
     return `${t(key, options)} (${t(key, { ...options, lng: 'en' })})`;
   };
 
@@ -700,6 +699,14 @@ const POS = () => {
       <div className="flex-1 flex flex-col min-w-0">
         <div className="h-20 px-8 flex items-center justify-between border-b border-border bg-background/50 backdrop-blur-sm">
           <div className="flex items-center gap-3">
+            <Button 
+              variant="outline" 
+              className="hidden md:flex items-center gap-2 border-primary/20 text-primary hover:bg-primary/10 rounded-xl h-10 text-[10px] font-black"
+              onClick={() => window.open('/customer-display', '_blank')}
+            >
+              <MonitorPlay className="h-4 w-4" />
+              CUSTOMER DISPLAY
+            </Button>
             <div className="flex items-center gap-2">
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                 <SelectTrigger className="w-[180px] h-10 rounded-xl bg-muted border-border text-[10px] font-black uppercase text-foreground">

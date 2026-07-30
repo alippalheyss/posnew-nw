@@ -137,6 +137,8 @@ export default function CustomerDisplay() {
           RAW SYNC KEY: {localStorage.getItem('customer_display_sync') ? localStorage.getItem('customer_display_sync')?.substring(0, 50) + '...' : 'NULL'}
           <br/>
           RAW OPEN CARTS: {localStorage.getItem('open_carts') ? localStorage.getItem('open_carts')?.substring(0, 50) + '...' : 'NULL'}
+          <br/>
+          SYNC ERROR: {localStorage.getItem('customer_display_sync_error') || 'NONE'}
         </div>
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-[#050510] to-orange-500/10 opacity-50" />
         

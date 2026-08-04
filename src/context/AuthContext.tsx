@@ -122,30 +122,46 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         const request = (async () => {
             try {
-                const { data, error } = await supabase
-                    .from('users')
-                    .select('*')
-                    .eq('id', authUserId)
-                    .single();
+                let retries = 3;
+                while (retries > 0) {
+                    try {
+                        const { data, error } = await supabase
+                            .from('users')
+                            .select('*')
+                            .eq('id', authUserId)
+                            .single();
 
-                if (error) {
-                    console.error('Error fetching user data:', error);
-                    return null;
+                        if (error) {
+                            if (error.message && error.message.includes('AbortError') && retries > 1) {
+                                retries--;
+                                await new Promise(res => setTimeout(res, 500));
+                                continue;
+                            }
+                            console.error('Error fetching user data:', error);
+                            return null;
+                        }
+
+                        return {
+                            id: data.id,
+                            username: data.username,
+                            name_en: data.name_en,
+                            name_dv: data.name_dv,
+                            role: data.role,
+                            permissions: data.permissions,
+                            isActive: data.is_active,
+                            createdAt: data.created_at,
+                            lastLogin: data.last_login,
+                        };
+                    } catch (error: any) {
+                        if (error?.message?.includes('AbortError') && retries > 1) {
+                            retries--;
+                            await new Promise(res => setTimeout(res, 500));
+                            continue;
+                        }
+                        console.error('Error in fetchUserData:', error);
+                        return null;
+                    }
                 }
-
-                return {
-                    id: data.id,
-                    username: data.username,
-                    name_en: data.name_en,
-                    name_dv: data.name_dv,
-                    role: data.role,
-                    permissions: data.permissions,
-                    isActive: data.is_active,
-                    createdAt: data.created_at,
-                    lastLogin: data.last_login,
-                };
-            } catch (error) {
-                console.error('Error in fetchUserData:', error);
                 return null;
             } finally {
                 pendingUserRequests.delete(authUserId);
@@ -250,7 +266,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const userData = await fetchUserData(data.user.id);
 
             if (!userData || !userData.isActive) {
-                await supabase.auth.signOut();
+                try {
+                    await supabase.auth.signOut();
+                } catch (signOutError) {
+                    console.error('Error during forced signout:', signOutError);
+                }
                 return false;
             }
 

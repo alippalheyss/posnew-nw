@@ -12,7 +12,10 @@ export const supabase = (supabaseUrl && supabaseAnonKey)
         auth: {
             autoRefreshToken: true,
             persistSession: true,
-            detectSessionInUrl: true
+            detectSessionInUrl: true,
+            lock: async (_name: string, _acquireTimeout: number, fn: () => Promise<any>) => {
+                return await fn();
+            },
         }
     })
     : null as any;

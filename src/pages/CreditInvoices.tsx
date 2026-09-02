@@ -5,9 +5,10 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { Printer, FileText, Receipt, Search, Filter, PencilLine, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
+import { Printer, FileText, Receipt, Search, Filter, PencilLine, AlertCircle, Clock, CheckCircle2, Download, Calendar as CalendarIcon, FileSpreadsheet } from 'lucide-react';
 import { printContent } from '@/utils/printHelper';
 import { useAppContext, Sale } from '@/context/AppContext';
+import { formatDate, formatTime, formatDateTime, extractDateOnly } from '@/utils/formatters';
 import SaleEditDialog from '@/components/SaleEditDialog';
 import { showSuccess } from '@/utils/toast';
 import { Badge } from '@/components/ui/badge';
@@ -15,8 +16,11 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import type { DateRange } from 'react-day-picker';
 import { format } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const CreditInvoices = () => {
   const { t } = useTranslation();
@@ -25,7 +29,10 @@ const CreditInvoices = () => {
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'custom'>('all');
-  const [customDate, setCustomDate] = useState<Date | undefined>(new Date());
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: new Date(),
+    to: new Date()
+  });
 
   const handleEditClick = (sale: Sale) => {
     setEditingSale({ ...sale });
@@ -155,7 +162,8 @@ const CreditInvoices = () => {
 
     return salesList.filter(sale => {
       if (!sale.date) return false;
-      const saleDate = new Date(sale.date);
+      const saleDateStr = extractDateOnly(sale.date);
+      const saleDate = new Date(saleDateStr);
       const sY = saleDate.getFullYear();
       const sM = saleDate.getMonth();
       const sD = saleDate.getDate();
@@ -166,8 +174,15 @@ const CreditInvoices = () => {
       if (dateFilter === 'yesterday') {
         return sY === yesterdayY && sM === yesterdayM && sD === yesterdayD;
       }
-      if (dateFilter === 'custom' && customDate) {
-        return sY === customDate.getFullYear() && sM === customDate.getMonth() && sD === customDate.getDate();
+      if (dateFilter === 'custom' && dateRange?.from) {
+        const from = new Date(dateRange.from);
+        from.setHours(0, 0, 0, 0);
+        const to = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
+        to.setHours(23, 59, 59, 999);
+        
+        const sFullDate = new Date(sale.date);
+        const targetTime = isNaN(sFullDate.getTime()) ? saleDate.getTime() : sFullDate.getTime();
+        return targetTime >= from.getTime() && targetTime <= to.getTime();
       }
       return true; // 'all'
     });
@@ -175,9 +190,158 @@ const CreditInvoices = () => {
 
   const filteredSales = filterSalesByDate(creditSales).filter(s => 
     s.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.customer?.name_dv.includes(searchTerm) ||
-    s.customer?.name_en.toLowerCase().includes(searchTerm.toLowerCase())
+    (s.invoiceNumber && s.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (s.customer?.name_dv && s.customer.name_dv.includes(searchTerm)) ||
+    (s.customer?.name_en && s.customer.name_en.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (s.customer?.code && s.customer.code.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  const getDateFilterLabel = () => {
+    if (dateFilter === 'today') return 'Today';
+    if (dateFilter === 'yesterday') return 'Yesterday';
+    if (dateFilter === 'all') return 'All Time';
+    if (dateFilter === 'custom' && dateRange?.from) {
+      if (dateRange.to && format(dateRange.from, 'yyyy-MM-dd') !== format(dateRange.to, 'yyyy-MM-dd')) {
+        return `${format(dateRange.from, 'dd/MM/yyyy')} - ${format(dateRange.to, 'dd/MM/yyyy')}`;
+      }
+      return format(dateRange.from, 'dd/MM/yyyy');
+    }
+    return 'Custom Range';
+  };
+
+  const totalCreditAmount = filteredSales.reduce((sum, s) => sum + s.grandTotal, 0);
+
+  const handleDownloadExcel = () => {
+    const currency = settings.shop.currency;
+    const filterLabel = getDateFilterLabel();
+
+    const data: any[][] = [
+      [settings.shop.shopName],
+      ["Credit Invoices Report"],
+      ["Generated At", formatDateTime(new Date())],
+      ["Period / Filter", filterLabel],
+      ["Search Filter", searchTerm || "All Invoices"],
+      [],
+      ["--- Summary Statistics ---"],
+      ["Total Invoices Count", filteredSales.length],
+      ["Total Credit Amount Due", `${currency} ${totalCreditAmount.toFixed(2)}`],
+      ["Average Invoice Amount", `${currency} ${(filteredSales.length > 0 ? totalCreditAmount / filteredSales.length : 0).toFixed(2)}`],
+      [],
+      ["--- Detailed Credit Invoices ---"],
+      [
+        "Invoice / ID",
+        "Date",
+        "Time",
+        "Customer Code",
+        "Customer Name (Dhivehi)",
+        "Customer Name (English)",
+        "Customer Phone",
+        "Items Count",
+        "Items Breakdown",
+        `Grand Total / Due (${currency})`,
+        "Payment Method"
+      ]
+    ];
+
+    filteredSales.forEach(sale => {
+      const itemsSummary = (sale.items || []).map(i => `${i.qty}x ${i.name_en || i.name_dv} (${(i.price * i.qty).toFixed(2)})`).join('; ');
+
+      data.push([
+        sale.invoiceNumber || sale.id,
+        formatDate(sale.date),
+        formatTime(sale.date),
+        sale.customer?.code || '-',
+        sale.customer?.name_dv || '-',
+        sale.customer?.name_en || 'Guest',
+        sale.customer?.phone || '-',
+        sale.items ? sale.items.length : 0,
+        itemsSummary,
+        Number(sale.grandTotal.toFixed(2)),
+        (sale.paymentMethod || 'Credit').toUpperCase()
+      ]);
+    });
+
+    data.push([
+      "TOTAL",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      filteredSales.reduce((acc, s) => acc + (s.items?.length || 0), 0),
+      "",
+      Number(totalCreditAmount.toFixed(2)),
+      ""
+    ]);
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+
+    ws['!cols'] = [
+      { wch: 18 },
+      { wch: 14 },
+      { wch: 12 },
+      { wch: 15 },
+      { wch: 22 },
+      { wch: 22 },
+      { wch: 16 },
+      { wch: 12 },
+      { wch: 50 },
+      { wch: 20 },
+      { wch: 16 }
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Credit Invoices");
+
+    const safeFilter = dateFilter === 'custom' && dateRange?.from
+      ? `custom_${format(dateRange.from, 'yyyyMMdd')}_${dateRange.to ? format(dateRange.to, 'yyyyMMdd') : ''}`
+      : dateFilter;
+
+    XLSX.writeFile(wb, `Credit_Invoices_${safeFilter}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showSuccess(t('download_report_successful') || 'Excel report downloaded successfully');
+  };
+
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(20);
+    doc.text('Credit Invoices Report', 14, 22);
+    
+    doc.setFontSize(11);
+    doc.text(`Period: ${getDateFilterLabel().toUpperCase()}`, 14, 30);
+    doc.text(`Total Credit Due: ${settings.shop.currency} ${totalCreditAmount.toFixed(2)}`, 14, 36);
+    doc.text(`Total Invoices: ${filteredSales.length}`, 14, 42);
+
+    const tableColumn = ["Invoice #", "Date", "Customer", "Items", "Total Due"];
+    const tableRows: any[] = [];
+
+    filteredSales.forEach(sale => {
+      const saleData = [
+        sale.invoiceNumber || sale.id,
+        `${formatDate(sale.date)} ${formatTime(sale.date)}`,
+        sale.customer ? (sale.customer.name_en || sale.customer.name_dv) : 'Guest',
+        sale.items.length,
+        `${settings.shop.currency} ${sale.grandTotal.toFixed(2)}`
+      ];
+      tableRows.push(saleData);
+    });
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 50,
+      theme: 'grid',
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [249, 115, 22] }
+    });
+
+    const safeFilter = dateFilter === 'custom' && dateRange?.from
+      ? `custom_${format(dateRange.from, 'yyyyMMdd')}`
+      : dateFilter;
+
+    doc.save(`credit-invoices-${safeFilter}.pdf`);
+  };
 
   const renderBoth = (key: string, options?: any) => (
     <>
@@ -188,12 +352,31 @@ const CreditInvoices = () => {
   return (
     <div className="p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
       {/* Header Section */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
         <div className="text-right">
            <h1 className="text-3xl font-black text-foreground flex items-center justify-end gap-3">
              {renderBoth('credit_invoices')} <Receipt className="h-8 w-8 text-primary" />
            </h1>
            <p className="text-sm text-muted-foreground mt-1">Manage and track all outstanding credit sales</p>
+        </div>
+
+        <div className="flex gap-2">
+          <Button 
+            onClick={handleDownloadExcel} 
+            variant="outline" 
+            className="bg-muted border-border hover:bg-emerald-500/10 hover:border-emerald-500/30 hover:text-emerald-500 text-foreground gap-2 h-11 px-4 rounded-xl text-xs font-bold transition-all"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+            Excel
+          </Button>
+          <Button 
+            onClick={handleDownloadPDF} 
+            variant="outline" 
+            className="bg-muted border-border hover:bg-orange-500/10 hover:border-orange-500/30 hover:text-orange-500 text-foreground gap-2 h-11 px-4 rounded-xl text-xs font-bold transition-all"
+          >
+            <Download className="h-4 w-4 text-orange-500" />
+            PDF
+          </Button>
         </div>
       </div>
 
@@ -233,19 +416,24 @@ const CreditInvoices = () => {
               className={cn("rounded-xl text-xs font-bold flex gap-2 items-center transition-all", dateFilter === 'custom' ? "bg-primary text-foreground" : "text-muted-foreground hover:text-foreground")}
             >
               <CalendarIcon className="h-4 w-4" />
-              {dateFilter === 'custom' && customDate ? format(customDate, 'PPP') : t('custom_date')}
+              {dateFilter === 'custom' && dateRange?.from ? (
+                <span>{getDateFilterLabel()}</span>
+              ) : (
+                <span>{t('custom_date') || 'Custom Range'}</span>
+              )}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0 bg-card border-border text-foreground" align="end">
             <Calendar
-              mode="single"
-              selected={customDate}
-              onSelect={(date) => {
-                if (date) {
-                  setCustomDate(date);
+              mode="range"
+              selected={dateRange}
+              onSelect={(range) => {
+                setDateRange(range);
+                if (range?.from) {
                   setDateFilter('custom');
                 }
               }}
+              numberOfMonths={2}
               initialFocus
               className="font-faruma"
             />

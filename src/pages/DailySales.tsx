@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { PencilLine, CalendarDays, Printer, Trash2, Filter, ChevronRight, Receipt, DollarSign, CreditCard, ArrowRightLeft, TrendingUp, Download } from 'lucide-react';
+import { PencilLine, CalendarDays, Printer, Trash2, Filter, ChevronRight, Receipt, DollarSign, CreditCard, ArrowRightLeft, TrendingUp, Download, Calendar as CalendarIcon, FileSpreadsheet } from 'lucide-react';
 import { useAppContext, Product, Customer, CartItem, Sale } from '@/context/AppContext';
 import { formatDate, formatTime, formatDateTime, toISODate, extractDateOnly } from '@/utils/formatters';
 import SaleEditDialog from '@/components/SaleEditDialog'; 
@@ -16,13 +16,22 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import type { DateRange } from 'react-day-picker';
+import { format } from 'date-fns';
 
 const DailySales = () => {
   const { t } = useTranslation();
   const { sales, setSales, settings } = useAppContext();
   const [isEditSaleDialogOpen, setIsEditSaleDialogOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
-  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'last30'>('today');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'last30' | 'custom'>('today');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: new Date(),
+    to: new Date()
+  });
   const [activeTab, setActiveTab] = useState<'sales' | 'pending'>('sales');
   const { pendingTransfers, resolvePendingTransfer } = useAppContext();
 
@@ -75,11 +84,35 @@ const DailySales = () => {
         saleDate.setHours(0, 0, 0, 0);
         return saleDate.getTime() >= thirtyDaysAgo.getTime();
       }
+      if (dateFilter === 'custom' && dateRange?.from) {
+        const from = new Date(dateRange.from);
+        from.setHours(0, 0, 0, 0);
+        const to = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
+        to.setHours(23, 59, 59, 999);
+        
+        const sFullDate = new Date(sale.date);
+        const targetTime = isNaN(sFullDate.getTime()) ? saleDate.getTime() : sFullDate.getTime();
+        return targetTime >= from.getTime() && targetTime <= to.getTime();
+      }
       return true; // 'all'
     });
   };
 
   const filteredSales = filterSalesByDate(sales);
+
+  const getDateFilterLabel = () => {
+    if (dateFilter === 'today') return 'Today';
+    if (dateFilter === 'yesterday') return 'Yesterday';
+    if (dateFilter === 'last30') return 'Last 30 Days';
+    if (dateFilter === 'all') return 'All Time';
+    if (dateFilter === 'custom' && dateRange?.from) {
+      if (dateRange.to && format(dateRange.from, 'yyyy-MM-dd') !== format(dateRange.to, 'yyyy-MM-dd')) {
+        return `${format(dateRange.from, 'dd/MM/yyyy')} - ${format(dateRange.to, 'dd/MM/yyyy')}`;
+      }
+      return format(dateRange.from, 'dd/MM/yyyy');
+    }
+    return 'Custom Range';
+  };
 
   const handlePrintReceipt = (sale: Sale) => {
     const currency = settings.shop.currency;
@@ -155,6 +188,8 @@ const DailySales = () => {
     showSuccess(t('sale_updated_successfully'));
   };
 
+  const totalSalesAmount = filteredSales.reduce((acc, sale) => acc + sale.grandTotal, 0);
+
   const handleDownloadPDF = () => {
     const doc = new jsPDF();
     
@@ -163,7 +198,7 @@ const DailySales = () => {
     doc.text('Daily Sales Report', 14, 22);
     
     doc.setFontSize(11);
-    doc.text(`Date Filter: ${dateFilter.toUpperCase()}`, 14, 30);
+    doc.text(`Period: ${getDateFilterLabel().toUpperCase()}`, 14, 30);
     doc.text(`Total Sales: ${settings.shop.currency} ${totalSalesAmount.toFixed(2)}`, 14, 36);
     doc.text(`Total Transactions: ${filteredSales.length}`, 14, 42);
 
@@ -191,10 +226,121 @@ const DailySales = () => {
       headStyles: { fillColor: [0, 132, 255] }
     });
 
-    doc.save(`sales-report-${dateFilter}.pdf`);
+    const safeFilter = dateFilter === 'custom' && dateRange?.from
+      ? `custom_${format(dateRange.from, 'yyyyMMdd')}`
+      : dateFilter;
+
+    doc.save(`sales-report-${safeFilter}.pdf`);
   };
 
-  const totalSalesAmount = filteredSales.reduce((acc, sale) => acc + sale.grandTotal, 0);
+  const handleDownloadExcel = () => {
+    const currency = settings.shop.currency;
+    const gstRate = settings.shop.taxRate || 0;
+    const filterLabel = getDateFilterLabel();
+
+    const cashSales = filteredSales.filter(s => s.paymentMethod?.toLowerCase() === 'cash');
+    const cardSales = filteredSales.filter(s => s.paymentMethod?.toLowerCase() === 'card');
+    const transferSales = filteredSales.filter(s => s.paymentMethod?.toLowerCase() === 'transfer' || s.paymentMethod?.toLowerCase() === 'mobile');
+    const creditSales = filteredSales.filter(s => s.paymentMethod?.toLowerCase() === 'credit');
+
+    const cashTotal = cashSales.reduce((acc, s) => acc + s.grandTotal, 0);
+    const cardTotal = cardSales.reduce((acc, s) => acc + s.grandTotal, 0);
+    const transferTotal = transferSales.reduce((acc, s) => acc + s.grandTotal, 0);
+    const creditTotal = creditSales.reduce((acc, s) => acc + s.grandTotal, 0);
+
+    const totalTaxable = filteredSales.reduce((sum, s) => sum + (s.grandTotal / (1 + (gstRate / 100))), 0);
+    const totalGst = totalSalesAmount - totalTaxable;
+
+    const data: any[][] = [
+      [settings.shop.shopName],
+      ["Daily Sales Report"],
+      ["Generated At", formatDateTime(new Date())],
+      ["Period / Filter", filterLabel],
+      [],
+      ["--- Summary Statistics ---"],
+      ["Total Sales Amount", `${currency} ${totalSalesAmount.toFixed(2)}`],
+      ["Total Transactions", filteredSales.length],
+      ["Average Basket Value", `${currency} ${(filteredSales.length > 0 ? totalSalesAmount / filteredSales.length : 0).toFixed(2)}`],
+      ["Cash Sales", `${currency} ${cashTotal.toFixed(2)} (${cashSales.length} txns)`],
+      ["Card Sales", `${currency} ${cardTotal.toFixed(2)} (${cardSales.length} txns)`],
+      ["Transfer Sales", `${currency} ${transferTotal.toFixed(2)} (${transferSales.length} txns)`],
+      ["Credit Sales", `${currency} ${creditTotal.toFixed(2)} (${creditSales.length} txns)`],
+      ["Total Subtotal (Excl. GST)", `${currency} ${totalTaxable.toFixed(2)}`],
+      [`Total GST (${gstRate}%)`, `${currency} ${totalGst.toFixed(2)}`],
+      [],
+      ["--- Detailed Transactions ---"],
+      [
+        "Invoice / ID",
+        "Date",
+        "Time",
+        "Customer",
+        "Payment Method",
+        "Items Count",
+        "Items Summary",
+        `Subtotal (${currency})`,
+        `GST (${currency})`,
+        `Grand Total (${currency})`
+      ]
+    ];
+
+    filteredSales.forEach(sale => {
+      const subtotal = sale.grandTotal / (1 + (gstRate / 100));
+      const gst = sale.grandTotal - subtotal;
+      const itemsSummary = (sale.items || []).map(i => `${i.qty}x ${i.name_en || i.name_dv}`).join('; ');
+      const customerName = sale.customer ? `${sale.customer.name_en || sale.customer.name_dv}` : 'Walk-in Customer';
+
+      data.push([
+        sale.invoiceNumber || sale.id,
+        formatDate(sale.date),
+        formatTime(sale.date),
+        customerName,
+        (sale.paymentMethod || 'Unknown').toUpperCase(),
+        sale.items ? sale.items.length : 0,
+        itemsSummary,
+        Number(subtotal.toFixed(2)),
+        Number(gst.toFixed(2)),
+        Number(sale.grandTotal.toFixed(2))
+      ]);
+    });
+
+    data.push([
+      "TOTAL",
+      "",
+      "",
+      "",
+      "",
+      filteredSales.reduce((acc, s) => acc + (s.items?.length || 0), 0),
+      "",
+      Number(totalTaxable.toFixed(2)),
+      Number(totalGst.toFixed(2)),
+      Number(totalSalesAmount.toFixed(2))
+    ]);
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+
+    ws['!cols'] = [
+      { wch: 18 },
+      { wch: 14 },
+      { wch: 12 },
+      { wch: 22 },
+      { wch: 16 },
+      { wch: 12 },
+      { wch: 45 },
+      { wch: 16 },
+      { wch: 14 },
+      { wch: 18 }
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Daily Sales");
+
+    const safeFilter = dateFilter === 'custom' && dateRange?.from
+      ? `custom_${format(dateRange.from, 'yyyyMMdd')}_${dateRange.to ? format(dateRange.to, 'yyyyMMdd') : ''}`
+      : dateFilter;
+
+    XLSX.writeFile(wb, `Sales_Report_${safeFilter}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showSuccess(t('download_report_successful') || 'Excel report downloaded successfully');
+  };
 
   const renderBoth = (key: string, options?: any) => (
     <>
@@ -214,7 +360,7 @@ const DailySales = () => {
   return (
     <div className="p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
       {/* Header Section */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
         <div className="text-right">
            <h1 className="text-3xl font-black text-foreground flex items-center justify-end gap-3">
              {renderBoth('daily_sales')} <CalendarDays className="h-8 w-8 text-primary" />
@@ -222,7 +368,7 @@ const DailySales = () => {
            <p className="text-sm text-muted-foreground mt-1">Review and manage your business transactions</p>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-wrap items-center gap-3">
            <div className="bg-muted rounded-xl p-1 border border-border flex gap-1">
               <Button 
                 variant="ghost" 
@@ -247,7 +393,8 @@ const DailySales = () => {
                 Pending ({pendingTransfers.length})
               </Button>
            </div>
-           <div className="bg-muted rounded-xl p-1 border border-border flex gap-1">
+           
+           <div className="bg-muted rounded-xl p-1 border border-border flex items-center gap-1">
               {['today', 'yesterday', 'last30', 'all'].map((filter) => (
                 <Button 
                   key={filter}
@@ -256,22 +403,70 @@ const DailySales = () => {
                   onClick={() => setDateFilter(filter as any)}
                   className={cn(
                     "px-4 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
-                    dateFilter === filter ? "bg-muted/80 text-foreground" : "text-muted-foreground hover:text-foreground"
+                    dateFilter === filter ? "bg-primary text-foreground" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   {filter}
                 </Button>
               ))}
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setDateFilter('custom')}
+                    className={cn(
+                      "px-3 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all",
+                      dateFilter === 'custom' ? "bg-primary text-foreground" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="h-3.5 w-3.5" />
+                    {dateFilter === 'custom' && dateRange?.from ? (
+                      <span>{getDateFilterLabel()}</span>
+                    ) : (
+                      <span>Custom Range</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-card border-border text-foreground" align="end">
+                  <Calendar
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={(range) => {
+                      setDateRange(range);
+                      if (range?.from) {
+                        setDateFilter('custom');
+                      }
+                    }}
+                    numberOfMonths={2}
+                    initialFocus
+                    className="font-faruma"
+                  />
+                </PopoverContent>
+              </Popover>
            </div>
-           <Button
-             variant="outline"
-             size="sm"
-             onClick={handleDownloadPDF}
-             className="bg-muted border-border hover:bg-muted/80 text-foreground gap-2"
-           >
-             <Download className="h-4 w-4" />
-             Download PDF
-           </Button>
+
+           <div className="flex gap-2">
+             <Button
+               variant="outline"
+               size="sm"
+               onClick={handleDownloadExcel}
+               className="bg-muted border-border hover:bg-emerald-500/10 hover:border-emerald-500/30 hover:text-emerald-500 text-foreground gap-2 h-9 px-3 rounded-xl text-xs font-bold transition-all"
+             >
+               <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+               Excel
+             </Button>
+             <Button
+               variant="outline"
+               size="sm"
+               onClick={handleDownloadPDF}
+               className="bg-muted border-border hover:bg-primary/10 hover:border-primary/30 hover:text-primary text-foreground gap-2 h-9 px-3 rounded-xl text-xs font-bold transition-all"
+             >
+               <Download className="h-4 w-4" />
+               PDF
+             </Button>
+           </div>
         </div>
       </div>
 

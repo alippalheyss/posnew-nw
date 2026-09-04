@@ -772,14 +772,12 @@ const renderBothString = (key: string, options?: any) => {
             {displayProducts.map((product) => {
               const isLowStock = product.stock_shop < LOW_STOCK_THRESHOLD;
               const cardColors = [
-                'bg-indigo-50 text-indigo-700 border-indigo-200/60 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800',
-                'bg-blue-50 text-blue-700 border-blue-200/60 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800',
-                'bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800',
-                'bg-amber-50 text-amber-700 border-amber-200/60 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800',
-                'bg-rose-50 text-rose-700 border-rose-200/60 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800',
-                'bg-purple-50 text-purple-700 border-purple-200/60 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800',
-                'bg-teal-50 text-teal-700 border-teal-200/60 dark:bg-teal-950/60 dark:text-teal-300 dark:border-teal-800',
-                'bg-orange-50 text-orange-700 border-orange-200/60 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-800',
+                'bg-[#A0D3E8]/30 text-[#004B87] border-[#A0D3E8]/60 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800',
+                'bg-[#F5F5F5] text-[#004B87] border-[#A0D3E8]/40 dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-800',
+                'bg-white text-[#004B87] border-[#A0D3E8]/50 dark:bg-slate-950/60 dark:text-slate-200 dark:border-slate-800',
+                'bg-[#A0D3E8]/45 text-[#004B87] border-[#A0D3E8]/70 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800',
+                'bg-[#F5F5F5] text-[#6C757D] border-[#6C757D]/30 dark:bg-slate-900/60 dark:text-slate-400 dark:border-slate-800',
+                'bg-[#004B87]/10 text-[#004B87] border-[#004B87]/20 dark:bg-sky-950/70 dark:text-sky-200 dark:border-sky-800',
               ];
               const colorClass = cardColors[Math.abs(product.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % cardColors.length];
               const adaptedImage = getAdaptedImageUrl(product.image, product.name_en || product.name_dv, product.item_code);

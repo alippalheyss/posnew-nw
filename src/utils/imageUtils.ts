@@ -3,20 +3,16 @@
  * Uses soft, low-contrast pastel tones in light mode to avoid harsh/screaming colors.
  */
 
-// Soft, modern, low-contrast pastel backgrounds with harmonious typography for Light Mode
+// User palette for Light Mode: #A0D3E8, #FFFFFF, #F5F5F5, #004B87, #6C757D
 export const LIGHT_COLORS = [
-    { bg: 'E0E7FF', fg: '4338CA' }, // Soft Indigo
-    { bg: 'DBEAFE', fg: '1D4ED8' }, // Soft Blue
-    { bg: 'EDE9FE', fg: '6D28D9' }, // Soft Violet
-    { bg: 'D1FAE5', fg: '047857' }, // Soft Emerald
-    { bg: 'FEF3C7', fg: 'B45309' }, // Soft Amber
-    { bg: 'FFE4E6', fg: 'BE123C' }, // Soft Rose
-    { bg: 'CCFBF1', fg: '0F766E' }, // Soft Teal
-    { bg: 'CFFAFE', fg: '0E7490' }, // Soft Cyan
-    { bg: 'FFEDD5', fg: 'C2410C' }, // Soft Orange
-    { bg: 'F3E8FF', fg: '7E22CE' }, // Soft Purple
-    { bg: 'E2E8F0', fg: '334155' }, // Soft Slate
-    { bg: 'FCE7F3', fg: '9D174D' }, // Soft Pink
+    { bg: 'A0D3E8', fg: '004B87' }, // Sky Blue with Deep Navy
+    { bg: 'F5F5F5', fg: '004B87' }, // Off-White with Deep Navy
+    { bg: 'FFFFFF', fg: '004B87' }, // White with Deep Navy
+    { bg: 'A0D3E8', fg: '6C757D' }, // Sky Blue with Muted Slate
+    { bg: 'F5F5F5', fg: '6C757D' }, // Off-White with Muted Slate
+    { bg: '004B87', fg: 'FFFFFF' }, // Deep Navy with White
+    { bg: '004B87', fg: 'A0D3E8' }, // Deep Navy with Sky Blue
+    { bg: 'A0D3E8', fg: 'FFFFFF' }, // Sky Blue with White
 ];
 
 // Dark mode palette: Deep, muted, low-contrast dark backgrounds

@@ -15,16 +15,16 @@ export const LIGHT_COLORS = [
     { bg: 'A0D3E8', fg: 'FFFFFF' }, // Sky Blue with White
 ];
 
-// Dark mode palette: Deep, muted, low-contrast dark backgrounds
+// User palette for Dark Mode: #1A1A2E, #16213E, #0F3460, #E94560, #533483
 export const DARK_COLORS = [
-    { bg: '1E293B', fg: '94A3B8' }, // Slate
-    { bg: '1E1B4B', fg: 'A5B4FC' }, // Indigo
-    { bg: '172554', fg: '93C5FD' }, // Blue
-    { bg: '064E3B', fg: '6EE7B7' }, // Emerald
-    { bg: '451A03', fg: 'FCD34D' }, // Amber
-    { bg: '4C0519', fg: 'FDA4AF' }, // Rose
-    { bg: '134E4A', fg: '5EEAD4' }, // Teal
-    { bg: '3B0764', fg: 'D8B4FE' }, // Purple
+    { bg: '16213E', fg: 'E94560' }, // Dark Navy with Crimson Rose
+    { bg: '0F3460', fg: 'FFFFFF' }, // Deep Royal with White
+    { bg: '533483', fg: 'FFFFFF' }, // Deep Violet with White
+    { bg: '1A1A2E', fg: 'E94560' }, // Deep Midnight with Crimson Rose
+    { bg: '16213E', fg: 'FFFFFF' }, // Dark Navy with White
+    { bg: '0F3460', fg: 'E94560' }, // Deep Royal with Crimson Rose
+    { bg: '533483', fg: 'E94560' }, // Deep Violet with Crimson Rose
+    { bg: '1A1A2E', fg: '533483' }, // Deep Midnight with Deep Violet
 ];
 
 /**

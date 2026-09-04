@@ -772,12 +772,12 @@ const renderBothString = (key: string, options?: any) => {
             {displayProducts.map((product) => {
               const isLowStock = product.stock_shop < LOW_STOCK_THRESHOLD;
               const cardColors = [
-                'bg-[#A0D3E8]/30 text-[#004B87] border-[#A0D3E8]/60 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800',
-                'bg-[#F5F5F5] text-[#004B87] border-[#A0D3E8]/40 dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-800',
-                'bg-white text-[#004B87] border-[#A0D3E8]/50 dark:bg-slate-950/60 dark:text-slate-200 dark:border-slate-800',
-                'bg-[#A0D3E8]/45 text-[#004B87] border-[#A0D3E8]/70 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800',
-                'bg-[#F5F5F5] text-[#6C757D] border-[#6C757D]/30 dark:bg-slate-900/60 dark:text-slate-400 dark:border-slate-800',
-                'bg-[#004B87]/10 text-[#004B87] border-[#004B87]/20 dark:bg-sky-950/70 dark:text-sky-200 dark:border-sky-800',
+                'bg-[#A0D3E8]/30 text-[#004B87] border-[#A0D3E8]/60 dark:bg-[#16213E] dark:text-[#E94560] dark:border-[#0F3460]',
+                'bg-[#F5F5F5] text-[#004B87] border-[#A0D3E8]/40 dark:bg-[#0F3460] dark:text-white dark:border-[#533483]',
+                'bg-white text-[#004B87] border-[#A0D3E8]/50 dark:bg-[#1A1A2E] dark:text-[#E94560] dark:border-[#16213E]',
+                'bg-[#A0D3E8]/45 text-[#004B87] border-[#A0D3E8]/70 dark:bg-[#533483] dark:text-white dark:border-[#E94560]/40',
+                'bg-[#F5F5F5] text-[#6C757D] border-[#6C757D]/30 dark:bg-[#16213E] dark:text-[#533483] dark:border-[#0F3460]',
+                'bg-[#004B87]/10 text-[#004B87] border-[#004B87]/20 dark:bg-[#0F3460] dark:text-[#E94560] dark:border-[#1A1A2E]',
               ];
               const colorClass = cardColors[Math.abs(product.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % cardColors.length];
               const adaptedImage = getAdaptedImageUrl(product.image, product.name_en || product.name_dv, product.item_code);

@@ -5,7 +5,7 @@ import { showError, showSuccess } from '@/utils/toast';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/components/ThemeProvider';
 
-import { toISODatetime, extractDateOnly } from '@/utils/formatters';
+import { toISODate, toISODatetime, extractDateOnly } from '@/utils/formatters';
 
 export interface Product {
   id: string;

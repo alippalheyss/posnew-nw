@@ -21,6 +21,7 @@ import CustomerAddDialog from '@/components/CustomerAddDialog';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from "@/components/ui/progress";
 import { printContent } from '@/utils/printHelper';
+import { getAdaptedImageUrl } from '@/utils/imageUtils';
 
 interface Cart {
   id: string;
@@ -771,24 +772,32 @@ const renderBothString = (key: string, options?: any) => {
             {displayProducts.map((product) => {
               const isLowStock = product.stock_shop < LOW_STOCK_THRESHOLD;
               const cardColors = [
-                'bg-blue-600', 'bg-red-600', 'bg-purple-600', 'bg-orange-600', 'bg-pink-600', 'bg-indigo-600'
+                'bg-indigo-50 text-indigo-700 border-indigo-200/60 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800',
+                'bg-blue-50 text-blue-700 border-blue-200/60 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800',
+                'bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800',
+                'bg-amber-50 text-amber-700 border-amber-200/60 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800',
+                'bg-rose-50 text-rose-700 border-rose-200/60 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800',
+                'bg-purple-50 text-purple-700 border-purple-200/60 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800',
+                'bg-teal-50 text-teal-700 border-teal-200/60 dark:bg-teal-950/60 dark:text-teal-300 dark:border-teal-800',
+                'bg-orange-50 text-orange-700 border-orange-200/60 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-800',
               ];
               const colorClass = cardColors[Math.abs(product.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % cardColors.length];
+              const adaptedImage = getAdaptedImageUrl(product.image, product.name_en || product.name_dv, product.item_code);
 
               return (
                 <div
                   key={product.id}
                   onClick={() => handleProductSelection(product)}
-                  className="group bg-card hover:bg-[#0f0f25] border border-border rounded-xl p-2 transition-all cursor-pointer relative"
+                  className="group bg-card hover:bg-muted/50 dark:hover:bg-[#0f0f25] border border-border rounded-xl p-2 transition-all cursor-pointer relative"
                 >
                   <div className={cn(
                     "aspect-square rounded-lg mb-2 flex items-center justify-center overflow-hidden relative border border-border",
-                    product.image ? "bg-white" : colorClass
+                    product.image ? "bg-muted/30" : colorClass
                   )}>
                     {product.image ? (
-                      <img src={product.image} alt={product.name_dv} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                      <img src={adaptedImage} alt={product.name_dv} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 dark:opacity-100 opacity-95" />
                     ) : (
-                      <div className="text-foreground font-black text-lg uppercase tracking-tighter text-center px-2 leading-tight drop-shadow-lg">
+                      <div className="font-black text-lg uppercase tracking-tighter text-center px-2 leading-tight drop-shadow-sm">
                         {product.name_en}
                       </div>
                     )}

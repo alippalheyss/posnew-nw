@@ -14,6 +14,7 @@ import { useAppContext, Product, Customer, CartItem, Sale } from '@/context/AppC
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { cn } from '@/lib/utils';
+import { getAdaptedImageUrl } from '@/utils/imageUtils';
 
 interface NewCreditSale {
   id: string;
@@ -154,7 +155,7 @@ const AddCreditSaleDialog: React.FC<AddCreditSaleDialogProps> = ({ isOpen, onClo
                     className="flex flex-col h-auto p-2 text-center hover:bg-primary hover:text-foreground transition-colors"
                     onClick={() => addToCart(product)}
                   >
-                    <img src={product.image} alt={product.name_dv} className="w-10 h-10 object-cover mb-1 rounded-md" />
+                    <img src={getAdaptedImageUrl(product.image, product.name_en || product.name_dv, product.item_code)} alt={product.name_dv} className="w-10 h-10 object-cover mb-1 rounded-md dark:opacity-100 opacity-95" />
                     <p className="font-semibold text-[10px] break-words line-clamp-1">{product.name_dv}</p>
                     <p className="text-[10px] text-black dark:text-foreground opacity-80 break-words line-clamp-1">({product.name_en})</p>
                     <p className="text-[10px] font-bold mt-1">{settings.shop.currency} {product.price.toFixed(2)}</p>

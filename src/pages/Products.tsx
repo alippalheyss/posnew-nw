@@ -13,6 +13,7 @@ import ExcelImportDialog from '@/components/ExcelImportDialog';
 import { useAppContext, Product } from '@/context/AppContext';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
+import { getAdaptedImageUrl } from '@/utils/imageUtils';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -189,20 +190,30 @@ const Products = () => {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 pb-6">
             {displayProducts.map((product) => {
                const margin = calculateProfitMargin(product);
-               const cardColors = ['bg-blue-600', 'bg-red-600', 'bg-purple-600', 'bg-orange-600', 'bg-pink-600', 'bg-indigo-600'];
+               const cardColors = [
+                 'bg-indigo-50 text-indigo-700 border-indigo-200/60 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800',
+                 'bg-blue-50 text-blue-700 border-blue-200/60 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800',
+                 'bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800',
+                 'bg-amber-50 text-amber-700 border-amber-200/60 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800',
+                 'bg-rose-50 text-rose-700 border-rose-200/60 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800',
+                 'bg-purple-50 text-purple-700 border-purple-200/60 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800',
+                 'bg-teal-50 text-teal-700 border-teal-200/60 dark:bg-teal-950/60 dark:text-teal-300 dark:border-teal-800',
+                 'bg-orange-50 text-orange-700 border-orange-200/60 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-800',
+               ];
                const colorClass = cardColors[Math.abs(product.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % cardColors.length];
+               const adaptedImage = getAdaptedImageUrl(product.image, product.name_en || product.name_dv, product.item_code);
 
                return (
                  <Card key={product.id} className="bg-card border-border hover:border-primary/30 transition-all overflow-hidden group rounded-2xl">
                    <CardContent className="p-0">
                       <div className={cn(
                         "aspect-[16/9] relative flex items-center justify-center overflow-hidden border-b border-border",
-                        product.image ? "bg-white" : colorClass
+                        product.image ? "bg-muted/30" : colorClass
                       )}>
                         {product.image ? (
-                          <img src={product.image} alt={product.name_dv} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                          <img src={adaptedImage} alt={product.name_dv} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 dark:opacity-100 opacity-95" />
                         ) : (
-                          <div className="text-foreground font-black text-xl uppercase tracking-tighter text-center px-4 leading-tight drop-shadow-xl">
+                          <div className="font-black text-xl uppercase tracking-tighter text-center px-4 leading-tight drop-shadow-sm">
                             {product.name_en}
                           </div>
                         )}
@@ -279,7 +290,7 @@ const Products = () => {
                             <p className="text-[10px] text-muted-foreground">{product.name_en}</p>
                           </div>
                           <div className="h-10 w-10 rounded-lg bg-muted border border-border flex items-center justify-center overflow-hidden">
-                             {product.image ? <img src={product.image} className="w-full h-full object-cover" /> : <Package className="h-4 w-4 text-muted-foreground/50" />}
+                             {product.image ? <img src={getAdaptedImageUrl(product.image, product.name_en || product.name_dv, product.item_code)} className="w-full h-full object-cover dark:opacity-100 opacity-95" /> : <Package className="h-4 w-4 text-muted-foreground/50" />}
                           </div>
                         </div>
                       </td>

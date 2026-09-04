@@ -116,6 +116,21 @@ export interface Purchase {
   subtotal?: number; // Sum of all item subtotals
 }
 
+export type ExpenseCategory = 'electricity' | 'zakat_al_mal' | 'naalu' | 'disposal_charge' | 'other';
+
+export interface Expense {
+  id: string;
+  date: string;
+  category: ExpenseCategory;
+  title: string;
+  amount: number;
+  paymentMethod: 'cash' | 'card' | 'transfer' | 'other';
+  referenceNumber?: string;
+  notes?: string;
+  recordedBy?: string;
+  createdAt?: string;
+}
+
 interface ShopSettings {
   shopName: string;
   shopAddress: string;
@@ -251,7 +266,9 @@ interface AppContextType {
   updateCustomer: (customer: Customer) => Promise<void>;
   pendingTransfers: any[];
   addPendingTransfer: (transfer: any) => void;
-  resolvePendingTransfer: (id: string, action: 'cash' | 'credit') => Promise<void>;
+  resolvePendingTransfer: (id: string, action: 'cash' | 'credit', silent?: boolean) => Promise<void>;
+  autoResolveExpiredPendingTransfers: () => Promise<void>;
+  convertAllPendingToCredit: () => Promise<void>;
   sidebarCollapsed: boolean;
   setSidebarCollapsed: (collapsed: boolean) => void;
   isPurchaseWindowOpen: boolean;
@@ -259,6 +276,11 @@ interface AppContextType {
   isPurchaseWindowMinimized: boolean;
   setIsPurchaseWindowMinimized: React.Dispatch<React.SetStateAction<boolean>>;
   refreshCustomers: () => Promise<void>;
+  expenses: Expense[];
+  setExpenses: React.Dispatch<React.SetStateAction<Expense[]>>;
+  addExpense: (expense: Expense) => Promise<void>;
+  updateExpense: (expense: Expense) => Promise<void>;
+  deleteExpense: (expenseId: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -271,6 +293,70 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   const [sales, setSales] = useState<Sale[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('app_expenses');
+        if (saved) {
+          return JSON.parse(saved);
+        }
+      } catch (e) {
+        console.error('Error parsing app_expenses', e);
+      }
+    }
+    return [
+      {
+        id: 'exp-1',
+        date: toISODate(),
+        category: 'electricity',
+        title: 'STELCO Electricity Bill - Shop',
+        amount: 2450.00,
+        paymentMethod: 'transfer',
+        referenceNumber: 'STEL-88421',
+        notes: 'Monthly electricity charges for main shop',
+        recordedBy: 'Admin'
+      },
+      {
+        id: 'exp-2',
+        date: toISODate(),
+        category: 'naalu',
+        title: 'Boat Naalu - Male to Island Cargo Shipment',
+        amount: 850.00,
+        paymentMethod: 'cash',
+        referenceNumber: 'BOAT-104',
+        notes: 'Freight for 12 cartons of beverages and household stock',
+        recordedBy: 'Admin'
+      },
+      {
+        id: 'exp-3',
+        date: toISODate(),
+        category: 'disposal_charge',
+        title: 'WAMCO Waste Disposal Charge',
+        amount: 350.00,
+        paymentMethod: 'cash',
+        referenceNumber: 'WAM-2026-9',
+        notes: 'Commercial waste collection service',
+        recordedBy: 'Admin'
+      },
+      {
+        id: 'exp-4',
+        date: toISODate(),
+        category: 'zakat_al_mal',
+        title: 'Zakat al-Mal Business Wealth Distribution',
+        amount: 5000.00,
+        paymentMethod: 'transfer',
+        referenceNumber: 'ZAK-2026-01',
+        notes: 'Annual 2.5% wealth zakat calculation & payout',
+        recordedBy: 'Admin'
+      }
+    ];
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('app_expenses', JSON.stringify(expenses));
+    }
+  }, [expenses]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('sidebar_collapsed');
@@ -282,6 +368,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   useEffect(() => {
     localStorage.setItem('sidebar_collapsed', String(sidebarCollapsed));
   }, [sidebarCollapsed]);
+
+  const isAutoResolvingRef = React.useRef(false);
 
   const [pendingTransfers, setPendingTransfers] = useState<any[]>(() => {
     if (typeof window !== 'undefined') {
@@ -420,6 +508,27 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           });
           return newSettings as AppSettings;
         });
+      }
+
+      // Safe fetch for expenses if Supabase table is created
+      try {
+        const { data: expensesData } = await supabase.from('expenses').select('*').order('date', { ascending: false });
+        if (expensesData && expensesData.length > 0) {
+          setExpenses(expensesData.map((e: any) => ({
+            id: e.id,
+            date: e.date,
+            category: e.category,
+            title: e.title,
+            amount: Number(e.amount || 0),
+            paymentMethod: e.payment_method || e.paymentMethod || 'cash',
+            referenceNumber: e.reference_number || e.referenceNumber,
+            notes: e.notes,
+            recordedBy: e.recorded_by || e.recordedBy,
+            createdAt: e.created_at || e.createdAt
+          })));
+        }
+      } catch (expErr) {
+        // Table does not exist in Supabase yet, localStorage will maintain expenses seamlessly
       }
     } catch (error) {
       console.error('Error fetching data from Supabase:', error);
@@ -856,35 +965,176 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     setPendingTransfers(prev => [...prev, { ...transfer, id: `transfer-${Date.now()}` }]);
   };
 
-  const resolvePendingTransfer = async (id: string, action: 'cash' | 'credit') => {
+  const resolvePendingTransfer = async (id: string, action: 'cash' | 'credit', silent: boolean = false) => {
     const transfer = pendingTransfers.find(t => t.id === id);
     if (!transfer) return;
 
-    const currentDate = new Date().toLocaleDateString('sv-SE');
+    const saleDate = transfer.date
+      ? (transfer.date.includes(' ') ? transfer.date : `${transfer.date} 23:59:59`)
+      : toISODatetime();
+
     if (action === 'cash') {
       await addSale({
         ...transfer,
-        date: currentDate,
+        id: crypto.randomUUID(),
+        date: saleDate,
         paymentMethod: 'cash',
         paidAmount: transfer.grandTotal,
         balance: 0
       });
     } else {
-      if (!transfer.customer) {
-        showError("This transfer has no associated customer for credit sale");
-        return;
+      let customerToUse = transfer.customer;
+      if (!customerToUse && transfer.tempCustomerName) {
+        customerToUse = customers.find(c =>
+          c.name_en?.toLowerCase() === transfer.tempCustomerName.trim().toLowerCase() ||
+          c.name_dv === transfer.tempCustomerName.trim() ||
+          c.phone === transfer.tempCustomerName.trim()
+        );
       }
+      if (!customerToUse) {
+        customerToUse = customers.find(c => c.code === 'CUST-TRANSFER-GUEST' || c.code === 'CUST-GUEST');
+      }
+      if (!customerToUse) {
+        customerToUse = customers.find(c =>
+          c.name_en?.toLowerCase().includes('guest') ||
+          c.name_en?.toLowerCase().includes('walk-in') ||
+          c.name_dv?.includes('މެހުމާނު')
+        );
+      }
+      if (!customerToUse) {
+        try {
+          const newGuest = await addCustomer({
+            id: crypto.randomUUID(),
+            code: 'CUST-TRANSFER-GUEST',
+            name_en: transfer.tempCustomerName || 'Walk-in Transfer',
+            name_dv: transfer.tempCustomerName || 'ޓްރާންސްފަރ މެހުމާނު',
+            phone: '',
+            email: '',
+            credit_limit: 999999,
+            loyalty_points: 0,
+            outstanding_balance: 0,
+            settlement_history: []
+          });
+          if (newGuest) customerToUse = newGuest;
+        } catch (e) {
+          console.error('Error creating fallback guest customer for transfer:', e);
+        }
+      }
+
       await addSale({
         ...transfer,
-        date: currentDate,
-        paymentMethod: 'credit'
+        id: crypto.randomUUID(),
+        date: saleDate,
+        customer: customerToUse || null,
+        paymentMethod: 'credit',
+        balance: transfer.grandTotal,
+        paidAmount: 0
       });
-      await updateCustomerBalance(transfer.customer.id, transfer.grandTotal);
+
+      if (customerToUse) {
+        await updateCustomerBalance(customerToUse.id, transfer.grandTotal);
+      }
     }
 
     setPendingTransfers(prev => prev.filter(t => t.id !== id));
-    showSuccess(`Transfer resolved as ${action} sale`);
+    if (!silent) {
+      showSuccess(`Transfer resolved as ${action} sale`);
+    }
   };
+
+  const autoResolveExpiredPendingTransfers = async () => {
+    if (isAutoResolvingRef.current) return;
+    isAutoResolvingRef.current = true;
+
+    try {
+      let currentPending = pendingTransfers;
+      try {
+        const stored = localStorage.getItem('pending_transfers');
+        if (stored) {
+          currentPending = JSON.parse(stored);
+        }
+      } catch (e) {
+        console.error('Error reading pending_transfers from storage:', e);
+      }
+
+      if (!currentPending || currentPending.length === 0) return;
+
+      const today = toISODate();
+      const expired = currentPending.filter((t: any) => {
+        const transferDate = extractDateOnly(t.date);
+        return transferDate && transferDate < today;
+      });
+
+      if (expired.length === 0) return;
+
+      console.log(`Auto-resolving ${expired.length} expired pending transfer(s) to credit...`);
+      let resolvedCount = 0;
+      const resolvedIds = new Set<string>();
+
+      for (const transfer of expired) {
+        try {
+          await resolvePendingTransfer(transfer.id, 'credit', true);
+          resolvedIds.add(transfer.id);
+          resolvedCount++;
+        } catch (err) {
+          console.error(`Failed to auto-resolve transfer ${transfer.id}:`, err);
+        }
+      }
+
+      if (resolvedCount > 0) {
+        setPendingTransfers(prev => prev.filter(t => !resolvedIds.has(t.id)));
+        showSuccess(`${resolvedCount} unconfirmed awaiting transfer(s) from previous day automatically converted to credit`);
+      }
+    } finally {
+      isAutoResolvingRef.current = false;
+    }
+  };
+
+  const convertAllPendingToCredit = async () => {
+    if (!pendingTransfers || pendingTransfers.length === 0) {
+      showError('No pending transfers to convert');
+      return;
+    }
+
+    const resolvedIds = new Set<string>();
+    for (const transfer of pendingTransfers) {
+      try {
+        await resolvePendingTransfer(transfer.id, 'credit', true);
+        resolvedIds.add(transfer.id);
+      } catch (err) {
+        console.error(`Failed to resolve transfer ${transfer.id}:`, err);
+      }
+    }
+
+    if (resolvedIds.size > 0) {
+      setPendingTransfers(prev => prev.filter(t => !resolvedIds.has(t.id)));
+      showSuccess(`Successfully converted ${resolvedIds.size} pending transfer(s) to credit`);
+    }
+  };
+
+  // Background check for expired pending transfers (end of day)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      autoResolveExpiredPendingTransfers();
+    }, 2500);
+
+    const intervalId = setInterval(() => {
+      autoResolveExpiredPendingTransfers();
+    }, 60000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        autoResolveExpiredPendingTransfers();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearTimeout(timeoutId);
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [customers]);
 
   const addSettlement = async (customerId: string, settlement: Settlement) => {
     try {
@@ -1231,10 +1481,88 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       setSales([]);
       setPurchases([]);
       setVendors([]);
+      setExpenses([]);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('app_expenses');
+      }
       showSuccess('All data cleared successfully');
     } catch (error) {
       console.error('Error clearing data:', error);
       showError('Failed to clear data from database');
+      throw error;
+    }
+  };
+
+  const addExpense = async (expense: Expense) => {
+    try {
+      setExpenses(prev => [expense, ...prev]);
+
+      // Attempt Supabase insert if table exists
+      try {
+        if (supabase) {
+          await supabase.from('expenses').insert([{
+            id: expense.id,
+            date: expense.date,
+            category: expense.category,
+            title: expense.title,
+            amount: expense.amount,
+            payment_method: expense.paymentMethod,
+            reference_number: expense.referenceNumber || null,
+            notes: expense.notes || null,
+            recorded_by: expense.recordedBy || null
+          }]);
+        }
+      } catch (dbErr) {
+        console.log('Expense saved locally (Supabase sync silent):', dbErr);
+      }
+    } catch (error) {
+      console.error('Error adding expense:', error);
+      showError('Failed to record expense');
+      throw error;
+    }
+  };
+
+  const updateExpense = async (expense: Expense) => {
+    try {
+      setExpenses(prev => prev.map(e => e.id === expense.id ? expense : e));
+
+      try {
+        if (supabase) {
+          await supabase.from('expenses').update({
+            date: expense.date,
+            category: expense.category,
+            title: expense.title,
+            amount: expense.amount,
+            payment_method: expense.paymentMethod,
+            reference_number: expense.referenceNumber || null,
+            notes: expense.notes || null,
+            recorded_by: expense.recordedBy || null
+          }).eq('id', expense.id);
+        }
+      } catch (dbErr) {
+        console.log('Expense updated locally:', dbErr);
+      }
+    } catch (error) {
+      console.error('Error updating expense:', error);
+      showError('Failed to update expense');
+      throw error;
+    }
+  };
+
+  const deleteExpense = async (expenseId: string) => {
+    try {
+      setExpenses(prev => prev.filter(e => e.id !== expenseId));
+
+      try {
+        if (supabase) {
+          await supabase.from('expenses').delete().eq('id', expenseId);
+        }
+      } catch (dbErr) {
+        console.log('Expense deleted locally:', dbErr);
+      }
+    } catch (error) {
+      console.error('Error deleting expense:', error);
+      showError('Failed to delete expense');
       throw error;
     }
   };
@@ -1333,13 +1661,20 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       pendingTransfers,
       addPendingTransfer,
       resolvePendingTransfer,
+      autoResolveExpiredPendingTransfers,
+      convertAllPendingToCredit,
       sidebarCollapsed,
       setSidebarCollapsed,
       isPurchaseWindowOpen,
       setIsPurchaseWindowOpen,
       isPurchaseWindowMinimized,
       setIsPurchaseWindowMinimized,
-      refreshCustomers
+      refreshCustomers,
+      expenses,
+      setExpenses,
+      addExpense,
+      updateExpense,
+      deleteExpense
     }}>
       {children}
     </AppContext.Provider>

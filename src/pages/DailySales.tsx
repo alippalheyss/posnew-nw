@@ -33,7 +33,7 @@ const DailySales = () => {
     to: new Date()
   });
   const [activeTab, setActiveTab] = useState<'sales' | 'pending'>('sales');
-  const { pendingTransfers, resolvePendingTransfer } = useAppContext();
+  const { pendingTransfers, resolvePendingTransfer, convertAllPendingToCredit } = useAppContext();
 
   useEffect(() => {
     const todayStr = toISODate();
@@ -581,48 +581,68 @@ const DailySales = () => {
                  No pending transfers
               </div>
             ) : (
-              pendingTransfers.map((transfer) => (
-                <Card key={transfer.id} className="bg-yellow-500/5 border-yellow-500/20 hover:border-yellow-500/40 transition-all rounded-3xl p-6">
-                  <div className="flex items-center justify-between gap-6">
-                     <div className="flex items-center gap-6">
-                        <div className="h-14 w-14 rounded-2xl bg-yellow-500/20 flex items-center justify-center text-yellow-500">
-                           <ArrowRightLeft className="h-7 w-7" />
-                        </div>
-                        <div className="text-right">
-                           <p className="text-lg font-black text-foreground">{transfer.customer?.name_dv || transfer.tempCustomerName || 'Guest'}</p>
-                           <p className="text-xs font-bold text-muted-foreground">{formatDateTime(transfer.date)}</p>
-                        </div>
-                     </div>
-
-                     <div className="text-center">
-                        <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest mb-1">Items</p>
-                        <p className="text-sm font-black text-foreground">{transfer.items.length}</p>
-                     </div>
-
-                     <div className="flex items-center gap-8">
-                        <div className="text-right">
-                           <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest mb-1">Amount</p>
-                           <p className="text-2xl font-black text-yellow-500">{settings.shop.currency} {transfer.grandTotal.toFixed(2)}</p>
-                        </div>
-                        <div className="flex gap-2">
-                           <Button 
-                             onClick={() => resolvePendingTransfer(transfer.id, 'cash')}
-                             className="bg-green-600 hover:bg-green-700 text-foreground font-black text-[10px] h-11 px-6 rounded-xl uppercase tracking-widest"
-                           >
-                             Confirm Cash
-                           </Button>
-                           <Button 
-                             onClick={() => resolvePendingTransfer(transfer.id, 'credit')}
-                             className="bg-blue-600 hover:bg-blue-700 text-foreground font-black text-[10px] h-11 px-6 rounded-xl uppercase tracking-widest"
-                             disabled={!transfer.customer}
-                           >
-                             Confirm Credit
-                           </Button>
-                        </div>
-                     </div>
+              <>
+                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-xl bg-yellow-500/20 flex items-center justify-center text-yellow-500 shrink-0">
+                      <ArrowRightLeft className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-foreground">Awaiting Transfers / Payments</p>
+                      <p className="text-xs text-muted-foreground">
+                        Any transfers not confirmed by the end of the day will automatically convert to credit sales.
+                      </p>
+                    </div>
                   </div>
-                </Card>
-              ))
+                  <Button
+                    onClick={() => convertAllPendingToCredit()}
+                    className="bg-blue-600 hover:bg-blue-700 text-foreground font-black text-xs h-10 px-5 rounded-xl uppercase tracking-wider shrink-0"
+                  >
+                    End of Day: Convert All to Credit
+                  </Button>
+                </div>
+                {pendingTransfers.map((transfer) => (
+                  <Card key={transfer.id} className="bg-yellow-500/5 border-yellow-500/20 hover:border-yellow-500/40 transition-all rounded-3xl p-6">
+                    <div className="flex items-center justify-between gap-6">
+                       <div className="flex items-center gap-6">
+                          <div className="h-14 w-14 rounded-2xl bg-yellow-500/20 flex items-center justify-center text-yellow-500">
+                             <ArrowRightLeft className="h-7 w-7" />
+                          </div>
+                          <div className="text-right">
+                             <p className="text-lg font-black text-foreground">{transfer.customer?.name_dv || transfer.tempCustomerName || 'Guest'}</p>
+                             <p className="text-xs font-bold text-muted-foreground">{formatDateTime(transfer.date)}</p>
+                          </div>
+                       </div>
+
+                       <div className="text-center">
+                          <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest mb-1">Items</p>
+                          <p className="text-sm font-black text-foreground">{transfer.items.length}</p>
+                       </div>
+
+                       <div className="flex items-center gap-8">
+                          <div className="text-right">
+                             <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest mb-1">Amount</p>
+                             <p className="text-2xl font-black text-yellow-500">{settings.shop.currency} {transfer.grandTotal.toFixed(2)}</p>
+                          </div>
+                          <div className="flex gap-2">
+                             <Button 
+                               onClick={() => resolvePendingTransfer(transfer.id, 'cash')}
+                               className="bg-green-600 hover:bg-green-700 text-foreground font-black text-[10px] h-11 px-6 rounded-xl uppercase tracking-widest"
+                             >
+                               Confirm Cash
+                             </Button>
+                             <Button 
+                               onClick={() => resolvePendingTransfer(transfer.id, 'credit')}
+                               className="bg-blue-600 hover:bg-blue-700 text-foreground font-black text-[10px] h-11 px-6 rounded-xl uppercase tracking-widest"
+                             >
+                               Confirm Credit
+                             </Button>
+                          </div>
+                       </div>
+                    </div>
+                  </Card>
+                ))}
+              </>
             )
           )}
         </div>

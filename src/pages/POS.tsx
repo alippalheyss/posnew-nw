@@ -51,6 +51,7 @@ const POS = () => {
     addPendingTransfer,
     pendingTransfers,
     resolvePendingTransfer,
+    convertAllPendingToCredit,
     refreshCustomers
   } = useAppContext();
 
@@ -522,7 +523,7 @@ const POS = () => {
     if (!activeCart || activeCart.items.length === 0) return;
 
     addPendingTransfer({
-      date: toISODate(),
+      date: toISODatetime(),
       customer: activeCart.customer,
       tempCustomerName: !activeCart.customer ? customerSearchTerm : null,
       items: activeCart.items,
@@ -1486,6 +1487,20 @@ const renderBothString = (key: string, options?: any) => {
             <DialogDescription className="text-right text-muted-foreground">
               Review and resolve pending bank transfers.
             </DialogDescription>
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 text-right flex flex-col sm:flex-row-reverse items-center justify-between gap-3 mt-2">
+              <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">
+                Unconfirmed transfers automatically convert to credit at the end of the day.
+              </p>
+              {pendingTransfers.length > 0 && (
+                <Button
+                  size="sm"
+                  onClick={() => convertAllPendingToCredit()}
+                  className="bg-blue-600 hover:bg-blue-700 text-foreground text-xs font-black h-8 px-3 rounded-lg shrink-0"
+                >
+                  End of Day: Convert All to Credit
+                </Button>
+              )}
+            </div>
           </DialogHeader>
 
           <ScrollArea className="h-[400px] mt-4">
@@ -1522,7 +1537,6 @@ const renderBothString = (key: string, options?: any) => {
                         size="sm"
                         onClick={() => resolvePendingTransfer(transfer.id, 'credit')}
                         className="bg-blue-600 hover:bg-blue-700 text-foreground text-[10px] font-black px-3 h-9"
-                        disabled={!transfer.customer}
                       >
                         CREDIT
                       </Button>

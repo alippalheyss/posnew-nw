@@ -21,6 +21,7 @@ import SalesReports from "./pages/SalesReports";
 import ExpiryAlerts from "./pages/ExpiryAlerts";
 import GSTReports from "./pages/GSTReports";
 import ShrinkageReport from "./pages/ShrinkageReport";
+import Expenses from "./pages/Expenses";
 import CustomerDisplay from "./pages/CustomerDisplay";
 import LocalPurchaseWindow from "./components/LocalPurchaseWindow";
 
@@ -55,6 +56,7 @@ const App = () => (
                         <Route path="/admin" element={<Admin />} />
                         <Route path="/daily-sales" element={<DailySales />} />
                         <Route path="/credit-invoices" element={<CreditInvoices />} />
+                        <Route path="/expenses" element={<Expenses />} />
                         <Route path="/sales-reports" element={<SalesReports />} />
                         <Route path="/expiry-alerts" element={<ExpiryAlerts />} />
                         <Route path="/gst-reports" element={<GSTReports />} />

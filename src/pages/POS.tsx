@@ -772,12 +772,12 @@ const renderBothString = (key: string, options?: any) => {
             {displayProducts.map((product) => {
               const isLowStock = product.stock_shop < LOW_STOCK_THRESHOLD;
               const cardColors = [
-                'bg-[#A0D3E8]/30 text-[#004B87] border-[#A0D3E8]/60 dark:bg-[#16213E] dark:text-[#E94560] dark:border-[#0F3460]',
-                'bg-[#F5F5F5] text-[#004B87] border-[#A0D3E8]/40 dark:bg-[#0F3460] dark:text-white dark:border-[#533483]',
-                'bg-white text-[#004B87] border-[#A0D3E8]/50 dark:bg-[#1A1A2E] dark:text-[#E94560] dark:border-[#16213E]',
-                'bg-[#A0D3E8]/45 text-[#004B87] border-[#A0D3E8]/70 dark:bg-[#533483] dark:text-white dark:border-[#E94560]/40',
-                'bg-[#F5F5F5] text-[#6C757D] border-[#6C757D]/30 dark:bg-[#16213E] dark:text-[#533483] dark:border-[#0F3460]',
-                'bg-[#004B87]/10 text-[#004B87] border-[#004B87]/20 dark:bg-[#0F3460] dark:text-[#E94560] dark:border-[#1A1A2E]',
+                'bg-[#A0D3E8]/30 text-[#004B87] border-[#A0D3E8]/60 dark:bg-[#1E293B] dark:text-[#F1F5F9] dark:border-[#475569]',
+                'bg-[#F5F5F5] text-[#004B87] border-[#A0D3E8]/40 dark:bg-[#0F172A] dark:text-[#F1F5F9] dark:border-[#334155]',
+                'bg-white text-[#004B87] border-[#A0D3E8]/50 dark:bg-[#334155] dark:text-[#F1F5F9] dark:border-[#475569]',
+                'bg-[#A0D3E8]/45 text-[#004B87] border-[#A0D3E8]/70 dark:bg-[#1E293B] dark:text-[#94A3B8] dark:border-[#334155]',
+                'bg-[#F5F5F5] text-[#6C757D] border-[#6C757D]/30 dark:bg-[#0F172A] dark:text-[#94A3B8] dark:border-[#475569]',
+                'bg-[#004B87]/10 text-[#004B87] border-[#004B87]/20 dark:bg-[#334155] dark:text-[#94A3B8] dark:border-[#334155]',
               ];
               const colorClass = cardColors[Math.abs(product.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % cardColors.length];
               const adaptedImage = getAdaptedImageUrl(product.image, product.name_en || product.name_dv, product.item_code);
@@ -786,7 +786,7 @@ const renderBothString = (key: string, options?: any) => {
                 <div
                   key={product.id}
                   onClick={() => handleProductSelection(product)}
-                  className="group bg-card hover:bg-muted/50 dark:hover:bg-[#0f0f25] border border-border rounded-xl p-2 transition-all cursor-pointer relative"
+                  className="group bg-card hover:bg-muted/50 dark:hover:bg-[#334155]/60 border border-border rounded-xl p-2 transition-all cursor-pointer relative"
                 >
                   <div className={cn(
                     "aspect-square rounded-lg mb-2 flex items-center justify-center overflow-hidden relative border border-border",

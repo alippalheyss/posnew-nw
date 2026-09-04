@@ -15,16 +15,16 @@ export const LIGHT_COLORS = [
     { bg: 'A0D3E8', fg: 'FFFFFF' }, // Sky Blue with White
 ];
 
-// User palette for Dark Mode: #1A1A2E, #16213E, #0F3460, #E94560, #533483
+// User palette for Dark Mode: #0F172A, #1E293B, #334155, #475569, #94A3B8, #F1F5F9
 export const DARK_COLORS = [
-    { bg: '16213E', fg: 'E94560' }, // Dark Navy with Crimson Rose
-    { bg: '0F3460', fg: 'FFFFFF' }, // Deep Royal with White
-    { bg: '533483', fg: 'FFFFFF' }, // Deep Violet with White
-    { bg: '1A1A2E', fg: 'E94560' }, // Deep Midnight with Crimson Rose
-    { bg: '16213E', fg: 'FFFFFF' }, // Dark Navy with White
-    { bg: '0F3460', fg: 'E94560' }, // Deep Royal with Crimson Rose
-    { bg: '533483', fg: 'E94560' }, // Deep Violet with Crimson Rose
-    { bg: '1A1A2E', fg: '533483' }, // Deep Midnight with Deep Violet
+    { bg: '1E293B', fg: 'F1F5F9' }, // Surface with Text Primary
+    { bg: '334155', fg: 'F1F5F9' }, // Elevated with Text Primary
+    { bg: '0F172A', fg: 'F1F5F9' }, // Darkest with Text Primary
+    { bg: '1E293B', fg: '94A3B8' }, // Surface with Text Subtle
+    { bg: '334155', fg: '94A3B8' }, // Elevated with Text Subtle
+    { bg: '0F172A', fg: '94A3B8' }, // Darkest with Text Subtle
+    { bg: '475569', fg: 'F1F5F9' }, // Border tone with Text Primary
+    { bg: '1E293B', fg: 'FFFFFF' }, // Surface with White
 ];
 
 /**

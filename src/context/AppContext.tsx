@@ -1454,16 +1454,38 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const addVendor = async (vendor: Vendor) => {
     try {
-      const { error } = await supabase
+      const { id, ...vendorData } = vendor as any;
+      const isUuid = id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      const validId = isUuid ? id : crypto.randomUUID();
+
+      const payload: any = {
+        id: validId,
+        code: vendorData.code,
+        name_dv: vendorData.name_dv || '',
+        name_en: vendorData.name_en || '',
+        contact_person: vendorData.contact_person || '',
+        phone: vendorData.phone || '',
+        email: vendorData.email || '',
+        tin_number: vendorData.tin_number || '',
+        address: vendorData.address || '',
+        notes: vendorData.notes || ''
+      };
+
+      const { data, error } = await supabase
         .from('vendors')
-        .insert(vendor);
+        .insert(payload)
+        .select()
+        .single();
 
       if (error) throw error;
 
-      setVendors(prev => [...prev, vendor]);
+      const createdVendor = data || payload;
+      setVendors(prev => [...prev, createdVendor]);
+      return createdVendor;
     } catch (error) {
       console.error('Error adding vendor:', error);
       showError('Failed to add vendor');
+      throw error;
     }
   };
 

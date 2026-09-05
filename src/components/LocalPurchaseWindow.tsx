@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Minus, X, Maximize2, ShoppingBag } from 'lucide-react';
+import { Minus, X, Maximize2, ShoppingBag, RotateCcw } from 'lucide-react';
 import { useAppContext, Purchase } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,9 +31,13 @@ const LocalPurchaseWindow = () => {
     billNumber: '',
     date: new Date().toISOString().split('T')[0],
     totalAmount: '',
+    gstAmount: '',
+    zeroTaxAmount: '',
     description: ''
   });
 
+  const [isCustomGst, setIsCustomGst] = useState(false);
+  const [showZeroTaxInput, setShowZeroTaxInput] = useState(false);
   const [vendorSearchQuery, setVendorSearchQuery] = useState('');
 
   const filteredVendors = vendors.filter(v => 
@@ -41,11 +45,45 @@ const LocalPurchaseWindow = () => {
     v.name_dv?.toLowerCase().includes(vendorSearchQuery.toLowerCase())
   );
 
-  const calculateGstFromTotal = (totalAmount: number) => {
-    const taxRate = settings.shop.taxRate;
-    const gstAmount = totalAmount - (totalAmount / (1 + (taxRate / 100)));
-    return { gstAmount, subtotal: totalAmount - gstAmount };
+  const computeAutoGst = (totalVal: string, zeroTaxVal: string) => {
+    const total = parseFloat(totalVal) || 0;
+    const zeroTax = parseFloat(zeroTaxVal) || 0;
+    const taxable = Math.max(0, total - zeroTax);
+    const taxRate = settings.shop.taxRate || 8;
+    const gst = taxable > 0 ? taxable - (taxable / (1 + (taxRate / 100))) : 0;
+    return gst > 0 ? gst.toFixed(2) : '0.00';
   };
+
+  const handleTotalChange = (val: string) => {
+    setNewPurchase(prev => {
+      const nextGst = isCustomGst ? prev.gstAmount : (val ? computeAutoGst(val, prev.zeroTaxAmount) : '');
+      return { ...prev, totalAmount: val, gstAmount: nextGst };
+    });
+  };
+
+  const handleZeroTaxChange = (val: string) => {
+    setNewPurchase(prev => {
+      const nextGst = isCustomGst ? prev.gstAmount : (prev.totalAmount ? computeAutoGst(prev.totalAmount, val) : '');
+      return { ...prev, zeroTaxAmount: val, gstAmount: nextGst };
+    });
+  };
+
+  const handleGstChange = (val: string) => {
+    setIsCustomGst(true);
+    setNewPurchase(prev => ({ ...prev, gstAmount: val }));
+  };
+
+  const resetToAutoGst = () => {
+    setIsCustomGst(false);
+    setNewPurchase(prev => ({
+      ...prev,
+      gstAmount: prev.totalAmount ? computeAutoGst(prev.totalAmount, prev.zeroTaxAmount) : ''
+    }));
+  };
+
+  const totalNum = parseFloat(newPurchase.totalAmount) || 0;
+  const gstNum = parseFloat(newPurchase.gstAmount) || 0;
+  const subtotalNum = Math.max(0, totalNum - gstNum);
 
   const handleAddPurchase = async () => {
     if (!newPurchase.vendorId || !newPurchase.totalAmount) {
@@ -57,7 +95,18 @@ const LocalPurchaseWindow = () => {
     if (!vendor) return;
 
     const total = parseFloat(newPurchase.totalAmount);
-    const { gstAmount, subtotal } = calculateGstFromTotal(total);
+    if (isNaN(total) || total <= 0) {
+      showError(t('enter_valid_amount') || 'Please enter a valid total amount');
+      return;
+    }
+
+    const gst = parseFloat(newPurchase.gstAmount) || 0;
+    if (gst > total) {
+      showError(t('gst_exceeds_total') || 'GST amount cannot exceed total bill amount');
+      return;
+    }
+
+    const subtotal = Math.max(0, total - gst);
 
     const purchase: Purchase = {
       id: crypto.randomUUID(),
@@ -65,8 +114,8 @@ const LocalPurchaseWindow = () => {
       vendor: vendor.name_en, // Legacy field
       billNumber: newPurchase.billNumber,
       description: newPurchase.description,
-      amount: subtotal,
-      gstAmount: gstAmount,
+      amount: parseFloat(subtotal.toFixed(2)),
+      gstAmount: parseFloat(gst.toFixed(2)),
       date: newPurchase.date,
     };
 
@@ -83,11 +132,15 @@ const LocalPurchaseWindow = () => {
   const handleClose = () => {
     setIsPurchaseWindowOpen(false);
     setIsPurchaseWindowMinimized(false);
+    setIsCustomGst(false);
+    setShowZeroTaxInput(false);
     setNewPurchase({
       vendorId: '',
       billNumber: '',
       date: new Date().toISOString().split('T')[0],
       totalAmount: '',
+      gstAmount: '',
+      zeroTaxAmount: '',
       description: ''
     });
   };
@@ -101,7 +154,9 @@ const LocalPurchaseWindow = () => {
           <ShoppingBag className="w-5 h-5 text-primary" />
           <div className="flex flex-col">
             <span className="text-xs font-black text-foreground uppercase tracking-widest">{t('record_local_purchase') || 'Record Purchase'}</span>
-            <span className="text-[9px] text-muted-foreground">{newPurchase.totalAmount ? `${settings.shop.currency} ${newPurchase.totalAmount}` : 'Draft'}</span>
+            <span className="text-[9px] text-muted-foreground">
+              {newPurchase.totalAmount ? `${settings.shop.currency} ${newPurchase.totalAmount} (GST: ${newPurchase.gstAmount || '0.00'})` : 'Draft'}
+            </span>
           </div>
         </div>
         <Button variant="ghost" size="icon" onClick={() => setIsPurchaseWindowMinimized(false)} className="h-8 w-8 rounded-full hover:bg-muted/80 text-foreground">
@@ -205,29 +260,135 @@ const LocalPurchaseWindow = () => {
             </div>
           </div>
 
+          {/* Total Bill Amount Box */}
           <div className="space-y-2 p-4 bg-primary/5 border border-primary/20 rounded-2xl">
-            <Label className="text-right block text-xs font-black uppercase tracking-widest text-primary">{t('total_amount_incl_gst') || 'Total Amount (incl GST)'}*</Label>
+            <Label className="text-right block text-xs font-black uppercase tracking-widest text-primary">
+              {t('total_amount_incl_gst') || 'Total Bill Amount (incl. GST)'}*
+            </Label>
             <div className="relative mt-2">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-black text-foreground/30" dir="ltr">{settings.shop.currency}</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-black text-foreground/40" dir="ltr">
+                {settings.shop.currency}
+              </span>
               <Input 
                 type="number" 
+                step="0.01"
                 value={newPurchase.totalAmount} 
-                onChange={(e) => setNewPurchase({ ...newPurchase, totalAmount: e.target.value })} 
-                className="text-right h-16 bg-transparent border-none outline-none focus-visible:ring-0 rounded-xl font-black text-3xl pl-16 px-2 shadow-none" 
+                onChange={(e) => handleTotalChange(e.target.value)} 
+                className="text-right h-16 bg-transparent border-none outline-none focus-visible:ring-0 rounded-xl font-black text-3xl pl-16 px-2 shadow-none text-foreground" 
                 placeholder="0.00"
               />
             </div>
-            <div className="h-px bg-primary/20 my-2" />
-            {newPurchase.totalAmount ? (
-              <div className="flex justify-between items-center px-1">
-                <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest">
-                  GST ({settings.shop.taxRate}%): {settings.shop.currency} {calculateGstFromTotal(parseFloat(newPurchase.totalAmount)).gstAmount.toFixed(2)}
-                </span>
-                <span className="text-[10px] text-foreground/30 uppercase tracking-widest">Auto-calculated</span>
+          </div>
+
+          {/* GST & Tax Breakdown Section */}
+          <div className="p-4 bg-muted/40 border border-border rounded-2xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {isCustomGst ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={resetToAutoGst}
+                    className="h-6 px-2 text-[10px] font-black text-primary hover:bg-primary/10 gap-1 rounded-md"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    {t('reset_to_auto') || 'Reset to Auto'}
+                  </Button>
+                ) : (
+                  <span className="text-[10px] font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-md uppercase tracking-wider">
+                    {t('auto_calculated') || 'Auto-calculated'}
+                  </span>
+                )}
               </div>
-            ) : (
-              <p className="text-[10px] text-foreground/30 uppercase tracking-widest text-center py-1">Enter total to calculate GST</p>
-            )}
+              <Label className="text-xs font-black uppercase tracking-widest text-foreground flex items-center gap-1">
+                {t('gst_amount') || `GST Amount (${settings.shop.taxRate}%)`}
+              </Label>
+            </div>
+
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground" dir="ltr">
+                {settings.shop.currency}
+              </span>
+              <Input
+                type="number"
+                step="0.01"
+                value={newPurchase.gstAmount}
+                onChange={(e) => handleGstChange(e.target.value)}
+                placeholder="0.00"
+                className={cn(
+                  "text-right h-11 bg-background border-border font-black text-lg pl-14 pr-3 rounded-xl transition-all",
+                  isCustomGst ? "border-orange-500 text-orange-600 dark:text-orange-400 focus:border-orange-500" : "text-foreground"
+                )}
+              />
+            </div>
+
+            {/* Zero-Tax Helper Toggle */}
+            <div className="pt-1">
+              {!showZeroTaxInput ? (
+                <button
+                  type="button"
+                  onClick={() => setShowZeroTaxInput(true)}
+                  className="text-[11px] font-bold text-primary hover:underline flex items-center justify-end gap-1 w-full text-right"
+                >
+                  + {t('bill_has_zero_tax') || 'Bill contains Zero-Tax / Exempt items?'}
+                </button>
+              ) : (
+                <div className="space-y-1.5 p-3 bg-background border border-border rounded-xl animate-in fade-in-50">
+                  <div className="flex justify-between items-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowZeroTaxInput(false);
+                        handleZeroTaxChange('');
+                      }}
+                      className="text-[10px] text-muted-foreground hover:text-red-500"
+                    >
+                      {t('remove') || 'Remove'}
+                    </button>
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                      {t('zero_tax_amount') || 'Zero-Tax Items Total (0% GST)'}
+                    </Label>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground" dir="ltr">
+                      {settings.shop.currency}
+                    </span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={newPurchase.zeroTaxAmount}
+                      onChange={(e) => handleZeroTaxChange(e.target.value)}
+                      placeholder="0.00"
+                      className="text-right h-10 bg-muted/30 border-border font-bold text-sm pl-14 pr-3 rounded-lg"
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground text-right">
+                    GST is calculated only on the remaining taxable portion.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Live Calculation Summary */}
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border text-right">
+              <div className="p-2.5 bg-background rounded-xl border border-border">
+                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block mb-0.5">
+                  {t('subtotal_excl_gst') || 'Subtotal (Excl. GST)'}
+                </span>
+                <span className="text-sm font-black text-foreground">
+                  {settings.shop.currency} {subtotalNum.toFixed(2)}
+                </span>
+              </div>
+              <div className="p-2.5 bg-background rounded-xl border border-border">
+                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block mb-0.5">
+                  {t('actual_gst') || 'Actual GST'}
+                </span>
+                <span className="text-sm font-black text-orange-600 dark:text-orange-400">
+                  {settings.shop.currency} {gstNum.toFixed(2)}
+                </span>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -246,7 +407,7 @@ const LocalPurchaseWindow = () => {
           <Button variant="ghost" onClick={handleClose} className="flex-1 h-12 rounded-xl font-black uppercase tracking-widest text-xs border border-border hover:bg-muted/80 hover:text-foreground">
             {t('cancel') || 'Cancel'}
           </Button>
-          <Button onClick={handleAddPurchase} className="flex-1 h-12 rounded-xl bg-primary hover:bg-primary/90 text-foreground font-black uppercase tracking-widest text-xs shadow-[0_0_20px_rgba(0,132,255,0.3)] hover:shadow-[0_0_30px_rgba(0,132,255,0.5)] transition-all">
+          <Button onClick={handleAddPurchase} className="flex-1 h-12 rounded-xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest text-xs shadow-[0_0_20px_rgba(0,132,255,0.3)] hover:shadow-[0_0_30px_rgba(0,132,255,0.5)] transition-all">
             {t('save_purchase') || 'Save Purchase'}
           </Button>
         </div>

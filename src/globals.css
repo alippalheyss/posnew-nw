@@ -68,7 +68,7 @@
     transform: translateZ(0);
   }
   .glass-dark {
-    @apply bg-black/40 backdrop-blur-xl border border-white/5;
+    @apply bg-card/95 dark:bg-black/40 backdrop-blur-xl border border-border dark:border-white/5;
     transform: translateZ(0);
   }
   .text-neon-blue {

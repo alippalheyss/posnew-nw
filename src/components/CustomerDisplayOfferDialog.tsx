@@ -92,10 +92,10 @@ export default function CustomerDisplayOfferDialog({ open, onOpenChange, onSave 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] font-faruma glass-dark text-foreground border-border" dir="rtl">
+      <DialogContent className="sm:max-w-[500px] font-faruma bg-card text-foreground border-border shadow-2xl" dir="rtl">
         <DialogHeader>
           <DialogTitle className="text-right text-2xl font-black">Add Custom Offer</DialogTitle>
-          <DialogDescription className="text-right text-foreground/50">Create a promotional offer for the customer display.</DialogDescription>
+          <DialogDescription className="text-right text-muted-foreground">Create a promotional offer for the customer display.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4 text-right">

@@ -70,9 +70,16 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
             return;
         }
 
+        const numericCode = (editedProduct.item_code || '').replace(/\D/g, '');
+        if (!numericCode) {
+            showError(t('product_code_numbers_only'));
+            return;
+        }
+
         const finalProduct: Product = {
             ...editedProduct,
-            image: imagePreviewUrl || generatePlaceholderImage(editedProduct.name_en || editedProduct.name_dv, editedProduct.item_code),
+            item_code: numericCode,
+            image: imagePreviewUrl || generatePlaceholderImage(editedProduct.name_en || editedProduct.name_dv, numericCode),
             expiry_date: expiryDate ? format(expiryDate, 'yyyy-MM-dd') : undefined,
         };
 
@@ -186,7 +193,12 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                     <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('item_code')}*</Label>
                                     <div className="relative">
                                        <Hash className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-                                       <Input value={editedProduct.item_code} readOnly className="bg-muted border-border h-11 rounded-xl text-right pr-10 font-mono text-sm opacity-50" />
+                                       <Input 
+                                          value={editedProduct.item_code} 
+                                          onChange={(e) => updateField('item_code', e.target.value.replace(/\D/g, ''))} 
+                                          placeholder="1001"
+                                          className="bg-muted border-border h-11 rounded-xl text-right pr-10 font-mono text-sm focus:border-primary/50" 
+                                       />
                                     </div>
                                 </div>
                                 <div className="space-y-2">

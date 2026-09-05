@@ -50,7 +50,7 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({ isOpen, onClo
           name_dv: row['name_dv'] || '',
           name_en: row['name_en'] || '',
           barcode: row['barcode'] ? String(row['barcode']) : '',
-          item_code: row['item_code'] ? String(row['item_code']) : '',
+          item_code: row['item_code'] ? String(row['item_code']).replace(/\D/g, '') : '',
           price: parseFloat(row['price']) || 0,
           image: row['image'] || '/placeholder.svg', // Default image if not provided
         }));

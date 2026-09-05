@@ -148,9 +148,12 @@ const POS = () => {
 
   useEffect(() => {
     if (searchTerm.trim()) {
+      const term = searchTerm.trim().toLowerCase();
+      const strippedTerm = term.replace(/^0+/, '');
       const exactMatch = products.find(p =>
         p.barcode === searchTerm.trim() ||
-        p.item_code.toLowerCase() === searchTerm.toLowerCase().trim()
+        p.item_code.toLowerCase() === term ||
+        (strippedTerm && p.item_code.replace(/^0+/, '') === strippedTerm)
       );
       if (exactMatch) {
         handleProductSelection(exactMatch);
@@ -1013,18 +1016,18 @@ const renderBothString = (key: string, options?: any) => {
       />
 
       <Dialog open={isCashDialogOpen} onOpenChange={setIsCashDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] font-faruma glass-dark text-foreground border-border" dir="rtl">
+        <DialogContent className="sm:max-w-[425px] font-faruma bg-card text-foreground border-border shadow-2xl" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-right text-2xl font-black">{renderBoth('cash_payment')}</DialogTitle>
-            <DialogDescription className="text-right text-foreground/50">{renderBoth('enter_paid_amount')}</DialogDescription>
+            <DialogDescription className="text-right text-muted-foreground">{renderBoth('enter_paid_amount')}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-6 py-4">
             <div className="space-y-2">
-              <Label className="text-right block opacity-50 uppercase text-[10px] font-black tracking-widest">{renderBoth('total_amount')}</Label>
-              <div className="text-4xl font-black text-neon-blue text-right">{settings.shop.currency} {grandTotal.toFixed(2)}</div>
+              <Label className="text-right block text-muted-foreground uppercase text-[10px] font-black tracking-widest">{renderBoth('total_amount')}</Label>
+              <div className="text-4xl font-black text-primary text-right">{settings.shop.currency} {grandTotal.toFixed(2)}</div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="paidAmount" className="text-right block opacity-50 uppercase text-[10px] font-black tracking-widest">{renderBoth('paid_amount')}</Label>
+              <Label htmlFor="paidAmount" className="text-right block text-muted-foreground uppercase text-[10px] font-black tracking-widest">{renderBoth('paid_amount')}</Label>
               <Input
                 id="paidAmount"
                 type="number"
@@ -1036,12 +1039,12 @@ const renderBothString = (key: string, options?: any) => {
                     processCashPayment();
                   }
                 }}
-                className="text-right h-14 bg-muted border-border text-2xl font-black focus:border-primary transition-all text-foreground"
+                className="text-right h-14 bg-background border-border text-2xl font-black focus:border-primary transition-all text-foreground"
                 autoFocus
               />
             </div>
             <div className="space-y-1 text-right">
-              <Label className="opacity-50 uppercase text-[10px] font-black tracking-widest">{renderBoth('balance')}</Label>
+              <Label className="text-muted-foreground uppercase text-[10px] font-black tracking-widest">{renderBoth('balance')}</Label>
               <div className={cn(
                 "text-2xl font-black",
                 balance < 0 ? "text-red-500" : "text-green-500"
@@ -1052,13 +1055,13 @@ const renderBothString = (key: string, options?: any) => {
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setIsCashDialogOpen(false)} className="flex-1 border-border hover:bg-muted text-foreground">{renderBoth('cancel')}</Button>
-            <Button onClick={processCashPayment} disabled={typeof paidAmount !== 'number' || paidAmount < grandTotal} className="flex-1 btn-gradient-blue text-foreground">{renderBoth('confirm_payment')}</Button>
+            <Button onClick={processCashPayment} disabled={typeof paidAmount !== 'number' || paidAmount < grandTotal} className="flex-1 btn-gradient-blue text-white font-bold">{renderBoth('confirm_payment')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={isCreditDialogOpen} onOpenChange={setIsCreditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] font-faruma glass-dark text-foreground border-border" dir="rtl">
+        <DialogContent className="sm:max-w-[500px] font-faruma bg-card text-foreground border-border shadow-2xl" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-right text-2xl font-black">{renderBoth('credit_sale')}</DialogTitle>
           </DialogHeader>
@@ -1070,13 +1073,13 @@ const renderBothString = (key: string, options?: any) => {
                     placeholder={renderBothString('search_customers')}
                     value={customerSearchTerm}
                     onChange={(e) => setCustomerSearchTerm(e.target.value)}
-                    className="flex-1 text-right bg-muted border-border text-foreground"
+                    className="flex-1 text-right bg-background border-border text-foreground"
                   />
                   <Button
                     variant="outline"
                     size="icon"
                     onClick={() => setIsAddCustomerDialogOpen(true)}
-                    className="h-10 w-10 border-border bg-muted hover:bg-primary/20 text-primary"
+                    className="h-10 w-10 border-border bg-card hover:bg-primary/20 text-primary"
                   >
                     <UserPlus className="h-4 w-4" />
                   </Button>
@@ -1093,10 +1096,10 @@ const renderBothString = (key: string, options?: any) => {
                           updateActiveCart(prev => ({ ...prev, customer }));
                           setCreditDialogStep(2);
                         }}
-                        className="p-4 rounded-xl cursor-pointer transition-all border border-border bg-muted hover:bg-muted/80 hover:border-primary/30 text-right group"
+                        className="p-4 rounded-xl cursor-pointer transition-all border border-border bg-card hover:bg-muted/50 hover:border-primary/40 text-right group"
                       >
                         <p className="font-black text-foreground group-hover:text-primary transition-colors">{customer.name_dv} ({customer.name_en})</p>
-                        <p className="text-[10px] opacity-40 mt-1 uppercase tracking-widest">Limit: {settings.shop.currency} {customer.credit_limit.toFixed(2)}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest">Limit: {settings.shop.currency} {customer.credit_limit.toFixed(2)}</p>
                       </div>
                     ))}
                   </div>
@@ -1105,12 +1108,12 @@ const renderBothString = (key: string, options?: any) => {
             ) : (
               <div className="space-y-6">
                 <div className="bg-primary/10 border border-primary/20 p-4 rounded-2xl text-right">
-                  <p className="text-[10px] opacity-50 uppercase font-black mb-1">{renderBoth('customer')}</p>
-                  <p className="font-black text-foreground text-lg">{activeCart?.customer?.name_dv}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase font-black mb-1">{renderBoth('customer')}</p>
+                  <p className="font-black text-foreground text-lg">{activeCart?.customer?.name_dv} ({activeCart?.customer?.name_en})</p>
                 </div>
                 <div className="space-y-2 text-right">
-                  <p className="text-[10px] opacity-50 uppercase font-black">{renderBoth('grand_total')}</p>
-                  <p className="text-4xl font-black text-neon-blue">{settings.shop.currency} {grandTotal.toFixed(2)}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase font-black">{renderBoth('grand_total')}</p>
+                  <p className="text-4xl font-black text-primary">{settings.shop.currency} {grandTotal.toFixed(2)}</p>
                 </div>
               </div>
             )}
@@ -1122,7 +1125,7 @@ const renderBothString = (key: string, options?: any) => {
                 <Button
                   onClick={processCreditPayment}
                   disabled={isProcessing}
-                  className="flex-1 btn-gradient-blue text-foreground"
+                  className="flex-1 btn-gradient-blue text-white font-bold"
                 >
                   {isProcessing ? 'Processing...' : renderBoth('confirm_credit_sale')}
                 </Button>
@@ -1135,26 +1138,26 @@ const renderBothString = (key: string, options?: any) => {
       </Dialog>
 
       <Dialog open={isConfirmRemoveCartDialogOpen} onOpenChange={setIsConfirmRemoveCartDialogOpen}>
-        <DialogContent className="sm:max-w-[400px] font-faruma glass-dark text-foreground border-border" dir="rtl">
+        <DialogContent className="sm:max-w-[400px] font-faruma bg-card text-foreground border-border shadow-2xl" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-right font-black text-xl">{renderBoth('confirm_cart_removal')}</DialogTitle>
-            <DialogDescription className="text-right text-foreground/50">{renderBoth('confirm_cart_removal_description')}</DialogDescription>
+            <DialogDescription className="text-right text-muted-foreground">{renderBoth('confirm_cart_removal_description')}</DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setIsConfirmRemoveCartDialogOpen(false)} className="flex-1 border-border hover:bg-muted text-foreground">{renderBoth('cancel')}</Button>
-            <Button variant="destructive" onClick={confirmRemoveCart} className="flex-1 text-foreground">{renderBoth('confirm')}</Button>
+            <Button variant="destructive" onClick={confirmRemoveCart} className="flex-1 text-white font-bold">{renderBoth('confirm')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={isExpiryDialogOpen} onOpenChange={setIsExpiryDialogOpen}>
-        <DialogContent className="sm:max-w-[450px] font-faruma glass-dark text-foreground border-border text-right p-0 overflow-hidden" dir="rtl">
+        <DialogContent className="sm:max-w-[450px] font-faruma bg-card text-foreground border-border text-right p-0 overflow-hidden shadow-2xl" dir="rtl">
           <div className="p-6">
             <DialogHeader className="pb-4 text-right">
-              <DialogTitle className="text-xl text-orange-400 flex items-center justify-center gap-2 px-0 w-full text-center">
-                <AlertTriangle className="h-6 w-6" /> {renderBoth('item_near_expiry')}
+              <DialogTitle className="text-xl text-orange-600 dark:text-orange-400 flex items-center justify-center gap-2 px-0 w-full text-center font-black">
+                <AlertTriangle className="h-6 w-6 text-orange-500" /> {renderBoth('item_near_expiry')}
               </DialogTitle>
-              <DialogDescription className="text-foreground/50 mt-2 break-words text-sm leading-relaxed text-right">
+              <DialogDescription className="text-muted-foreground mt-2 break-words text-sm leading-relaxed text-right">
                 {renderBoth('expiry_discount_message', {
                   itemName: selectedProductForExpiry?.name_dv,
                   expiryDate: selectedProductForExpiry?.expiry_date ? new Date(selectedProductForExpiry.expiry_date).toLocaleDateString() : ''
@@ -1162,11 +1165,11 @@ const renderBothString = (key: string, options?: any) => {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="bg-orange-500/10 p-4 rounded-lg border border-orange-500/20 my-4 text-right">
+            <div className="bg-orange-500/10 dark:bg-orange-500/20 p-4 rounded-xl border border-orange-500/30 my-4 text-right">
               <div className="flex flex-col gap-4">
                 <div className="flex justify-between items-center">
-                  <p className="text-xs text-orange-400 font-bold uppercase tracking-wider">{renderBoth('discount_offer')}</p>
-                  <p className="text-lg font-black text-orange-300">{expiryDiscountPercent}% {t('discount')}</p>
+                  <p className="text-xs text-orange-600 dark:text-orange-400 font-bold uppercase tracking-wider">{renderBoth('discount_offer')}</p>
+                  <p className="text-lg font-black text-orange-600 dark:text-orange-300">{expiryDiscountPercent}% {t('discount')}</p>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2">
@@ -1177,7 +1180,7 @@ const renderBothString = (key: string, options?: any) => {
                       onClick={() => setExpiryDiscountPercent(pct)}
                       className={cn(
                         "h-12 border-orange-500/30 font-black text-lg",
-                        expiryDiscountPercent === pct ? "bg-orange-500 text-foreground" : "text-orange-500 hover:bg-orange-500/20"
+                        expiryDiscountPercent === pct ? "bg-orange-500 text-white hover:bg-orange-600" : "text-orange-600 dark:text-orange-400 hover:bg-orange-500/20"
                       )}
                     >
                       {pct}%
@@ -1192,22 +1195,22 @@ const renderBothString = (key: string, options?: any) => {
                       value={expiryDiscountPercent}
                       onChange={(e) => setExpiryDiscountPercent(parseFloat(e.target.value) || 0)}
                       onFocus={handleFocus}
-                      className="bg-muted border-orange-500/30 text-orange-300 font-black h-12 pr-10 text-right text-xl"
+                      className="bg-background border-orange-500/30 text-orange-600 dark:text-orange-300 font-black h-12 pr-10 text-right text-xl"
                     />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-orange-400 font-black text-lg">%</span>
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-orange-600 dark:text-orange-400 font-black text-lg">%</span>
                   </div>
                 </div>
               </div>
             </div>
 
             <DialogFooter className="flex flex-row-reverse justify-between gap-4 mt-6">
-              <Button onClick={confirmExpiryDiscount} className="bg-orange-600 hover:bg-orange-700 text-foreground font-bold px-8">
+              <Button onClick={confirmExpiryDiscount} className="bg-orange-600 hover:bg-orange-700 text-white font-bold px-8">
                 {renderBoth('apply_discount')}
               </Button>
               <Button variant="ghost" onClick={() => {
                 if (selectedProductForExpiry) addToCart(selectedProductForExpiry);
                 setIsExpiryDialogOpen(false);
-              }} className="text-muted-foreground">
+              }} className="text-muted-foreground hover:text-foreground">
                 {renderBoth('no_thanks')}
               </Button>
             </DialogFooter>
@@ -1223,7 +1226,7 @@ const renderBothString = (key: string, options?: any) => {
           setSplitSearchTerm('');
         }
       }}>
-        <DialogContent className="sm:max-w-[500px] font-faruma glass-dark text-foreground border-border p-0 overflow-hidden" dir="rtl">
+        <DialogContent className="sm:max-w-[500px] font-faruma bg-card text-foreground border-border p-0 overflow-hidden shadow-2xl" dir="rtl">
           <DialogHeader className="p-6 pb-2">
             <DialogTitle className="text-right text-2xl font-black flex items-center justify-end gap-3">
               (Split Bill) {t('split_bill')} <Users className="h-6 w-6 text-primary" />
@@ -1242,7 +1245,7 @@ const renderBothString = (key: string, options?: any) => {
                     placeholder={renderBothString('search_customers')}
                     value={splitSearchTerm}
                     onChange={(e) => setSplitSearchTerm(e.target.value)}
-                    className="w-full bg-muted border-border rounded-2xl pr-12 h-14 text-right font-bold focus:border-primary/50 transition-all"
+                    className="w-full bg-background border-border rounded-2xl pr-12 h-14 text-right font-bold focus:border-primary/50 transition-all text-foreground"
                   />
                 </div>
               </div>
@@ -1265,8 +1268,8 @@ const renderBothString = (key: string, options?: any) => {
                           className={cn(
                             "p-4 rounded-[2rem] border transition-all cursor-pointer flex items-center justify-between gap-4",
                             isSelected
-                              ? "bg-primary border-primary shadow-lg shadow-primary/20 scale-[0.98]"
-                              : "bg-muted border-border hover:border-border"
+                              ? "bg-primary border-primary shadow-lg shadow-primary/20 scale-[0.98] text-primary-foreground"
+                              : "bg-card border-border hover:border-primary/40 hover:bg-muted/50"
                           )}
                         >
                           <div className="flex items-center gap-3">
@@ -1280,12 +1283,17 @@ const renderBothString = (key: string, options?: any) => {
 
                           <div className="flex-1 text-right">
                             <div className="flex items-center justify-end gap-2 mb-0.5">
-                              <span className="text-[10px] font-bold opacity-40 uppercase tracking-widest">{customer.code}</span>
+                              <span className={cn("text-[10px] font-bold uppercase tracking-widest", isSelected ? "text-primary-foreground/80" : "text-muted-foreground")}>{customer.code}</span>
                               <span className="text-[10px] font-bold opacity-40">•</span>
-                              <span className="text-sm font-black text-foreground">{customer.name_en}</span>
+                              <span className={cn("text-sm font-black", isSelected ? "text-primary-foreground" : "text-foreground")}>{customer.name_en}</span>
                             </div>
-                            <h4 className="text-lg font-black text-foreground leading-tight">{customer.name_dv}</h4>
-                            <Badge variant="outline" className="mt-2 bg-black/20 border-border text-[9px] font-black py-0 px-2 h-5">
+                            <h4 className={cn("text-lg font-black leading-tight", isSelected ? "text-primary-foreground" : "text-foreground")}>{customer.name_dv}</h4>
+                            <Badge variant="outline" className={cn(
+                              "mt-2 text-[9px] font-black py-0 px-2 h-5",
+                              isSelected 
+                                ? "bg-white/20 border-white/30 text-white" 
+                                : "bg-muted border-border text-muted-foreground"
+                            )}>
                               {settings.shop.currency} {customer.outstanding_balance.toFixed(2)}
                             </Badge>
                           </div>
@@ -1295,14 +1303,14 @@ const renderBothString = (key: string, options?: any) => {
                 </div>
               </ScrollArea>
 
-              <div className="p-6 bg-muted border-t border-border">
+              <div className="p-6 bg-card border-t border-border">
                 <div className="flex justify-between items-center mb-4">
                   <div className="text-right">
-                    <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest leading-none mb-1">TOTAL TO SPLIT</p>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">TOTAL TO SPLIT</p>
                     <p className="text-2xl font-black text-primary">{settings.shop.currency} {grandTotal.toFixed(2)}</p>
                   </div>
                   <div className="text-left">
-                    <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest leading-none mb-1">SELECTED</p>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">SELECTED</p>
                     <p className="text-2xl font-black text-foreground">{selectedSplitCustomerIds.length}</p>
                   </div>
                 </div>
@@ -1313,7 +1321,7 @@ const renderBothString = (key: string, options?: any) => {
                   <Button
                     onClick={moveToAllocation}
                     disabled={selectedSplitCustomerIds.length === 0}
-                    className="flex-1 btn-gradient-blue h-14 rounded-2xl font-black text-foreground shadow-xl shadow-blue-500/20 uppercase tracking-widest text-xs"
+                    className="flex-1 btn-gradient-blue h-14 rounded-2xl font-black text-white shadow-xl shadow-blue-500/20 uppercase tracking-widest text-xs"
                   >
                     {t('next')}
                   </Button>
@@ -1327,23 +1335,23 @@ const renderBothString = (key: string, options?: any) => {
                   {splitEntries.map((entry) => {
                     const customer = customers.find(c => c.id === entry.customerId);
                     return (
-                      <div key={entry.id} className="p-5 rounded-3xl bg-muted border border-border flex items-center justify-between gap-4 group hover:bg-muted/80 transition-all">
+                      <div key={entry.id} className="p-5 rounded-3xl bg-card border border-border flex items-center justify-between gap-4 group hover:bg-muted/40 transition-all">
                         <div className="flex items-center gap-4">
                           <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-muted-foreground/50 uppercase">{settings.shop.currency}</span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-muted-foreground uppercase">{settings.shop.currency}</span>
                             <Input
                               type="number"
                               value={entry.amount}
                               onChange={(e) => updateSplitAmount(entry.id, parseFloat(e.target.value) || 0)}
                               onFocus={handleFocus}
-                              className="w-32 h-14 bg-black/40 border-border rounded-2xl pl-10 text-right text-xl font-black focus:border-primary transition-all text-foreground"
+                              className="w-32 h-14 bg-background border-border rounded-2xl pl-10 text-right text-xl font-black focus:border-primary transition-all text-foreground"
                             />
                           </div>
                         </div>
 
                         <div className="flex-1 text-right">
                           <h4 className="text-lg font-black text-foreground mb-0.5">{customer?.name_dv}</h4>
-                          <p className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest">{customer?.name_en}</p>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{customer?.name_en}</p>
                         </div>
                       </div>
                     );
@@ -1351,17 +1359,17 @@ const renderBothString = (key: string, options?: any) => {
                 </div>
               </ScrollArea>
 
-              <div className="p-6 bg-muted border-t border-border">
+              <div className="p-6 bg-card border-t border-border">
                 <div className="grid grid-cols-2 gap-6 mb-6">
                   <div className="text-right">
-                    <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest leading-none mb-1">(TARGET TOTAL)</p>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">(TARGET TOTAL)</p>
                     <p className="text-2xl font-black text-foreground">{settings.shop.currency} {grandTotal.toFixed(2)}</p>
                   </div>
                   <div className="text-left">
-                    <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest leading-none mb-1">(TOTAL ALLOCATED)</p>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">(TOTAL ALLOCATED)</p>
                     <p className={cn(
                       "text-2xl font-black transition-all",
-                      Math.abs(splitRemaining) < 0.01 ? "text-green-500" : "text-red-500"
+                      Math.abs(splitRemaining) < 0.01 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
                     )}>
                       {settings.shop.currency} {splitTotal.toFixed(2)}
                     </p>
@@ -1375,7 +1383,7 @@ const renderBothString = (key: string, options?: any) => {
                   <Button
                     onClick={processSplitPayment}
                     disabled={Math.abs(splitRemaining) > 0.01 || splitEntries.length === 0}
-                    className="flex-1 btn-gradient-blue h-14 rounded-2xl font-black text-foreground shadow-xl shadow-blue-500/20 uppercase tracking-widest text-xs"
+                    className="flex-1 btn-gradient-blue h-14 rounded-2xl font-black text-white shadow-xl shadow-blue-500/20 uppercase tracking-widest text-xs"
                   >
                     (Confirm Split Payment) {t('confirm_split_payment')}
                   </Button>

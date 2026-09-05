@@ -434,7 +434,31 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         supabase.from('settings').select('*')
       ]);
 
-      if (productsData) setProducts(productsData);
+      if (productsData) {
+        const sanitizedProducts = productsData.map(p => ({
+          ...p,
+          item_code: (p.item_code || '').replace(/\D/g, '') || '0'
+        }));
+        setProducts(sanitizedProducts);
+
+        // Auto-migrate any legacy non-numeric product codes in Supabase in background
+        const legacyProducts = productsData.filter(p => /\D/.test(p.item_code || ''));
+        if (legacyProducts.length > 0 && supabase) {
+          (async () => {
+            try {
+              for (const p of legacyProducts) {
+                const numericCode = (p.item_code || '').replace(/\D/g, '');
+                if (numericCode) {
+                  await supabase.from('products').update({ item_code: numericCode }).eq('id', p.id);
+                }
+              }
+              console.log(`Migrated ${legacyProducts.length} legacy product codes to numeric only.`);
+            } catch (err) {
+              console.warn('Background product code migration error:', err);
+            }
+          })();
+        }
+      }
       if (customersData) {
         const formattedCustomers = customersData.map(c => ({
           ...c,
@@ -1233,12 +1257,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const getNextProductCode = () => {
     const lastItemCode = products.reduce((maxCode, product) => {
-      // Extract number from code like PROD001, C001, P001, etc.
-      const match = product.item_code.match(/\d+/);
-      const codeNum = match ? parseInt(match[0], 10) : 0;
+      // Extract digits only from code
+      const digits = (product.item_code || '').replace(/\D/g, '');
+      const codeNum = digits ? parseInt(digits, 10) : 0;
       return isNaN(codeNum) ? maxCode : Math.max(maxCode, codeNum);
     }, 0);
-    return `PROD${String(lastItemCode + 1).padStart(3, '0')}`;
+    const nextNum = lastItemCode + 1;
+    return nextNum < 1000 ? String(nextNum).padStart(3, '0') : String(nextNum);
   };
 
   // Helper function to get top N products by sales count
@@ -1267,6 +1292,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     try {
       console.log('Updating product in Supabase:', updatedProduct.id);
       
+      const numericCode = (updatedProduct.item_code || '').replace(/\D/g, '') || '0';
+      
       // Clean data for Supabase update - convert undefined to null and ensure numbers
       const cleanData = {
         name_dv: updatedProduct.name_dv,
@@ -1275,7 +1302,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         stock_shop: Number(updatedProduct.stock_shop),
         stock_godown: Number(updatedProduct.stock_godown),
         barcode: updatedProduct.barcode,
-        item_code: updatedProduct.item_code,
+        item_code: numericCode,
         category: updatedProduct.category,
         is_zero_tax: !!updatedProduct.is_zero_tax,
         expiry_date: updatedProduct.expiry_date || null,
@@ -1309,8 +1336,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         showError('Product not found in database');
       }
 
+      const productWithNumericCode = {
+        ...updatedProduct,
+        item_code: numericCode
+      };
+
       setProducts(prev => prev.map(p =>
-        p.id === updatedProduct.id ? updatedProduct : p
+        p.id === updatedProduct.id ? productWithNumericCode : p
       ));
       console.log('Product updated successfully in local state');
       
@@ -1322,7 +1354,11 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         .single();
         
       if (!fetchError && freshProduct) {
-        setProducts(prev => prev.map(p => p.id === updatedProduct.id ? freshProduct : p));
+        const sanitizedFresh = {
+          ...freshProduct,
+          item_code: (freshProduct.item_code || '').replace(/\D/g, '') || '0'
+        };
+        setProducts(prev => prev.map(p => p.id === updatedProduct.id ? sanitizedFresh : p));
         console.log('Product refreshed from DB successfully');
       }
     } catch (error) {
@@ -1333,22 +1369,28 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const addProduct = async (product: Product) => {
     try {
+      const numericCode = (product.item_code || '').replace(/\D/g, '') || getNextProductCode();
+      const productWithNumericCode: Product = {
+        ...product,
+        item_code: numericCode
+      };
+
       const cleanData = {
-        id: product.id,
-        name_dv: product.name_dv,
-        name_en: product.name_en,
-        price: Number(product.price),
-        stock_shop: Number(product.stock_shop),
-        stock_godown: Number(product.stock_godown),
-        barcode: product.barcode,
-        item_code: product.item_code,
-        category: product.category,
-        is_zero_tax: !!product.is_zero_tax,
-        expiry_date: product.expiry_date || null,
-        image: product.image || '',
-        cost_price: product.cost_price ? Number(product.cost_price) : null,
-        last_purchase_date: product.last_purchase_date || null,
-        units: product.units || null
+        id: productWithNumericCode.id,
+        name_dv: productWithNumericCode.name_dv,
+        name_en: productWithNumericCode.name_en,
+        price: Number(productWithNumericCode.price),
+        stock_shop: Number(productWithNumericCode.stock_shop),
+        stock_godown: Number(productWithNumericCode.stock_godown),
+        barcode: productWithNumericCode.barcode,
+        item_code: numericCode,
+        category: productWithNumericCode.category,
+        is_zero_tax: !!productWithNumericCode.is_zero_tax,
+        expiry_date: productWithNumericCode.expiry_date || null,
+        image: productWithNumericCode.image || '',
+        cost_price: productWithNumericCode.cost_price ? Number(productWithNumericCode.cost_price) : null,
+        last_purchase_date: productWithNumericCode.last_purchase_date || null,
+        units: productWithNumericCode.units || null
       };
 
       const { error } = await supabase
@@ -1357,7 +1399,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
       if (error) throw error;
 
-      setProducts(prev => [...prev, product]);
+      setProducts(prev => [...prev, productWithNumericCode]);
     } catch (error) {
       console.error('Error adding product:', error);
       showError('Failed to add product to database');

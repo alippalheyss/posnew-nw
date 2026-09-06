@@ -252,7 +252,14 @@ const Products = () => {
                          <p className="text-[9px] font-bold text-foreground/30 uppercase tracking-widest truncate">{product.name_en}</p>
                          
                          <div className="flex items-center justify-between mt-3">
-                            <span className="text-xs font-black text-primary">{settings.shop.currency} {product.price.toFixed(2)}</span>
+                            <div className="text-right">
+                              <span className="text-xs font-black text-primary">{settings.shop.currency} {product.price.toFixed(2)}</span>
+                              {product.units && product.units.length > 0 && (
+                                <span className="text-[8px] font-bold text-muted-foreground block">
+                                  +{product.units.length} unit{product.units.length > 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </div>
                             <div className="flex items-center gap-1">
                                <div className={cn("w-1.5 h-1.5 rounded-full", product.stock_shop < 10 ? "bg-red-500" : "bg-green-500")} />
                                <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest">{product.stock_shop}</span>
@@ -294,7 +301,20 @@ const Products = () => {
                       </td>
                       <td className="p-4 font-mono text-xs text-muted-foreground">{product.item_code}</td>
                       <td className="p-4 font-mono text-xs text-muted-foreground">{product.barcode}</td>
-                      <td className="p-4 font-black text-primary">{settings.shop.currency} {product.price.toFixed(2)}</td>
+                      <td className="p-4">
+                        <div className="font-black text-primary">
+                          {settings.shop.currency} {product.price.toFixed(2)}
+                        </div>
+                        {product.units && product.units.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1 justify-end">
+                            {product.units.map((u, i) => (
+                              <span key={i} className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
+                                {u.name}: {settings.shop.currency} {u.price.toFixed(2)} ({u.conversion_factor} pcs)
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </td>
                       <td className="p-4">
                          <Badge className={cn(
                            "bg-muted text-muted-foreground border-border text-[10px] font-black px-2 py-0.5 rounded-full",

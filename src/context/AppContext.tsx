@@ -896,7 +896,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       Promise.all(sale.items.map(async (item) => {
         const product = products.find(p => p.id === item.id);
         if (product) {
-          await updateStock(product.id, product.stock_shop - item.qty);
+          const qtyToDeduct = item.qty * (item.unit_conversion || 1);
+          await updateStock(product.id, product.stock_shop - qtyToDeduct);
         }
       })).catch(err => console.error('Error updating stock after sale:', err));
       

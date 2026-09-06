@@ -251,7 +251,14 @@ export default function CustomerDisplay() {
                         </div>
                       )}
                       <div className="min-w-0">
-                        <h3 className={cn("font-bold text-foreground group-hover:text-primary transition-colors truncate", isVeryDense ? "text-lg" : isDense ? "text-xl" : "text-2xl mb-1")}>{item.name_dv}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className={cn("font-bold text-foreground group-hover:text-primary transition-colors truncate", isVeryDense ? "text-lg" : isDense ? "text-xl" : "text-2xl mb-1")}>{item.name_dv}</h3>
+                          {item.selected_unit && item.selected_unit !== 'Piece' && (
+                            <span className="text-[10px] font-black uppercase tracking-wider bg-primary/15 text-primary border border-primary/30 px-1.5 py-0.5 rounded-md leading-none whitespace-nowrap">
+                              {item.selected_unit}
+                            </span>
+                          )}
+                        </div>
                         {!isVeryDense && <p className={cn("text-foreground/50 truncate", isDense ? "text-sm" : "text-lg")}>{item.name_en}</p>}
                       </div>
                     </div>

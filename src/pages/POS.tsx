@@ -7,11 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ShoppingCart, PlusCircle, Minus, Trash2, MonitorPlay, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, ArrowLeft, Plus } from 'lucide-react';
+import { ShoppingCart, PlusCircle, Minus, Trash2, MonitorPlay, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, ArrowLeft, Plus, ChevronDown, Boxes } from 'lucide-react';
 import { formatDate, toISODate, toISODatetime, formatTime, formatDateTime } from '@/utils/formatters';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useAppContext, Product, Customer, CartItem, Sale } from '@/context/AppContext';
 import { showSuccess, showError } from '@/utils/toast';
@@ -150,13 +156,31 @@ const POS = () => {
     if (searchTerm.trim()) {
       const term = searchTerm.trim().toLowerCase();
       const strippedTerm = term.replace(/^0+/, '');
-      const exactMatch = products.find(p =>
-        p.barcode === searchTerm.trim() ||
-        p.item_code.toLowerCase() === term ||
-        (strippedTerm && p.item_code.replace(/^0+/, '') === strippedTerm)
-      );
+      let matchedUnit: string | undefined = undefined;
+
+      const exactMatch = products.find(p => {
+        if (
+          p.barcode === searchTerm.trim() ||
+          p.item_code.toLowerCase() === term ||
+          (strippedTerm && p.item_code.replace(/^0+/, '') === strippedTerm)
+        ) {
+          return true;
+        }
+        // Match unit-level barcode (e.g. barcode printed on Box/Case)
+        const foundUnit = p.units?.find(u => u.barcode && u.barcode.trim() === searchTerm.trim());
+        if (foundUnit) {
+          matchedUnit = foundUnit.name;
+          return true;
+        }
+        return false;
+      });
+
       if (exactMatch) {
-        handleProductSelection(exactMatch);
+        if (matchedUnit) {
+          addToCart(exactMatch, 1, matchedUnit);
+        } else {
+          handleProductSelection(exactMatch);
+        }
         setSearchTerm('');
         showSuccess(t('product_added_via_barcode', { name: exactMatch.name_dv }));
       }
@@ -330,28 +354,94 @@ const POS = () => {
     }
   };
 
-  const updateCartItemQty = (id: string, delta: number) => {
+  const switchCartItemUnit = (item: CartItem, newUnitName: string) => {
+    const currentUnit = item.selected_unit || 'Piece';
+    if (currentUnit === newUnitName) return;
+
+    const product = products.find(p => p.id === item.id);
+    if (!product) return;
+
+    let newPrice = product.price;
+    let newConversion = 1;
+
+    if (newUnitName !== 'Piece') {
+      const unit = product.units?.find(u => u.name === newUnitName);
+      if (unit) {
+        newPrice = unit.price;
+        newConversion = unit.conversion_factor;
+      }
+    }
+
+    updateActiveCart(prevCart => {
+      const targetExisting = prevCart.items.find(
+        i => i.id === item.id && (i.selected_unit || 'Piece') === newUnitName
+      );
+
+      if (targetExisting) {
+        // Merge quantities and remove previous unit line
+        return {
+          ...prevCart,
+          items: prevCart.items
+            .map(i => {
+              if (i.id === item.id && (i.selected_unit || 'Piece') === newUnitName) {
+                return { ...i, qty: i.qty + item.qty };
+              }
+              return i;
+            })
+            .filter(i => !(i.id === item.id && (i.selected_unit || 'Piece') === currentUnit))
+        };
+      } else {
+        // Update unit in-place
+        return {
+          ...prevCart,
+          items: prevCart.items.map(i => {
+            if (i.id === item.id && (i.selected_unit || 'Piece') === currentUnit) {
+              return {
+                ...i,
+                selected_unit: newUnitName,
+                price: newPrice,
+                unit_price: newPrice,
+                unit_conversion: newConversion
+              };
+            }
+            return i;
+          })
+        };
+      }
+    });
+
+    showSuccess(t('unit_switched_to', { defaultValue: `Unit switched to ${newUnitName}` }));
+  };
+
+  const updateCartItemQty = (id: string, delta: number, selectedUnit?: string) => {
+    const unitName = selectedUnit || 'Piece';
     updateActiveCart(prevCart => ({
       ...prevCart,
       items: prevCart.items.map((item) =>
-        item.id === id ? { ...item, qty: Math.max(0, item.qty + delta) } : item
+        item.id === id && (item.selected_unit || 'Piece') === unitName
+          ? { ...item, qty: Math.max(0, item.qty + delta) }
+          : item
       ).filter(item => item.qty > 0),
     }));
   };
 
-  const setCartItemQty = (id: string, qty: number) => {
+  const setCartItemQty = (id: string, qty: number, selectedUnit?: string) => {
+    const unitName = selectedUnit || 'Piece';
     updateActiveCart(prevCart => ({
       ...prevCart,
       items: prevCart.items.map((item) =>
-        item.id === id ? { ...item, qty: Math.max(0, qty) } : item
+        item.id === id && (item.selected_unit || 'Piece') === unitName
+          ? { ...item, qty: Math.max(0, qty) }
+          : item
       ).filter(item => item.qty > 0),
     }));
   };
 
-  const removeFromCart = (id: string) => {
+  const removeFromCart = (id: string, selectedUnit?: string) => {
+    const unitName = selectedUnit || 'Piece';
     updateActiveCart(prevCart => ({
       ...prevCart,
-      items: prevCart.items.filter(item => item.id !== id),
+      items: prevCart.items.filter(item => !(item.id === id && (item.selected_unit || 'Piece') === unitName)),
     }));
   };
 
@@ -547,7 +637,7 @@ const POS = () => {
     const itemsHtml = sale.items.map((item: any) => `
       <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
         <div style="flex: 1; text-align: left;">
-          ${item.name_dv}<br/><small>${item.name_en}</small>
+          ${item.name_dv}${item.selected_unit && item.selected_unit !== 'Piece' ? ` (${item.selected_unit})` : ''}<br/><small>${item.name_en}${item.selected_unit && item.selected_unit !== 'Piece' ? ` (${item.selected_unit})` : ''}</small>
         </div>
         <div style="width: 60px; text-align: right;">${item.qty} x ${item.price.toFixed(2)}</div>
         <div style="width: 70px; text-align: right;">${(item.qty * item.price).toFixed(2)}</div>
@@ -890,7 +980,7 @@ const renderBothString = (key: string, options?: any) => {
           ) : (
             <div className="space-y-2 pb-6">
               {activeCart.items.map((item) => (
-                <div key={`${item.id}-${item.selected_unit}`} className="group relative bg-muted hover:bg-muted/80 border border-border rounded-xl p-3 transition-all">
+                <div key={`${item.id}-${item.selected_unit || 'Piece'}`} className="group relative bg-muted hover:bg-muted/80 border border-border rounded-xl p-3 transition-all">
                   <div className="flex gap-4 items-start">
                     <div className="flex flex-col gap-2 items-start">
                       <div className="text-[16px] font-black text-primary whitespace-nowrap">
@@ -901,12 +991,12 @@ const renderBothString = (key: string, options?: any) => {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          onClick={() => updateCartItemQty(item.id, -1)}
+                          onClick={() => updateCartItemQty(item.id, -1, item.selected_unit)}
                         ><Minus className="h-4 w-4" /></Button>
                         <Input
                           type="number"
                           value={item.qty}
-                          onChange={(e) => setCartItemQty(item.id, parseFloat(e.target.value) || 0)}
+                          onChange={(e) => setCartItemQty(item.id, parseFloat(e.target.value) || 0, item.selected_unit)}
                           onFocus={handleFocus}
                           className="w-14 text-center text-[14px] font-black text-foreground bg-transparent border-none h-8 p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
@@ -914,7 +1004,7 @@ const renderBothString = (key: string, options?: any) => {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          onClick={() => updateCartItemQty(item.id, 1)}
+                          onClick={() => updateCartItemQty(item.id, 1, item.selected_unit)}
                         ><Plus className="h-4 w-4" /></Button>
                       </div>
                     </div>
@@ -922,7 +1012,7 @@ const renderBothString = (key: string, options?: any) => {
                     <div className="flex-1 text-right min-w-0">
                       <div className="flex justify-between items-start mb-1">
                         <button
-                          onClick={() => removeFromCart(item.id)}
+                          onClick={() => removeFromCart(item.id, item.selected_unit)}
                           className="text-muted-foreground/50 hover:text-red-500 transition-colors p-1"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -930,9 +1020,64 @@ const renderBothString = (key: string, options?: any) => {
                         <div className="flex-1 min-w-0">
                           <p className="text-[18px] font-black text-foreground leading-tight mb-1">{item.name_dv}</p>
                           <p className="text-[13px] font-bold text-foreground/50 leading-tight uppercase mb-1">{item.name_en}</p>
-                          {item.selected_unit && item.selected_unit !== 'Piece' && (
-                            <Badge variant="outline" className="text-[9px] border-primary/30 text-primary uppercase font-black px-1.5 py-0.5 h-auto leading-none">{item.selected_unit}</Badge>
-                          )}
+                          {(() => {
+                            const prod = products.find(p => p.id === item.id);
+                            const hasUnits = prod?.units && prod.units.length > 0;
+                            const currentUnit = item.selected_unit || 'Piece';
+
+                            if (!hasUnits) {
+                              return item.selected_unit && item.selected_unit !== 'Piece' ? (
+                                <Badge variant="outline" className="text-[9px] border-primary/30 text-primary uppercase font-black px-1.5 py-0.5 h-auto leading-none">
+                                  {item.selected_unit}
+                                </Badge>
+                              ) : null;
+                            }
+
+                            return (
+                              <div className="flex items-center justify-end gap-1.5 mt-1.5">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <button
+                                      type="button"
+                                      className="flex items-center gap-1 text-[10px] font-black bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 px-2.5 py-0.5 rounded-lg transition-colors cursor-pointer shadow-sm"
+                                    >
+                                      <Boxes className="h-3 w-3 opacity-70" />
+                                      <span>{currentUnit}</span>
+                                      <ChevronDown className="h-3 w-3 opacity-70" />
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="bg-card border-border text-foreground font-faruma text-right min-w-[220px] z-[120] shadow-2xl rounded-2xl p-1">
+                                    <div className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-muted-foreground border-b border-border text-right">
+                                      {t('switch_unit') || 'Switch Unit'}
+                                    </div>
+                                    <DropdownMenuItem
+                                      onClick={() => switchCartItemUnit(item, 'Piece')}
+                                      className={cn(
+                                        "flex items-center justify-between text-xs py-2 px-3 rounded-xl cursor-pointer hover:bg-muted transition-colors",
+                                        currentUnit === 'Piece' && "font-black text-primary bg-primary/10"
+                                      )}
+                                    >
+                                      <span className="font-mono font-bold text-primary">{settings.shop.currency} {prod.price.toFixed(2)}</span>
+                                      <span className="font-bold">Piece (1 pc)</span>
+                                    </DropdownMenuItem>
+                                    {prod.units!.map((u, idx) => (
+                                      <DropdownMenuItem
+                                        key={idx}
+                                        onClick={() => switchCartItemUnit(item, u.name)}
+                                        className={cn(
+                                          "flex items-center justify-between text-xs py-2 px-3 rounded-xl cursor-pointer hover:bg-muted transition-colors",
+                                          currentUnit === u.name && "font-black text-primary bg-primary/10"
+                                        )}
+                                      >
+                                        <span className="font-mono font-bold text-primary">{settings.shop.currency} {u.price.toFixed(2)}</span>
+                                        <span className="font-bold">{u.name} ({u.conversion_factor} pcs)</span>
+                                      </DropdownMenuItem>
+                                    ))}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -1012,7 +1157,7 @@ const renderBothString = (key: string, options?: any) => {
         isOpen={isUnitSelectionDialogOpen}
         onClose={() => setIsUnitSelectionDialogOpen(false)}
         product={productForUnitSelection}
-        onSelect={(unit) => handleUnitSelection(unit.name)}
+        onSelect={(unit) => handleUnitSelection(unit ? unit.name : 'Piece')}
       />
 
       <Dialog open={isCashDialogOpen} onOpenChange={setIsCashDialogOpen}>

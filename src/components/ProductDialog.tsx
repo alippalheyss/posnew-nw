@@ -222,206 +222,230 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col font-faruma bg-card border-border text-foreground" dir="rtl">
-                <DialogHeader className="text-right">
-                    <DialogTitle className="text-2xl font-black flex items-center justify-end gap-3">
+            <DialogContent className="sm:max-w-[1040px] max-h-[92vh] overflow-hidden flex flex-col font-faruma bg-card border-border text-foreground p-0 shadow-2xl rounded-3xl" dir="rtl">
+                {/* Header */}
+                <DialogHeader className="text-right px-6 pt-5 pb-3 border-b border-border bg-muted/20">
+                    <DialogTitle className="text-xl font-black flex items-center justify-end gap-2.5 text-foreground">
                         {product ? renderBoth('edit_product') : renderBoth('add_new_product')}
-                        <Package className="h-6 w-6 text-primary" />
+                        <Package className="h-5 w-5 text-primary" />
                     </DialogTitle>
-                    <DialogDescription className="text-muted-foreground">
+                    <DialogDescription className="text-muted-foreground text-xs">
                         {renderBoth('product_details_description')}
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="flex-1 overflow-y-auto custom-scrollbar py-6 pl-2">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {/* Image Section */}
-                        <div className="space-y-4">
-                            <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('product_image')}</Label>
-                            <div className="aspect-square rounded-3xl bg-muted border-2 border-dashed border-border flex flex-col items-center justify-center relative overflow-hidden group">
-                                {imagePreviewUrl ? (
-                                    <img src={imagePreviewUrl} alt="Preview" className="w-full h-full object-cover" />
-                                ) : (
-                                    <ImageIcon className="h-12 w-12 text-foreground/10" />
-                                )}
-                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    <Label htmlFor="image-upload" className="cursor-pointer bg-primary px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/90 transition-all flex items-center gap-2">
-                                        <Upload className="h-3 w-3" /> UPLOAD IMAGE
+                {/* Content: Side-by-side Grid */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                        {/* Right Panel: Basic Product Info (7 cols) */}
+                        <div className="lg:col-span-7 space-y-4">
+                            {/* Row 1: Image + Names */}
+                            <div className="flex gap-4 items-start">
+                                {/* Compact Image Upload */}
+                                <div className="space-y-1 shrink-0">
+                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                                        {renderBoth('product_image')}
                                     </Label>
-                                    <input id="image-upload" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Basic Info Section */}
-                        <div className="space-y-6">
-                            <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('product_name')} (ދިވެހި)*</Label>
-                                <Input 
-                                    value={editedProduct.name_dv} 
-                                    onChange={(e) => updateField('name_dv', e.target.value)} 
-                                    className="bg-muted border-border h-12 rounded-xl text-right font-bold focus:border-primary/50"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('product_name')} (English)*</Label>
-                                <Input 
-                                    value={editedProduct.name_en} 
-                                    onChange={(e) => updateField('name_en', e.target.value)} 
-                                    className="bg-muted border-border h-12 rounded-xl text-right font-bold focus:border-primary/50"
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('item_code')}*</Label>
-                                    <div className="relative">
-                                       <Hash className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-                                       <Input 
-                                          value={editedProduct.item_code} 
-                                          onChange={(e) => updateField('item_code', e.target.value.replace(/\D/g, ''))} 
-                                          placeholder="1001"
-                                          className="bg-muted border-border h-11 rounded-xl text-right pr-10 font-mono text-sm focus:border-primary/50" 
-                                       />
+                                    <div className="w-24 h-24 rounded-2xl bg-muted border-2 border-dashed border-border flex flex-col items-center justify-center relative overflow-hidden group">
+                                        {imagePreviewUrl ? (
+                                            <img src={imagePreviewUrl} alt="Preview" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <ImageIcon className="h-8 w-8 text-foreground/20" />
+                                        )}
+                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <Label htmlFor="image-upload" className="cursor-pointer bg-primary p-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white hover:bg-primary/90 transition-all flex items-center gap-1">
+                                                <Upload className="h-3 w-3" />
+                                            </Label>
+                                            <input id="image-upload" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('barcode')}*</Label>
-                                    <div className="relative">
-                                       <Barcode className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-                                       <Input 
-                                          value={editedProduct.barcode} 
-                                          onChange={(e) => updateField('barcode', e.target.value)} 
-                                          className="bg-muted border-border h-11 rounded-xl text-right pr-10 font-mono text-sm focus:border-primary/50" 
-                                       />
+
+                                {/* Names */}
+                                <div className="flex-1 space-y-2.5 min-w-0">
+                                    <div className="space-y-1">
+                                        <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                                            {renderBoth('product_name')} (ދިވެހި)*
+                                        </Label>
+                                        <Input 
+                                            value={editedProduct.name_dv} 
+                                            onChange={(e) => updateField('name_dv', e.target.value)} 
+                                            className="bg-muted border-border h-10 rounded-xl text-right font-bold text-sm focus:border-primary/50"
+                                            placeholder="ތަކެތީގެ ނަން"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                                            {renderBoth('product_name')} (English)*
+                                        </Label>
+                                        <Input 
+                                            value={editedProduct.name_en} 
+                                            onChange={(e) => updateField('name_en', e.target.value)} 
+                                            className="bg-muted border-border h-10 rounded-xl text-right font-bold text-sm focus:border-primary/50"
+                                            placeholder="Product Name"
+                                        />
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <Separator className="my-8 bg-muted" />
+                            {/* Row 2: Price, Item Code, Barcode */}
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="space-y-1">
+                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                                        {renderBoth('price')} (Piece)*
+                                    </Label>
+                                    <div className="relative">
+                                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-black text-primary">
+                                            {settings.shop.currency}
+                                        </span>
+                                        <Input 
+                                            type="number" 
+                                            step="0.01"
+                                            value={editedProduct.price} 
+                                            onChange={(e) => updateField('price', parseFloat(e.target.value) || 0)} 
+                                            onFocus={handleFocus}
+                                            className="bg-muted border-border h-11 rounded-xl text-right pl-12 pr-3 text-lg font-black text-primary focus:border-primary" 
+                                        />
+                                    </div>
+                                </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-6">
-                            <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('price')}*</Label>
-                                <div className="relative">
-                                   <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-primary">MVR</span>
-                                   <Input 
-                                      type="number" 
-                                      value={editedProduct.price} 
-                                      onChange={(e) => updateField('price', parseFloat(e.target.value) || 0)} 
-                                      onFocus={handleFocus}
-                                      className="bg-muted border-border h-14 rounded-2xl text-right pr-4 text-2xl font-black text-foreground focus:border-primary" 
-                                   />
+                                <div className="space-y-1">
+                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                                        {renderBoth('item_code')}*
+                                    </Label>
+                                    <div className="relative">
+                                        <Hash className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+                                        <Input 
+                                            value={editedProduct.item_code} 
+                                            onChange={(e) => updateField('item_code', e.target.value.replace(/\D/g, ''))} 
+                                            placeholder="1001"
+                                            className="bg-muted border-border h-11 rounded-xl text-right pr-8 font-mono text-xs focus:border-primary/50" 
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                                        {renderBoth('barcode')}*
+                                    </Label>
+                                    <div className="relative">
+                                        <Barcode className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+                                        <Input 
+                                            value={editedProduct.barcode} 
+                                            onChange={(e) => updateField('barcode', e.target.value)} 
+                                            className="bg-muted border-border h-11 rounded-xl text-right pr-8 font-mono text-xs focus:border-primary/50" 
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('category')}</Label>
-                                <Select value={editedProduct.category} onValueChange={(val) => updateField('category', val)}>
-                                    <SelectTrigger className="bg-muted border-border h-12 rounded-xl text-right">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-card border-border text-foreground">
-                                        <SelectItem value="DRINKS" className="text-right">DRINKS</SelectItem>
-                                        <SelectItem value="FOOD" className="text-right">FOOD</SelectItem>
-                                        <SelectItem value="HARDWARE" className="text-right">HARDWARE</SelectItem>
-                                        <SelectItem value="COSMETICS" className="text-right">COSMETICS</SelectItem>
-                                        <SelectItem value="OTHER" className="text-right">OTHER</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                            {/* Row 3: Category, Expiry Date, Zero Tax */}
+                            <div className="grid grid-cols-3 gap-3 items-end">
+                                <div className="space-y-1">
+                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                                        {renderBoth('category')}
+                                    </Label>
+                                    <Select value={editedProduct.category} onValueChange={(val) => updateField('category', val)}>
+                                        <SelectTrigger className="bg-muted border-border h-11 rounded-xl text-right text-xs font-bold">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-card border-border text-foreground">
+                                            <SelectItem value="DRINKS" className="text-right">DRINKS</SelectItem>
+                                            <SelectItem value="FOOD" className="text-right">FOOD</SelectItem>
+                                            <SelectItem value="HARDWARE" className="text-right">HARDWARE</SelectItem>
+                                            <SelectItem value="COSMETICS" className="text-right">COSMETICS</SelectItem>
+                                            <SelectItem value="OTHER" className="text-right">OTHER</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                                        {renderBoth('expiry_date')}
+                                    </Label>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="outline" className={cn("w-full justify-between text-right font-bold h-11 text-xs rounded-xl bg-muted border-border hover:bg-muted/80", !expiryDate && "text-muted-foreground")}>
+                                                {expiryDate ? format(expiryDate, "dd/MM/yyyy") : <span>{renderBoth('pick_a_date')}</span>}
+                                                <CalendarIcon className="h-3.5 w-3.5 opacity-50" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0 bg-card border-border z-[120]" align="start">
+                                            <Calendar mode="single" selected={expiryDate} onSelect={setExpiryDate} initialFocus className="text-foreground" />
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+
+                                <div className="bg-muted p-2.5 rounded-xl border border-border flex items-center justify-between h-11">
+                                    <Switch 
+                                        checked={editedProduct.is_zero_tax} 
+                                        onCheckedChange={(val) => updateField('is_zero_tax', val)}
+                                        className="data-[state=checked]:bg-primary scale-90"
+                                    />
+                                    <Label className="font-bold text-xs uppercase tracking-wider text-muted-foreground">
+                                        Zero Tax (0% GST)
+                                    </Label>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="space-y-6">
-                           <div className="bg-muted p-6 rounded-3xl border border-border">
-                              <div className="flex items-center justify-between mb-4">
-                                 <Switch 
-                                    checked={editedProduct.is_zero_tax} 
-                                    onCheckedChange={(val) => updateField('is_zero_tax', val)}
-                                    className="data-[state=checked]:bg-primary"
-                                 />
-                                 <Label className="font-black text-sm uppercase tracking-widest">Zero Tax Item</Label>
-                              </div>
-                              <p className="text-[10px] text-muted-foreground/50 text-right">Enable this if the item is GST exempt (e.g. basic food items).</p>
-                           </div>
-
-                           <div className="space-y-2">
-                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('expiry_date')}</Label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" className={cn("w-full justify-start text-right font-normal h-12 rounded-xl bg-muted border-border hover:bg-muted/80", !expiryDate && "text-muted-foreground")}>
-                                            {expiryDate ? format(expiryDate, "PPP") : <span>{renderBoth('pick_a_date')}</span>}
-                                            <CalendarIcon className="mr-auto h-4 w-4 opacity-50" />
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0 bg-card border-border" align="start">
-                                        <Calendar mode="single" selected={expiryDate} onSelect={setExpiryDate} initialFocus className="text-foreground" />
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-                        </div>
-                    </div>
-
-                    <Separator className="my-8 bg-muted" />
-
-                    {/* Units & Packaging Section */}
-                    <div className="space-y-4 bg-muted/30 p-5 rounded-3xl border border-border">
-                        <div className="flex items-center justify-between">
-                            <Button 
-                                type="button"
-                                size="sm" 
-                                onClick={handleOpenAddUnit}
-                                className="h-9 px-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs gap-1.5 shadow-sm"
-                            >
-                                <Plus className="h-3.5 w-3.5" />
-                                {renderBoth('add_unit')}
-                            </Button>
-                            <div className="text-right">
-                                <h4 className="text-sm font-black uppercase tracking-wider text-foreground flex items-center justify-end gap-2">
-                                    {renderBoth('product_units')}
-                                    <Boxes className="h-4 w-4 text-primary" />
-                                </h4>
-                                <p className="text-[11px] text-muted-foreground mt-0.5">
-                                    {renderBoth('product_units_desc')}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Inline Unit Form */}
-                        {isUnitFormOpen && (
-                            <div className="p-4 bg-card border border-primary/30 rounded-2xl space-y-4 animate-in fade-in-50 duration-200">
-                                <div className="flex items-center justify-between border-b border-border pb-2">
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => setIsUnitFormOpen(false)}
-                                        className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground"
-                                    >
-                                        <X className="h-4 w-4" />
-                                    </Button>
-                                    <span className="text-xs font-black uppercase text-primary tracking-wider">
-                                        {editingUnitIndex !== null ? renderBoth('edit_unit') : renderBoth('add_unit')}
+                        {/* Left Panel: Units & Packaging (5 cols) */}
+                        <div className="lg:col-span-5 bg-muted/30 p-4 rounded-3xl border border-border flex flex-col min-h-[310px]">
+                            <div className="flex items-center justify-between pb-3 border-b border-border">
+                                <Button 
+                                    type="button"
+                                    size="sm" 
+                                    onClick={handleOpenAddUnit}
+                                    className="h-8 px-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs gap-1 shadow-sm"
+                                >
+                                    <Plus className="h-3.5 w-3.5" />
+                                    {renderBoth('add_unit')}
+                                </Button>
+                                <div className="text-right">
+                                    <h4 className="text-xs font-black uppercase tracking-wider text-foreground flex items-center justify-end gap-1.5">
+                                        {units.length > 0 && (
+                                            <Badge variant="outline" className="text-[10px] font-black h-4 px-1.5 bg-primary/10 text-primary border-primary/30">
+                                                {units.length}
+                                            </Badge>
+                                        )}
+                                        {renderBoth('product_units')}
+                                        <Boxes className="h-4 w-4 text-primary" />
+                                    </h4>
+                                    <span className="text-[10px] text-muted-foreground">
+                                        Box, Case, Pack pricing
                                     </span>
                                 </div>
+                            </div>
 
-                                {/* Common Unit Presets */}
-                                <div className="space-y-1.5">
-                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                                        Quick Suggestions
-                                    </Label>
-                                    <div className="flex flex-wrap gap-1.5 justify-end">
-                                        {['Box', 'Case', 'Pack', 'Carton', 'Dozen', 'Bundle'].map((preset) => (
+                            {/* Inline Unit Form */}
+                            {isUnitFormOpen && (
+                                <div className="p-3 bg-card border border-primary/30 rounded-2xl space-y-3 mt-3 animate-in fade-in-50 duration-150">
+                                    <div className="flex items-center justify-between border-b border-border pb-1.5">
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => setIsUnitFormOpen(false)}
+                                            className="h-6 w-6 rounded-md text-muted-foreground hover:text-foreground"
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <span className="text-[11px] font-black uppercase text-primary tracking-wider">
+                                            {editingUnitIndex !== null ? renderBoth('edit_unit') : renderBoth('add_unit')}
+                                        </span>
+                                    </div>
+
+                                    {/* Quick Preset Pills */}
+                                    <div className="flex flex-wrap gap-1 justify-end">
+                                        {['Box', 'Case', 'Pack', 'Carton', 'Dozen'].map((preset) => (
                                             <button
                                                 key={preset}
                                                 type="button"
                                                 onClick={() => setUnitForm(prev => ({ ...prev, name: preset }))}
                                                 className={cn(
-                                                    "px-2.5 py-1 rounded-lg text-xs font-bold border transition-all",
+                                                    "px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all",
                                                     unitForm.name.toLowerCase() === preset.toLowerCase()
-                                                        ? "bg-primary text-white border-primary shadow-sm"
+                                                        ? "bg-primary text-white border-primary"
                                                         : "bg-muted text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
                                                 )}
                                             >
@@ -429,182 +453,169 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                             </button>
                                         ))}
                                     </div>
-                                </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    <div className="space-y-1.5">
-                                        <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                                            {renderBoth('unit_name')}*
-                                        </Label>
-                                        <Input
-                                            value={unitForm.name}
-                                            onChange={(e) => setUnitForm(prev => ({ ...prev, name: e.target.value }))}
-                                            placeholder="e.g. Box"
-                                            className="h-10 bg-muted border-border rounded-xl text-right font-bold text-sm"
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                                            {renderBoth('conversion_factor')}*
-                                        </Label>
-                                        <Input
-                                            type="number"
-                                            value={unitForm.conversion_factor}
-                                            onChange={(e) => setUnitForm(prev => ({ ...prev, conversion_factor: e.target.value }))}
-                                            placeholder="12"
-                                            className="h-10 bg-muted border-border rounded-xl text-right font-bold text-sm"
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                                            {renderBoth('unit_price')} ({settings.shop.currency})*
-                                        </Label>
-                                        <Input
-                                            type="number"
-                                            step="0.01"
-                                            value={unitForm.price}
-                                            onChange={(e) => setUnitForm(prev => ({ ...prev, price: e.target.value }))}
-                                            placeholder="0.00"
-                                            className="h-10 bg-muted border-border rounded-xl text-right font-bold text-sm text-primary"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end">
-                                    <div className="space-y-1.5">
-                                        <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                                            {renderBoth('unit_barcode')}
-                                        </Label>
-                                        <div className="relative">
-                                            <Barcode className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="space-y-1">
+                                            <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
+                                                {renderBoth('unit_name')}*
+                                            </Label>
                                             <Input
-                                                value={unitForm.barcode}
-                                                onChange={(e) => setUnitForm(prev => ({ ...prev, barcode: e.target.value }))}
-                                                placeholder="Optional unit barcode"
-                                                className="h-10 bg-muted border-border rounded-xl text-right pr-9 font-mono text-xs"
+                                                value={unitForm.name}
+                                                onChange={(e) => setUnitForm(prev => ({ ...prev, name: e.target.value }))}
+                                                placeholder="e.g. Box"
+                                                className="h-9 bg-muted border-border rounded-lg text-right font-bold text-xs"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
+                                                {renderBoth('conversion_factor')}*
+                                            </Label>
+                                            <Input
+                                                type="number"
+                                                value={unitForm.conversion_factor}
+                                                onChange={(e) => setUnitForm(prev => ({ ...prev, conversion_factor: e.target.value }))}
+                                                placeholder="12"
+                                                className="h-9 bg-muted border-border rounded-lg text-right font-bold text-xs"
                                             />
                                         </div>
                                     </div>
 
-                                    {/* Real-time Calculation Helper */}
-                                    <div className="p-2.5 rounded-xl bg-muted/60 border border-border flex items-center justify-between text-xs">
-                                        <span className="font-bold text-foreground">
-                                            {parseFloat(unitForm.price) > 0 && parseFloat(unitForm.conversion_factor) > 0
-                                                ? `${settings.shop.currency} ${(parseFloat(unitForm.price) / parseFloat(unitForm.conversion_factor)).toFixed(2)} / pc`
-                                                : '-'}
-                                        </span>
-                                        <span className="text-[10px] font-bold text-muted-foreground uppercase">
-                                            Calculated Cost / Pc
-                                        </span>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="space-y-1">
+                                            <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
+                                                {renderBoth('unit_price')} ({settings.shop.currency})*
+                                            </Label>
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                value={unitForm.price}
+                                                onChange={(e) => setUnitForm(prev => ({ ...prev, price: e.target.value }))}
+                                                placeholder="0.00"
+                                                className="h-9 bg-muted border-border rounded-lg text-right font-bold text-xs text-primary"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
+                                                {renderBoth('unit_barcode')}
+                                            </Label>
+                                            <Input
+                                                value={unitForm.barcode}
+                                                onChange={(e) => setUnitForm(prev => ({ ...prev, barcode: e.target.value }))}
+                                                placeholder="Optional"
+                                                className="h-9 bg-muted border-border rounded-lg text-right font-mono text-[11px]"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {parseFloat(unitForm.price) > 0 && parseFloat(unitForm.conversion_factor) > 0 && (
+                                        <div className="p-1.5 rounded-lg bg-muted/60 text-[10px] text-muted-foreground text-center font-mono">
+                                            = {settings.shop.currency} {(parseFloat(unitForm.price) / parseFloat(unitForm.conversion_factor)).toFixed(2)} / pc
+                                        </div>
+                                    )}
+
+                                    <div className="flex justify-end gap-1.5 pt-1">
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setIsUnitFormOpen(false)}
+                                            className="h-8 px-3 rounded-lg text-xs font-bold"
+                                        >
+                                            {renderBoth('cancel')}
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            onClick={handleSaveUnit}
+                                            className="h-8 px-4 rounded-lg bg-primary text-white text-xs font-black"
+                                        >
+                                            <Check className="h-3 w-3 mr-1" />
+                                            {editingUnitIndex !== null ? 'Update' : 'Save Unit'}
+                                        </Button>
                                     </div>
                                 </div>
+                            )}
 
-                                <div className="flex justify-end gap-2 pt-2">
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => setIsUnitFormOpen(false)}
-                                        className="h-9 px-4 rounded-xl text-xs font-bold"
-                                    >
-                                        {renderBoth('cancel')}
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        onClick={handleSaveUnit}
-                                        className="h-9 px-5 rounded-xl bg-primary text-white text-xs font-black"
-                                    >
-                                        <Check className="h-3.5 w-3.5 mr-1" />
-                                        {editingUnitIndex !== null ? 'Update Unit' : 'Save Unit'}
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* List of Configured Units */}
-                        {units.length > 0 ? (
-                            <div className="space-y-2">
-                                {units.map((u, index) => {
-                                    const perPiece = u.conversion_factor > 0 ? (u.price / u.conversion_factor).toFixed(2) : '0.00';
-                                    return (
-                                        <div
-                                            key={index}
-                                            className="p-3 bg-card border border-border hover:border-primary/40 rounded-2xl flex items-center justify-between gap-3 transition-all"
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => handleEditUnit(index)}
-                                                    className="h-8 w-8 rounded-lg text-blue-400 hover:bg-blue-500/10"
-                                                >
-                                                    <Pencil className="h-3.5 w-3.5" />
-                                                </Button>
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => handleDeleteUnit(index)}
-                                                    className="h-8 w-8 rounded-lg text-red-400 hover:bg-red-500/10"
-                                                >
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                </Button>
-                                            </div>
-
-                                            <div className="flex items-center gap-4 flex-1 justify-end text-right">
-                                                {u.barcode && (
-                                                    <span className="hidden sm:inline-block font-mono text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
-                                                        {u.barcode}
-                                                    </span>
-                                                )}
-                                                <div className="text-left">
-                                                    <span className="text-sm font-black text-primary block">
-                                                        {settings.shop.currency} {u.price.toFixed(2)}
-                                                    </span>
-                                                    <span className="text-[10px] text-muted-foreground">
-                                                        ~ {settings.shop.currency} {perPiece} / pc
-                                                    </span>
+                            {/* Units List */}
+                            <div className="flex-1 mt-3 space-y-2 overflow-y-auto max-h-[260px] custom-scrollbar">
+                                {units.length > 0 ? (
+                                    units.map((u, index) => {
+                                        const perPiece = u.conversion_factor > 0 ? (u.price / u.conversion_factor).toFixed(2) : '0.00';
+                                        return (
+                                            <div
+                                                key={index}
+                                                className="p-2.5 bg-card border border-border hover:border-primary/40 rounded-xl flex items-center justify-between gap-2 transition-all"
+                                            >
+                                                <div className="flex items-center gap-0.5">
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleEditUnit(index)}
+                                                        className="h-7 w-7 rounded-md text-blue-400 hover:bg-blue-500/10"
+                                                    >
+                                                        <Pencil className="h-3 w-3" />
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleDeleteUnit(index)}
+                                                        className="h-7 w-7 rounded-md text-red-400 hover:bg-red-500/10"
+                                                    >
+                                                        <Trash2 className="h-3 w-3" />
+                                                    </Button>
                                                 </div>
-                                                <div className="text-right">
-                                                    <div className="flex items-center gap-1.5 justify-end">
-                                                        <Badge variant="outline" className="text-xs font-black uppercase tracking-wider bg-primary/10 text-primary border-primary/30">
-                                                            {u.name}
-                                                        </Badge>
+
+                                                <div className="flex items-center gap-2.5 flex-1 justify-end text-right">
+                                                    <div className="text-left font-mono">
+                                                        <span className="text-xs font-black text-primary block">
+                                                            {settings.shop.currency} {u.price.toFixed(2)}
+                                                        </span>
+                                                        <span className="text-[9px] text-muted-foreground block">
+                                                            ~ {settings.shop.currency} {perPiece} / pc
+                                                        </span>
                                                     </div>
-                                                    <span className="text-[11px] text-muted-foreground font-bold">
-                                                        {u.conversion_factor} pcs per {u.name.toLowerCase()}
-                                                    </span>
+                                                    <div className="text-right">
+                                                        <div className="flex items-center gap-1 justify-end">
+                                                            <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-primary/10 text-primary border-primary/30 px-1.5 py-0">
+                                                                {u.name}
+                                                            </Badge>
+                                                        </div>
+                                                        <span className="text-[10px] text-muted-foreground font-bold block mt-0.5">
+                                                            {u.conversion_factor} pcs
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
+                                        );
+                                    })
+                                ) : (
+                                    !isUnitFormOpen && (
+                                        <div className="h-full min-h-[160px] flex flex-col items-center justify-center p-4 border border-dashed border-border rounded-2xl bg-card/30 text-center">
+                                            <Layers className="h-6 w-6 text-muted-foreground/40 mb-1.5" />
+                                            <p className="text-xs font-bold text-muted-foreground">
+                                                {renderBoth('no_units_added')}
+                                            </p>
+                                            <p className="text-[10px] text-muted-foreground/60 mt-1 max-w-[220px]">
+                                                Click "+ Add Unit" to add wholesale/box pricing (Box, Case, Pack).
+                                            </p>
                                         </div>
-                                    );
-                                })}
+                                    )
+                                )}
                             </div>
-                        ) : (
-                            !isUnitFormOpen && (
-                                <div className="text-center py-6 px-4 border border-dashed border-border rounded-2xl bg-card/40">
-                                    <Layers className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-                                    <p className="text-xs font-bold text-muted-foreground">
-                                        {renderBoth('no_units_added')}
-                                    </p>
-                                    <p className="text-[10px] text-muted-foreground/60 mt-1">
-                                        This product sells as single items (Piece) at the base price of {settings.shop.currency} {editedProduct.price.toFixed(2)}. Click "+ Add Unit" to configure wholesale/box pricing.
-                                    </p>
-                                </div>
-                            )
-                        )}
+                        </div>
                     </div>
                 </div>
 
-                <DialogFooter className="gap-3 pt-6 border-t border-border">
-                    <Button variant="ghost" onClick={onClose} className="flex-1 h-12 border-border hover:bg-muted text-foreground font-black uppercase tracking-widest">
+                {/* Footer */}
+                <DialogFooter className="gap-3 px-6 py-4 border-t border-border bg-muted/20">
+                    <Button variant="ghost" onClick={onClose} className="flex-1 h-11 border-border hover:bg-muted text-foreground font-black uppercase tracking-widest text-xs">
                         {renderBoth('cancel')}
                     </Button>
-                    <Button onClick={handleSave} className="flex-1 h-12 bg-primary hover:bg-primary/90 font-black uppercase tracking-widest shadow-[0_0_20px_rgba(0,132,255,0.3)]">
+                    <Button onClick={handleSave} className="flex-1 h-11 bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest text-xs shadow-[0_0_20px_rgba(0,132,255,0.3)]">
                         <Save className="ml-2 h-4 w-4" /> {renderBoth('save_product')}
                     </Button>
                 </DialogFooter>

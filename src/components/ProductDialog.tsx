@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Product, useAppContext } from '@/context/AppContext';
-import { Plus, Trash2, Save, Upload, CalendarIcon, Package, DollarSign, Barcode, Hash, ListTree, Image as ImageIcon, Boxes, Layers, Pencil, X, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Save, Upload, CalendarIcon, Package, DollarSign, Barcode, Hash, ListTree, Image as ImageIcon, Boxes, Layers, Pencil, X, Sparkles, Check } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -444,7 +444,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                 onClick={() => setUnitForm(prev => ({ ...prev, name: preset }))}
                                                 className={cn(
                                                     "px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all",
-                                                    unitForm.name.toLowerCase() === preset.toLowerCase()
+                                                    (unitForm.name || '').toLowerCase() === preset.toLowerCase()
                                                         ? "bg-primary text-white border-primary"
                                                         : "bg-muted text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
                                                 )}
@@ -484,7 +484,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                     <div className="grid grid-cols-2 gap-2">
                                         <div className="space-y-1">
                                             <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
-                                                {renderBoth('unit_price')} ({settings.shop.currency})*
+                                                {renderBoth('unit_price')} ({settings?.shop?.currency || 'MVR'})*
                                             </Label>
                                             <Input
                                                 type="number"
@@ -511,7 +511,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
 
                                     {parseFloat(unitForm.price) > 0 && parseFloat(unitForm.conversion_factor) > 0 && (
                                         <div className="p-1.5 rounded-lg bg-muted/60 text-[10px] text-muted-foreground text-center font-mono">
-                                            = {settings.shop.currency} {(parseFloat(unitForm.price) / parseFloat(unitForm.conversion_factor)).toFixed(2)} / pc
+                                            = {settings?.shop?.currency || 'MVR'} {(parseFloat(unitForm.price) / parseFloat(unitForm.conversion_factor)).toFixed(2)} / pc
                                         </div>
                                     )}
 
@@ -542,7 +542,9 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                             <div className="flex-1 mt-3 space-y-2 overflow-y-auto max-h-[260px] custom-scrollbar">
                                 {units.length > 0 ? (
                                     units.map((u, index) => {
-                                        const perPiece = u.conversion_factor > 0 ? (u.price / u.conversion_factor).toFixed(2) : '0.00';
+                                        const conv = Number(u.conversion_factor || 0);
+                                        const price = Number(u.price || 0);
+                                        const perPiece = conv > 0 ? (price / conv).toFixed(2) : '0.00';
                                         return (
                                             <div
                                                 key={index}
@@ -572,10 +574,10 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                 <div className="flex items-center gap-2.5 flex-1 justify-end text-right">
                                                     <div className="text-left font-mono">
                                                         <span className="text-xs font-black text-primary block">
-                                                            {settings.shop.currency} {u.price.toFixed(2)}
+                                                            {settings?.shop?.currency || 'MVR'} {price.toFixed(2)}
                                                         </span>
                                                         <span className="text-[9px] text-muted-foreground block">
-                                                            ~ {settings.shop.currency} {perPiece} / pc
+                                                            ~ {settings?.shop?.currency || 'MVR'} {perPiece} / pc
                                                         </span>
                                                     </div>
                                                     <div className="text-right">

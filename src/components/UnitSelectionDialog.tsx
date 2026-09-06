@@ -16,6 +16,14 @@ interface UnitSelectionDialogProps {
     onSelect: (unit: { name: string, price: number, conversion_factor: number }) => void;
 }
 
+interface DisplayUnit {
+    name: string;
+    price: number;
+    conversion_factor: number;
+    barcode?: string;
+    isBase?: boolean;
+}
+
 const UnitSelectionDialog: React.FC<UnitSelectionDialogProps> = ({ isOpen, onClose, product, onSelect }) => {
     const { t } = useTranslation();
     const { settings } = useAppContext();
@@ -23,14 +31,15 @@ const UnitSelectionDialog: React.FC<UnitSelectionDialogProps> = ({ isOpen, onClo
     if (!product) return null;
 
     // Base unit option
-    const baseUnit = {
+    const baseUnit: DisplayUnit = {
         name: 'Piece',
-        price: product.price,
+        price: Number(product.price || 0),
         conversion_factor: 1,
         isBase: true
     };
 
-    const units = [baseUnit, ...(product.units || [])];
+    const units: DisplayUnit[] = [baseUnit, ...((product.units || []).map(u => ({ ...u, isBase: false })))];
+    const currency = settings?.shop?.currency || 'MVR';
 
     const renderBoth = (key: string, options?: any) => (
         <>
@@ -54,7 +63,9 @@ const UnitSelectionDialog: React.FC<UnitSelectionDialogProps> = ({ isOpen, onClo
 
                 <div className="grid gap-2.5 py-4">
                     {units.map((unit, index) => {
-                        const perPiece = unit.conversion_factor > 0 ? (unit.price / unit.conversion_factor).toFixed(2) : unit.price.toFixed(2);
+                        const price = Number(unit.price || 0);
+                        const conv = Number(unit.conversion_factor || 1);
+                        const perPiece = conv > 0 ? (price / conv).toFixed(2) : price.toFixed(2);
                         return (
                             <button
                                 key={index}
@@ -63,19 +74,19 @@ const UnitSelectionDialog: React.FC<UnitSelectionDialogProps> = ({ isOpen, onClo
                                 onClick={() => {
                                     onSelect({
                                         name: unit.name,
-                                        price: unit.price,
-                                        conversion_factor: unit.conversion_factor
+                                        price: price,
+                                        conversion_factor: conv
                                     });
                                     onClose();
                                 }}
                             >
                                 <div className="text-left font-mono">
                                     <span className="text-lg font-black text-primary group-hover:text-primary transition-colors block">
-                                        {settings.shop.currency} {unit.price.toFixed(2)}
+                                        {currency} {price.toFixed(2)}
                                     </span>
-                                    {!unit.isBase && unit.conversion_factor > 1 && (
+                                    {!unit.isBase && conv > 1 && (
                                         <span className="text-[10px] text-muted-foreground font-sans block">
-                                            ~ {settings.shop.currency} {perPiece} / pc
+                                            ~ {currency} {perPiece} / pc
                                         </span>
                                     )}
                                 </div>
@@ -97,7 +108,7 @@ const UnitSelectionDialog: React.FC<UnitSelectionDialogProps> = ({ isOpen, onClo
                                             </span>
                                         </div>
                                         <span className="text-[11px] text-muted-foreground block">
-                                            {unit.isBase ? '1 pc (Single item)' : `Contains ${unit.conversion_factor} pcs`}
+                                            {unit.isBase ? '1 pc (Single item)' : `Contains ${conv} pcs`}
                                         </span>
                                     </div>
                                     <div className="h-10 w-10 rounded-xl bg-card border border-border flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:border-primary/40 transition-all">

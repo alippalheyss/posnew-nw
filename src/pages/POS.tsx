@@ -287,12 +287,8 @@ const POS = () => {
       }
     }
 
-    if (product.units && product.units.length > 0) {
-      setProductForUnitSelection(product);
-      setIsUnitSelectionDialogOpen(true);
-    } else {
-      addToCart(product);
-    }
+    // Add with default unit (Piece) directly to cart - unit can be switched anytime in the cart
+    addToCart(product);
   };
 
   const addToCart = (product: Product, discountFactor: number = 1, selectedUnit?: string) => {
@@ -1039,16 +1035,17 @@ const renderBothString = (key: string, options?: any) => {
                                   <DropdownMenuTrigger asChild>
                                     <button
                                       type="button"
-                                      className="flex items-center gap-1 text-[10px] font-black bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 px-2.5 py-0.5 rounded-lg transition-colors cursor-pointer shadow-sm"
+                                      className="flex items-center gap-1.5 text-[11px] font-black bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow-sm active:scale-95"
+                                      title={t('switch_unit') || 'Switch Unit'}
                                     >
-                                      <Boxes className="h-3 w-3 opacity-70" />
+                                      <Boxes className="h-3.5 w-3.5 text-primary" />
                                       <span>{currentUnit}</span>
                                       <ChevronDown className="h-3 w-3 opacity-70" />
                                     </button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end" className="bg-card border-border text-foreground font-faruma text-right min-w-[220px] z-[120] shadow-2xl rounded-2xl p-1">
                                     <div className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-muted-foreground border-b border-border text-right">
-                                      {t('switch_unit') || 'Switch Unit'}
+                                      {t('switch_unit') || 'Switch Unit (ޔުނިޓް ބަދަލުކުރޭ)'}
                                     </div>
                                     <DropdownMenuItem
                                       onClick={() => switchCartItemUnit(item, 'Piece')}
@@ -1057,7 +1054,7 @@ const renderBothString = (key: string, options?: any) => {
                                         currentUnit === 'Piece' && "font-black text-primary bg-primary/10"
                                       )}
                                     >
-                                      <span className="font-mono font-bold text-primary">{settings.shop.currency} {prod.price.toFixed(2)}</span>
+                                      <span className="font-mono font-bold text-primary">{settings?.shop?.currency || 'MVR'} {Number(prod.price || 0).toFixed(2)}</span>
                                       <span className="font-bold">Piece (1 pc)</span>
                                     </DropdownMenuItem>
                                     {prod.units!.map((u, idx) => (
@@ -1069,7 +1066,7 @@ const renderBothString = (key: string, options?: any) => {
                                           currentUnit === u.name && "font-black text-primary bg-primary/10"
                                         )}
                                       >
-                                        <span className="font-mono font-bold text-primary">{settings.shop.currency} {u.price.toFixed(2)}</span>
+                                        <span className="font-mono font-bold text-primary">{settings?.shop?.currency || 'MVR'} {Number(u.price || 0).toFixed(2)}</span>
                                         <span className="font-bold">{u.name} ({u.conversion_factor} pcs)</span>
                                       </DropdownMenuItem>
                                     ))}

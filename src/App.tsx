@@ -41,6 +41,16 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/customer-display" element={<CustomerDisplay />} />
 
+              {/* Standalone Mobile Purchase Route (No desktop Layout or Sidebar) */}
+              <Route
+                path="/mobile-purchase"
+                element={
+                  <ProtectedRoute>
+                    <MobilePurchase />
+                  </ProtectedRoute>
+                }
+              />
+
               {/* Protected Routes */}
               <Route
                 path="/*"

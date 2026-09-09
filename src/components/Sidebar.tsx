@@ -46,11 +46,15 @@ const Sidebar = () => {
   const { sidebarCollapsed, setSidebarCollapsed } = useAppContext();
   const navItems = allNavItems.filter(item => can(item.permission));
 
+  if (location.pathname === '/mobile-purchase') {
+    return null;
+  }
+
   return (
     <>
       <div className={cn("flex-shrink-0 transition-all duration-300 hidden md:block", sidebarCollapsed ? "w-0" : "w-[280px]")} />
       <div className={cn(
-        "flex flex-col h-screen font-faruma overflow-hidden z-[100] transition-all duration-300 group/sidebar fixed right-0 top-0 bottom-0",
+        "hidden md:flex flex-col h-screen font-faruma overflow-hidden z-[100] transition-all duration-300 group/sidebar fixed right-0 top-0 bottom-0",
         sidebarCollapsed 
           ? "w-2 hover:w-[280px] bg-transparent hover:bg-background hover:border-l hover:border-border hover:shadow-[-20px_0_50px_rgba(0,0,0,0.5)]" 
           : "w-[280px] bg-background border-l border-border shadow-[-20px_0_50px_rgba(0,0,0,0.5)]"

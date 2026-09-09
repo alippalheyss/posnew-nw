@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useAppContext } from '@/context/AppContext';
 import { Button } from './ui/button';
@@ -12,6 +13,11 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { sidebarCollapsed, setSidebarCollapsed } = useAppContext();
+  const location = useLocation();
+
+  if (location.pathname === '/mobile-purchase') {
+    return <>{children}</>;
+  }
   
   return (
     <div className="flex h-[100dvh] flex-row-reverse bg-background text-foreground overflow-hidden">

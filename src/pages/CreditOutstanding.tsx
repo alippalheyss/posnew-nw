@@ -357,7 +357,24 @@ const CreditOutstanding = () => {
   );
 
   const handleShareCustomerViber = (customer: Customer) => {
-    const message = formatCreditStatementViberMessage(customer, settings.shop);
+    let balance = Number(customer.outstanding_balance || 0);
+    if (!balance || balance <= 0) {
+      const custCreditSales = sales.filter(s =>
+        (s.customer?.id === customer.id) &&
+        (s.paymentMethod?.toLowerCase() === 'credit' || (s.paymentMethod?.toLowerCase() === 'split' && s.splitDetails?.some((d: any) => d.method?.toLowerCase() === 'credit' && d.customerId === customer.id)))
+      );
+      const totalCredit = custCreditSales.reduce((sum, s) => {
+        if (s.paymentMethod?.toLowerCase() === 'credit') return sum + (s.grandTotal || 0);
+        const splitCredit = s.splitDetails?.filter((d: any) => d.method?.toLowerCase() === 'credit' && d.customerId === customer.id).reduce((ss: number, dd: any) => ss + dd.amount, 0) || 0;
+        return sum + splitCredit;
+      }, 0);
+      const totalSettled = customer.settlement_history?.reduce((sum, s) => sum + (s.amount_paid || 0), 0) || 0;
+      if (totalCredit > 0) {
+        balance = Math.max(0, totalCredit - totalSettled);
+      }
+    }
+
+    const message = formatCreditStatementViberMessage(customer, settings.shop, balance);
     shareViaViber({
       phone: customer.phone,
       text: message

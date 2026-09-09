@@ -36,7 +36,7 @@ export const formatCartViberMessage = (
   if (customer) {
     msg += `👤 Customer: ${customer.name_en || customer.name_dv} (${customer.code || ''})\n`;
   }
-  msg += `─────────────────────────\n`;
+  msg += `-------------------------\n`;
 
   items.forEach((item, index) => {
     const unitLabel = item.selected_unit && item.selected_unit !== 'Piece' ? ` [${item.selected_unit}]` : '';
@@ -45,15 +45,15 @@ export const formatCartViberMessage = (
     msg += `${index + 1}. ${itemName}${unitLabel}\n   ${item.qty} x ${currency} ${Number(item.price || 0).toFixed(2)} = ${currency} ${lineTotal}\n`;
   });
 
-  msg += `─────────────────────────\n`;
+  msg += `-------------------------\n`;
   msg += `Subtotal: ${currency} ${totals.subtotal.toFixed(2)}\n`;
   if (totals.gstAmount > 0) {
     msg += `GST (${taxRate}%): ${currency} ${totals.gstAmount.toFixed(2)}\n`;
   }
   msg += `*Total Due: ${currency} ${totals.grandTotal.toFixed(2)}*\n`;
-  msg += `─────────────────────────\n`;
+  msg += `-------------------------\n`;
 
-  if (shopSettings?.receiptFooter) {
+  if (shopSettings?.receiptFooter && shopSettings.receiptFooter !== 'Visit us again soon!') {
     msg += `🏦 *Transfer Information:*\n${shopSettings.receiptFooter}\n`;
   } else if (shopSettings?.shopPhone) {
     msg += `🏦 *Transfer Information:*\nPlease transfer to our BML account and send the slip.\nContact / BML MobilePay: ${shopSettings.shopPhone}\n`;
@@ -65,27 +65,41 @@ export const formatCartViberMessage = (
 
 export const formatCreditStatementViberMessage = (
   customer: Customer,
-  shopSettings?: any
+  shopSettings?: any,
+  overrideBalance?: number
 ): string => {
   const shopName = shopSettings?.shopName || 'Shop';
   const currency = shopSettings?.currency || 'MVR';
   const now = new Date().toISOString();
-  const balance = Number(customer.outstanding_balance || 0).toFixed(2);
 
+  // Robustly extract the balance from override or any customer balance field
+  const rawBalance = 
+    overrideBalance !== undefined && overrideBalance !== null
+      ? overrideBalance
+      : (customer.outstanding_balance ?? 
+         (customer as any).balance ?? 
+         (customer as any).total_outstanding ?? 
+         (customer as any).outstanding ?? 
+         0);
+  const balance = Number(rawBalance || 0).toFixed(2);
+  const customerName = customer.name_dv || customer.name_en || 'Customer';
+
+  // Keep format concise and lightweight (no heavy multi-byte box characters)
+  // Ensure the outstanding balance is at the TOP so it is NEVER truncated by URL length limits
   let msg = `📋 *${shopName} - Outstanding Statement*\n`;
+  msg += `👤 Customer: ${customerName}${customer.code ? ` (${customer.code})` : ''}\n`;
+  msg += `💰 *OUTSTANDING: ${currency} ${balance}*\n`;
+  msg += `💰 *ދައްކަންޖެހޭ އަދަދު: ${currency} ${balance}*\n`;
   msg += `📅 Date: ${formatDate(now)}\n`;
-  msg += `👤 Customer: ${customer.name_en || customer.name_dv} (${customer.code || ''})\n`;
   if (customer.phone) {
     msg += `📞 Phone: ${customer.phone}\n`;
   }
-  msg += `─────────────────────────\n`;
-  msg += `*Outstanding Balance: ${currency} ${balance}*\n`;
-  msg += `─────────────────────────\n`;
+  msg += `-------------------------\n`;
 
-  if (shopSettings?.receiptFooter) {
-    msg += `🏦 *Account for Settlement:*\n${shopSettings.receiptFooter}\n`;
+  if (shopSettings?.receiptFooter && shopSettings.receiptFooter !== 'Visit us again soon!') {
+    msg += `🏦 *Payment Info:*\n${shopSettings.receiptFooter}\n`;
   } else if (shopSettings?.shopPhone) {
-    msg += `🏦 *Account for Settlement:*\nPlease transfer to our BML account and send the receipt.\nContact / Account: ${shopSettings.shopPhone}\n`;
+    msg += `🏦 *Account / Contact:* ${shopSettings.shopPhone}\n`;
   }
 
   msg += `Please send the transfer slip once payment is made. Thank you! 🙏`;
@@ -112,13 +126,12 @@ export const shareViaViber = async ({
   const encodedText = encodeURIComponent(text);
 
   // 2. Open Viber via URI scheme
+  // Provide both 'text' and 'draft' query parameters for maximum compatibility across Viber versions
   if (cleaned) {
-    // Direct chat link with customer's phone
-    window.location.href = `viber://chat?number=${cleaned}&draft=${encodedText}`;
+    window.location.href = `viber://chat?number=${cleaned}&text=${encodedText}&draft=${encodedText}`;
     showSuccess(`Copied statement & opening Viber chat with ${phone}!`);
   } else {
-    // Open Viber share dialog
     window.location.href = `viber://forward?text=${encodedText}`;
-    showSuccess('Copied cart summary & opening Viber!');
+    showSuccess('Copied statement & opening Viber!');
   }
 };

@@ -22,6 +22,7 @@ import autoTable from 'jspdf-autotable';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from "@/components/ui/progress";
 import { formatDate, formatTime, formatCurrency, toISODate } from '@/utils/formatters';
+import { formatCreditStatementViberMessage, shareViaViber } from '@/utils/viberHelper';
 
 interface Settlement {
   id: string;
@@ -348,6 +349,21 @@ const CreditOutstanding = () => {
   };
 
 
+  const ViberIcon = ({ className }: { className?: string }) => (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+      <path d="M19.39 3.55C17.43 1.95 14.54 1.25 11.53 1.25c-4.48 0-8.23 2.5-9.84 6.37C.71 9.98.67 12.38 1.57 14.67c.69 1.76 1.83 3.32 3.33 4.54l-.56 2.37c-.16.66.42 1.25 1.07 1.07l2.84-.79c1.17.44 2.42.69 3.73.69 4.47 0 8.22-2.5 9.83-6.37.98-2.36 1.02-4.76.12-7.05-.68-1.76-1.83-3.32-3.33-4.54l.79-1.04zm-1.85 11.83c-1.28 3.08-4.32 5.07-7.96 5.07-1.06 0-2.08-.18-3.04-.53l-2.09.58.42-1.78c-1.22-1-2.15-2.27-2.7-3.7-.72-1.84-.69-3.77.1-5.67 1.28-3.08 4.31-5.07 7.95-5.07 2.47 0 4.83.58 6.43 1.89 1.23 1 2.16 2.27 2.71 3.7.72 1.85.69 3.78-.1 5.68l-.72-.17z" />
+      <path d="M13.2 7.74c-.2-.04-.41.08-.45.28-.05.2.07.41.28.45 1.48.27 2.65 1.44 2.92 2.92.03.18.18.31.36.31.03 0 .06 0 .09-.02.2-.04.33-.24.29-.45-.33-1.81-1.77-3.25-3.49-3.49zm-.52-1.85c-.2-.04-.4.08-.44.28-.04.2.08.4.28.44 2.44.46 4.37 2.39 4.83 4.83.03.18.18.31.36.31.03 0 .05 0 .08-.01.2-.04.33-.24.29-.44-.52-2.82-2.76-5.05-5.4-5.41zm-1.7 6.47c-.24-.31-.59-.44-.9-.35-.34.1-.73.44-1.09.82-.41-.24-.87-.58-1.33-1.04-.46-.46-.8-.92-1.04-1.33.38-.36.72-.75.82-1.09.09-.31-.04-.66-.35-.9L7.4 8.04c-.32-.25-.76-.23-1.04.06l-.76.77c-.4.4-.55.98-.37 1.52.48 1.43 1.5 3.32 3.03 4.85 1.53 1.53 3.42 2.55 4.85 3.03.54.18 1.12.03 1.52-.37l.77-.76c.29-.28.31-.72.06-1.04l-1.48-1.69z" />
+    </svg>
+  );
+
+  const handleShareCustomerViber = (customer: Customer) => {
+    const message = formatCreditStatementViberMessage(customer, settings.shop);
+    shareViaViber({
+      phone: customer.phone,
+      text: message
+    });
+  };
+
   const renderBoth = (key: string, options?: any) => (
     <>
       {t(key, options)} ({t(key, { ...options, lng: 'en' })})
@@ -512,6 +528,15 @@ const CreditOutstanding = () => {
                           DETAILS
                         </Button>
                      </div>
+
+                     <Button
+                        type="button"
+                        onClick={() => handleShareCustomerViber(customer)}
+                        className="w-full mt-2 bg-[#7360F2]/15 hover:bg-[#7360F2]/25 text-[#7360F2] border border-[#7360F2]/30 text-[10px] font-black h-9 rounded-xl transition-all gap-2 flex items-center justify-center active:scale-95"
+                     >
+                        <ViberIcon className="h-3.5 w-3.5 fill-current" />
+                        <span>Send Statement via Viber (ވައިބަރ އިން ފޮނުވާ)</span>
+                     </Button>
                   </div>
                </CardContent>
             </Card>

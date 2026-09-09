@@ -24,6 +24,7 @@ import ShrinkageReport from "./pages/ShrinkageReport";
 import Expenses from "./pages/Expenses";
 import CustomerDisplay from "./pages/CustomerDisplay";
 import LocalPurchaseWindow from "./components/LocalPurchaseWindow";
+import MobilePurchase from "./pages/MobilePurchase";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +62,7 @@ const App = () => (
                         <Route path="/expiry-alerts" element={<ExpiryAlerts />} />
                         <Route path="/gst-reports" element={<GSTReports />} />
                         <Route path="/shrinkage-report" element={<ShrinkageReport />} />
+                        <Route path="/mobile-purchase" element={<MobilePurchase />} />
                         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                         <Route path="*" element={<NotFound />} />
                       </Routes>

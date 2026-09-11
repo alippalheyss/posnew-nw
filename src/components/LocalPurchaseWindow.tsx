@@ -159,27 +159,52 @@ const LocalPurchaseWindow = () => {
             </span>
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => setIsPurchaseWindowMinimized(false)} className="h-8 w-8 rounded-full hover:bg-muted/80 text-foreground">
-          <Maximize2 className="h-4 w-4" />
+        <Button variant="outline" size="icon" onClick={() => setIsPurchaseWindowMinimized(false)} className="h-8 w-8 rounded-xl bg-background border-border hover:bg-primary/15 hover:border-primary/50 hover:text-primary text-foreground shadow-sm">
+          <Maximize2 className="h-4 w-4 stroke-[2]" />
         </Button>
-        <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8 rounded-full hover:bg-red-500/20 text-red-500">
-          <X className="h-4 w-4" />
+        <Button variant="outline" size="icon" onClick={handleClose} className="h-8 w-8 rounded-xl bg-red-500/10 border border-red-500/30 hover:bg-red-500/25 text-red-500 shadow-sm">
+          <X className="h-4 w-4 stroke-[2.5]" />
         </Button>
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg bg-card border border-border rounded-3xl shadow-2xl overflow-hidden flex flex-col font-faruma" dir="rtl">
+    <div 
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in cursor-pointer"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          setIsPurchaseWindowMinimized(true);
+        }
+      }}
+    >
+      <div 
+        className="w-full max-w-lg bg-card border border-border rounded-3xl shadow-2xl overflow-hidden flex flex-col font-faruma relative cursor-default" 
+        dir="rtl"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-border bg-muted relative">
-          <div className="flex gap-2 absolute top-4 left-4" dir="ltr">
-            <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8 rounded-full hover:bg-red-500/20 text-red-500">
-              <X className="h-4 w-4" />
+          <div className="flex items-center gap-2 absolute top-5 left-5 z-20" dir="ltr">
+            <Button 
+              type="button"
+              variant="outline" 
+              size="icon" 
+              onClick={() => setIsPurchaseWindowMinimized(true)} 
+              className="h-8 w-8 rounded-xl border border-border/80 bg-background/90 hover:bg-amber-500/15 hover:border-amber-500/50 hover:text-amber-500 text-foreground/80 shadow-sm transition-all active:scale-90"
+              title="Minimize (ކުޑަކޮށްލާ)"
+            >
+              <Minus className="h-4 w-4 stroke-[2.5]" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsPurchaseWindowMinimized(true)} className="h-8 w-8 rounded-full hover:bg-muted/80 text-foreground">
-              <Minus className="h-4 w-4" />
+            <Button 
+              type="button"
+              variant="outline" 
+              size="icon" 
+              onClick={handleClose} 
+              className="h-8 w-8 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/25 text-red-500 shadow-sm transition-all active:scale-90"
+              title="Close (ބަންދުކޮށްލާ)"
+            >
+              <X className="h-4 w-4 stroke-[2.5]" />
             </Button>
           </div>
           <div className="text-right w-full pr-8">

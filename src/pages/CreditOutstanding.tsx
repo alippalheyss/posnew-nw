@@ -392,13 +392,16 @@ const CreditOutstanding = () => {
   };
 
   const allSettlements = customers.flatMap(c =>
-    c.settlement_history.map(s => ({
+    (c.settlement_history || []).map(s => ({
       ...s,
-      customerName: c.name_dv,
+      customerName: c.name_dv || c.name_en,
       customerEn: c.name_en
     }))
-  ).sort((a, b) => b.id.localeCompare(a.id))
-    .slice(0, 10);
+  ).sort((a, b) => {
+    const timeA = new Date(a.date).getTime() || 0;
+    const timeB = new Date(b.date).getTime() || 0;
+    return timeB - timeA;
+  }).slice(0, 15);
 
   return (
     <div className="p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
@@ -420,19 +423,19 @@ const CreditOutstanding = () => {
            </div>
 
            <ScrollArea className="h-[140px] overflow-hidden">
-              <div className="flex gap-4 p-1">
+              <div className="flex gap-4 p-1" dir="ltr">
                 {allSettlements.length === 0 ? (
                   <div className="w-full h-24 flex items-center justify-center border-2 border-dashed border-border rounded-3xl text-foreground/10 font-black uppercase tracking-widest text-[10px]">
                      No recent settlements recorded
                   </div>
                 ) : (
                   allSettlements.map((s) => (
-                    <div key={s.id} className="min-w-[220px] bg-card border border-border hover:border-green-500/30 rounded-3xl p-4 text-right transition-all group">
+                    <div key={s.id} className="min-w-[220px] bg-card border border-border hover:border-green-500/30 rounded-3xl p-4 text-left transition-all group shadow-sm">
                        <div className="flex items-center justify-between mb-3">
                           <CheckCircle2 className="h-4 w-4 text-green-500" />
                           <span className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest">{formatDate(s.date)} {formatTime(s.date)}</span>
                        </div>
-                       <p className="font-black text-foreground text-sm truncate mb-1">{s.customerName}</p>
+                       <p className="font-black text-foreground text-sm truncate mb-1" dir="rtl">{s.customerName}</p>
                        <p className="text-xl font-black text-green-500">{settings.shop.currency} {s.amount_paid.toFixed(0)}</p>
                     </div>
                   ))

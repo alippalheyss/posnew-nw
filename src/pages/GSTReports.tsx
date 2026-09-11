@@ -20,7 +20,7 @@ import * as XLSX from 'xlsx';
 
 const GSTReports = () => {
     const { t } = useTranslation();
-    const { sales, purchases, settings, setIsPurchaseWindowOpen, deletePurchase } = useAppContext();
+    const { sales, purchases, vendors, settings, setIsPurchaseWindowOpen, deletePurchase } = useAppContext();
     const [timeRange, setTimeRange] = useState('this_month');
     const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(null);
     
@@ -92,36 +92,83 @@ const GSTReports = () => {
 
 
     const exportToExcel = () => {
-        const data = [
-            ["GST Report", settings.shop.shopName],
-            ["Period", timeRange.replace('_', ' ').toUpperCase()],
-            [],
-            ["Summary"],
-            ["Total Taxable Sales", totalTaxableSales.toFixed(2)],
-            ["Output GST", outputGST.toFixed(2)],
-            ["Total Taxable Purchases", totalPurchases.toFixed(2)],
-            ["Input GST", inputGST.toFixed(2)],
-            ["Net GST Payable", netGST.toFixed(2)],
-            [],
-            ["Input GST Details (Purchases)"],
-            ["Date", "Bill #", "Vendor", "Amount (Excl. GST)", "GST Amount", "Total Amount"]
+        const headers = [
+            "#",
+            "Supplier TIN",
+            "Supplier Name",
+            "Supplier Invoice Number",
+            "Invoice Date",
+            "Invoice Total (excluding GST)",
+            "GST Charged at 6%",
+            "GST Charged at 8%",
+            "GST Charged at 12%",
+            "GST Charged at 16%",
+            "GST Charged at 17%",
+            "Your Taxable Activity Number",
+            "Revenue / Capital"
         ];
 
-        filteredPurchases.forEach(p => {
-            data.push([
-                p.date,
-                p.billNumber,
-                p.vendorName,
-                p.amount.toFixed(2),
-                p.gstAmount.toFixed(2),
-                (p.amount + p.gstAmount).toFixed(2)
-            ]);
+        const rows = filteredPurchases.map((p, index) => {
+            const matchedVendor = vendors.find(v =>
+                (p.vendorId && v.id === p.vendorId) ||
+                (v.name_en && p.vendor && v.name_en.trim().toLowerCase() === p.vendor.trim().toLowerCase()) ||
+                (v.name_dv && p.vendor && v.name_dv.trim().toLowerCase() === p.vendor.trim().toLowerCase()) ||
+                (v.name_en && (p as any).vendorName && v.name_en.trim().toLowerCase() === (p as any).vendorName.trim().toLowerCase()) ||
+                (v.name_dv && (p as any).vendorName && v.name_dv.trim().toLowerCase() === (p as any).vendorName.trim().toLowerCase())
+            );
+
+            const supplierTin = matchedVendor?.tin_number || '';
+            const supplierName = matchedVendor?.name_en || matchedVendor?.name_dv || (p as any).vendorName || p.vendor || '';
+            const supplierInvoiceNumber = p.billNumber || '';
+            const invoiceDate = extractDateOnly(p.date) || p.date || '';
+            const invoiceTotalExclGst = Number((p.amount || 0).toFixed(2));
+            const gstChargedAt6 = 0;
+            const gstChargedAt8 = Number((p.gstAmount || 0).toFixed(2));
+            const gstChargedAt12 = 0;
+            const gstChargedAt16 = 0;
+            const gstChargedAt17 = 0;
+            const taxableActivityNumber = 1;
+            const revenueCapital = "Revenue";
+
+            return [
+                index + 1,
+                supplierTin,
+                supplierName,
+                supplierInvoiceNumber,
+                invoiceDate,
+                invoiceTotalExclGst,
+                gstChargedAt6,
+                gstChargedAt8,
+                gstChargedAt12,
+                gstChargedAt16,
+                gstChargedAt17,
+                taxableActivityNumber,
+                revenueCapital
+            ];
         });
 
-        const ws = XLSX.utils.aoa_to_sheet(data);
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+
+        ws['!cols'] = [
+            { wch: 6 },  // #
+            { wch: 18 }, // Supplier TIN
+            { wch: 30 }, // Supplier Name
+            { wch: 25 }, // Supplier Invoice Number
+            { wch: 15 }, // Invoice Date
+            { wch: 30 }, // Invoice Total (excluding GST)
+            { wch: 18 }, // GST Charged at 6%
+            { wch: 18 }, // GST Charged at 8%
+            { wch: 18 }, // GST Charged at 12%
+            { wch: 18 }, // GST Charged at 16%
+            { wch: 18 }, // GST Charged at 17%
+            { wch: 28 }, // Your Taxable Activity Number
+            { wch: 20 }  // Revenue / Capital
+        ];
+
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "GST Report");
-        XLSX.writeFile(wb, `GST_Report_${timeRange}.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, "Input Tax Statement");
+        XLSX.writeFile(wb, `MIRA_Input_Tax_Statement_${timeRange}.xlsx`);
+        showSuccess('MIRA Input Tax Statement downloaded successfully');
     };
 
     return (
@@ -244,7 +291,21 @@ const GSTReports = () => {
                                                         </div>
                                                     )}
                                                 </TableCell>
-                                                <TableCell className="text-right text-sm font-bold text-muted-foreground/80">{purchase.vendorName || purchase.vendor || '-'}</TableCell>
+                                                <TableCell className="text-right text-sm font-bold text-muted-foreground/80">
+                                                    <div>{purchase.vendorName || purchase.vendor || '-'}</div>
+                                                    {(() => {
+                                                        const matchedVendor = vendors.find(v =>
+                                                            (purchase.vendorId && v.id === purchase.vendorId) ||
+                                                            (v.name_en && purchase.vendor && v.name_en.trim().toLowerCase() === purchase.vendor.trim().toLowerCase()) ||
+                                                            (v.name_dv && purchase.vendor && v.name_dv.trim().toLowerCase() === purchase.vendor.trim().toLowerCase()) ||
+                                                            (v.name_en && (purchase as any).vendorName && v.name_en.trim().toLowerCase() === (purchase as any).vendorName.trim().toLowerCase()) ||
+                                                            (v.name_dv && (purchase as any).vendorName && v.name_dv.trim().toLowerCase() === (purchase as any).vendorName.trim().toLowerCase())
+                                                        );
+                                                        return matchedVendor?.tin_number ? (
+                                                            <div className="text-[10px] font-mono text-primary/80 font-normal">TIN: {matchedVendor.tin_number}</div>
+                                                        ) : null;
+                                                    })()}
+                                                </TableCell>
                                                 <TableCell className="text-right font-medium">{settings.shop.currency} {purchase.amount.toFixed(2)}</TableCell>
                                                 <TableCell className="text-right font-black text-orange-500">{settings.shop.currency} {purchase.gstAmount.toFixed(2)}</TableCell>
                                                 <TableCell className="text-right font-black text-primary">

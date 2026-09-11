@@ -1331,16 +1331,23 @@ const POS = () => {
       </Dialog>
 
       <Dialog open={isExpiryDialogOpen} onOpenChange={setIsExpiryDialogOpen}>
-        <DialogContent className="sm:max-w-[480px] font-faruma bg-card text-foreground border-border text-right p-6 shadow-2xl rounded-3xl" dir="rtl">
-          <DialogHeader className="pb-3 text-right space-y-2">
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <Badge variant="outline" className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30 text-xs font-black">
-                {selectedProductForExpiry?.expiry_date ? formatDate(selectedProductForExpiry.expiry_date) : ''}
-              </Badge>
-              <DialogTitle className="text-xl text-orange-600 dark:text-orange-400 flex items-center gap-2 font-black">
-                <span>{renderBoth('item_near_expiry')}</span>
-                <AlertTriangle className="h-5 w-5 text-orange-500" />
-              </DialogTitle>
+        <DialogContent className="sm:max-w-[460px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border text-right p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+          <DialogHeader className="pb-3 text-right space-y-2 border-b border-border/60">
+            <div className="flex items-start justify-between gap-2 pl-8">
+              {selectedProductForExpiry?.expiry_date && (
+                <Badge variant="outline" className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30 text-[11px] font-black shrink-0 mt-0.5">
+                  {formatDate(selectedProductForExpiry.expiry_date)}
+                </Badge>
+              )}
+              <div className="text-right flex-1 min-w-0">
+                <DialogTitle className="text-lg font-black text-orange-600 dark:text-orange-400 flex items-center justify-end gap-2">
+                  <span className="truncate">{t('item_near_expiry')}</span>
+                  <AlertTriangle className="h-5 w-5 shrink-0 text-orange-500" />
+                </DialogTitle>
+                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-0.5">
+                  {t('item_near_expiry', { lng: 'en' })}
+                </p>
+              </div>
             </div>
             <DialogDescription className="text-muted-foreground text-xs leading-relaxed text-right pt-1">
               {renderBoth('expiry_discount_message', {
@@ -1350,7 +1357,7 @@ const POS = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="bg-orange-500/10 dark:bg-orange-500/20 p-4 rounded-2xl border border-orange-500/30 my-2 text-right space-y-4">
+          <div className="bg-orange-500/10 dark:bg-orange-500/20 p-4 rounded-2xl border border-orange-500/30 text-right space-y-3 box-border w-full my-1">
             <div className="flex justify-between items-center">
               <span className="text-xl font-black text-orange-600 dark:text-orange-300 font-mono">
                 {expiryDiscountPercent}% {t('discount')}
@@ -1360,7 +1367,7 @@ const POS = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 gap-2 w-full">
               {[10, 20, 30, 50].map((pct) => (
                 <Button
                   key={pct}
@@ -1368,7 +1375,7 @@ const POS = () => {
                   variant="outline"
                   onClick={() => setExpiryDiscountPercent(pct)}
                   className={cn(
-                    "h-11 border-orange-500/30 font-black text-sm rounded-xl transition-all font-mono",
+                    "h-10 border-orange-500/30 font-black text-xs sm:text-sm rounded-xl transition-all font-mono",
                     expiryDiscountPercent === pct 
                       ? "bg-orange-500 text-white hover:bg-orange-600 shadow-md shadow-orange-500/20" 
                       : "text-orange-600 dark:text-orange-400 hover:bg-orange-500/20 bg-background/50"
@@ -1387,16 +1394,16 @@ const POS = () => {
                 value={expiryDiscountPercent}
                 onChange={(e) => setExpiryDiscountPercent(parseFloat(e.target.value) || 0)}
                 onFocus={handleFocus}
-                className="bg-background border-orange-500/30 text-orange-600 dark:text-orange-300 font-black h-12 pl-10 pr-4 text-right text-lg rounded-xl font-mono"
+                className="bg-background border-orange-500/30 text-orange-600 dark:text-orange-300 font-black h-11 pl-10 pr-4 text-right text-lg rounded-xl font-mono w-full"
               />
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-600 dark:text-orange-400 font-black text-sm">%</span>
             </div>
           </div>
 
-          <DialogFooter className="flex flex-row-reverse justify-between gap-3 mt-4 pt-2 border-t border-border">
+          <DialogFooter className="flex sm:flex-row flex-row-reverse gap-3 mt-3 pt-3 border-t border-border space-x-0 sm:space-x-0 w-full">
             <Button 
               onClick={confirmExpiryDiscount} 
-              className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-black h-12 rounded-xl shadow-lg shadow-orange-600/20 text-xs uppercase"
+              className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-black h-11 rounded-xl shadow-lg shadow-orange-600/20 text-xs uppercase"
             >
               {renderBoth('apply_discount')}
             </Button>
@@ -1406,7 +1413,7 @@ const POS = () => {
                 if (selectedProductForExpiry) addToCart(selectedProductForExpiry);
                 setIsExpiryDialogOpen(false);
               }} 
-              className="flex-1 text-muted-foreground hover:text-foreground h-12 rounded-xl border-border text-xs font-bold"
+              className="flex-1 text-muted-foreground hover:text-foreground h-11 rounded-xl border-border text-xs font-bold"
             >
               {renderBoth('no_thanks')}
             </Button>

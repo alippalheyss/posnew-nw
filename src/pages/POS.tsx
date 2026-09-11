@@ -1299,77 +1299,236 @@ const POS = () => {
       </Dialog>
 
       <Dialog open={isCreditDialogOpen} onOpenChange={setIsCreditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] font-faruma bg-card text-foreground border-border shadow-2xl" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-right text-2xl font-black">{renderBoth('credit_sale')}</DialogTitle>
+        <DialogContent className="sm:max-w-[540px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border text-right p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+          <DialogHeader className="pb-3 text-right space-y-1 border-b border-border/60">
+            <div className="flex items-center justify-between pl-8">
+              <div className="text-right flex-1 min-w-0">
+                <DialogTitle className="text-xl md:text-2xl font-black text-foreground flex items-center justify-end gap-2.5">
+                  <span>{creditDialogStep === 1 ? renderBoth('credit_sale') : renderBoth('confirm_credit_sale')}</span>
+                  {creditDialogStep === 1 ? (
+                    <CreditCard className="h-6 w-6 text-primary shrink-0" />
+                  ) : (
+                    <Receipt className="h-6 w-6 text-primary shrink-0" />
+                  )}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5 text-right">
+                  {creditDialogStep === 1 
+                    ? renderBoth('select_or_add_customer_for_credit') 
+                    : (t('confirm_credit_sale_description') || 'ކްރެޑިޓް ވިއްކުމުގެ ތަފްޞީލް ކަށަވަރުކުރައްވާ')
+                  }
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="py-4">
+
+          <div className="py-3">
             {creditDialogStep === 1 ? (
-              <>
-                <div className="flex gap-2 mb-4">
-                  <Input
-                    placeholder={renderBothString('search_customers')}
-                    value={customerSearchTerm}
-                    onChange={(e) => setCustomerSearchTerm(e.target.value)}
-                    className="flex-1 text-right bg-background border-border text-foreground"
-                  />
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+                    <Input
+                      placeholder={renderBothString('search_customers')}
+                      value={customerSearchTerm}
+                      onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                      className="w-full text-right bg-muted/60 border-border text-foreground h-11 pr-10 rounded-xl font-bold"
+                    />
+                  </div>
                   <Button
                     variant="outline"
                     size="icon"
                     onClick={() => setIsAddCustomerDialogOpen(true)}
-                    className="h-10 w-10 border-border bg-card hover:bg-primary/20 text-primary"
+                    className="h-11 w-11 rounded-xl border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary shrink-0"
+                    title={t('add_new_customer')}
                   >
-                    <UserPlus className="h-4 w-4" />
+                    <UserPlus className="h-5 w-5" />
                   </Button>
                 </div>
-                <ScrollArea className="h-[300px] pr-4">
-                  <div className="space-y-2">
+
+                <ScrollArea className="h-[320px] pr-2 custom-scrollbar">
+                  <div className="space-y-2.5">
                     {customers.filter(c =>
-                      c.name_dv.includes(customerSearchTerm) ||
-                      c.name_en.toLowerCase().includes(customerSearchTerm.toLowerCase())
-                    ).map((customer) => (
-                      <div
-                        key={customer.id}
-                        onClick={() => {
-                          updateActiveCart(prev => ({ ...prev, customer }));
-                          setCreditDialogStep(2);
-                        }}
-                        className="p-4 rounded-xl cursor-pointer transition-all border border-border bg-card hover:bg-muted/50 hover:border-primary/40 text-right group"
-                      >
-                        <p className="font-black text-foreground group-hover:text-primary transition-colors">{customer.name_dv} ({customer.name_en})</p>
-                        <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest">Limit: {settings.shop.currency} {customer.credit_limit.toFixed(2)}</p>
-                      </div>
-                    ))}
+                      c.name_dv?.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
+                      c.name_en?.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
+                      c.phone?.includes(customerSearchTerm) ||
+                      c.code?.toLowerCase().includes(customerSearchTerm.toLowerCase())
+                    ).map((customer) => {
+                      const outstanding = customer.outstanding_balance || 0;
+                      const limit = customer.credit_limit || 0;
+                      const isOverLimit = limit > 0 && (outstanding + grandTotal > limit);
+                      return (
+                        <div
+                          key={customer.id}
+                          onClick={() => {
+                            updateActiveCart(prev => ({ ...prev, customer }));
+                            setCreditDialogStep(2);
+                          }}
+                          className="p-3.5 rounded-2xl cursor-pointer transition-all border border-border bg-card hover:bg-muted/60 hover:border-primary/50 text-right group shadow-sm hover:shadow-md"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex flex-col items-start gap-1 shrink-0">
+                              <Badge variant="outline" className={cn(
+                                "text-[10px] font-black px-2 py-0.5 rounded-md",
+                                isOverLimit 
+                                  ? "bg-red-500/10 text-red-500 border-red-500/30" 
+                                  : "bg-primary/10 text-primary border-primary/30"
+                              )}>
+                                {t('credit_limit')}: {settings.shop.currency} {limit.toFixed(2)}
+                              </Badge>
+                              {outstanding > 0 && (
+                                <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400">
+                                  {t('current_outstanding')}: {settings.shop.currency} {outstanding.toFixed(2)}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-right flex-1 min-w-0">
+                              <p className="font-black text-foreground group-hover:text-primary transition-colors text-sm truncate">
+                                {customer.name_dv} {customer.name_en ? `(${customer.name_en})` : ''}
+                              </p>
+                              <div className="flex items-center justify-end gap-2 text-[11px] text-muted-foreground mt-0.5">
+                                {customer.phone && <span>📞 {customer.phone}</span>}
+                                {customer.code && <span className="font-mono opacity-70">#{customer.code}</span>}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </ScrollArea>
-              </>
+              </div>
             ) : (
-              <div className="space-y-6">
-                <div className="bg-primary/10 border border-primary/20 p-4 rounded-2xl text-right">
-                  <p className="text-[10px] text-muted-foreground uppercase font-black mb-1">{renderBoth('customer')}</p>
-                  <p className="font-black text-foreground text-lg">{activeCart?.customer?.name_dv} ({activeCart?.customer?.name_en})</p>
+              <div className="space-y-4">
+                {/* Customer Details Card */}
+                <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20 text-right">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setCreditDialogStep(1)}
+                      className="h-7 px-2 text-xs font-bold text-primary hover:text-primary hover:bg-primary/20 rounded-lg gap-1"
+                    >
+                      {renderBoth('change_customer')}
+                    </Button>
+                    <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                      {renderBoth('customer')}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-end gap-2">
+                    <p className="font-black text-foreground text-base md:text-lg">
+                      {activeCart?.customer?.name_dv} {activeCart?.customer?.name_en ? `(${activeCart?.customer?.name_en})` : ''}
+                    </p>
+                    <User className="h-4 w-4 text-primary shrink-0" />
+                  </div>
+                  {activeCart?.customer?.phone && (
+                    <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                      📞 {activeCart?.customer?.phone}
+                    </p>
+                  )}
                 </div>
-                <div className="space-y-2 text-right">
-                  <p className="text-[10px] text-muted-foreground uppercase font-black">{renderBoth('grand_total')}</p>
-                  <p className="text-4xl font-black text-primary">{settings.shop.currency} {grandTotal.toFixed(2)}</p>
+
+                {/* Financial Summary 2x2 Grid */}
+                {(() => {
+                  const currentBalance = activeCart?.customer?.outstanding_balance || 0;
+                  const newBalance = currentBalance + grandTotal;
+                  const limit = activeCart?.customer?.credit_limit || 0;
+                  const isLimitExceeded = limit > 0 && newBalance > limit;
+
+                  return (
+                    <>
+                      <div className="grid grid-cols-2 gap-2.5 text-right">
+                        {/* Grand Total */}
+                        <div className="p-3 bg-muted/60 rounded-xl border border-border">
+                          <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider block mb-0.5">
+                            {renderBoth('grand_total')}
+                          </span>
+                          <span className="text-lg font-black text-primary font-mono">
+                            {settings.shop.currency} {grandTotal.toFixed(2)}
+                          </span>
+                        </div>
+
+                        {/* Current Outstanding */}
+                        <div className="p-3 bg-muted/60 rounded-xl border border-border">
+                          <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider block mb-0.5">
+                            {renderBoth('current_outstanding')}
+                          </span>
+                          <span className="text-lg font-black text-foreground font-mono">
+                            {settings.shop.currency} {currentBalance.toFixed(2)}
+                          </span>
+                        </div>
+
+                        {/* New Outstanding */}
+                        <div className="p-3 bg-orange-500/10 rounded-xl border border-orange-500/30">
+                          <span className="text-[10px] font-black uppercase text-orange-600 dark:text-orange-400 tracking-wider block mb-0.5">
+                            {renderBoth('new_outstanding')}
+                          </span>
+                          <span className="text-lg font-black text-orange-600 dark:text-orange-400 font-mono">
+                            {settings.shop.currency} {newBalance.toFixed(2)}
+                          </span>
+                        </div>
+
+                        {/* Credit Limit */}
+                        <div className={cn(
+                          "p-3 rounded-xl border",
+                          isLimitExceeded 
+                            ? "bg-red-500/10 border-red-500/30" 
+                            : "bg-muted/60 border-border"
+                        )}>
+                          <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider block mb-0.5">
+                            {renderBoth('credit_limit')}
+                          </span>
+                          <span className="text-lg font-black text-foreground font-mono">
+                            {settings.shop.currency} {limit.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {isLimitExceeded && (
+                        <div className="p-2.5 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center gap-2 text-red-500 text-xs font-black">
+                          <AlertTriangle className="h-4 w-4 shrink-0" />
+                          <span>{t('credit_limit_exceeded_error', { customerName: activeCart?.customer?.name_dv })}</span>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+
+                {/* Items Badge */}
+                <div className="flex items-center justify-between px-3.5 py-2 bg-muted/40 rounded-xl border border-border text-xs font-bold text-muted-foreground">
+                  <span>{activeCart?.items?.reduce((s, i) => s + i.qty, 0) || 0} {t('units') || 'pcs'}</span>
+                  <span>{activeCart?.items?.length || 0} {t('items') || 'items'}</span>
                 </div>
               </div>
             )}
           </div>
-          <DialogFooter className="gap-2 pt-4 border-t border-border">
+
+          <DialogFooter className="gap-2 pt-3 border-t border-border flex flex-row justify-between">
             {creditDialogStep === 2 ? (
               <>
-                <Button variant="outline" onClick={() => setCreditDialogStep(1)} className="border-border hover:bg-muted text-foreground">{renderBoth('change_customer')}</Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setCreditDialogStep(1)} 
+                  className="h-11 px-4 border-border hover:bg-muted text-foreground rounded-xl font-bold"
+                >
+                  {renderBoth('change_customer')}
+                </Button>
                 <Button
                   onClick={processCreditPayment}
                   disabled={isProcessing}
-                  className="flex-1 btn-gradient-blue text-white font-bold"
+                  className="flex-1 h-11 bg-primary hover:bg-primary/90 text-white font-black rounded-xl shadow-lg transition-all text-xs uppercase tracking-wider"
                 >
-                  {isProcessing ? 'Processing...' : renderBoth('confirm_credit_sale')}
+                  {isProcessing ? (t('processing') || 'Processing...') : renderBoth('confirm_credit_sale')}
                 </Button>
               </>
             ) : (
-              <Button variant="outline" onClick={() => setIsCreditDialogOpen(false)} className="w-full border-border hover:bg-muted text-foreground">{renderBoth('cancel')}</Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsCreditDialogOpen(false)} 
+                className="w-full h-11 border-border hover:bg-muted text-foreground rounded-xl font-bold"
+              >
+                {renderBoth('cancel')}
+              </Button>
             )}
           </DialogFooter>
         </DialogContent>

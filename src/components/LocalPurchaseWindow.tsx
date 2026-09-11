@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Minus, X, Maximize2, ShoppingBag, RotateCcw } from 'lucide-react';
-import { useAppContext, Purchase } from '@/context/AppContext';
+import { Minus, X, Maximize2, ShoppingBag, RotateCcw, Plus, Building2 } from 'lucide-react';
+import { useAppContext, Purchase, Vendor } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -23,6 +24,7 @@ const LocalPurchaseWindow = () => {
     setIsPurchaseWindowMinimized,
     vendors,
     addPurchase,
+    addVendor,
     settings
   } = useAppContext();
 
@@ -39,6 +41,13 @@ const LocalPurchaseWindow = () => {
   const [isCustomGst, setIsCustomGst] = useState(false);
   const [showZeroTaxInput, setShowZeroTaxInput] = useState(false);
   const [vendorSearchQuery, setVendorSearchQuery] = useState('');
+
+  // Quick Add Vendor State
+  const [isQuickAddVendorOpen, setIsQuickAddVendorOpen] = useState(false);
+  const [quickVendorName, setQuickVendorName] = useState('');
+  const [quickVendorPhone, setQuickVendorPhone] = useState('');
+  const [quickVendorTin, setQuickVendorTin] = useState('');
+  const [isAddingVendor, setIsAddingVendor] = useState(false);
 
   const filteredVendors = vendors.filter(v => 
     v.name_en?.toLowerCase().includes(vendorSearchQuery.toLowerCase()) || 
@@ -79,6 +88,43 @@ const LocalPurchaseWindow = () => {
       ...prev,
       gstAmount: prev.totalAmount ? computeAutoGst(prev.totalAmount, prev.zeroTaxAmount) : ''
     }));
+  };
+
+  const handleQuickAddVendor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickVendorName.trim()) {
+      showError(t('vendor_name_required') || 'Vendor name is required');
+      return;
+    }
+
+    setIsAddingVendor(true);
+    const newV: Vendor = {
+      id: crypto.randomUUID(),
+      code: `V-${Date.now().toString().slice(-4)}`,
+      name_en: quickVendorName.trim(),
+      name_dv: quickVendorName.trim(),
+      phone: quickVendorPhone.trim(),
+      email: '',
+      contact_person: '',
+      tin_number: quickVendorTin.trim(),
+      address: '',
+      notes: 'Added from Local Purchase'
+    };
+
+    try {
+      const created = await addVendor(newV);
+      setNewPurchase(prev => ({ ...prev, vendorId: created?.id || newV.id }));
+      setIsQuickAddVendorOpen(false);
+      setQuickVendorName('');
+      setQuickVendorPhone('');
+      setQuickVendorTin('');
+      showSuccess(t('vendor_added_successfully') || `Vendor "${newV.name_en}" added successfully`);
+    } catch (err) {
+      console.error('Error adding vendor:', err);
+      showError('Failed to add vendor');
+    } finally {
+      setIsAddingVendor(false);
+    }
   };
 
   const totalNum = parseFloat(newPurchase.totalAmount) || 0;
@@ -184,14 +230,14 @@ const LocalPurchaseWindow = () => {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-border bg-muted relative">
-          <div className="flex items-center gap-2 absolute top-5 left-5 z-20" dir="ltr">
+        <div className="flex items-center justify-between p-5 md:p-6 border-b border-border bg-muted/70 gap-4">
+          <div className="flex items-center gap-2 shrink-0" dir="ltr">
             <Button 
               type="button"
               variant="outline" 
               size="icon" 
               onClick={() => setIsPurchaseWindowMinimized(true)} 
-              className="h-8 w-8 rounded-xl border border-border/80 bg-background/90 hover:bg-amber-500/15 hover:border-amber-500/50 hover:text-amber-500 text-foreground/80 shadow-sm transition-all active:scale-90"
+              className="h-8 w-8 rounded-xl border border-border/80 bg-background hover:bg-amber-500/15 hover:border-amber-500/50 hover:text-amber-500 text-foreground shadow-sm transition-all active:scale-90"
               title="Minimize (ކުޑަކޮށްލާ)"
             >
               <Minus className="h-4 w-4 stroke-[2.5]" />
@@ -207,18 +253,32 @@ const LocalPurchaseWindow = () => {
               <X className="h-4 w-4 stroke-[2.5]" />
             </Button>
           </div>
-          <div className="text-right w-full pr-8">
-            <h2 className="text-2xl font-black text-foreground flex items-center justify-end gap-3">
-              {t('record_local_purchase') || 'Record Purchase'} <ShoppingBag className="h-6 w-6 text-primary" />
+          <div className="text-right flex-1 min-w-0">
+            <h2 className="text-xl md:text-2xl font-black text-foreground flex items-center justify-end gap-2.5 truncate">
+              {t('record_local_purchase') || 'Record Purchase'} <ShoppingBag className="h-5 w-5 md:h-6 md:w-6 text-primary shrink-0" />
             </h2>
-            <p className="text-sm text-muted-foreground">{t('record_purchase_description') || 'Enter local purchase bill details'}</p>
+            <p className="text-xs md:text-sm text-muted-foreground truncate">{t('record_purchase_description') || 'Enter local purchase bill details'}</p>
           </div>
         </div>
 
         {/* Content */}
         <div className="p-6 space-y-5 overflow-y-auto max-h-[65vh]">
           <div className="space-y-2">
-            <Label className="text-right block text-xs font-black uppercase tracking-widest text-muted-foreground">{t('select_vendor') || 'Select Vendor'}*</Label>
+            <div className="flex items-center justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsQuickAddVendorOpen(true)}
+                className="h-7 px-2.5 text-xs font-bold text-primary border-primary/30 hover:bg-primary/10 gap-1 rounded-lg transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                {t('add_vendor') || 'Add Vendor'}
+              </Button>
+              <Label className="text-right block text-xs font-black uppercase tracking-widest text-muted-foreground">
+                {t('select_vendor') || 'Select Vendor'}*
+              </Label>
+            </div>
             <Select value={newPurchase.vendorId} onValueChange={(val) => setNewPurchase({ ...newPurchase, vendorId: val })}>
               <SelectTrigger className="w-full bg-muted border-border text-right h-12 rounded-xl font-bold">
                 <SelectValue placeholder="Choose Vendor" />
@@ -437,6 +497,69 @@ const LocalPurchaseWindow = () => {
           </Button>
         </div>
       </div>
+
+      {/* Quick Add Vendor Dialog */}
+      <Dialog open={isQuickAddVendorOpen} onOpenChange={setIsQuickAddVendorOpen}>
+        <DialogContent className="max-w-md bg-card border-border font-faruma text-foreground" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black flex items-center gap-2 text-right">
+              <Building2 className="w-5 h-5 text-primary" />
+              {t('add_vendor') || 'Add New Vendor'}
+            </DialogTitle>
+            <DialogDescription className="text-right text-xs text-muted-foreground">
+              {t('enter_vendor_details') || 'Enter vendor name and contact details'}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleQuickAddVendor} className="space-y-4 py-2">
+            <div className="space-y-1.5 text-right">
+              <Label className="text-xs font-bold">{t('vendor_name') || 'Vendor Name'}*</Label>
+              <Input
+                value={quickVendorName}
+                onChange={(e) => setQuickVendorName(e.target.value)}
+                placeholder="Vendor name / ވެންޑަރ ނަން"
+                className="text-right bg-muted border-border font-bold h-10"
+                autoFocus
+                required
+              />
+            </div>
+            <div className="space-y-1.5 text-right">
+              <Label className="text-xs font-bold">{t('phone') || 'Phone'}</Label>
+              <Input
+                value={quickVendorPhone}
+                onChange={(e) => setQuickVendorPhone(e.target.value)}
+                placeholder="Phone number / ފޯނު ނަންބަރު"
+                className="text-right bg-muted border-border h-10"
+              />
+            </div>
+            <div className="space-y-1.5 text-right">
+              <Label className="text-xs font-bold">{t('tin_number') || 'TIN Number'}</Label>
+              <Input
+                value={quickVendorTin}
+                onChange={(e) => setQuickVendorTin(e.target.value)}
+                placeholder="TIN number (Optional)"
+                className="text-right bg-muted border-border h-10"
+              />
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0 pt-2 flex flex-row-reverse justify-start">
+              <Button
+                type="submit"
+                disabled={isAddingVendor || !quickVendorName.trim()}
+                className="bg-primary hover:bg-primary/90 text-white font-bold h-10 px-6 rounded-xl"
+              >
+                {isAddingVendor ? (t('saving') || 'Saving...') : (t('add_vendor') || 'Add Vendor')}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setIsQuickAddVendorOpen(false)}
+                className="h-10 px-4 rounded-xl border border-border"
+              >
+                {t('cancel') || 'Cancel'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

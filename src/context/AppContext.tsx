@@ -262,7 +262,7 @@ interface AppContextType {
   getNextVendorCode: () => string;
   updateProductCostPrice: (productId: string, newCost: number, purchaseDate: string) => Promise<void>;
   calculateProfitMargin: (product: Product) => number;
-  addSale: (sale: Sale) => Promise<void>;
+  addSale: (sale: Sale) => Promise<Sale>;
   addCustomer: (customer: Customer) => Promise<Customer | void>;
   updateCustomer: (customer: Customer) => Promise<void>;
   pendingTransfers: any[];
@@ -453,7 +453,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
             paymentMethod: String(s.payment_method || 'cash').toLowerCase(),
             paidAmount: Number(s.paid_amount || 0),
             balance: Number(s.balance || 0),
-            invoiceNumber: s.invoice_number,
+            invoiceNumber: s.invoice_number || `${String(s.payment_method || '').toLowerCase() === 'credit' ? 'CRINV' : 'INV'}/${new Date(s.date).getFullYear().toString().slice(-2)}/${(new Date(s.date).getMonth() + 1).toString().padStart(2, '0')}/${String(s.id).replace(/\D/g, '').slice(-3).padStart(3, '0') || '001'}`,
             splitDetails: splitDetails
           };
         });
@@ -808,14 +808,15 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const generateInvoiceNumber = (dateStr: string, isCredit: boolean, existingSales: Sale[]) => {
     const prefix = isCredit ? 'CRINV/' : 'INV/';
-    const date = new Date(dateStr);
-    const year = date.getFullYear().toString().slice(-2);
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const date = dateStr ? new Date(dateStr) : new Date();
+    const validDate = isNaN(date.getTime()) ? new Date() : date;
+    const year = validDate.getFullYear().toString().slice(-2);
+    const month = (validDate.getMonth() + 1).toString().padStart(2, '0');
     
     const prefixStr = `${prefix}${year}/${month}/`;
     
     let maxSeq = 0;
-    existingSales.forEach(s => {
+    (existingSales || []).forEach(s => {
       if (s.invoiceNumber && s.invoiceNumber.startsWith(prefixStr)) {
         const seqStr = s.invoiceNumber.slice(prefixStr.length);
         const seq = parseInt(seqStr, 10);
@@ -829,7 +830,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     return `${prefixStr}${nextSeq}`;
   };
 
-  const addSale = async (sale: Sale) => {
+  const addSale = async (sale: Sale): Promise<Sale> => {
     try {
       const isCredit = String(sale.paymentMethod).toLowerCase() === 'credit';
       const invoiceNumber = sale.invoiceNumber || generateInvoiceNumber(sale.date, isCredit, sales);
@@ -870,6 +871,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       })).catch(err => console.error('Error updating stock after sale:', err));
       
       // Do NOT await fetchData() here to prevent race conditions with optimistic state
+
+      return saleWithInvoice;
     } catch (error) {
       console.error('Error adding sale:', error);
       showError('Failed to save sale to database');

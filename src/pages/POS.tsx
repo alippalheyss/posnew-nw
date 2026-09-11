@@ -102,12 +102,25 @@ const POS = () => {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const focusSearchBar = () => {
+    setTimeout(() => {
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+        searchInputRef.current.select();
+      }
+    }, 60);
+  };
+
   const LOW_STOCK_THRESHOLD = 10;
   const NEAR_EXPIRY_DAYS = 30;
 
   useEffect(() => {
-    searchInputRef.current?.focus();
+    focusSearchBar();
   }, [activeCartId]);
+
+  useEffect(() => {
+    focusSearchBar();
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('pos_active', 'true');
@@ -296,7 +309,6 @@ const POS = () => {
     // Immediately clear search if product was searched
     if (searchTerm) {
       setSearchTerm('');
-      searchInputRef.current?.focus();
     }
 
     if (product.expiry_date) {
@@ -314,6 +326,7 @@ const POS = () => {
 
     // Add with default unit (Piece) directly to cart - unit can be switched anytime in the cart
     addToCart(product);
+    focusSearchBar();
   };
 
   const addToCart = (product: Product, discountFactor: number = 1, selectedUnit?: string) => {
@@ -355,6 +368,8 @@ const POS = () => {
         };
       }
     });
+
+    focusSearchBar();
   };
 
   const handleUnitSelection = (unit: string) => {
@@ -362,6 +377,7 @@ const POS = () => {
       addToCart(productForUnitSelection, 1, unit);
       setIsUnitSelectionDialogOpen(false);
       setProductForUnitSelection(null);
+      focusSearchBar();
     }
   };
 
@@ -372,6 +388,7 @@ const POS = () => {
       setIsExpiryDialogOpen(false);
       setSelectedProductForExpiry(null);
       showSuccess(t('expiry_discount_applied'));
+      focusSearchBar();
     }
   };
 
@@ -554,7 +571,7 @@ const POS = () => {
       balance: balance,
     };
     try {
-      await addSale(newSale);
+      const recordedSale = await addSale(newSale);
 
       if (activeCart.customer) {
         if (settings.general.enableLoyaltyProgram) {
@@ -570,12 +587,14 @@ const POS = () => {
       }
 
       showSuccess(t('cash_payment_successful'));
+      setLastSaleForPrint(recordedSale);
       if (settings.printing.printMode === 'auto') {
-        handlePrintReceipt(newSale);
+        handlePrintReceipt(recordedSale);
       }
       clearActiveCart();
       setPaidAmount(0);
       setIsCashDialogOpen(false);
+      focusSearchBar();
     } catch (error) {
       console.error('Error processing cash payment:', error);
       showError('Failed to save sale');
@@ -608,7 +627,7 @@ const POS = () => {
     };
     setIsProcessing(true);
     try {
-      await addSale(newSale);
+      const recordedSale = await addSale(newSale);
 
       if (activeCart.customer) {
         await updateCustomerBalance(activeCart.customer.id, grandTotal);
@@ -621,11 +640,13 @@ const POS = () => {
       }
 
       showSuccess(t('credit_sale_successful'));
+      setLastSaleForPrint(recordedSale);
       if (settings.printing.printMode === 'auto') {
-        handlePrintReceipt(newSale);
+        handlePrintReceipt(recordedSale);
       }
       clearActiveCart();
       setIsCreditDialogOpen(false);
+      focusSearchBar();
     } catch (error: any) {
       console.error('Error processing credit payment:', error);
       showError(`Failed to save credit sale: ${error.message || 'Unknown error'}`);
@@ -779,7 +800,7 @@ const POS = () => {
     };
 
     try {
-      await addSale(newSale);
+      const recordedSale = await addSale(newSale);
 
       for (const entry of splitEntries) {
         if (entry.method === 'Credit' && entry.customerId) {
@@ -788,12 +809,14 @@ const POS = () => {
       }
 
       showSuccess(t('split_payment_successful'));
+      setLastSaleForPrint(recordedSale);
       if (settings.printing.printMode === 'auto') {
-        handlePrintReceipt(newSale);
+        handlePrintReceipt(recordedSale);
       }
       clearActiveCart();
       setIsSplitDialogOpen(false);
       setSplitEntries([{ id: '1', amount: 0, method: 'Cash' }]);
+      focusSearchBar();
     } catch (error) {
       console.error('Error processing split payment:', error);
       showError('Failed to save split payment');
@@ -976,32 +999,67 @@ const POS = () => {
               </div>
             </Button>
           </div>
-          <div className="flex flex-wrap gap-2 mb-4">
-            {[...openCarts.values()].map(cart => (
-              <div key={cart.id} className="relative group">
-                <Button
-                  variant={activeCartId === cart.id ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => switchCart(cart.id)}
-                  className={cn(
-                    "h-8 px-4 text-[10px] font-black rounded-full transition-all",
-                    activeCartId === cart.id
-                      ? "bg-primary text-foreground shadow-[0_0_15px_rgba(0,132,255,0.3)]"
-                      : "border-border text-muted-foreground hover:text-foreground hover:border-border"
-                  )}
-                >
-                  {cart.displayNumber} <span className="mr-1 opacity-50">CART</span>
-                </Button>
-                {openCarts.size > 1 && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleRemoveCartClick(cart.id); }}
-                    className="absolute -top-1 -left-1 h-4 w-4 rounded-full bg-red-500 text-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg"
+          <div className="flex flex-wrap gap-2 mb-3">
+            {[...openCarts.values()].map(cart => {
+              const isActive = activeCartId === cart.id;
+              const customerName = cart.customer ? (cart.customer.name_dv || cart.customer.name_en) : null;
+              return (
+                <div key={cart.id} className="relative group">
+                  <Button
+                    variant={isActive ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => switchCart(cart.id)}
+                    className={cn(
+                      "h-9 px-3.5 text-xs font-black rounded-xl transition-all flex items-center gap-2",
+                      isActive
+                        ? "bg-primary text-white shadow-[0_0_15px_rgba(0,132,255,0.4)] ring-2 ring-primary/40 border-primary"
+                        : "bg-muted/70 border-border text-foreground/80 hover:text-foreground hover:bg-muted"
+                    )}
                   >
-                    <XCircle className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
-            ))}
+                    <span>Cart #{cart.displayNumber}</span>
+                    {customerName && (
+                      <span className={cn(
+                        "max-w-[90px] truncate text-[10px] px-1.5 py-0.5 rounded-md font-medium",
+                        isActive ? "bg-white/20 text-white" : "bg-primary/10 text-primary"
+                      )}>
+                        {customerName}
+                      </span>
+                    )}
+                  </Button>
+                  {openCarts.size > 1 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleRemoveCartClick(cart.id); }}
+                      className="absolute -top-1.5 -left-1.5 h-5 w-5 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg hover:bg-red-600"
+                      title="Remove Cart"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Active Cart Title & Status Banner */}
+          <div className="flex items-center justify-between px-4 py-2.5 bg-muted/60 rounded-2xl border border-border mb-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="px-2.5 py-1 bg-primary text-white text-xs font-black rounded-lg shadow-sm shrink-0">
+                CART #{activeCart?.displayNumber || 1}
+              </span>
+              {activeCart?.customer ? (
+                <div className="flex items-center gap-1.5 text-xs font-bold text-primary truncate">
+                  <User className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">{activeCart.customer.name_dv || activeCart.customer.name_en}</span>
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground font-semibold">
+                  {t('walk_in_customer') || 'Walk-in Customer'}
+                </span>
+              )}
+            </div>
+            <span className="text-xs font-bold text-muted-foreground shrink-0">
+              {activeCart?.items.length || 0} {t('items') || 'items'}
+            </span>
           </div>
         </div>
 

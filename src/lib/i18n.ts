@@ -506,8 +506,10 @@ const resources = {
       "printers_found": "{{count}} ޕްރިންޓަރު ފެނިއްޖެ",
       "qz_tray_not_running": "ކިއު.ޒީ ޓްރޭ އެޕްލިކޭޝަން ހުޅުވާފައެއް ނެތް",
       "calculated_gst": "ޖީ.އެސް.ޓީ (ހިސާބު ކުރެވިފައި)",
-      "save_purchase": "ބިލް ސޭވް ކުރޭ",
-      "no_sales_data": "ވިކުރީގެ މަޢުލޫމާތެއް ނެތް"
+      "save_purchase": "ބިލް ރައްކާކުރޭ",
+      "no_sales_data": "ވިކުރީގެ މަޢުލޫމާތެއް ނެތް",
+      "record_local_purchase": "ބިލް އެޅުން (Local Purchase)",
+      "record_purchase_description": "ލޯކަލް ޕާޗޭސް ބިލުގެ ތަފްޞީލް ލިޔުއްވާ"
     }
   },
   en: {
@@ -1009,7 +1011,9 @@ const resources = {
       "qz_tray_not_running": "QZ Tray is not running",
       "calculated_gst": "Calculated GST",
       "save_purchase": "Save Purchase",
-      "no_sales_data": "No sales data available"
+      "no_sales_data": "No sales data available",
+      "record_local_purchase": "Record Local Purchase",
+      "record_purchase_description": "Enter local purchase bill details"
     }
   }
 };

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -110,8 +110,8 @@ const LocalPurchaseWindow = () => {
     };
 
     try {
-      const created = await addVendor(newV);
-      setNewPurchase(prev => ({ ...prev, vendorId: created?.id || newV.id }));
+      await addVendor(newV);
+      setNewPurchase(prev => ({ ...prev, vendorId: newV.id }));
       setIsQuickAddVendorOpen(false);
       setQuickVendorName('');
       setQuickVendorPhone('');

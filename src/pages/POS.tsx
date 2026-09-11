@@ -1985,8 +1985,8 @@ const POS = () => {
       </Dialog>
 
       <Dialog open={isAwaitingTransferDialogOpen} onOpenChange={setIsAwaitingTransferDialogOpen}>
-        <DialogContent className="sm:max-w-[480px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border text-right p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
-          <DialogHeader className="pb-3 text-right space-y-1.5 border-b border-border/60">
+        <DialogContent className="sm:max-w-[600px] w-[calc(100vw-2rem)] max-h-[92vh] overflow-y-auto font-faruma bg-card text-foreground border border-border text-right p-6 sm:p-7 shadow-2xl rounded-3xl box-border custom-scrollbar [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+          <DialogHeader className="pb-4 text-right space-y-1.5 border-b border-border/60">
             <div className="flex items-center justify-between pl-8">
               <div className="text-right flex-1 min-w-0">
                 <DialogTitle className="text-xl md:text-2xl font-black text-foreground flex items-center gap-2.5">
@@ -2000,79 +2000,101 @@ const POS = () => {
             </div>
           </DialogHeader>
 
-          <div className="py-3 space-y-3.5">
-            {/* Grand Total Banner */}
-            <div className="p-3.5 bg-primary/5 rounded-2xl border border-primary/20 flex items-center justify-between text-right">
-              <div>
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-0.5">{renderBoth('grand_total')}</p>
-                <p className="text-2xl font-black text-primary font-mono">{settings.shop.currency} {grandTotal.toFixed(2)}</p>
+          <div className="py-4 space-y-4">
+            {/* Grand Total & Transfer Amount Side-by-Side 2-Column Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              {/* Grand Total Card */}
+              <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20 flex flex-col justify-between text-right">
+                <span className="text-[11px] font-bold text-muted-foreground block mb-1">
+                  {renderBoth('grand_total')}
+                </span>
+                <span className="text-2xl font-black text-primary font-mono tracking-tight">
+                  {settings.shop.currency} {grandTotal.toFixed(2)}
+                </span>
               </div>
-              <Receipt className="h-7 w-7 text-primary/40" />
-            </div>
 
-            {/* Transfer Amount */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-muted-foreground block text-right">{renderBoth('transfer_amount')}</Label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">{settings.shop.currency}</span>
-                <Input
-                  type="number"
-                  value={transferAmount}
-                  onChange={(e) => setTransferAmount(parseFloat(e.target.value) || 0)}
-                  onFocus={handleFocus}
-                  className="bg-muted/60 border-border h-12 rounded-xl pl-12 pr-4 text-xl font-mono font-black text-foreground text-right focus:border-primary"
-                  autoFocus
-                />
+              {/* Transfer Amount Input Card */}
+              <div className="p-4 bg-muted/50 rounded-2xl border border-border flex flex-col justify-between text-right">
+                <Label className="text-[11px] font-bold text-muted-foreground block mb-1">
+                  {renderBoth('transfer_amount')}
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground font-mono">
+                    {settings.shop.currency}
+                  </span>
+                  <Input
+                    type="number"
+                    value={transferAmount}
+                    onChange={(e) => setTransferAmount(parseFloat(e.target.value) || 0)}
+                    onFocus={handleFocus}
+                    className="bg-background border-border h-10 rounded-xl pl-10 pr-3 text-lg font-mono font-black text-foreground text-right focus:border-primary"
+                    autoFocus
+                  />
+                </div>
               </div>
             </div>
 
             {/* Customer Section */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
+            <div className="space-y-2.5 pt-1">
+              <div className="flex items-center justify-between gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setIsAddCustomerDialogOpen(true)}
-                  className="text-xs h-7 px-2.5 border-primary/30 text-primary hover:bg-primary/10 font-bold rounded-lg gap-1"
+                  className="text-xs h-7 px-2.5 border-primary/30 text-primary hover:bg-primary/10 font-bold rounded-lg gap-1 shrink-0"
                 >
-                  <UserPlus className="h-3.5 w-3.5" /> {renderBoth('add_customer')}
+                  <UserPlus className="h-3.5 w-3.5" />
+                  {renderBoth('add_customer')}
                 </Button>
-                <Label className="text-xs font-bold text-muted-foreground block text-right">{renderBoth('select_customer_or_enter_name')}</Label>
+                <Label className="text-xs font-bold text-muted-foreground text-right">
+                  {renderBoth('select_customer_or_enter_name')}
+                </Label>
               </div>
 
               {activeCart?.customer ? (
-                <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 flex items-center justify-between text-right">
+                <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20 flex items-center justify-between text-right">
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={() => updateActiveCart(prev => ({ ...prev, customer: null }))}
-                    className="h-7 px-2 text-xs font-bold text-primary hover:bg-primary/20 rounded-lg"
+                    className="h-7 px-2.5 text-xs font-bold border-primary/30 text-primary hover:bg-primary/20 rounded-lg shrink-0"
                   >
                     {renderBoth('change_customer')}
                   </Button>
-                  <div>
-                    <p className="font-black text-sm text-foreground">{activeCart.customer.name_dv} {activeCart.customer.name_en ? `(${activeCart.customer.name_en})` : ''}</p>
-                    {activeCart.customer.phone && (
-                      <p className="text-[11px] text-muted-foreground font-mono mt-0.5">📞 {activeCart.customer.phone}</p>
-                    )}
+                  <div className="min-w-0 flex-1 pr-3">
+                    <p className="font-black text-base text-foreground truncate">
+                      {activeCart.customer.name_dv} {activeCart.customer.name_en ? `(${activeCart.customer.name_en})` : ''}
+                    </p>
+                    <div className="flex items-center justify-end gap-3 text-xs text-muted-foreground mt-0.5">
+                      {activeCart.customer.phone && (
+                        <span className="font-mono">📞 <span dir="ltr">{activeCart.customer.phone}</span></span>
+                      )}
+                      {activeCart.customer.code && (
+                        <span className="font-mono opacity-80">#{activeCart.customer.code}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               ) : (
-                <div className="space-y-1.5">
-                  <Input
-                    placeholder={renderBothString('search_or_type_name')}
-                    value={customerSearchTerm}
-                    onChange={(e) => setCustomerSearchTerm(e.target.value)}
-                    className="bg-muted/60 border-border h-11 text-right text-foreground font-bold rounded-xl pr-3.5 placeholder:text-muted-foreground/60"
-                  />
-                  <ScrollArea className="h-[120px] border border-border/70 rounded-xl p-1 custom-scrollbar">
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+                    <Input
+                      placeholder={renderBothString('search_or_type_name')}
+                      value={customerSearchTerm}
+                      onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                      className="bg-muted/60 border-border h-11 text-right text-foreground font-bold rounded-xl pr-10 pl-3 placeholder:text-muted-foreground/60"
+                    />
+                  </div>
+                  <ScrollArea className="h-[140px] border border-border/70 rounded-2xl p-1.5 custom-scrollbar bg-card">
                     <div className="space-y-1">
                       {customers.filter(c =>
                         c.name_dv?.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
                         c.name_en?.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
-                        c.phone?.includes(customerSearchTerm)
+                        c.phone?.includes(customerSearchTerm) ||
+                        c.code?.toLowerCase().includes(customerSearchTerm.toLowerCase())
                       ).map(customer => (
                         <div
                           key={customer.id}
@@ -2081,12 +2103,15 @@ const POS = () => {
                             setCustomerSearchTerm(customer.name_dv);
                           }}
                           className={cn(
-                            "p-2 rounded-lg cursor-pointer text-right text-xs font-bold transition-all flex items-center justify-between",
-                            activeCart?.customer?.id === customer.id ? "bg-primary text-white" : "bg-card hover:bg-muted text-foreground border border-border/50"
+                            "p-2.5 rounded-xl cursor-pointer text-right text-xs font-bold transition-all flex items-center justify-between",
+                            activeCart?.customer?.id === customer.id ? "bg-primary text-white" : "bg-card hover:bg-muted text-foreground border border-border/40 hover:border-primary/40"
                           )}
                         >
-                          <span className="text-[11px] opacity-70">{customer.phone ? `📞 ${customer.phone}` : ''}</span>
-                          <span>{customer.name_dv} {customer.name_en ? `(${customer.name_en})` : ''}</span>
+                          <div className="flex items-center gap-2">
+                            {customer.phone && <span className="text-[11px] opacity-70 font-mono" dir="ltr">📞 {customer.phone}</span>}
+                            {customer.code && <span className="text-[10px] font-mono opacity-50">#{customer.code}</span>}
+                          </div>
+                          <span className="font-black truncate">{customer.name_dv} {customer.name_en ? `(${customer.name_en})` : ''}</span>
                         </div>
                       ))}
                     </div>
@@ -2096,11 +2121,11 @@ const POS = () => {
             </div>
           </div>
 
-          <DialogFooter className="gap-2.5 pt-3 border-t border-border flex flex-row justify-between items-center">
+          <DialogFooter className="gap-3 pt-4 border-t border-border flex flex-row justify-between items-center">
             <Button 
               variant="outline" 
               onClick={() => setIsAwaitingTransferDialogOpen(false)} 
-              className="flex-1 h-11 border-border hover:bg-muted text-foreground rounded-xl font-bold"
+              className="h-11 px-6 border-border hover:bg-muted text-foreground rounded-xl font-bold"
             >
               {renderBoth('cancel')}
             </Button>

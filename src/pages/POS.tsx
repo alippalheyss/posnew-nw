@@ -118,6 +118,16 @@ const POS = () => {
     };
   }, []);
 
+  const isAnyModalOpen = isCashDialogOpen || isCreditDialogOpen || isSplitDialogOpen || 
+                         isAwaitingTransferDialogOpen || isPendingTransfersDialogOpen || 
+                         isExpiryDialogOpen || isConfirmRemoveCartDialogOpen || 
+                         isLoyaltyRedemptionDialogOpen || isUnitSelectionDialogOpen || 
+                         isAddCustomerDialogOpen || isPrintConfirmDialogOpen;
+  const isAnyModalOpenRef = useRef(isAnyModalOpen);
+  useEffect(() => {
+    isAnyModalOpenRef.current = isAnyModalOpen;
+  }, [isAnyModalOpen]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (document.activeElement?.tagName === 'INPUT' && document.activeElement !== searchInputRef.current) {
@@ -127,7 +137,21 @@ const POS = () => {
         return;
       }
 
-      if (e.key === 'Enter' && !isCashDialogOpen && !isCreditDialogOpen && !isSplitDialogOpen && !isAwaitingTransferDialogOpen) {
+      if (isAnyModalOpenRef.current) {
+        if (e.key === 'Escape') {
+          setIsCashDialogOpen(false);
+          setIsCreditDialogOpen(false);
+          setIsSplitDialogOpen(false);
+          setIsAwaitingTransferDialogOpen(false);
+          setIsPendingTransfersDialogOpen(false);
+          setIsExpiryDialogOpen(false);
+          setIsConfirmRemoveCartDialogOpen(false);
+          setIsPrintConfirmDialogOpen(false);
+        }
+        return;
+      }
+
+      if (e.key === 'Enter') {
         e.preventDefault();
         setIsCashDialogOpen(true);
       } else if (e.key === 'F11') {
@@ -140,11 +164,6 @@ const POS = () => {
       } else if (e.key === 'F6') {
         e.preventDefault();
         setIsSplitDialogOpen(true);
-      } else if (e.key === 'Escape') {
-        setIsCashDialogOpen(false);
-        setIsCreditDialogOpen(false);
-        setIsSplitDialogOpen(false);
-        setIsAwaitingTransferDialogOpen(false);
       }
     };
 
@@ -1312,70 +1331,86 @@ const POS = () => {
       </Dialog>
 
       <Dialog open={isExpiryDialogOpen} onOpenChange={setIsExpiryDialogOpen}>
-        <DialogContent className="sm:max-w-[450px] font-faruma bg-card text-foreground border-border text-right p-0 overflow-hidden shadow-2xl" dir="rtl">
-          <div className="p-6">
-            <DialogHeader className="pb-4 text-right">
-              <DialogTitle className="text-xl text-orange-600 dark:text-orange-400 flex items-center justify-center gap-2 px-0 w-full text-center font-black">
-                <AlertTriangle className="h-6 w-6 text-orange-500" /> {renderBoth('item_near_expiry')}
+        <DialogContent className="sm:max-w-[480px] font-faruma bg-card text-foreground border-border text-right p-6 shadow-2xl rounded-3xl" dir="rtl">
+          <DialogHeader className="pb-3 text-right space-y-2">
+            <div className="flex items-center justify-between border-b border-border/60 pb-3">
+              <Badge variant="outline" className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30 text-xs font-black">
+                {selectedProductForExpiry?.expiry_date ? formatDate(selectedProductForExpiry.expiry_date) : ''}
+              </Badge>
+              <DialogTitle className="text-xl text-orange-600 dark:text-orange-400 flex items-center gap-2 font-black">
+                <span>{renderBoth('item_near_expiry')}</span>
+                <AlertTriangle className="h-5 w-5 text-orange-500" />
               </DialogTitle>
-              <DialogDescription className="text-muted-foreground mt-2 break-words text-sm leading-relaxed text-right">
-                {renderBoth('expiry_discount_message', {
-                  itemName: selectedProductForExpiry?.name_dv,
-                  expiryDate: selectedProductForExpiry?.expiry_date ? new Date(selectedProductForExpiry.expiry_date).toLocaleDateString() : ''
-                })}
-              </DialogDescription>
-            </DialogHeader>
+            </div>
+            <DialogDescription className="text-muted-foreground text-xs leading-relaxed text-right pt-1">
+              {renderBoth('expiry_discount_message', {
+                itemName: selectedProductForExpiry?.name_dv || selectedProductForExpiry?.name_en || 'Product',
+                expiryDate: selectedProductForExpiry?.expiry_date ? formatDate(selectedProductForExpiry.expiry_date) : ''
+              })}
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="bg-orange-500/10 dark:bg-orange-500/20 p-4 rounded-xl border border-orange-500/30 my-4 text-right">
-              <div className="flex flex-col gap-4">
-                <div className="flex justify-between items-center">
-                  <p className="text-xs text-orange-600 dark:text-orange-400 font-bold uppercase tracking-wider">{renderBoth('discount_offer')}</p>
-                  <p className="text-lg font-black text-orange-600 dark:text-orange-300">{expiryDiscountPercent}% {t('discount')}</p>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  {[20, 30, 50].map((pct) => (
-                    <Button
-                      key={pct}
-                      variant="outline"
-                      onClick={() => setExpiryDiscountPercent(pct)}
-                      className={cn(
-                        "h-12 border-orange-500/30 font-black text-lg",
-                        expiryDiscountPercent === pct ? "bg-orange-500 text-white hover:bg-orange-600" : "text-orange-600 dark:text-orange-400 hover:bg-orange-500/20"
-                      )}
-                    >
-                      {pct}%
-                    </Button>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-3 mt-2">
-                  <div className="relative w-full">
-                    <Input
-                      type="number"
-                      value={expiryDiscountPercent}
-                      onChange={(e) => setExpiryDiscountPercent(parseFloat(e.target.value) || 0)}
-                      onFocus={handleFocus}
-                      className="bg-background border-orange-500/30 text-orange-600 dark:text-orange-300 font-black h-12 pr-10 text-right text-xl"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-orange-600 dark:text-orange-400 font-black text-lg">%</span>
-                  </div>
-                </div>
-              </div>
+          <div className="bg-orange-500/10 dark:bg-orange-500/20 p-4 rounded-2xl border border-orange-500/30 my-2 text-right space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-xl font-black text-orange-600 dark:text-orange-300 font-mono">
+                {expiryDiscountPercent}% {t('discount')}
+              </span>
+              <p className="text-xs text-orange-600 dark:text-orange-400 font-black uppercase tracking-wider">
+                {renderBoth('discount_offer')}
+              </p>
             </div>
 
-            <DialogFooter className="flex flex-row-reverse justify-between gap-4 mt-6">
-              <Button onClick={confirmExpiryDiscount} className="bg-orange-600 hover:bg-orange-700 text-white font-bold px-8">
-                {renderBoth('apply_discount')}
-              </Button>
-              <Button variant="ghost" onClick={() => {
+            <div className="grid grid-cols-4 gap-2">
+              {[10, 20, 30, 50].map((pct) => (
+                <Button
+                  key={pct}
+                  type="button"
+                  variant="outline"
+                  onClick={() => setExpiryDiscountPercent(pct)}
+                  className={cn(
+                    "h-11 border-orange-500/30 font-black text-sm rounded-xl transition-all font-mono",
+                    expiryDiscountPercent === pct 
+                      ? "bg-orange-500 text-white hover:bg-orange-600 shadow-md shadow-orange-500/20" 
+                      : "text-orange-600 dark:text-orange-400 hover:bg-orange-500/20 bg-background/50"
+                  )}
+                >
+                  {pct}%
+                </Button>
+              ))}
+            </div>
+
+            <div className="relative w-full">
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                value={expiryDiscountPercent}
+                onChange={(e) => setExpiryDiscountPercent(parseFloat(e.target.value) || 0)}
+                onFocus={handleFocus}
+                className="bg-background border-orange-500/30 text-orange-600 dark:text-orange-300 font-black h-12 pl-10 pr-4 text-right text-lg rounded-xl font-mono"
+              />
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-600 dark:text-orange-400 font-black text-sm">%</span>
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-row-reverse justify-between gap-3 mt-4 pt-2 border-t border-border">
+            <Button 
+              onClick={confirmExpiryDiscount} 
+              className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-black h-12 rounded-xl shadow-lg shadow-orange-600/20 text-xs uppercase"
+            >
+              {renderBoth('apply_discount')}
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => {
                 if (selectedProductForExpiry) addToCart(selectedProductForExpiry);
                 setIsExpiryDialogOpen(false);
-              }} className="text-muted-foreground hover:text-foreground">
-                {renderBoth('no_thanks')}
-              </Button>
-            </DialogFooter>
-          </div>
+              }} 
+              className="flex-1 text-muted-foreground hover:text-foreground h-12 rounded-xl border-border text-xs font-bold"
+            >
+              {renderBoth('no_thanks')}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -1390,10 +1425,10 @@ const POS = () => {
         <DialogContent className="sm:max-w-[500px] font-faruma bg-card text-foreground border-border p-0 overflow-hidden shadow-2xl" dir="rtl">
           <DialogHeader className="p-6 pb-2">
             <DialogTitle className="text-right text-2xl font-black flex items-center justify-end gap-3">
-              (Split Bill) {t('split_bill')} <Users className="h-6 w-6 text-primary" />
+              {renderBoth('split_bill')} <Users className="h-6 w-6 text-primary" />
             </DialogTitle>
             <DialogDescription className="text-right text-muted-foreground">
-              {splitStep === 1 ? t('select_customers_to_split') : t('allocate_amounts')}
+              {splitStep === 1 ? renderBoth('select_customers_for_split') : renderBoth('review_split_amounts')}
             </DialogDescription>
           </DialogHeader>
 
@@ -1406,6 +1441,12 @@ const POS = () => {
                     placeholder={renderBothString('search_customers')}
                     value={splitSearchTerm}
                     onChange={(e) => setSplitSearchTerm(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && selectedSplitCustomerIds.length > 0) {
+                        e.preventDefault();
+                        moveToAllocation();
+                      }
+                    }}
                     className="w-full bg-background border-border rounded-2xl pr-12 h-14 text-right font-bold focus:border-primary/50 transition-all text-foreground"
                   />
                 </div>
@@ -1467,24 +1508,24 @@ const POS = () => {
               <div className="p-6 bg-card border-t border-border">
                 <div className="flex justify-between items-center mb-4">
                   <div className="text-right">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">TOTAL TO SPLIT</p>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">{renderBoth('total_to_split')}</p>
                     <p className="text-2xl font-black text-primary">{settings.shop.currency} {grandTotal.toFixed(2)}</p>
                   </div>
                   <div className="text-left">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">SELECTED</p>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">{renderBoth('selected')}</p>
                     <p className="text-2xl font-black text-foreground">{selectedSplitCustomerIds.length}</p>
                   </div>
                 </div>
                 <div className="flex gap-3">
                   <Button variant="outline" onClick={() => setIsSplitDialogOpen(false)} className="flex-1 border-border h-14 rounded-2xl font-black text-foreground hover:bg-muted uppercase tracking-widest text-xs">
-                    {t('cancel')}
+                    {renderBoth('cancel')}
                   </Button>
                   <Button
                     onClick={moveToAllocation}
                     disabled={selectedSplitCustomerIds.length === 0}
                     className="flex-1 btn-gradient-blue h-14 rounded-2xl font-black text-white shadow-xl shadow-blue-500/20 uppercase tracking-widest text-xs"
                   >
-                    {t('next')}
+                    {renderBoth('next')}
                   </Button>
                 </div>
               </div>
@@ -1505,7 +1546,13 @@ const POS = () => {
                               value={entry.amount}
                               onChange={(e) => updateSplitAmount(entry.id, parseFloat(e.target.value) || 0)}
                               onFocus={handleFocus}
-                              className="w-32 h-14 bg-background border-border rounded-2xl pl-10 text-right text-xl font-black focus:border-primary transition-all text-foreground"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && Math.abs(splitRemaining) <= 0.01 && splitEntries.length > 0) {
+                                  e.preventDefault();
+                                  processSplitPayment();
+                                }
+                              }}
+                              className="w-32 h-14 bg-background border-border rounded-2xl pl-10 text-right text-xl font-black focus:border-primary transition-all text-foreground font-mono"
                             />
                           </div>
                         </div>
@@ -1523,13 +1570,13 @@ const POS = () => {
               <div className="p-6 bg-card border-t border-border">
                 <div className="grid grid-cols-2 gap-6 mb-6">
                   <div className="text-right">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">(TARGET TOTAL)</p>
-                    <p className="text-2xl font-black text-foreground">{settings.shop.currency} {grandTotal.toFixed(2)}</p>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">{renderBoth('total_to_split')}</p>
+                    <p className="text-2xl font-black text-foreground font-mono">{settings.shop.currency} {grandTotal.toFixed(2)}</p>
                   </div>
                   <div className="text-left">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">(TOTAL ALLOCATED)</p>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">{renderBoth('sum')}</p>
                     <p className={cn(
-                      "text-2xl font-black transition-all",
+                      "text-2xl font-black transition-all font-mono",
                       Math.abs(splitRemaining) < 0.01 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
                     )}>
                       {settings.shop.currency} {splitTotal.toFixed(2)}
@@ -1539,14 +1586,14 @@ const POS = () => {
 
                 <div className="flex gap-3">
                   <Button variant="ghost" onClick={backToSelection} className="h-14 w-14 rounded-2xl border border-border text-foreground hover:bg-muted">
-                    <ArrowLeft className="h-5 w-5" />
+                    <ArrowLeft className="h-5 w-5 rtl:rotate-180" />
                   </Button>
                   <Button
                     onClick={processSplitPayment}
                     disabled={Math.abs(splitRemaining) > 0.01 || splitEntries.length === 0}
                     className="flex-1 btn-gradient-blue h-14 rounded-2xl font-black text-white shadow-xl shadow-blue-500/20 uppercase tracking-widest text-xs"
                   >
-                    (Confirm Split Payment) {t('confirm_split_payment')}
+                    {renderBoth('confirm_split_payment')}
                   </Button>
                 </div>
               </div>

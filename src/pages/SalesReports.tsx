@@ -1,12 +1,21 @@
 "use client";
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useAppContext } from '@/context/AppContext';
 import { TrendingUp, BarChart3, PieChart, Calendar, DollarSign, Activity, ShoppingBag, ArrowUpRight, ArrowDownRight, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid
+} from 'recharts';
 
 const SalesReports = () => {
   const { t } = useTranslation();
@@ -22,7 +31,7 @@ const SalesReports = () => {
       return false;
     });
 
-    const total = filtered.reduce((sum, sale) => sum + sale.grandTotal, 0);
+    const total = filtered.reduce((sum, sale) => sum + (Number(sale.grandTotal) || 0), 0);
     return { total, count: filtered.length, items: filtered };
   };
 
@@ -33,11 +42,11 @@ const SalesReports = () => {
     let totalCost = 0;
 
     filtered.forEach(sale => {
-      sale.items.forEach(item => {
+      (sale.items || []).forEach(item => {
         const product = products.find(p => p.id === item.id);
         if (product) {
-          const revenue = item.price * item.qty;
-          const cost = (product.cost_price || 0) * item.qty;
+          const revenue = Number(item.price || 0) * Number(item.qty || 0);
+          const cost = Number(product.cost_price || 0) * Number(item.qty || 0);
 
           totalRevenue += revenue;
           totalCost += cost;
@@ -68,6 +77,103 @@ const SalesReports = () => {
       {t(key, options)} ({t(key, { ...options, lng: 'en' })})
     </>
   );
+
+  // Dynamic monthly revenue data for the last 6 months
+  const monthlyGrowthData = useMemo(() => {
+    const months = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthShort = d.toLocaleString('en-US', { month: 'short' });
+      const year = d.getFullYear();
+      const monthIndex = d.getMonth();
+
+      const totalForMonth = sales
+        .filter(sale => {
+          const sDate = new Date(sale.date);
+          return sDate.getFullYear() === year && sDate.getMonth() === monthIndex;
+        })
+        .reduce((sum, s) => sum + (Number(s.grandTotal) || 0), 0);
+
+      months.push({
+        name: monthShort,
+        fullName: `${monthShort} ${year}`,
+        revenue: Math.round(totalForMonth * 100) / 100
+      });
+    }
+    return months;
+  }, [sales]);
+
+  // Dynamic Key Insights from actual sales
+  const keyInsights = useMemo(() => {
+    // 1. Highest Revenue Day
+    const dayTotals = new Map<string, number>();
+    sales.forEach(s => {
+      if (!s.date) return;
+      const dayKey = s.date.slice(0, 10);
+      dayTotals.set(dayKey, (dayTotals.get(dayKey) || 0) + (Number(s.grandTotal) || 0));
+    });
+
+    let highestDayDate: string | null = null;
+    let highestDayAmount = 0;
+    dayTotals.forEach((amt, day) => {
+      if (amt > highestDayAmount) {
+        highestDayAmount = amt;
+        highestDayDate = day;
+      }
+    });
+
+    let highestDayLabel = '-';
+    if (highestDayDate) {
+      const d = new Date(highestDayDate);
+      highestDayLabel = `${d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} (${settings.shop.currency} ${highestDayAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`;
+    }
+
+    // 2. Best Selling Category
+    const categoryQty = new Map<string, number>();
+    sales.forEach(s => {
+      (s.items || []).forEach(item => {
+        const prod = products.find(p => p.id === item.id);
+        const cat = prod?.category || 'General';
+        categoryQty.set(cat, (categoryQty.get(cat) || 0) + (Number(item.qty) || 0));
+      });
+    });
+
+    let bestCategory = '-';
+    let bestCategoryQty = 0;
+    categoryQty.forEach((qty, cat) => {
+      if (qty > bestCategoryQty) {
+        bestCategoryQty = qty;
+        bestCategory = cat;
+      }
+    });
+    const bestCategoryLabel = bestCategory !== '-' ? `${bestCategory} (${bestCategoryQty} units)` : '-';
+
+    // 3. Average Basket Value
+    const totalRevenue = sales.reduce((sum, s) => sum + (Number(s.grandTotal) || 0), 0);
+    const avgBasket = sales.length > 0 ? (totalRevenue / sales.length) : 0;
+    const avgBasketLabel = `${settings.shop.currency} ${avgBasket.toFixed(2)}`;
+
+    return {
+      highestDayLabel,
+      bestCategoryLabel,
+      avgBasketLabel
+    };
+  }, [sales, products, settings.shop.currency]);
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-popover border border-border px-3 py-2 rounded-xl shadow-xl text-popover-foreground text-xs font-faruma text-right" dir="rtl">
+          <p className="font-bold text-muted-foreground">{label}</p>
+          <p className="font-black text-primary text-sm mt-0.5" dir="ltr">
+            {settings.shop.currency} {Number(payload[0].value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   const StatCard = ({ title, stats, icon: Icon, color, profit }: any) => (
     <Card className="bg-card border-border hover:border-primary/30 transition-all rounded-[2rem] overflow-hidden group">
@@ -131,41 +237,76 @@ const SalesReports = () => {
              <Card className="bg-card border-border rounded-[2rem] p-8">
                 <CardHeader className="p-0 mb-6 flex flex-row items-center justify-between">
                    <CardTitle className="text-xl font-black text-foreground flex items-center gap-2">
-                      <Activity className="h-5 w-5 text-primary" /> Monthly Growth
+                      <Activity className="h-5 w-5 text-primary" /> {renderBoth('monthly_growth')}
                    </CardTitle>
+                   <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest bg-muted px-2.5 py-1 rounded-lg border border-border">
+                     Last 6 Months
+                   </span>
                 </CardHeader>
-                <div className="h-60 flex flex-col items-center justify-center border-2 border-dashed border-border rounded-3xl bg-muted">
-                   <p className="text-muted-foreground/50 font-black uppercase tracking-widest">Chart Visualisation Placeholder</p>
-                   <p className="text-[10px] text-foreground/10 mt-2 font-bold">UPGRADE TO PRO FOR ADVANCED ANALYTICS</p>
+                <div className="h-64 w-full" dir="ltr">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={monthlyGrowthData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="growthGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4}/>
+                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.6} />
+                      <XAxis 
+                        dataKey="name" 
+                        stroke="hsl(var(--muted-foreground))" 
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis 
+                        stroke="hsl(var(--muted-foreground))" 
+                        fontSize={10}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => `${value >= 1000 ? `${(value/1000).toFixed(0)}k` : value}`}
+                      />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Area 
+                        type="monotone" 
+                        dataKey="revenue" 
+                        stroke="hsl(var(--primary))" 
+                        strokeWidth={2.5}
+                        fillOpacity={1} 
+                        fill="url(#growthGradient)" 
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </div>
              </Card>
 
              <Card className="bg-card border-border rounded-[2rem] p-8">
                 <CardHeader className="p-0 mb-6 flex flex-row items-center justify-between">
                    <CardTitle className="text-xl font-black text-foreground flex items-center gap-2">
-                      <ShoppingBag className="h-5 w-5 text-orange-500" /> Key Insights
+                      <ShoppingBag className="h-5 w-5 text-orange-500" /> {renderBoth('key_insights')}
                    </CardTitle>
                 </CardHeader>
                 <div className="space-y-4">
                    <div className="p-4 bg-muted rounded-2xl border border-border flex items-center justify-between">
-                      <ArrowUpRight className="h-5 w-5 text-green-500" />
+                      <ArrowUpRight className="h-5 w-5 text-green-500 shrink-0" />
                       <div className="text-right">
-                         <p className="text-sm font-black text-foreground">Highest Revenue Day</p>
-                         <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Saturday, May 3rd</p>
+                         <p className="text-sm font-black text-foreground">{renderBoth('highest_revenue_day')}</p>
+                         <p className="text-[11px] text-muted-foreground font-bold tracking-wide mt-0.5">{keyInsights.highestDayLabel}</p>
                       </div>
                    </div>
                    <div className="p-4 bg-muted rounded-2xl border border-border flex items-center justify-between">
-                      <TrendingUp className="h-5 w-5 text-blue-500" />
+                      <TrendingUp className="h-5 w-5 text-blue-500 shrink-0" />
                       <div className="text-right">
-                         <p className="text-sm font-black text-foreground">Best Selling Category</p>
-                         <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Soft Drinks & Beverages</p>
+                         <p className="text-sm font-black text-foreground">{renderBoth('best_selling_category')}</p>
+                         <p className="text-[11px] text-muted-foreground font-bold tracking-wide mt-0.5">{keyInsights.bestCategoryLabel}</p>
                       </div>
                    </div>
                    <div className="p-4 bg-muted rounded-2xl border border-border flex items-center justify-between">
-                      <Activity className="h-5 w-5 text-purple-500" />
+                      <Activity className="h-5 w-5 text-purple-500 shrink-0" />
                       <div className="text-right">
-                         <p className="text-sm font-black text-foreground">Average Basket Value</p>
-                         <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{settings.shop.currency} 45.50</p>
+                         <p className="text-sm font-black text-foreground">{renderBoth('average_basket_value')}</p>
+                         <p className="text-[11px] text-muted-foreground font-bold tracking-wide mt-0.5">{keyInsights.avgBasketLabel}</p>
                       </div>
                    </div>
                 </div>

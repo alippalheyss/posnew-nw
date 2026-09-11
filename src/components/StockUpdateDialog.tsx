@@ -57,67 +57,94 @@ const StockUpdateDialog: React.FC<StockUpdateDialogProps> = ({ isOpen, onClose, 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[450px] font-faruma bg-card border-border text-foreground shadow-2xl" dir="rtl">
-        <DialogHeader className="text-right">
-          <DialogTitle className="text-2xl font-black flex items-center justify-end gap-3">
-             {renderBoth('update_stock')} <Edit3 className="h-6 w-6 text-primary" />
+      <DialogContent className="sm:max-w-[440px] font-faruma bg-card border-border text-foreground shadow-2xl rounded-3xl p-6" dir="rtl">
+        <DialogHeader className="text-right pb-2 space-y-1">
+          <DialogTitle className="text-xl font-black flex items-center justify-end gap-2.5">
+             <span>{renderBoth('update_stock')}</span>
+             <Edit3 className="h-5 w-5 text-primary" />
           </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
+          <DialogDescription className="text-xs text-muted-foreground font-bold">
             {stockItem.name_dv} ({stockItem.name_en})
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-8 py-8">
-           <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-4 py-2">
+           <div className="grid grid-cols-2 gap-3">
               <div 
                 onClick={() => setTarget('shop')}
                 className={cn(
-                  "p-4 rounded-2xl border cursor-pointer transition-all text-right",
-                  target === 'shop' ? "bg-primary/10 border-primary shadow-lg shadow-primary/20" : "bg-muted border-border opacity-50"
+                  "p-3.5 rounded-2xl border cursor-pointer transition-all text-center",
+                  target === 'shop' 
+                    ? "bg-primary/10 border-primary shadow-sm ring-1 ring-primary/30" 
+                    : "bg-muted/60 border-border opacity-70 hover:opacity-100"
                 )}
               >
-                 <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest mb-1">{renderBoth('shop_stock')}</p>
-                 <p className="text-2xl font-black text-foreground">{stockItem.stock_shop}</p>
+                 <div className="flex items-center justify-center gap-1.5 mb-1">
+                   <Boxes className="h-3.5 w-3.5 text-muted-foreground" />
+                   <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">
+                     {renderBoth('shop_stock')}
+                   </span>
+                 </div>
+                 <p className="text-2xl font-black text-foreground font-mono">{stockItem.stock_shop}</p>
+                 {target === 'shop' && (
+                   <span className="text-[9px] font-black text-primary uppercase tracking-widest mt-1 block">Selected (އިޚްތިޔާރުކުރެވިފައި)</span>
+                 )}
               </div>
               <div 
                 onClick={() => setTarget('godown')}
                 className={cn(
-                  "p-4 rounded-2xl border cursor-pointer transition-all text-right",
-                  target === 'godown' ? "bg-primary/10 border-primary shadow-lg shadow-primary/20" : "bg-muted border-border opacity-50"
+                  "p-3.5 rounded-2xl border cursor-pointer transition-all text-center",
+                  target === 'godown' 
+                    ? "bg-primary/10 border-primary shadow-sm ring-1 ring-primary/30" 
+                    : "bg-muted/60 border-border opacity-70 hover:opacity-100"
                 )}
               >
-                 <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest mb-1">{renderBoth('godown_stock')}</p>
-                 <p className="text-2xl font-black text-foreground">{stockItem.stock_godown}</p>
+                 <div className="flex items-center justify-center gap-1.5 mb-1">
+                   <Boxes className="h-3.5 w-3.5 text-muted-foreground" />
+                   <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">
+                     {renderBoth('godown_stock')}
+                   </span>
+                 </div>
+                 <p className="text-2xl font-black text-foreground font-mono">{stockItem.stock_godown}</p>
+                 {target === 'godown' && (
+                   <span className="text-[9px] font-black text-primary uppercase tracking-widest mt-1 block">Selected (އިޚްތިޔާރުކުރެވިފައި)</span>
+                 )}
               </div>
            </div>
 
-           <div className="space-y-3">
-              <Label htmlFor="newStock" className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest pr-2">
-                {renderBoth('new_stock_quantity')}*
+           <div className="space-y-1.5">
+              <Label htmlFor="newStock" className="text-right block text-xs font-black uppercase text-foreground px-1">
+                {renderBoth('new_stock_quantity')}* ({target === 'shop' ? t('shop') : t('godown')})
               </Label>
               <div className="relative">
-                 <Boxes className="absolute right-4 top-1/2 -translate-y-1/2 h-6 w-6 text-primary/40" />
+                 <Boxes className="absolute right-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/50" />
                  <Input
                    id="newStock"
                    type="number"
+                   min="0"
                    value={editedStock}
-                   onChange={(e) => setEditedStock(parseFloat(e.target.value) || '')} onFocus={handleFocus}
-                   className="bg-muted border-primary h-16 rounded-2xl pr-14 text-3xl font-black text-foreground focus:ring-0 text-right"
+                   onChange={(e) => setEditedStock(parseFloat(e.target.value) || '')} 
+                   onFocus={handleFocus}
+                   className="bg-muted border-border focus:border-primary h-13 rounded-xl pr-12 text-2xl font-black text-foreground font-mono text-right"
                    autoFocus
                    placeholder="0"
                  />
               </div>
-              <p className="text-[10px] text-muted-foreground/50 text-right italic">
-                This will manually override the current {target === 'shop' ? 'Shop' : 'Godown'} stock value.
+              <p className="text-[11px] text-muted-foreground text-right px-1 pt-0.5">
+                {renderBoth('update_stock_manual_override')}
               </p>
            </div>
         </div>
 
-        <DialogFooter className="gap-3 pt-4 border-t border-border">
-          <Button variant="ghost" onClick={onClose} className="flex-1 h-12 border-border hover:bg-muted text-foreground font-black uppercase tracking-widest">
+        <DialogFooter className="gap-2.5 pt-3 border-t border-border flex flex-row">
+          <Button variant="outline" onClick={onClose} className="flex-1 h-11 border-border hover:bg-muted text-foreground font-bold text-xs rounded-xl">
             {renderBoth('cancel')}
           </Button>
-          <Button onClick={handleSave} disabled={typeof editedStock !== 'number' || editedStock < 0} className="flex-1 h-12 bg-primary hover:bg-primary/90 font-black uppercase tracking-widest shadow-[0_0_20px_rgba(0,132,255,0.3)]">
+          <Button 
+            onClick={handleSave} 
+            disabled={typeof editedStock !== 'number' || editedStock < 0} 
+            className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs rounded-xl shadow-lg shadow-primary/20 uppercase"
+          >
             {renderBoth('save_changes')}
           </Button>
         </DialogFooter>

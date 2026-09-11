@@ -119,6 +119,20 @@ CREATE TABLE IF NOT EXISTS public.settings (
     UNIQUE(user_id, category)
 );
 
+-- Create expenses table
+CREATE TABLE IF NOT EXISTS public.expenses (
+    id TEXT PRIMARY KEY DEFAULT uuid_generate_v4()::text,
+    date DATE NOT NULL,
+    category TEXT NOT NULL,
+    title TEXT NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    payment_method TEXT NOT NULL DEFAULT 'cash',
+    reference_number TEXT,
+    notes TEXT,
+    recorded_by TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_products_barcode ON public.products(barcode);
 CREATE INDEX IF NOT EXISTS idx_products_item_code ON public.products(item_code);
@@ -129,6 +143,8 @@ CREATE INDEX IF NOT EXISTS idx_sales_customer_id ON public.sales(customer_id);
 CREATE INDEX IF NOT EXISTS idx_settlements_customer_id ON public.settlements(customer_id);
 CREATE INDEX IF NOT EXISTS idx_purchases_vendor_id ON public.purchases(vendor_id);
 CREATE INDEX IF NOT EXISTS idx_purchases_date ON public.purchases(date);
+CREATE INDEX IF NOT EXISTS idx_expenses_date ON public.expenses(date);
+CREATE INDEX IF NOT EXISTS idx_expenses_category ON public.expenses(category);
 
 -- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -161,6 +177,7 @@ ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vendors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.purchases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies (allow authenticated users to access all data)
 -- Note: You may want to customize these policies based on your security requirements
@@ -194,6 +211,10 @@ CREATE POLICY "Allow authenticated users full access to vendors" ON public.vendo
 
 -- Purchases policies
 CREATE POLICY "Allow authenticated users full access to purchases" ON public.purchases
+    FOR ALL USING (auth.role() = 'authenticated');
+
+-- Expenses policies
+CREATE POLICY "Allow authenticated users full access to expenses" ON public.expenses
     FOR ALL USING (auth.role() = 'authenticated');
 
 -- Settings policies

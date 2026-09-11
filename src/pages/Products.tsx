@@ -254,6 +254,11 @@ const Products = () => {
                          <div className="flex items-center justify-between mt-3">
                             <div className="text-right">
                               <span className="text-xs font-black text-primary">{settings.shop.currency} {product.price.toFixed(2)}</span>
+                              {product.cost_price && product.cost_price > 0 && (
+                                <span className="text-[9px] font-bold text-muted-foreground/80 block">
+                                  Cost: {settings.shop.currency} {product.cost_price.toFixed(2)}
+                                </span>
+                              )}
                               {product.units && product.units.length > 0 && (
                                 <span className="text-[8px] font-bold text-muted-foreground block">
                                   +{product.units.length} unit{product.units.length > 1 ? 's' : ''}
@@ -305,6 +310,11 @@ const Products = () => {
                         <div className="font-black text-primary">
                           {settings.shop.currency} {product.price.toFixed(2)}
                         </div>
+                        {product.cost_price && product.cost_price > 0 && (
+                          <div className="text-[10px] text-muted-foreground font-semibold">
+                            Cost: {settings.shop.currency} {product.cost_price.toFixed(2)}
+                          </div>
+                        )}
                         {product.units && product.units.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1 justify-end">
                             {product.units.map((u, i) => (

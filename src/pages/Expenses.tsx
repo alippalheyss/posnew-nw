@@ -164,7 +164,7 @@ const Expenses: React.FC = () => {
     }
 
     const newExpense: Expense = {
-      id: `exp-${Date.now()}`,
+      id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `exp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       date: formData.date || toISODate(),
       category: formData.category,
       title: formData.title.trim(),

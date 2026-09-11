@@ -176,17 +176,24 @@ const MobilePurchase: React.FC = () => {
       return;
     }
 
+    const finalGst = parseFloat(effectiveGst) || 0;
+    if (finalGst > parsedTotal) {
+      showError('GST amount cannot exceed total bill amount');
+      return;
+    }
+
     setIsSaving(true);
     try {
-      const finalGst = parseFloat(effectiveGst);
+      const netSubtotalNum = Math.max(0, parsedTotal - finalGst);
       const purchaseData: Purchase = {
         id: crypto.randomUUID(),
         date: date,
         vendorId: vendorId,
         vendor: selectedVendor?.name_en || selectedVendor?.name_dv || '',
+        vendorName: selectedVendor?.name_en || selectedVendor?.name_dv || '',
         billNumber: billNumber.trim(),
-        amount: parsedTotal,
-        gstAmount: finalGst,
+        amount: parseFloat(netSubtotalNum.toFixed(2)),
+        gstAmount: parseFloat(finalGst.toFixed(2)),
         description: `${description ? description + ' | ' : ''}${hasZeroTax ? `[0% GST: ${currency} ${parsedZeroTax.toFixed(2)}]` : ''}${billImage ? ' [Receipt Photo Attached]' : ''}`,
         items: []
       };
@@ -588,7 +595,7 @@ const MobilePurchase: React.FC = () => {
                 <div key={p.id} className="bg-card border border-border rounded-xl p-3 flex items-center justify-between text-right">
                   <div className="text-left font-mono">
                     <span className="text-xs font-black text-primary block">
-                      {currency} {Number(p.amount || 0).toFixed(2)}
+                      {currency} {(Number(p.amount || 0) + Number(p.gstAmount || 0)).toFixed(2)}
                     </span>
                     <span className="text-[9px] text-muted-foreground block">
                       GST: {currency} {Number(p.gstAmount || 0).toFixed(2)}

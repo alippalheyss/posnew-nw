@@ -252,6 +252,7 @@ interface AppContextType {
   addSettlement: (customerId: string, settlement: Settlement) => Promise<void>;
   purchases: Purchase[];
   addPurchase: (purchase: Purchase) => Promise<void>;
+  deletePurchase: (purchaseId: string) => Promise<void>;
   vendors: Vendor[];
   setVendors: React.Dispatch<React.SetStateAction<Vendor[]>>;
   addVendor: (vendor: Vendor) => Promise<void>;
@@ -298,58 +299,17 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       try {
         const saved = localStorage.getItem('app_expenses');
         if (saved) {
-          return JSON.parse(saved);
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            const mockIds = ['exp-1', 'exp-2', 'exp-3', 'exp-4'];
+            return parsed.filter((e: any) => !mockIds.includes(e.id));
+          }
         }
       } catch (e) {
         console.error('Error parsing app_expenses', e);
       }
     }
-    return [
-      {
-        id: 'exp-1',
-        date: toISODate(),
-        category: 'electricity',
-        title: 'STELCO Electricity Bill - Shop',
-        amount: 2450.00,
-        paymentMethod: 'transfer',
-        referenceNumber: 'STEL-88421',
-        notes: 'Monthly electricity charges for main shop',
-        recordedBy: 'Admin'
-      },
-      {
-        id: 'exp-2',
-        date: toISODate(),
-        category: 'naalu',
-        title: 'Boat Naalu - Male to Island Cargo Shipment',
-        amount: 850.00,
-        paymentMethod: 'cash',
-        referenceNumber: 'BOAT-104',
-        notes: 'Freight for 12 cartons of beverages and household stock',
-        recordedBy: 'Admin'
-      },
-      {
-        id: 'exp-3',
-        date: toISODate(),
-        category: 'disposal_charge',
-        title: 'WAMCO Waste Disposal Charge',
-        amount: 350.00,
-        paymentMethod: 'cash',
-        referenceNumber: 'WAM-2026-9',
-        notes: 'Commercial waste collection service',
-        recordedBy: 'Admin'
-      },
-      {
-        id: 'exp-4',
-        date: toISODate(),
-        category: 'zakat_al_mal',
-        title: 'Zakat al-Mal Business Wealth Distribution',
-        amount: 5000.00,
-        paymentMethod: 'transfer',
-        referenceNumber: 'ZAK-2026-01',
-        notes: 'Annual 2.5% wealth zakat calculation & payout',
-        recordedBy: 'Admin'
-      }
-    ];
+    return [];
   });
 
   useEffect(() => {
@@ -536,20 +496,28 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
       // Safe fetch for expenses if Supabase table is created
       try {
-        const { data: expensesData } = await supabase.from('expenses').select('*').order('date', { ascending: false });
-        if (expensesData && expensesData.length > 0) {
-          setExpenses(expensesData.map((e: any) => ({
-            id: e.id,
-            date: e.date,
-            category: e.category,
-            title: e.title,
-            amount: Number(e.amount || 0),
-            paymentMethod: e.payment_method || e.paymentMethod || 'cash',
-            referenceNumber: e.reference_number || e.referenceNumber,
-            notes: e.notes,
-            recordedBy: e.recorded_by || e.recordedBy,
-            createdAt: e.created_at || e.createdAt
-          })));
+        const { data: expensesData, error: expError } = await supabase
+          .from('expenses')
+          .select('*')
+          .order('date', { ascending: false });
+
+        if (!expError && expensesData) {
+          const mockIds = ['exp-1', 'exp-2', 'exp-3', 'exp-4'];
+          const userExpenses = expensesData
+            .filter((e: any) => !mockIds.includes(e.id))
+            .map((e: any) => ({
+              id: e.id,
+              date: e.date,
+              category: e.category,
+              title: e.title,
+              amount: Number(e.amount || 0),
+              paymentMethod: e.payment_method || e.paymentMethod || 'cash',
+              referenceNumber: e.reference_number || e.referenceNumber,
+              notes: e.notes,
+              recordedBy: e.recorded_by || e.recordedBy,
+              createdAt: e.created_at || e.createdAt
+            }));
+          setExpenses(userExpenses);
         }
       } catch (expErr) {
         // Table does not exist in Supabase yet, localStorage will maintain expenses seamlessly
@@ -1453,6 +1421,23 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
+  const deletePurchase = async (purchaseId: string) => {
+    try {
+      const { error } = await supabase
+        .from('purchases')
+        .delete()
+        .eq('id', purchaseId);
+
+      if (error) throw error;
+
+      setPurchases(prev => prev.filter(p => p.id !== purchaseId));
+      showSuccess('Purchase deleted successfully');
+    } catch (error) {
+      console.error('Error deleting purchase:', error);
+      showError('Failed to delete purchase');
+    }
+  };
+
   const addVendor = async (vendor: Vendor) => {
     try {
       const { id, ...vendorData } = vendor as any;
@@ -1711,6 +1696,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       transferStock,
       purchases,
       addPurchase,
+      deletePurchase,
       vendors,
       setVendors,
       addVendor,

@@ -20,8 +20,9 @@ import * as XLSX from 'xlsx';
 
 const GSTReports = () => {
     const { t } = useTranslation();
-    const { sales, purchases, settings, setIsPurchaseWindowOpen } = useAppContext();
+    const { sales, purchases, settings, setIsPurchaseWindowOpen, deletePurchase } = useAppContext();
     const [timeRange, setTimeRange] = useState('this_month');
+    const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(null);
     
     const renderBoth = (key: string, options?: any) => (
         <>
@@ -221,12 +222,13 @@ const GSTReports = () => {
                                         <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">Amount (Excl.)</TableHead>
                                         <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">GST ({settings.shop.taxRate}%)</TableHead>
                                         <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">Total</TableHead>
+                                        <TableHead className="text-center font-black text-muted-foreground uppercase text-[10px] tracking-widest w-12"></TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {filteredPurchases.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="text-center py-20 text-muted-foreground/50 font-black uppercase tracking-[0.2em]">
+                                            <TableCell colSpan={7} className="text-center py-20 text-muted-foreground/50 font-black uppercase tracking-[0.2em]">
                                                 No purchase records for this period
                                             </TableCell>
                                         </TableRow>
@@ -234,12 +236,30 @@ const GSTReports = () => {
                                         filteredPurchases.map((purchase) => (
                                             <TableRow key={purchase.id} className="border-border hover:bg-muted transition-colors group">
                                                 <TableCell className="text-right font-medium">{formatDate(purchase.date)}</TableCell>
-                                                <TableCell className="text-right font-black text-foreground">{purchase.billNumber || '-'}</TableCell>
-                                                <TableCell className="text-right text-sm font-bold text-muted-foreground/80">{purchase.vendorName}</TableCell>
+                                                <TableCell className="text-right font-black text-foreground">
+                                                    <div>{purchase.billNumber || '-'}</div>
+                                                    {purchase.description && (
+                                                        <div className="text-[10px] text-muted-foreground font-normal truncate max-w-[180px]" title={purchase.description}>
+                                                            {purchase.description}
+                                                        </div>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-right text-sm font-bold text-muted-foreground/80">{purchase.vendorName || purchase.vendor || '-'}</TableCell>
                                                 <TableCell className="text-right font-medium">{settings.shop.currency} {purchase.amount.toFixed(2)}</TableCell>
                                                 <TableCell className="text-right font-black text-orange-500">{settings.shop.currency} {purchase.gstAmount.toFixed(2)}</TableCell>
                                                 <TableCell className="text-right font-black text-primary">
                                                     {settings.shop.currency} {(purchase.amount + purchase.gstAmount).toFixed(2)}
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => setPurchaseToDelete(purchase)}
+                                                        className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg opacity-60 group-hover:opacity-100 transition-all"
+                                                        title="Delete Purchase Record"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
                                                 </TableCell>
                                             </TableRow>
                                         ))
@@ -250,6 +270,44 @@ const GSTReports = () => {
                     </Card>
                 </div>
             </ScrollArea>
+
+            {/* Delete Purchase Confirmation Dialog */}
+            <Dialog open={!!purchaseToDelete} onOpenChange={(open) => !open && setPurchaseToDelete(null)}>
+                <DialogContent className="font-faruma bg-card border-border text-foreground max-w-sm" dir="rtl">
+                    <DialogHeader className="text-right">
+                        <DialogTitle className="text-base font-black flex items-center justify-end gap-2 text-red-500">
+                            <span>ބިލް ޑިލީޓް ކުރަންވީތަ؟</span>
+                            <Trash2 className="h-5 w-5" />
+                        </DialogTitle>
+                        <DialogDescription className="text-xs text-muted-foreground text-right mt-2 space-y-1">
+                            {purchaseToDelete && (
+                                <>
+                                    <div>ބިލް ނަންބަރު: <strong className="text-foreground">{purchaseToDelete.billNumber || '-'}</strong> ({purchaseToDelete.vendorName || purchaseToDelete.vendor})</div>
+                                    <div>ތާރީޚް: <strong className="text-foreground">{formatDate(purchaseToDelete.date)}</strong></div>
+                                    <div>ޖުމްލަ އަގު: <strong className="text-primary">{settings.shop.currency} {(purchaseToDelete.amount + purchaseToDelete.gstAmount).toFixed(2)}</strong></div>
+                                </>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="flex gap-2 mt-4">
+                        <Button variant="ghost" onClick={() => setPurchaseToDelete(null)} className="flex-1 h-10 text-xs font-bold">
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={async () => {
+                                if (purchaseToDelete) {
+                                    await deletePurchase(purchaseToDelete.id);
+                                    setPurchaseToDelete(null);
+                                }
+                            }}
+                            className="flex-1 h-10 text-xs font-black bg-red-600 hover:bg-red-700"
+                        >
+                            Delete Bill
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

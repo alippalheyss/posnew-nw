@@ -635,7 +635,9 @@ const CreditOutstanding = () => {
           <ScrollArea className="h-[400px] mt-4 pr-4">
             <div className="space-y-3">
               {selectedCustomerForAction?.settlement_history && selectedCustomerForAction.settlement_history.length > 0 ? (
-                [...selectedCustomerForAction.settlement_history].reverse().map((settlement, idx) => (
+                [...selectedCustomerForAction.settlement_history]
+                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                  .map((settlement, idx) => (
                   <div key={settlement.id || idx} className="p-4 rounded-2xl bg-muted border border-border text-right relative overflow-hidden group">
                     <div className="flex justify-between items-center mb-2">
                        <span className="text-[10px] font-mono text-muted-foreground/50">{formatDate(settlement.date)} {formatTime(settlement.date)}</span>
@@ -677,7 +679,9 @@ const CreditOutstanding = () => {
           <ScrollArea className="h-[450px] mt-4 pr-4">
             <div className="space-y-4">
               {selectedCustomerCreditSales.length > 0 ? (
-                [...selectedCustomerCreditSales].reverse().map((sale) => {
+                [...selectedCustomerCreditSales]
+                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                  .map((sale) => {
                   const splitEntry = sale.splitDetails?.find((d: any) => d.customerId === selectedCustomerForAction?.id && d.method?.toLowerCase() === 'credit');
                   const isSplit = !!splitEntry;
                   const displayAmount = isSplit ? splitEntry.amount : sale.grandTotal;

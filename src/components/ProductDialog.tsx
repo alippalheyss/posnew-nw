@@ -160,6 +160,9 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
 
         const finalProduct: Product = {
             ...editedProduct,
+            cost_price: (editedProduct.cost_price !== undefined && editedProduct.cost_price !== null && !isNaN(Number(editedProduct.cost_price)))
+                ? Number(editedProduct.cost_price)
+                : undefined,
             item_code: numericCode,
             image: imagePreviewUrl || generatePlaceholderImage(editedProduct.name_en || editedProduct.name_dv, numericCode),
             expiry_date: expiryDate ? format(expiryDate, 'yyyy-MM-dd') : undefined,
@@ -288,12 +291,24 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                 </div>
                             </div>
 
-                            {/* Row 2: Price, Item Code, Barcode */}
-                            <div className="grid grid-cols-3 gap-3">
+                            {/* Row 2: Selling Price & Cost Price */}
+                            <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1">
-                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                                        {renderBoth('price')} (Piece)*
-                                    </Label>
+                                    <div className="flex justify-between items-center">
+                                        {editedProduct.cost_price && Number(editedProduct.cost_price) > 0 && editedProduct.price > 0 && (
+                                            <span className={cn(
+                                                "text-[9px] font-black px-1.5 py-0.5 rounded-md",
+                                                editedProduct.price >= Number(editedProduct.cost_price)
+                                                    ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                                                    : "bg-red-500/10 text-red-500 border border-red-500/20"
+                                            )}>
+                                                {(((editedProduct.price - Number(editedProduct.cost_price)) / Number(editedProduct.cost_price)) * 100).toFixed(0)}% margin
+                                            </span>
+                                        )}
+                                        <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                                            {renderBoth('selling_price')} (Piece)*
+                                        </Label>
+                                    </div>
                                     <div className="relative">
                                         <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-black text-primary">
                                             {settings.shop.currency}
@@ -309,6 +324,29 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                     </div>
                                 </div>
 
+                                <div className="space-y-1">
+                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                                        {renderBoth('cost_price')} (Piece)
+                                    </Label>
+                                    <div className="relative">
+                                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-black text-emerald-500">
+                                            {settings.shop.currency}
+                                        </span>
+                                        <Input 
+                                            type="number" 
+                                            step="0.01"
+                                            value={editedProduct.cost_price ?? ''} 
+                                            onChange={(e) => updateField('cost_price', e.target.value === '' ? undefined : (parseFloat(e.target.value) || 0))} 
+                                            onFocus={handleFocus}
+                                            placeholder="0.00"
+                                            className="bg-muted border-border h-11 rounded-xl text-right pl-12 pr-3 text-lg font-black text-foreground focus:border-emerald-500/50" 
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Row 3: Item Code & Barcode */}
+                            <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1">
                                     <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
                                         {renderBoth('item_code')}*

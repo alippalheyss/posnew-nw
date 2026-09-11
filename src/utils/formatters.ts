@@ -113,3 +113,10 @@ export const toISODatetime = (date: Date = new Date()): string => {
   const seconds = String(date.getSeconds()).padStart(2, '0');
   return `${datePart} ${hours}:${minutes}:${seconds}`;
 };
+
+export const formatCurrency = (amount: number | string | undefined | null, currency: string = 'MVR'): string => {
+  const num = typeof amount === 'string' ? parseFloat(amount) : Number(amount || 0);
+  if (isNaN(num)) return `${currency} 0.00`;
+  return `${currency} ${num.toFixed(2)}`;
+};
+

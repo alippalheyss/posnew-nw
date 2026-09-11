@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ShoppingCart, PlusCircle, Minus, Trash2, MonitorPlay, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, ArrowLeft, Plus, ChevronDown, Boxes, X } from 'lucide-react';
+import { ShoppingCart, PlusCircle, Minus, Trash2, MonitorPlay, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, ArrowLeft, Plus, ChevronDown, Boxes, X, CheckCircle2, Package, Loader2 } from 'lucide-react';
 import { formatDate, toISODate, toISODatetime, formatTime, formatDateTime } from '@/utils/formatters';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
@@ -1299,22 +1299,22 @@ const POS = () => {
       </Dialog>
 
       <Dialog open={isCreditDialogOpen} onOpenChange={setIsCreditDialogOpen}>
-        <DialogContent className="sm:max-w-[540px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border text-right p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
-          <DialogHeader className="pb-3 text-right space-y-1 border-b border-border/60">
+        <DialogContent className="sm:max-w-[560px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border text-right p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+          <DialogHeader className="pb-3 text-right space-y-1.5 border-b border-border/60">
             <div className="flex items-center justify-between pl-8">
               <div className="text-right flex-1 min-w-0">
-                <DialogTitle className="text-xl md:text-2xl font-black text-foreground flex items-center justify-end gap-2.5">
-                  <span>{creditDialogStep === 1 ? renderBoth('credit_sale') : renderBoth('confirm_credit_sale')}</span>
+                <DialogTitle className="text-xl md:text-2xl font-black text-foreground flex items-center gap-2.5">
                   {creditDialogStep === 1 ? (
                     <CreditCard className="h-6 w-6 text-primary shrink-0" />
                   ) : (
                     <Receipt className="h-6 w-6 text-primary shrink-0" />
                   )}
+                  <span>{creditDialogStep === 1 ? renderBoth('credit_sale') : renderBoth('confirm_credit_sale')}</span>
                 </DialogTitle>
-                <DialogDescription className="text-xs text-muted-foreground mt-0.5 text-right">
+                <DialogDescription className="text-xs text-muted-foreground mt-1 text-right">
                   {creditDialogStep === 1 
                     ? renderBoth('select_or_add_customer_for_credit') 
-                    : (t('confirm_credit_sale_description') || 'ކްރެޑިޓް ވިއްކުމުގެ ތަފްޞީލް ކަށަވަރުކުރައްވާ')
+                    : renderBoth('confirm_credit_sale_description')
                   }
                 </DialogDescription>
               </div>
@@ -1331,7 +1331,7 @@ const POS = () => {
                       placeholder={renderBothString('search_customers')}
                       value={customerSearchTerm}
                       onChange={(e) => setCustomerSearchTerm(e.target.value)}
-                      className="w-full text-right bg-muted/60 border-border text-foreground h-11 pr-10 rounded-xl font-bold"
+                      className="w-full text-right bg-muted/60 border-border text-foreground h-11 pr-10 rounded-xl font-bold placeholder:text-muted-foreground/60"
                     />
                   </div>
                   <Button
@@ -1339,93 +1339,123 @@ const POS = () => {
                     size="icon"
                     onClick={() => setIsAddCustomerDialogOpen(true)}
                     className="h-11 w-11 rounded-xl border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary shrink-0"
-                    title={t('add_new_customer')}
+                    title={renderBothString('add_new_customer')}
                   >
                     <UserPlus className="h-5 w-5" />
                   </Button>
                 </div>
 
-                <ScrollArea className="h-[320px] pr-2 custom-scrollbar">
-                  <div className="space-y-2.5">
-                    {customers.filter(c =>
+                <ScrollArea className="h-[340px] pr-2 custom-scrollbar">
+                  {(() => {
+                    const filteredCustomers = customers.filter(c =>
                       c.name_dv?.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
                       c.name_en?.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
                       c.phone?.includes(customerSearchTerm) ||
                       c.code?.toLowerCase().includes(customerSearchTerm.toLowerCase())
-                    ).map((customer) => {
-                      const outstanding = customer.outstanding_balance || 0;
-                      const limit = customer.credit_limit || 0;
-                      const isOverLimit = limit > 0 && (outstanding + grandTotal > limit);
+                    );
+
+                    if (filteredCustomers.length === 0) {
                       return (
-                        <div
-                          key={customer.id}
-                          onClick={() => {
-                            updateActiveCart(prev => ({ ...prev, customer }));
-                            setCreditDialogStep(2);
-                          }}
-                          className="p-3.5 rounded-2xl cursor-pointer transition-all border border-border bg-card hover:bg-muted/60 hover:border-primary/50 text-right group shadow-sm hover:shadow-md"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex flex-col items-start gap-1 shrink-0">
-                              <Badge variant="outline" className={cn(
-                                "text-[10px] font-black px-2 py-0.5 rounded-md",
-                                isOverLimit 
-                                  ? "bg-red-500/10 text-red-500 border-red-500/30" 
-                                  : "bg-primary/10 text-primary border-primary/30"
-                              )}>
-                                {t('credit_limit')}: {settings.shop.currency} {limit.toFixed(2)}
-                              </Badge>
-                              {outstanding > 0 && (
-                                <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400">
-                                  {t('current_outstanding')}: {settings.shop.currency} {outstanding.toFixed(2)}
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-right flex-1 min-w-0">
-                              <p className="font-black text-foreground group-hover:text-primary transition-colors text-sm truncate">
-                                {customer.name_dv} {customer.name_en ? `(${customer.name_en})` : ''}
-                              </p>
-                              <div className="flex items-center justify-end gap-2 text-[11px] text-muted-foreground mt-0.5">
-                                {customer.phone && <span>📞 {customer.phone}</span>}
-                                {customer.code && <span className="font-mono opacity-70">#{customer.code}</span>}
-                              </div>
-                            </div>
-                          </div>
+                        <div className="p-8 text-center text-muted-foreground bg-muted/20 rounded-2xl border border-dashed border-border/80 flex flex-col items-center justify-center gap-2 mt-4">
+                          <Users className="h-8 w-8 text-muted-foreground/40" />
+                          <p className="text-sm font-bold">{renderBoth('no_customers_found')}</p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsAddCustomerDialogOpen(true)}
+                            className="mt-2 text-xs font-bold gap-1 rounded-xl border-primary/30 text-primary hover:bg-primary/10"
+                          >
+                            <UserPlus className="h-3.5 w-3.5" />
+                            {renderBoth('add_new_customer')}
+                          </Button>
                         </div>
                       );
-                    })}
-                  </div>
+                    }
+
+                    return (
+                      <div className="space-y-2.5">
+                        {filteredCustomers.map((customer) => {
+                          const outstanding = customer.outstanding_balance || 0;
+                          const limit = customer.credit_limit || 0;
+                          const isOverLimit = limit > 0 && (outstanding + grandTotal > limit);
+                          return (
+                            <div
+                              key={customer.id}
+                              onClick={() => {
+                                updateActiveCart(prev => ({ ...prev, customer }));
+                                setCreditDialogStep(2);
+                              }}
+                              className="p-3.5 rounded-2xl cursor-pointer transition-all border border-border bg-card hover:bg-muted/60 hover:border-primary/50 text-right group shadow-sm hover:shadow-md"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex flex-col items-start gap-1 shrink-0">
+                                  <Badge variant="outline" className={cn(
+                                    "text-[10px] font-black px-2.5 py-0.5 rounded-md",
+                                    isOverLimit 
+                                      ? "bg-red-500/10 text-red-500 border-red-500/30" 
+                                      : "bg-primary/10 text-primary border-primary/30"
+                                  )}>
+                                    {t('credit_limit')}: {settings.shop.currency} {limit.toFixed(2)}
+                                  </Badge>
+                                  {outstanding > 0 && (
+                                    <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400">
+                                      {t('current_outstanding')}: {settings.shop.currency} {outstanding.toFixed(2)}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-right flex-1 min-w-0">
+                                  <p className="font-black text-foreground group-hover:text-primary transition-colors text-sm truncate">
+                                    {customer.name_dv} {customer.name_en ? `(${customer.name_en})` : ''}
+                                  </p>
+                                  <div className="flex items-center justify-end gap-2 text-[11px] text-muted-foreground mt-0.5">
+                                    {customer.phone && <span dir="ltr">📞 {customer.phone}</span>}
+                                    {customer.code && <span className="font-mono opacity-70">#{customer.code}</span>}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </ScrollArea>
               </div>
             ) : (
               <div className="space-y-4">
                 {/* Customer Details Card */}
-                <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20 text-right">
-                  <div className="flex items-center justify-between mb-1.5">
+                <div className="p-4 sm:p-5 bg-primary/10 rounded-2xl border border-primary/20 text-right space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black uppercase text-primary tracking-wider flex items-center gap-1.5">
+                      <User className="h-4 w-4" />
+                      {renderBoth('customer')}
+                    </span>
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       onClick={() => setCreditDialogStep(1)}
-                      className="h-7 px-2 text-xs font-bold text-primary hover:text-primary hover:bg-primary/20 rounded-lg gap-1"
+                      className="h-7 px-2.5 text-xs font-bold border-primary/30 text-primary hover:bg-primary/20 rounded-lg"
                     >
                       {renderBoth('change_customer')}
                     </Button>
-                    <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                      {renderBoth('customer')}
-                    </span>
                   </div>
-                  <div className="flex items-center justify-end gap-2">
-                    <p className="font-black text-foreground text-base md:text-lg">
+                  <div>
+                    <p className="font-black text-foreground text-base sm:text-lg">
                       {activeCart?.customer?.name_dv} {activeCart?.customer?.name_en ? `(${activeCart?.customer?.name_en})` : ''}
                     </p>
-                    <User className="h-4 w-4 text-primary shrink-0" />
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                      {activeCart?.customer?.phone && (
+                        <span className="font-mono flex items-center gap-1">
+                          <span>📞</span>
+                          <span dir="ltr">{activeCart?.customer?.phone}</span>
+                        </span>
+                      )}
+                      {activeCart?.customer?.code && (
+                        <span className="font-mono opacity-80">#{activeCart?.customer?.code}</span>
+                      )}
+                    </div>
                   </div>
-                  {activeCart?.customer?.phone && (
-                    <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                      📞 {activeCart?.customer?.phone}
-                    </p>
-                  )}
                 </div>
 
                 {/* Financial Summary 2x2 Grid */}
@@ -1434,91 +1464,137 @@ const POS = () => {
                   const newBalance = currentBalance + grandTotal;
                   const limit = activeCart?.customer?.credit_limit || 0;
                   const isLimitExceeded = limit > 0 && newBalance > limit;
+                  const remainingCredit = limit > 0 ? limit - newBalance : 0;
 
                   return (
-                    <>
-                      <div className="grid grid-cols-2 gap-2.5 text-right">
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3 text-right">
                         {/* Grand Total */}
-                        <div className="p-3 bg-muted/60 rounded-xl border border-border">
-                          <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider block mb-0.5">
+                        <div className="p-3.5 bg-primary/5 rounded-2xl border border-primary/20 flex flex-col justify-between">
+                          <span className="text-[11px] font-bold text-muted-foreground block mb-1">
                             {renderBoth('grand_total')}
                           </span>
-                          <span className="text-lg font-black text-primary font-mono">
+                          <span className="text-xl font-black text-primary font-mono tracking-tight">
                             {settings.shop.currency} {grandTotal.toFixed(2)}
                           </span>
                         </div>
 
                         {/* Current Outstanding */}
-                        <div className="p-3 bg-muted/60 rounded-xl border border-border">
-                          <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider block mb-0.5">
+                        <div className="p-3.5 bg-muted/60 rounded-2xl border border-border/80 flex flex-col justify-between">
+                          <span className="text-[11px] font-bold text-muted-foreground block mb-1">
                             {renderBoth('current_outstanding')}
                           </span>
-                          <span className="text-lg font-black text-foreground font-mono">
+                          <span className="text-xl font-black text-foreground font-mono tracking-tight">
                             {settings.shop.currency} {currentBalance.toFixed(2)}
                           </span>
                         </div>
 
                         {/* New Outstanding */}
-                        <div className="p-3 bg-orange-500/10 rounded-xl border border-orange-500/30">
-                          <span className="text-[10px] font-black uppercase text-orange-600 dark:text-orange-400 tracking-wider block mb-0.5">
+                        <div className="p-3.5 bg-orange-500/10 rounded-2xl border border-orange-500/30 flex flex-col justify-between">
+                          <span className="text-[11px] font-bold text-orange-600 dark:text-orange-400 block mb-1">
                             {renderBoth('new_outstanding')}
                           </span>
-                          <span className="text-lg font-black text-orange-600 dark:text-orange-400 font-mono">
+                          <span className="text-xl font-black text-orange-600 dark:text-orange-400 font-mono tracking-tight">
                             {settings.shop.currency} {newBalance.toFixed(2)}
                           </span>
                         </div>
 
                         {/* Credit Limit */}
                         <div className={cn(
-                          "p-3 rounded-xl border",
+                          "p-3.5 rounded-2xl border flex flex-col justify-between",
                           isLimitExceeded 
                             ? "bg-red-500/10 border-red-500/30" 
-                            : "bg-muted/60 border-border"
+                            : "bg-muted/60 border-border/80"
                         )}>
-                          <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider block mb-0.5">
-                            {renderBoth('credit_limit')}
-                          </span>
-                          <span className="text-lg font-black text-foreground font-mono">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[11px] font-bold text-muted-foreground">
+                              {renderBoth('credit_limit')}
+                            </span>
+                            {isLimitExceeded && (
+                              <Badge variant="destructive" className="text-[9px] px-1.5 py-0 h-4">
+                                {t('credit_exceeded_warning')}
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-xl font-black text-foreground font-mono tracking-tight">
                             {settings.shop.currency} {limit.toFixed(2)}
                           </span>
                         </div>
                       </div>
 
-                      {isLimitExceeded && (
-                        <div className="p-2.5 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center gap-2 text-red-500 text-xs font-black">
+                      {/* Remaining Credit or Warning Banner */}
+                      {isLimitExceeded ? (
+                        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center gap-2 text-red-500 text-xs font-black">
                           <AlertTriangle className="h-4 w-4 shrink-0" />
                           <span>{t('credit_limit_exceeded_error', { customerName: activeCart?.customer?.name_dv })}</span>
                         </div>
-                      )}
-                    </>
+                      ) : limit > 0 ? (
+                        <div className="px-3.5 py-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                          <span>{renderBoth('remaining_credit_limit')}:</span>
+                          <span className="font-mono text-sm font-black">
+                            {settings.shop.currency} {remainingCredit.toFixed(2)}
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
                   );
                 })()}
 
-                {/* Items Badge */}
-                <div className="flex items-center justify-between px-3.5 py-2 bg-muted/40 rounded-xl border border-border text-xs font-bold text-muted-foreground">
-                  <span>{activeCart?.items?.reduce((s, i) => s + i.qty, 0) || 0} {t('units') || 'pcs'}</span>
-                  <span>{activeCart?.items?.length || 0} {t('items') || 'items'}</span>
+                {/* Items Summary Breakdown */}
+                <div className="p-3 bg-muted/40 rounded-2xl border border-border/80 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-muted-foreground pb-1 border-b border-border/50">
+                    <span className="flex items-center gap-1.5">
+                      <Package className="h-3.5 w-3.5 text-primary" />
+                      <span>{renderBoth('cart_items_summary')}</span>
+                    </span>
+                    <span>
+                      {activeCart?.items?.length || 0} {t('items')} ({activeCart?.items?.reduce((s, i) => s + i.qty, 0) || 0} {t('units')})
+                    </span>
+                  </div>
+                  <div className="max-h-24 overflow-y-auto space-y-1 pr-1 custom-scrollbar text-xs">
+                    {activeCart?.items?.map((item) => (
+                      <div key={item.id} className="flex items-center justify-between text-muted-foreground py-0.5">
+                        <span className="font-mono text-foreground font-bold shrink-0">
+                          {settings.shop.currency} {(item.price * item.qty).toFixed(2)}
+                        </span>
+                        <span className="truncate max-w-[320px] text-right">
+                          {item.qty}x {item.name_dv} {item.name_en ? `(${item.name_en})` : ''}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
           </div>
 
-          <DialogFooter className="gap-2 pt-3 border-t border-border flex flex-row justify-between">
+          <DialogFooter className="gap-2.5 pt-3 border-t border-border flex flex-row justify-between items-center">
             {creditDialogStep === 2 ? (
               <>
                 <Button 
                   variant="outline" 
                   onClick={() => setCreditDialogStep(1)} 
-                  className="h-11 px-4 border-border hover:bg-muted text-foreground rounded-xl font-bold"
+                  className="h-11 px-5 border-border hover:bg-muted text-foreground rounded-xl font-bold flex items-center gap-1.5"
                 >
-                  {renderBoth('change_customer')}
+                  <ArrowLeft className="h-4 w-4" />
+                  {renderBoth('back')}
                 </Button>
                 <Button
                   onClick={processCreditPayment}
-                  disabled={isProcessing}
-                  className="flex-1 h-11 bg-primary hover:bg-primary/90 text-white font-black rounded-xl shadow-lg transition-all text-xs uppercase tracking-wider"
+                  disabled={isProcessing || !activeCart?.customer}
+                  className="flex-1 h-11 bg-primary hover:bg-primary/90 text-white font-black rounded-xl shadow-lg transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2"
                 >
-                  {isProcessing ? (t('processing') || 'Processing...') : renderBoth('confirm_credit_sale')}
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>{t('processing')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>{renderBoth('confirm_credit_sale')}</span>
+                    </>
+                  )}
                 </Button>
               </>
             ) : (

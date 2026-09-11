@@ -8,8 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -498,68 +496,90 @@ const LocalPurchaseWindow = () => {
         </div>
       </div>
 
-      {/* Quick Add Vendor Dialog */}
-      <Dialog open={isQuickAddVendorOpen} onOpenChange={setIsQuickAddVendorOpen}>
-        <DialogContent className="max-w-md bg-card border-border font-faruma text-foreground" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-black flex items-center gap-2 text-right">
-              <Building2 className="w-5 h-5 text-primary" />
-              {t('add_vendor') || 'Add New Vendor'}
-            </DialogTitle>
-            <DialogDescription className="text-right text-xs text-muted-foreground">
-              {t('enter_vendor_details') || 'Enter vendor name and contact details'}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleQuickAddVendor} className="space-y-4 py-2">
-            <div className="space-y-1.5 text-right">
-              <Label className="text-xs font-bold">{t('vendor_name') || 'Vendor Name'}*</Label>
-              <Input
-                value={quickVendorName}
-                onChange={(e) => setQuickVendorName(e.target.value)}
-                placeholder="Vendor name / ވެންޑަރ ނަން"
-                className="text-right bg-muted border-border font-bold h-10"
-                autoFocus
-                required
-              />
-            </div>
-            <div className="space-y-1.5 text-right">
-              <Label className="text-xs font-bold">{t('phone') || 'Phone'}</Label>
-              <Input
-                value={quickVendorPhone}
-                onChange={(e) => setQuickVendorPhone(e.target.value)}
-                placeholder="Phone number / ފޯނު ނަންބަރު"
-                className="text-right bg-muted border-border h-10"
-              />
-            </div>
-            <div className="space-y-1.5 text-right">
-              <Label className="text-xs font-bold">{t('tin_number') || 'TIN Number'}</Label>
-              <Input
-                value={quickVendorTin}
-                onChange={(e) => setQuickVendorTin(e.target.value)}
-                placeholder="TIN number (Optional)"
-                className="text-right bg-muted border-border h-10"
-              />
-            </div>
-            <DialogFooter className="gap-2 sm:gap-0 pt-2 flex flex-row-reverse justify-start">
-              <Button
-                type="submit"
-                disabled={isAddingVendor || !quickVendorName.trim()}
-                className="bg-primary hover:bg-primary/90 text-white font-bold h-10 px-6 rounded-xl"
-              >
-                {isAddingVendor ? (t('saving') || 'Saving...') : (t('add_vendor') || 'Add Vendor')}
-              </Button>
-              <Button
+      {/* Quick Add Vendor Modal */}
+      {isQuickAddVendorOpen && (
+        <div 
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsQuickAddVendorOpen(false);
+          }}
+        >
+          <div 
+            className="w-full max-w-md bg-card border border-border rounded-3xl p-6 shadow-2xl space-y-4 font-faruma text-foreground relative animate-in zoom-in-95"
+            dir="rtl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <button
                 type="button"
-                variant="ghost"
                 onClick={() => setIsQuickAddVendorOpen(false)}
-                className="h-10 px-4 rounded-xl border border-border"
+                className="h-8 w-8 rounded-xl border border-border bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
               >
-                {t('cancel') || 'Cancel'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+                <X className="h-4 w-4" />
+              </button>
+              <div className="text-right">
+                <h3 className="text-lg font-black flex items-center justify-end gap-2">
+                  {t('add_vendor') || 'Add New Vendor'}
+                  <Building2 className="w-5 h-5 text-primary" />
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {t('enter_vendor_details') || 'Enter vendor name and contact details'}
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleQuickAddVendor} className="space-y-4 pt-1">
+              <div className="space-y-1.5 text-right">
+                <Label className="text-xs font-bold text-muted-foreground">{t('vendor_name') || 'Vendor Name'}*</Label>
+                <Input
+                  value={quickVendorName}
+                  onChange={(e) => setQuickVendorName(e.target.value)}
+                  placeholder="Vendor name / ވެންޑަރ ނަން"
+                  className="text-right bg-muted border-border font-bold h-11 rounded-xl"
+                  autoFocus
+                  required
+                />
+              </div>
+              <div className="space-y-1.5 text-right">
+                <Label className="text-xs font-bold text-muted-foreground">{t('phone') || 'Phone'}</Label>
+                <Input
+                  value={quickVendorPhone}
+                  onChange={(e) => setQuickVendorPhone(e.target.value)}
+                  placeholder="Phone number / ފޯނު ނަންބަރު"
+                  className="text-right bg-muted border-border h-11 rounded-xl"
+                />
+              </div>
+              <div className="space-y-1.5 text-right">
+                <Label className="text-xs font-bold text-muted-foreground">{t('tin_number') || 'TIN Number'}</Label>
+                <Input
+                  value={quickVendorTin}
+                  onChange={(e) => setQuickVendorTin(e.target.value)}
+                  placeholder="TIN number (Optional)"
+                  className="text-right bg-muted border-border h-11 rounded-xl"
+                />
+              </div>
+              <div className="pt-2 flex gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsQuickAddVendorOpen(false)}
+                  className="flex-1 h-11 rounded-xl border border-border font-bold text-xs"
+                >
+                  {t('cancel') || 'Cancel'}
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isAddingVendor || !quickVendorName.trim()}
+                  className="flex-1 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs shadow-lg"
+                >
+                  {isAddingVendor ? (t('saving') || 'Saving...') : (t('add_vendor') || 'Add Vendor')}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

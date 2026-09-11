@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,13 +10,14 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { PlusCircle, Building2, Pencil, Trash2, Search, Info, Phone, Mail, MapPin, Hash, User } from 'lucide-react';
+import { PlusCircle, Building2, Pencil, Trash2, Search, Info, Phone, Mail, MapPin, Hash, User, ArrowLeft } from 'lucide-react';
 import { useAppContext, Vendor } from '@/context/AppContext';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 
 const Vendors = () => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const { vendors, addVendor, updateVendor, deleteVendor, getNextVendorCode } = useAppContext();
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -146,6 +148,14 @@ const Vendors = () => {
                     <p className="text-sm text-muted-foreground mt-1">{renderBoth('manage_vendor_information')}</p>
                 </div>
                 <div className="flex gap-3">
+                    <Button 
+                        onClick={() => navigate('/gst-reports')} 
+                        variant="outline" 
+                        className="gap-2 border-border hover:bg-muted h-11 px-5 rounded-xl font-bold"
+                    >
+                        <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
+                        <span>{t('gst_reports') || 'GST Reports'}</span>
+                    </Button>
                     <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }} className="gap-2 bg-primary hover:bg-primary/90 h-11 px-6 rounded-xl font-black shadow-[0_0_20px_rgba(0,132,255,0.3)]">
                         <PlusCircle className="h-4 w-4" /> {renderBoth('add_vendor')}
                     </Button>

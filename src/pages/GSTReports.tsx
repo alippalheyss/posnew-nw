@@ -202,6 +202,14 @@ const GSTReports = () => {
                         <Download className="h-4 w-4" /> {renderBoth('download_excel')}
                     </Button>
                     <Button 
+                        onClick={() => navigate('/vendors')} 
+                        variant="outline" 
+                        className="gap-2 border-primary/30 hover:border-primary/60 bg-primary/10 hover:bg-primary/20 text-primary h-11 px-5 rounded-xl font-black transition-all"
+                    >
+                        <Building2 className="h-4 w-4" />
+                        <span>{renderBoth('vendors')}</span>
+                    </Button>
+                    <Button 
                         onClick={() => navigate('/mobile-purchase')} 
                         variant="outline" 
                         className="gap-2 border-emerald-500/30 hover:border-emerald-500/60 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 h-11 px-5 rounded-xl font-black transition-all"

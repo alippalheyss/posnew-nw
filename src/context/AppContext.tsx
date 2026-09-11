@@ -938,19 +938,39 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const updateCustomer = async (customer: Customer) => {
     try {
+      if (!customer.id) {
+        throw new Error('Customer ID is required');
+      }
+
+      const payload: any = {
+        name_dv: customer.name_dv,
+        name_en: customer.name_en,
+        phone: customer.phone || '',
+        email: customer.email || '',
+        credit_limit: Number(customer.credit_limit) || 0,
+        loyalty_points: Number(customer.loyalty_points) || 0,
+        outstanding_balance: Number(customer.outstanding_balance) || 0,
+        updated_at: new Date().toISOString()
+      };
+      if (customer.code) {
+        payload.code = customer.code;
+      }
+
       const { error } = await supabase
         .from('customers')
-        .update(customer)
+        .update(payload)
         .eq('id', customer.id);
 
       if (error) throw error;
 
       setCustomers(prev => prev.map(c =>
-        c.id === customer.id ? customer : c
+        c.id === customer.id ? { ...c, ...customer, ...payload } : c
       ));
-    } catch (error) {
+      showSuccess('Customer updated successfully');
+    } catch (error: any) {
       console.error('Error updating customer:', error);
-      showError('Failed to update customer in database');
+      showError('Failed to update customer: ' + (error.message || 'Unknown error'));
+      throw error;
     }
   };
 

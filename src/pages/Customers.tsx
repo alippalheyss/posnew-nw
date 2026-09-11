@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatCreditStatementViberMessage, shareViaViber } from '@/utils/viberHelper';
+import { showSuccess, showError } from '@/utils/toast';
 
 const Customers = () => {
   const { t } = useTranslation();
@@ -28,6 +29,7 @@ const Customers = () => {
   const [isEditCustomerDialogOpen, setIsEditCustomerDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [isAddCustomerDialogOpen, setIsAddCustomerDialogOpen] = useState(false);
+  const [isSavingCustomer, setIsSavingCustomer] = useState(false);
 
   const filteredCustomers = customers.filter(customer =>
     customer.name_dv.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -43,13 +45,19 @@ const Customers = () => {
 
   const handleSaveCustomer = async () => {
     if (!editingCustomer) return;
+    if (!editingCustomer.name_dv?.trim() && !editingCustomer.name_en?.trim()) {
+      showError(t('fill_all_fields_error') || 'Please enter customer name');
+      return;
+    }
     try {
+      setIsSavingCustomer(true);
       await updateCustomer(editingCustomer);
-      showSuccess(t('customer_updated_successfully'));
       setIsEditCustomerDialogOpen(false);
       setEditingCustomer(null);
     } catch (error) {
       console.error('Error updating customer:', error);
+    } finally {
+      setIsSavingCustomer(false);
     }
   };
 
@@ -307,7 +315,7 @@ const Customers = () => {
                 <Input
                   id="creditLimit"
                   type="number"
-                  value={editingCustomer?.credit_limit || ''}
+                  value={editingCustomer?.credit_limit !== undefined ? editingCustomer.credit_limit : ''}
                   onChange={(e) => setEditingCustomer(prev => prev ? { ...prev, credit_limit: parseFloat(e.target.value) || 0 } : null)}
                   className="text-right h-12 bg-muted border-border rounded-xl"
                 />
@@ -315,11 +323,21 @@ const Customers = () => {
             </div>
           </div>
           <DialogFooter className="gap-3 pt-4 border-t border-border">
-            <Button variant="ghost" onClick={() => setIsEditCustomerDialogOpen(false)} className="flex-1 border-border hover:bg-muted text-foreground">
+            <Button variant="ghost" onClick={() => setIsEditCustomerDialogOpen(false)} disabled={isSavingCustomer} className="flex-1 border-border hover:bg-muted text-foreground">
               {renderBoth('cancel')}
             </Button>
-            <Button onClick={() => editingCustomer && handleSaveCustomer(editingCustomer)} className="flex-1 bg-primary hover:bg-primary/90 font-black">
-              {renderBoth('save_changes')}
+            <Button 
+              onClick={handleSaveCustomer} 
+              disabled={isSavingCustomer || !editingCustomer}
+              className="flex-1 bg-primary hover:bg-primary/90 font-black"
+            >
+              {isSavingCustomer ? (
+                <span className="flex items-center justify-center gap-2">
+                  <RefreshCcw className="h-4 w-4 animate-spin" /> Saving...
+                </span>
+              ) : (
+                renderBoth('save_changes')
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

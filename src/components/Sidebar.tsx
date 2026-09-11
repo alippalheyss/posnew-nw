@@ -31,7 +31,6 @@ const Sidebar = () => {
     { name_dv: t('stock'), name_en: t('stock', { lng: 'en' }), icon: Boxes, path: '/stock', permission: 'canAccessStock' as const },
     { name_dv: t('customers'), name_en: t('customers', { lng: 'en' }), icon: Users, path: '/customers', permission: 'canAccessCustomers' as const },
     { name_dv: t('vendors'), name_en: t('vendors', { lng: 'en' }), icon: Building2, path: '/vendors', permission: 'canAccessAdmin' as const },
-    { name_dv: 'ބިލް އެޅުން (Mobile)', name_en: 'Purchase Bill (Mobile)', icon: Receipt, path: '/mobile-purchase', permission: 'canAccessAdmin' as const },
     { name_dv: t('credit_outstanding'), name_en: t('credit_outstanding', { lng: 'en' }), icon: DollarSign, path: '/credit-outstanding', permission: 'canAccessSales' as const },
     { name_dv: t('daily_sales'), name_en: t('daily_sales', { lng: 'en' }), icon: CalendarDays, path: '/daily-sales', permission: 'canAccessSales' as const },
     { name_dv: t('credit_invoices'), name_en: t('credit_invoices', { lng: 'en' }), icon: Receipt, path: '/credit-invoices', permission: 'canAccessSales' as const },

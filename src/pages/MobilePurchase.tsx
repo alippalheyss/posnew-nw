@@ -35,7 +35,11 @@ import { showSuccess, showError } from '@/utils/toast';
 import { formatDate, toISODate } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
 
-const MobilePurchase: React.FC = () => {
+interface MobilePurchaseProps {
+  embedded?: boolean;
+}
+
+const MobilePurchase: React.FC<MobilePurchaseProps> = ({ embedded = false }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { vendors, addPurchase, addVendor, purchases, settings } = useAppContext();
@@ -224,38 +228,60 @@ const MobilePurchase: React.FC = () => {
     .slice(0, 5);
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-faruma pb-24 selection:bg-primary/30" dir="rtl">
+    <div className={cn(embedded ? "h-full bg-background text-foreground font-faruma pb-8" : "min-h-screen bg-background text-foreground font-faruma pb-24 selection:bg-primary/30")} dir="rtl">
       {/* Mobile Top Header */}
-      <div className="sticky top-0 z-40 bg-card/90 backdrop-blur-md border-b border-border px-4 py-3.5 flex items-center justify-between">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate('/')}
-          className="h-9 w-9 rounded-xl hover:bg-muted"
-        >
-          <ArrowLeft className="h-5 w-5 rtl:rotate-180" />
-        </Button>
+      {!embedded ? (
+        <div className="sticky top-0 z-40 bg-card/90 backdrop-blur-md border-b border-border px-4 py-3.5 flex items-center justify-between">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/')}
+            className="h-9 w-9 rounded-xl hover:bg-muted"
+          >
+            <ArrowLeft className="h-5 w-5 rtl:rotate-180" />
+          </Button>
 
-        <div className="text-center">
-          <h1 className="text-base font-black flex items-center justify-center gap-1.5 text-foreground">
-            <span>ބިލް އެޅުން (Purchase Bill)</span>
-            <Receipt className="h-4 w-4 text-primary" />
-          </h1>
-          <p className="text-[10px] text-muted-foreground font-sans">Mobile Bill Entry Portal</p>
+          <div className="text-center">
+            <h1 className="text-base font-black flex items-center justify-center gap-1.5 text-foreground">
+              <span>ބިލް އެޅުން (Purchase Bill)</span>
+              <Receipt className="h-4 w-4 text-primary" />
+            </h1>
+            <p className="text-[10px] text-muted-foreground font-sans">Mobile Bill Entry Portal</p>
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsNewVendorOpen(true)}
+            className="h-8 px-2.5 rounded-xl border-primary/30 bg-primary/10 text-primary text-[10px] font-black gap-1"
+          >
+            <Plus className="h-3 w-3" />
+            <span>Vendor</span>
+          </Button>
         </div>
+      ) : (
+        <div className="max-w-2xl mx-auto px-4 pt-1 pb-2 flex items-center justify-between">
+          <div className="text-right">
+            <h2 className="text-base font-black text-foreground flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-primary" />
+              <span>ބިލް އެޅުން (Purchase Bill)</span>
+            </h2>
+            <p className="text-xs text-muted-foreground">Capture paper invoices, compute 8% GST & update stock costs</p>
+          </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIsNewVendorOpen(true)}
-          className="h-8 px-2.5 rounded-xl border-primary/30 bg-primary/10 text-primary text-[10px] font-black gap-1"
-        >
-          <Plus className="h-3 w-3" />
-          <span>Vendor</span>
-        </Button>
-      </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsNewVendorOpen(true)}
+            className="h-9 px-3 rounded-xl border-primary/30 bg-primary/10 text-primary text-xs font-black gap-1.5 hover:bg-primary/20"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>+ Add Vendor</span>
+          </Button>
+        </div>
+      )}
 
-      <div className="max-w-md mx-auto p-4 space-y-4">
+      <div className={cn(embedded ? "max-w-2xl mx-auto p-4 space-y-4" : "max-w-md mx-auto p-4 space-y-4")}>
         {/* Camera Receipt Attachment Banner */}
         <div className="bg-card border border-border rounded-2xl p-3.5 space-y-2.5 shadow-sm">
           <div className="flex items-center justify-between">

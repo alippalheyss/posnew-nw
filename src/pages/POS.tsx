@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ShoppingCart, PlusCircle, Minus, Trash2, MonitorPlay, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, ArrowLeft, Plus, ChevronDown, Boxes, X, CheckCircle2, Package, Loader2 } from 'lucide-react';
+import { ShoppingCart, PlusCircle, Minus, Trash2, MonitorPlay, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, ArrowLeft, Plus, ChevronDown, Boxes, X, CheckCircle2, Package, Loader2, Check } from 'lucide-react';
 import { formatDate, toISODate, toISODatetime, formatTime, formatDateTime } from '@/utils/formatters';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
@@ -753,6 +753,20 @@ const POS = () => {
 
     setSplitEntries(newEntries);
     setSplitStep(2);
+  };
+
+  const equalizeSplit = () => {
+    if (splitEntries.length === 0) return;
+    const equalAmount = grandTotal / splitEntries.length;
+    const newEntries = splitEntries.map(e => ({
+      ...e,
+      amount: Number(equalAmount.toFixed(2))
+    }));
+    const sum = newEntries.reduce((s, e) => s + e.amount, 0);
+    if (Math.abs(sum - grandTotal) > 0.001) {
+      newEntries[newEntries.length - 1].amount += (grandTotal - sum);
+    }
+    setSplitEntries(newEntries);
   };
 
   const backToSelection = () => {
@@ -1722,21 +1736,39 @@ const POS = () => {
           setSplitSearchTerm('');
         }
       }}>
-        <DialogContent className="sm:max-w-[500px] font-faruma bg-card text-foreground border-border p-0 overflow-hidden shadow-2xl" dir="rtl">
-          <DialogHeader className="p-6 pb-2">
-            <DialogTitle className="text-right text-2xl font-black flex items-center justify-end gap-3">
-              {renderBoth('split_bill')} <Users className="h-6 w-6 text-primary" />
-            </DialogTitle>
-            <DialogDescription className="text-right text-muted-foreground">
-              {splitStep === 1 ? renderBoth('select_customers_for_split') : renderBoth('review_split_amounts')}
-            </DialogDescription>
+        <DialogContent className="sm:max-w-[560px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border text-right p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+          <DialogHeader className="pb-3 text-right space-y-1.5 border-b border-border/60">
+            <div className="flex items-center justify-between pl-8">
+              <div className="text-right flex-1 min-w-0">
+                <DialogTitle className="text-xl md:text-2xl font-black text-foreground flex items-center gap-2.5">
+                  <Users className="h-6 w-6 text-primary shrink-0" />
+                  <span>{renderBoth('split_bill')}</span>
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-1 text-right">
+                  {splitStep === 1 ? renderBoth('select_customers_for_split') : renderBoth('review_split_amounts')}
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
-          {splitStep === 1 ? (
-            <div className="flex flex-col h-[600px]">
-              <div className="px-6 py-2">
+          <div className="py-3">
+            {splitStep === 1 ? (
+              <div className="space-y-3">
+                {/* Total & Selected bar */}
+                <div className="flex items-center justify-between px-3.5 py-2.5 bg-muted/40 rounded-2xl border border-border text-xs font-bold">
+                  <div className="text-right">
+                    <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider block mb-0.5">{renderBoth('total_to_split')}</span>
+                    <span className="font-mono text-base font-black text-primary">{settings.shop.currency} {grandTotal.toFixed(2)}</span>
+                  </div>
+                  <div className="text-left">
+                    <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider block mb-0.5">{renderBoth('selected')}</span>
+                    <span className="font-mono text-base font-black text-foreground">{selectedSplitCustomerIds.length}</span>
+                  </div>
+                </div>
+
+                {/* Search Bar */}
                 <div className="relative">
-                  <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+                  <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
                   <Input
                     placeholder={renderBothString('search_customers')}
                     value={splitSearchTerm}
@@ -1747,100 +1779,129 @@ const POS = () => {
                         moveToAllocation();
                       }
                     }}
-                    className="w-full bg-background border-border rounded-2xl pr-12 h-14 text-right font-bold focus:border-primary/50 transition-all text-foreground"
+                    className="w-full text-right bg-muted/60 border-border text-foreground h-11 pr-10 rounded-xl font-bold placeholder:text-muted-foreground/60"
                   />
                 </div>
-              </div>
 
-              <ScrollArea className="flex-1 px-6 py-4">
-                <div className="space-y-3">
-                  {customers
-                    .filter(c => (c.credit_limit || 0) > 0)
-                    .filter(c =>
-                      c.name_dv.includes(splitSearchTerm) ||
-                      c.name_en.toLowerCase().includes(splitSearchTerm.toLowerCase()) ||
-                      c.code.includes(splitSearchTerm)
-                    )
-                    .map(customer => {
-                      const isSelected = selectedSplitCustomerIds.includes(customer.id);
+                {/* Customer List */}
+                <ScrollArea className="h-[320px] pr-2 custom-scrollbar">
+                  {(() => {
+                    const filtered = customers.filter(c =>
+                      c.name_dv?.toLowerCase().includes(splitSearchTerm.toLowerCase()) ||
+                      c.name_en?.toLowerCase().includes(splitSearchTerm.toLowerCase()) ||
+                      c.code?.toLowerCase().includes(splitSearchTerm.toLowerCase()) ||
+                      c.phone?.includes(splitSearchTerm)
+                    );
+
+                    if (filtered.length === 0) {
                       return (
-                        <div
-                          key={customer.id}
-                          onClick={() => toggleSplitCustomer(customer.id)}
-                          className={cn(
-                            "p-4 rounded-[2rem] border transition-all cursor-pointer flex items-center justify-between gap-4",
-                            isSelected
-                              ? "bg-primary border-primary shadow-lg shadow-primary/20 scale-[0.98] text-primary-foreground"
-                              : "bg-card border-border hover:border-primary/40 hover:bg-muted/50"
-                          )}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={cn(
-                              "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
-                              isSelected ? "bg-white border-white text-primary" : "border-border"
-                            )}>
-                              {isSelected && <Plus className="h-4 w-4 rotate-45" />}
-                            </div>
-                          </div>
-
-                          <div className="flex-1 text-right">
-                            <div className="flex items-center justify-end gap-2 mb-0.5">
-                              <span className={cn("text-[10px] font-bold uppercase tracking-widest", isSelected ? "text-primary-foreground/80" : "text-muted-foreground")}>{customer.code}</span>
-                              <span className="text-[10px] font-bold opacity-40">•</span>
-                              <span className={cn("text-sm font-black", isSelected ? "text-primary-foreground" : "text-foreground")}>{customer.name_en}</span>
-                            </div>
-                            <h4 className={cn("text-lg font-black leading-tight", isSelected ? "text-primary-foreground" : "text-foreground")}>{customer.name_dv}</h4>
-                            <Badge variant="outline" className={cn(
-                              "mt-2 text-[9px] font-black py-0 px-2 h-5",
-                              isSelected 
-                                ? "bg-white/20 border-white/30 text-white" 
-                                : "bg-muted border-border text-muted-foreground"
-                            )}>
-                              {settings.shop.currency} {customer.outstanding_balance.toFixed(2)}
-                            </Badge>
-                          </div>
+                        <div className="p-8 text-center text-muted-foreground bg-muted/20 rounded-2xl border border-dashed border-border/80 flex flex-col items-center justify-center gap-2 mt-4">
+                          <Users className="h-8 w-8 text-muted-foreground/40" />
+                          <p className="text-sm font-bold">{renderBoth('no_customers_found')}</p>
                         </div>
                       );
-                    })}
-                </div>
-              </ScrollArea>
+                    }
 
-              <div className="p-6 bg-card border-t border-border">
-                <div className="flex justify-between items-center mb-4">
-                  <div className="text-right">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">{renderBoth('total_to_split')}</p>
-                    <p className="text-2xl font-black text-primary">{settings.shop.currency} {grandTotal.toFixed(2)}</p>
-                  </div>
-                  <div className="text-left">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">{renderBoth('selected')}</p>
-                    <p className="text-2xl font-black text-foreground">{selectedSplitCustomerIds.length}</p>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <Button variant="outline" onClick={() => setIsSplitDialogOpen(false)} className="flex-1 border-border h-14 rounded-2xl font-black text-foreground hover:bg-muted uppercase tracking-widest text-xs">
-                    {renderBoth('cancel')}
-                  </Button>
-                  <Button
-                    onClick={moveToAllocation}
-                    disabled={selectedSplitCustomerIds.length === 0}
-                    className="flex-1 btn-gradient-blue h-14 rounded-2xl font-black text-white shadow-xl shadow-blue-500/20 uppercase tracking-widest text-xs"
-                  >
-                    {renderBoth('next')}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col h-[600px]">
-              <ScrollArea className="flex-1 px-6 py-6">
-                <div className="space-y-4">
-                  {splitEntries.map((entry) => {
-                    const customer = customers.find(c => c.id === entry.customerId);
                     return (
-                      <div key={entry.id} className="p-5 rounded-3xl bg-card border border-border flex items-center justify-between gap-4 group hover:bg-muted/40 transition-all">
-                        <div className="flex items-center gap-4">
-                          <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-muted-foreground uppercase">{settings.shop.currency}</span>
+                      <div className="space-y-2.5">
+                        {filtered.map((customer) => {
+                          const isSelected = selectedSplitCustomerIds.includes(customer.id);
+                          return (
+                            <div
+                              key={customer.id}
+                              onClick={() => toggleSplitCustomer(customer.id)}
+                              className={cn(
+                                "p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 text-right shadow-sm hover:shadow-md",
+                                isSelected
+                                  ? "bg-primary/10 border-primary ring-1 ring-primary/40 text-foreground"
+                                  : "bg-card border-border hover:bg-muted/60 hover:border-primary/40 text-foreground"
+                              )}
+                            >
+                              <div className="flex items-center gap-3 shrink-0">
+                                <div className={cn(
+                                  "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
+                                  isSelected ? "bg-primary border-primary text-white" : "border-border/80 bg-muted/40 text-transparent"
+                                )}>
+                                  <Check className="h-3.5 w-3.5 stroke-[3]" />
+                                </div>
+                                <Badge variant="outline" className="text-[10px] font-black px-2 py-0.5 rounded-md">
+                                  {settings.shop.currency} {customer.outstanding_balance.toFixed(2)}
+                                </Badge>
+                              </div>
+
+                              <div className="flex-1 text-right min-w-0">
+                                <p className="font-black text-foreground text-sm truncate">
+                                  {customer.name_dv} {customer.name_en ? `(${customer.name_en})` : ''}
+                                </p>
+                                <div className="flex items-center justify-end gap-2 text-[11px] text-muted-foreground mt-0.5">
+                                  {customer.phone && <span dir="ltr">📞 {customer.phone}</span>}
+                                  {customer.code && <span className="font-mono opacity-70">#{customer.code}</span>}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </ScrollArea>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {/* Financial Summary Grid */}
+                <div className="grid grid-cols-2 gap-3 text-right">
+                  <div className="p-3 bg-muted/60 rounded-2xl border border-border">
+                    <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider block mb-0.5">{renderBoth('total_to_split')}</span>
+                    <span className="text-lg font-black text-foreground font-mono">{settings.shop.currency} {grandTotal.toFixed(2)}</span>
+                  </div>
+                  <div className={cn(
+                    "p-3 rounded-2xl border",
+                    Math.abs(splitRemaining) < 0.01 
+                      ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400" 
+                      : "bg-orange-500/10 border-orange-500/30 text-orange-600 dark:text-orange-400"
+                  )}>
+                    <span className="text-[10px] font-black uppercase tracking-wider block mb-0.5">{renderBoth('allocated_sum')}</span>
+                    <span className="text-lg font-black font-mono">{settings.shop.currency} {splitTotal.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                {/* Balance Status & Equal Split button */}
+                <div className={cn(
+                  "flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-bold border",
+                  Math.abs(splitRemaining) < 0.01 
+                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400" 
+                    : "bg-red-500/10 border-red-500/30 text-red-500"
+                )}>
+                  {Math.abs(splitRemaining) < 0.01 ? (
+                    <span className="flex items-center gap-1.5">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>{renderBoth('balanced')}</span>
+                    </span>
+                  ) : (
+                    <span>
+                      {renderBoth('remaining_to_allocate')}: <span className="font-mono font-black">{settings.shop.currency} {splitRemaining.toFixed(2)}</span>
+                    </span>
+                  )}
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    size="sm" 
+                    onClick={equalizeSplit} 
+                    className="h-7 text-[11px] font-bold border-primary/30 text-primary hover:bg-primary/10 rounded-lg"
+                  >
+                    {renderBoth('equal_split')}
+                  </Button>
+                </div>
+
+                {/* Customer Allocation List */}
+                <ScrollArea className="h-[280px] pr-2 custom-scrollbar">
+                  <div className="space-y-2.5">
+                    {splitEntries.map((entry) => {
+                      const customer = customers.find(c => c.id === entry.customerId);
+                      return (
+                        <div key={entry.id} className="p-3.5 rounded-2xl bg-card border border-border flex items-center justify-between gap-3 text-right hover:border-primary/40 transition-all shadow-sm">
+                          <div className="relative w-36 shrink-0">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">{settings.shop.currency}</span>
                             <Input
                               type="number"
                               value={entry.amount}
@@ -1852,140 +1913,203 @@ const POS = () => {
                                   processSplitPayment();
                                 }
                               }}
-                              className="w-32 h-14 bg-background border-border rounded-2xl pl-10 text-right text-xl font-black focus:border-primary transition-all text-foreground font-mono"
+                              className="h-11 bg-muted/60 border-border rounded-xl pl-10 pr-3 text-right text-base font-black font-mono text-foreground focus:border-primary"
                             />
                           </div>
+
+                          <div className="flex-1 text-right min-w-0">
+                            <p className="font-black text-foreground text-sm truncate">{customer?.name_dv} {customer?.name_en ? `(${customer?.name_en})` : ''}</p>
+                            <div className="flex items-center justify-end gap-2 mt-1">
+                              <Select value={entry.method} onValueChange={(val: any) => updateSplitMethod(entry.id, val)}>
+                                <SelectTrigger className="h-7 w-28 text-[10px] font-black rounded-lg bg-muted/80 border-border text-foreground">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="font-faruma bg-card border-border text-foreground" dir="rtl">
+                                  <SelectItem value="Credit">{renderBoth('credit')}</SelectItem>
+                                  <SelectItem value="Cash">{renderBoth('cash')}</SelectItem>
+                                  <SelectItem value="Card">{renderBoth('card')}</SelectItem>
+                                  <SelectItem value="Transfer">Transfer</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
                         </div>
-
-                        <div className="flex-1 text-right">
-                          <h4 className="text-lg font-black text-foreground mb-0.5">{customer?.name_dv}</h4>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{customer?.name_en}</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
-
-              <div className="p-6 bg-card border-t border-border">
-                <div className="grid grid-cols-2 gap-6 mb-6">
-                  <div className="text-right">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">{renderBoth('total_to_split')}</p>
-                    <p className="text-2xl font-black text-foreground font-mono">{settings.shop.currency} {grandTotal.toFixed(2)}</p>
+                      );
+                    })}
                   </div>
-                  <div className="text-left">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">{renderBoth('sum')}</p>
-                    <p className={cn(
-                      "text-2xl font-black transition-all font-mono",
-                      Math.abs(splitRemaining) < 0.01 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                    )}>
-                      {settings.shop.currency} {splitTotal.toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <Button variant="ghost" onClick={backToSelection} className="h-14 w-14 rounded-2xl border border-border text-foreground hover:bg-muted">
-                    <ArrowLeft className="h-5 w-5 rtl:rotate-180" />
-                  </Button>
-                  <Button
-                    onClick={processSplitPayment}
-                    disabled={Math.abs(splitRemaining) > 0.01 || splitEntries.length === 0}
-                    className="flex-1 btn-gradient-blue h-14 rounded-2xl font-black text-white shadow-xl shadow-blue-500/20 uppercase tracking-widest text-xs"
-                  >
-                    {renderBoth('confirm_split_payment')}
-                  </Button>
-                </div>
+                </ScrollArea>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+
+          <DialogFooter className="gap-2.5 pt-3 border-t border-border flex flex-row justify-between items-center">
+            {splitStep === 1 ? (
+              <>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsSplitDialogOpen(false)} 
+                  className="flex-1 h-11 border-border hover:bg-muted text-foreground rounded-xl font-bold"
+                >
+                  {renderBoth('cancel')}
+                </Button>
+                <Button
+                  onClick={moveToAllocation}
+                  disabled={selectedSplitCustomerIds.length === 0}
+                  className="flex-1 h-11 bg-primary hover:bg-primary/90 text-white font-black rounded-xl shadow-lg transition-all text-xs uppercase tracking-wider"
+                >
+                  {renderBoth('next')}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button 
+                  variant="outline" 
+                  onClick={backToSelection} 
+                  className="h-11 px-5 border-border hover:bg-muted text-foreground rounded-xl font-bold flex items-center gap-1.5"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  {renderBoth('back')}
+                </Button>
+                <Button
+                  onClick={processSplitPayment}
+                  disabled={Math.abs(splitRemaining) > 0.01 || splitEntries.length === 0}
+                  className="flex-1 h-11 bg-primary hover:bg-primary/90 text-white font-black rounded-xl shadow-lg transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>{renderBoth('confirm_split_payment')}</span>
+                </Button>
+              </>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={isAwaitingTransferDialogOpen} onOpenChange={setIsAwaitingTransferDialogOpen}>
-        <DialogContent className="sm:max-w-[400px] font-faruma bg-card border-border text-foreground" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-right text-2xl font-black flex items-center justify-end gap-3">
-              Confirm Bank Transfer <Receipt className="h-6 w-6 text-blue-400" />
-            </DialogTitle>
-            <DialogDescription className="text-right text-muted-foreground">
-              Enter the amount transferred by the customer.
-            </DialogDescription>
+        <DialogContent className="sm:max-w-[480px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border text-right p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+          <DialogHeader className="pb-3 text-right space-y-1.5 border-b border-border/60">
+            <div className="flex items-center justify-between pl-8">
+              <div className="text-right flex-1 min-w-0">
+                <DialogTitle className="text-xl md:text-2xl font-black text-foreground flex items-center gap-2.5">
+                  <Receipt className="h-6 w-6 text-primary shrink-0" />
+                  <span>{renderBoth('awaiting_transfer')}</span>
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-1 text-right">
+                  {renderBoth('awaiting_transfer_description')}
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
-          <div className="py-8 space-y-4">
-            <div className="bg-muted p-4 rounded-2xl border border-border text-right">
-              <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest mb-1">Grand Total</p>
-              <p className="text-3xl font-black text-foreground">{settings.shop.currency} {grandTotal.toFixed(2)}</p>
+          <div className="py-3 space-y-3.5">
+            {/* Grand Total Banner */}
+            <div className="p-3.5 bg-primary/5 rounded-2xl border border-primary/20 flex items-center justify-between text-right">
+              <div>
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-0.5">{renderBoth('grand_total')}</p>
+                <p className="text-2xl font-black text-primary font-mono">{settings.shop.currency} {grandTotal.toFixed(2)}</p>
+              </div>
+              <Receipt className="h-7 w-7 text-primary/40" />
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest pr-2">Transfer Amount</Label>
+            {/* Transfer Amount */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-muted-foreground block text-right">{renderBoth('transfer_amount')}</Label>
               <div className="relative">
-                <DollarSign className="absolute right-4 top-1/2 -translate-y-1/2 h-6 w-6 text-primary/40" />
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">{settings.shop.currency}</span>
                 <Input
                   type="number"
                   value={transferAmount}
                   onChange={(e) => setTransferAmount(parseFloat(e.target.value) || 0)}
                   onFocus={handleFocus}
-                  className="bg-muted border-primary h-16 rounded-2xl pr-14 text-3xl font-black text-foreground text-right"
+                  className="bg-muted/60 border-border h-12 rounded-xl pl-12 pr-4 text-xl font-mono font-black text-foreground text-right focus:border-primary"
                   autoFocus
                 />
               </div>
             </div>
 
+            {/* Customer Section */}
             <div className="space-y-2">
-              <div className="flex justify-between items-center pr-2">
+              <div className="flex items-center justify-between">
                 <Button
-                  variant="ghost"
+                  type="button"
+                  variant="outline"
                   size="sm"
                   onClick={() => setIsAddCustomerDialogOpen(true)}
-                  className="text-[10px] h-6 px-2 text-green-500 hover:text-green-400 hover:bg-green-500/10 font-black"
+                  className="text-xs h-7 px-2.5 border-primary/30 text-primary hover:bg-primary/10 font-bold rounded-lg gap-1"
                 >
-                  <UserPlus className="h-3 w-3 ml-1" /> {renderBoth('add_customer')}
+                  <UserPlus className="h-3.5 w-3.5" /> {renderBoth('add_customer')}
                 </Button>
-                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">Select Customer or Enter Name</Label>
+                <Label className="text-xs font-bold text-muted-foreground block text-right">{renderBoth('select_customer_or_enter_name')}</Label>
               </div>
-              <Input
-                placeholder="Search or type name..."
-                value={customerSearchTerm}
-                onChange={(e) => setCustomerSearchTerm(e.target.value)}
-                className="bg-muted border-border h-12 text-right text-foreground"
-              />
-              <ScrollArea className="h-[150px] mt-2 border border-border rounded-xl">
-                <div className="p-2 space-y-1">
-                  {customers.filter(c =>
-                    c.name_dv.includes(customerSearchTerm) ||
-                    c.name_en.toLowerCase().includes(customerSearchTerm.toLowerCase())
-                  ).map(customer => (
-                    <div
-                      key={customer.id}
-                      onClick={() => {
-                        updateActiveCart(prev => ({ ...prev, customer }));
-                        setCustomerSearchTerm(customer.name_dv);
-                      }}
-                      className={cn(
-                        "p-2 rounded-lg cursor-pointer text-right text-sm transition-all",
-                        activeCart?.customer?.id === customer.id ? "bg-primary text-foreground" : "bg-muted hover:bg-muted/80 text-muted-foreground/80"
-                      )}
-                    >
-                      {customer.name_dv}
-                    </div>
-                  ))}
+
+              {activeCart?.customer ? (
+                <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 flex items-center justify-between text-right">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => updateActiveCart(prev => ({ ...prev, customer: null }))}
+                    className="h-7 px-2 text-xs font-bold text-primary hover:bg-primary/20 rounded-lg"
+                  >
+                    {renderBoth('change_customer')}
+                  </Button>
+                  <div>
+                    <p className="font-black text-sm text-foreground">{activeCart.customer.name_dv} {activeCart.customer.name_en ? `(${activeCart.customer.name_en})` : ''}</p>
+                    {activeCart.customer.phone && (
+                      <p className="text-[11px] text-muted-foreground font-mono mt-0.5">📞 {activeCart.customer.phone}</p>
+                    )}
+                  </div>
                 </div>
-              </ScrollArea>
+              ) : (
+                <div className="space-y-1.5">
+                  <Input
+                    placeholder={renderBothString('search_or_type_name')}
+                    value={customerSearchTerm}
+                    onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                    className="bg-muted/60 border-border h-11 text-right text-foreground font-bold rounded-xl pr-3.5 placeholder:text-muted-foreground/60"
+                  />
+                  <ScrollArea className="h-[120px] border border-border/70 rounded-xl p-1 custom-scrollbar">
+                    <div className="space-y-1">
+                      {customers.filter(c =>
+                        c.name_dv?.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
+                        c.name_en?.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
+                        c.phone?.includes(customerSearchTerm)
+                      ).map(customer => (
+                        <div
+                          key={customer.id}
+                          onClick={() => {
+                            updateActiveCart(prev => ({ ...prev, customer }));
+                            setCustomerSearchTerm(customer.name_dv);
+                          }}
+                          className={cn(
+                            "p-2 rounded-lg cursor-pointer text-right text-xs font-bold transition-all flex items-center justify-between",
+                            activeCart?.customer?.id === customer.id ? "bg-primary text-white" : "bg-card hover:bg-muted text-foreground border border-border/50"
+                          )}
+                        >
+                          <span className="text-[11px] opacity-70">{customer.phone ? `📞 ${customer.phone}` : ''}</span>
+                          <span>{customer.name_dv} {customer.name_en ? `(${customer.name_en})` : ''}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
             </div>
           </div>
 
-          <DialogFooter className="gap-3">
-            <Button variant="ghost" onClick={() => setIsAwaitingTransferDialogOpen(false)} className="flex-1 border-border text-foreground">
-              Cancel
+          <DialogFooter className="gap-2.5 pt-3 border-t border-border flex flex-row justify-between items-center">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsAwaitingTransferDialogOpen(false)} 
+              className="flex-1 h-11 border-border hover:bg-muted text-foreground rounded-xl font-bold"
+            >
+              {renderBoth('cancel')}
             </Button>
             <Button
               onClick={processTransferPayment}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-foreground font-black"
+              className="flex-1 h-11 bg-primary hover:bg-primary/90 text-white font-black rounded-xl shadow-lg transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2"
             >
-              Confirm Transfer
+              <CheckCircle2 className="h-4 w-4" />
+              <span>{renderBoth('confirm_bank_transfer')}</span>
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2002,67 +2126,75 @@ const POS = () => {
       />
 
       <Dialog open={isPendingTransfersDialogOpen} onOpenChange={setIsPendingTransfersDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] font-faruma bg-card border-border text-foreground" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-right text-2xl font-black flex items-center justify-end gap-3">
-              Pending Transfers <ArrowRightLeft className="h-6 w-6 text-yellow-500" />
-            </DialogTitle>
-            <DialogDescription className="text-right text-muted-foreground">
-              Review and resolve pending bank transfers.
-            </DialogDescription>
-            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 text-right flex flex-col sm:flex-row-reverse items-center justify-between gap-3 mt-2">
-              <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">
-                Unconfirmed transfers automatically convert to credit at the end of the day.
+        <DialogContent className="sm:max-w-[620px] w-[calc(100vw-2rem)] font-faruma bg-card border border-border text-foreground text-right p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+          <DialogHeader className="pb-3 text-right space-y-1.5 border-b border-border/60">
+            <div className="flex items-center justify-between pl-8">
+              <div className="text-right flex-1 min-w-0">
+                <DialogTitle className="text-xl md:text-2xl font-black text-foreground flex items-center gap-2.5">
+                  <ArrowRightLeft className="h-6 w-6 text-yellow-500 shrink-0" />
+                  <span>{renderBoth('pending_transfers')}</span>
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-1 text-right">
+                  {renderBoth('pending_transfers_description')}
+                </DialogDescription>
+              </div>
+            </div>
+            <div className="bg-yellow-500/10 border border-yellow-500/25 rounded-2xl p-3 text-right flex flex-col sm:flex-row items-center justify-between gap-3 mt-2">
+              <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium text-right flex-1">
+                {renderBoth('auto_convert_notice')}
               </p>
               {pendingTransfers.length > 0 && (
                 <Button
                   size="sm"
                   onClick={() => convertAllPendingToCredit()}
-                  className="bg-blue-600 hover:bg-blue-700 text-foreground text-xs font-black h-8 px-3 rounded-lg shrink-0"
+                  className="bg-primary hover:bg-primary/90 text-white text-xs font-black h-8 px-3 rounded-xl shrink-0"
                 >
-                  End of Day: Convert All to Credit
+                  {renderBoth('convert_all_to_credit')}
                 </Button>
               )}
             </div>
           </DialogHeader>
 
-          <ScrollArea className="h-[400px] mt-4">
+          <ScrollArea className="h-[360px] pr-2 custom-scrollbar mt-3">
             <div className="space-y-3">
               {pendingTransfers.length === 0 ? (
-                <div className="h-40 flex flex-col items-center justify-center text-muted-foreground/50 uppercase tracking-widest font-black text-sm">
-                  No pending transfers
+                <div className="h-44 flex flex-col items-center justify-center gap-2 text-muted-foreground/50 bg-muted/20 rounded-2xl border border-dashed border-border/80 font-bold text-sm">
+                  <ArrowRightLeft className="h-8 w-8 opacity-40" />
+                  <p>{renderBoth('no_pending_transfers')}</p>
                 </div>
               ) : (
                 pendingTransfers.map((transfer) => (
-                  <div key={transfer.id} className="p-4 rounded-2xl bg-muted border border-border flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500">
-                        <ArrowRightLeft className="h-5 w-5" />
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-black text-foreground">{transfer.customer?.name_dv || transfer.tempCustomerName || 'Guest'}</p>
-                        <p className="text-[10px] font-bold text-muted-foreground">{formatDateTime(transfer.date)}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest mb-0.5">Amount</p>
-                      <p className="text-lg font-black text-yellow-500">{settings.shop.currency} {transfer.grandTotal.toFixed(2)}</p>
-                    </div>
-                    <div className="flex gap-2">
+                  <div key={transfer.id} className="p-4 rounded-2xl bg-card border border-border flex items-center justify-between gap-4 hover:border-primary/40 transition-all shadow-sm">
+                    <div className="flex items-center gap-2 shrink-0">
                       <Button
                         size="sm"
                         onClick={() => resolvePendingTransfer(transfer.id, 'cash')}
-                        className="bg-green-600 hover:bg-green-700 text-foreground text-[10px] font-black px-3 h-9"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-3.5 h-9 rounded-xl shadow-sm"
                       >
-                        CASH
+                        {renderBoth('cash')}
                       </Button>
                       <Button
                         size="sm"
                         onClick={() => resolvePendingTransfer(transfer.id, 'credit')}
-                        className="bg-blue-600 hover:bg-blue-700 text-foreground text-[10px] font-black px-3 h-9"
+                        className="bg-primary hover:bg-primary/90 text-white text-xs font-black px-3.5 h-9 rounded-xl shadow-sm"
                       >
-                        CREDIT
+                        {renderBoth('credit')}
                       </Button>
+                    </div>
+
+                    <div className="text-center px-2">
+                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-0.5">{renderBoth('grand_total')}</p>
+                      <p className="text-lg font-black text-yellow-600 dark:text-yellow-400 font-mono">{settings.shop.currency} {transfer.grandTotal.toFixed(2)}</p>
+                    </div>
+
+                    <div className="flex items-center gap-3 text-right flex-1 min-w-0 justify-end">
+                      <div className="truncate">
+                        <p className="text-sm font-black text-foreground truncate">{transfer.customer?.name_dv || transfer.tempCustomerName || renderBothString('guest_customer')}</p>
+                        <p className="text-[10px] font-bold text-muted-foreground font-mono mt-0.5">{formatDateTime(transfer.date)}</p>
+                      </div>
+                      <div className="h-10 w-10 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500 shrink-0">
+                        <ArrowRightLeft className="h-5 w-5" />
+                      </div>
                     </div>
                   </div>
                 ))

@@ -2034,6 +2034,14 @@ const POS = () => {
               </div>
             </div>
 
+            {/* Shop Account Info Banner */}
+            <div className="flex items-center justify-between px-4 py-2.5 bg-muted/60 rounded-xl border border-border text-xs">
+              <span className="font-mono font-black text-primary text-sm tracking-wide" dir="ltr">7730000442060 (B BACK)</span>
+              <span className="font-bold text-muted-foreground flex items-center gap-1.5">
+                <span>ބީއެމްއެލް އެކައުންޓް (BML Account):</span>
+              </span>
+            </div>
+
             {/* Customer Section */}
             <div className="space-y-2.5 pt-1">
               <div className="flex items-center justify-between gap-2">

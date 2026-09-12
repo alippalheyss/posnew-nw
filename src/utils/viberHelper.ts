@@ -52,14 +52,11 @@ export const formatCartViberMessage = (
   }
   msg += `*Total Due: ${currency} ${totals.grandTotal.toFixed(2)}*\n`;
   msg += `-------------------------\n`;
-
-  if (shopSettings?.receiptFooter && shopSettings.receiptFooter !== 'Visit us again soon!') {
-    msg += `🏦 *Transfer Information:*\n${shopSettings.receiptFooter}\n`;
-  } else if (shopSettings?.shopPhone) {
-    msg += `🏦 *Transfer Information:*\nPlease transfer to our BML account and send the slip.\nContact / BML MobilePay: ${shopSettings.shopPhone}\n`;
+  msg += `🏦 *BML: 7730000442060 (B BACK)*\n`;
+  if (shopSettings?.shopPhone) {
+    msg += `📞 Contact / MobilePay: ${shopSettings.shopPhone}\n`;
   }
-
-  msg += `Thank you for shopping with us! 🙏`;
+  msg += `Please transfer and send the slip. Thank you! 🙏`;
   return msg;
 };
 
@@ -84,8 +81,7 @@ export const formatCreditStatementViberMessage = (
   const balance = Number(rawBalance || 0).toFixed(2);
   const customerName = customer.name_dv || customer.name_en || 'Customer';
 
-  // Keep format concise and lightweight (no heavy multi-byte box characters)
-  // Ensure the outstanding balance is at the TOP so it is NEVER truncated by URL length limits
+  // Crisp, professional, and lightweight format to ensure 100% fits within Viber URL limits
   let msg = `📋 *${shopName} - Outstanding Statement*\n`;
   msg += `👤 Customer: ${customerName}${customer.code ? ` (${customer.code})` : ''}\n`;
   msg += `💰 *OUTSTANDING: ${currency} ${balance}*\n`;
@@ -95,11 +91,12 @@ export const formatCreditStatementViberMessage = (
     msg += `📞 Phone: ${customer.phone}\n`;
   }
   msg += `-------------------------\n`;
+  msg += `🏦 *BML: 7730000442060 (B BACK)*\n`;
+  msg += `(ބީއެމްއެލް އެކައުންޓް: 7730000442060)\n`;
+  msg += `-------------------------\n`;
 
-  if (shopSettings?.receiptFooter && shopSettings.receiptFooter !== 'Visit us again soon!') {
-    msg += `🏦 *Payment Info:*\n${shopSettings.receiptFooter}\n`;
-  } else if (shopSettings?.shopPhone) {
-    msg += `🏦 *Account / Contact:* ${shopSettings.shopPhone}\n`;
+  if (shopSettings?.receiptFooter && shopSettings.receiptFooter !== 'Visit us again soon!' && !shopSettings.receiptFooter.includes('7730000442060')) {
+    msg += `${shopSettings.receiptFooter}\n`;
   }
 
   msg += `Please send the transfer slip once payment is made. Thank you! 🙏`;
@@ -113,25 +110,37 @@ export const shareViaViber = async ({
   phone?: string;
   text: string;
 }): Promise<void> => {
-  // 1. Always copy text to clipboard for zero-friction paste
+  // 1. Always copy text to clipboard for 100% complete zero-friction manual paste
+  let copied = false;
   try {
     if (navigator?.clipboard?.writeText) {
       await navigator.clipboard.writeText(text);
+      copied = true;
     }
   } catch (err) {
     console.warn('Clipboard write error:', err);
   }
 
   const cleaned = cleanMaldivesPhone(phone);
-  const encodedText = encodeURIComponent(text);
+  const encodedDraft = encodeURIComponent(text);
 
   // 2. Open Viber via URI scheme
-  // Provide both 'text' and 'draft' query parameters for maximum compatibility across Viber versions
+  // CRITICAL FIX: Passing ONLY 'draft' (NOT both 'text' and 'draft').
+  // Providing both parameters doubled the URI length (exceeding Windows/Viber CLI buffer)
+  // and pushed 'draft' past the buffer cutoff, causing Viber desktop to truncate the message.
   if (cleaned) {
-    window.location.href = `viber://chat?number=${cleaned}&text=${encodedText}&draft=${encodedText}`;
-    showSuccess(`Copied statement & opening Viber chat with ${phone}!`);
+    window.location.href = `viber://chat?number=${cleaned}&draft=${encodedDraft}`;
+    showSuccess(
+      copied
+        ? `Copied statement & opening Viber! (Press Ctrl+V to paste full statement)`
+        : `Opening Viber chat with ${phone}!`
+    );
   } else {
-    window.location.href = `viber://forward?text=${encodedText}`;
-    showSuccess('Copied statement & opening Viber!');
+    window.location.href = `viber://forward?text=${encodedDraft}`;
+    showSuccess(
+      copied
+        ? 'Copied statement & opening Viber! (Press Ctrl+V to paste full statement)'
+        : 'Opening Viber!'
+    );
   }
 };

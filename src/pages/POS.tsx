@@ -164,6 +164,15 @@ const POS = () => {
         return;
       }
 
+      // If user is focused in the product search bar, let the search input's onKeyDown handle Enter/Escape
+      if (document.activeElement === searchInputRef.current) {
+        if (e.key === 'Escape') {
+          setSearchTerm('');
+          searchInputRef.current?.blur();
+        }
+        return;
+      }
+
       if (e.key === 'Enter') {
         e.preventDefault();
         setIsCashDialogOpen(true);
@@ -183,41 +192,6 @@ const POS = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-
-  useEffect(() => {
-    if (searchTerm.trim()) {
-      const term = searchTerm.trim().toLowerCase();
-      const strippedTerm = term.replace(/^0+/, '');
-      let matchedUnit: string | undefined = undefined;
-
-      const exactMatch = products.find(p => {
-        if (
-          p.barcode === searchTerm.trim() ||
-          p.item_code.toLowerCase() === term ||
-          (strippedTerm && p.item_code.replace(/^0+/, '') === strippedTerm)
-        ) {
-          return true;
-        }
-        // Match unit-level barcode (e.g. barcode printed on Box/Case)
-        const foundUnit = p.units?.find(u => u.barcode && u.barcode.trim() === searchTerm.trim());
-        if (foundUnit) {
-          matchedUnit = foundUnit.name;
-          return true;
-        }
-        return false;
-      });
-
-      if (exactMatch) {
-        if (matchedUnit) {
-          addToCart(exactMatch, 1, matchedUnit);
-        } else {
-          handleProductSelection(exactMatch);
-        }
-        setSearchTerm('');
-        showSuccess(t('product_added_via_barcode', { name: exactMatch.name_dv }));
-      }
-    }
-  }, [searchTerm, products]);
 
   const clearActiveCart = () => {
     setOpenCarts(prev => {
@@ -541,6 +515,66 @@ const POS = () => {
 
     return matchesSearch && matchesCategory && matchesFavorite;
   }).slice(0, 50);
+
+  const handleSearchSubmit = (termToSubmit?: string) => {
+    const rawTerm = (termToSubmit !== undefined ? termToSubmit : searchTerm).trim();
+    if (!rawTerm) {
+      // If search bar is empty and Enter is pressed, proceed to checkout if cart has items
+      if (activeCart && activeCart.items.length > 0) {
+        setIsCashDialogOpen(true);
+      }
+      return;
+    }
+
+    const term = rawTerm.toLowerCase();
+    const strippedTerm = term.replace(/^0+/, '');
+    let matchedUnit: string | undefined = undefined;
+
+    // 1. Try exact barcode match (product barcode or unit barcode)
+    let exactMatch = products.find(p => {
+      if (p.barcode && p.barcode.trim() === rawTerm) return true;
+      const foundUnit = p.units?.find(u => u.barcode && u.barcode.trim() === rawTerm);
+      if (foundUnit) {
+        matchedUnit = foundUnit.name;
+        return true;
+      }
+      return false;
+    });
+
+    // 2. Try exact item_code match
+    if (!exactMatch) {
+      exactMatch = products.find(p => 
+        p.item_code.toLowerCase() === term ||
+        (strippedTerm && p.item_code.replace(/^0+/, '').toLowerCase() === strippedTerm)
+      );
+    }
+
+    // 3. Try exact name match (English or Dhivehi)
+    if (!exactMatch) {
+      exactMatch = products.find(p => 
+        p.name_en.toLowerCase() === term ||
+        p.name_dv.toLowerCase() === term
+      );
+    }
+
+    // 4. If only one product in the filtered display results, pick that one
+    if (!exactMatch && displayProducts.length === 1) {
+      exactMatch = displayProducts[0];
+    }
+
+    if (exactMatch) {
+      if (matchedUnit) {
+        addToCart(exactMatch, 1, matchedUnit);
+      } else {
+        handleProductSelection(exactMatch);
+      }
+      setSearchTerm('');
+      showSuccess(t('product_added_via_barcode', { name: exactMatch.name_dv }));
+      focusSearchBar();
+    } else {
+      showError(`ނުފެނުނު: ${rawTerm} (Product not found)`);
+    }
+  };
 
   const processCashPayment = async () => {
     if (!activeCart || activeCart.items.length === 0) {
@@ -892,9 +926,15 @@ const POS = () => {
               <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
               <Input
                 ref={searchInputRef}
-                placeholder="...Search by name, code or barcode"
+                placeholder="...Search by name, code or barcode (Enter to add)"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSearchSubmit();
+                  }
+                }}
                 className="w-full bg-muted border-border rounded-xl px-10 text-right font-bold h-11 focus:border-primary/50 focus:ring-0 transition-all placeholder:text-foreground/10 text-foreground"
                 dir="rtl"
               />

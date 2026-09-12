@@ -79,26 +79,15 @@ export const formatCreditStatementViberMessage = (
          (customer as any).outstanding ?? 
          0);
   const balance = Number(rawBalance || 0).toFixed(2);
-  const customerName = customer.name_dv || customer.name_en || 'Customer';
+  const customerName = customer.name_en || customer.name_dv || 'Customer';
 
-  // Crisp, professional, and lightweight format to ensure 100% fits within Viber URL limits
   let msg = `📋 *${shopName} - Outstanding Statement*\n`;
   msg += `👤 Customer: ${customerName}${customer.code ? ` (${customer.code})` : ''}\n`;
   msg += `💰 *OUTSTANDING: ${currency} ${balance}*\n`;
-  msg += `💰 *ދައްކަންޖެހޭ އަދަދު: ${currency} ${balance}*\n`;
   msg += `📅 Date: ${formatDate(now)}\n`;
-  if (customer.phone) {
-    msg += `📞 Phone: ${customer.phone}\n`;
-  }
   msg += `-------------------------\n`;
   msg += `🏦 *BML: 7730000442060 (B BACK)*\n`;
-  msg += `(ބީއެމްއެލް އެކައުންޓް: 7730000442060)\n`;
   msg += `-------------------------\n`;
-
-  if (shopSettings?.receiptFooter && shopSettings.receiptFooter !== 'Visit us again soon!' && !shopSettings.receiptFooter.includes('7730000442060')) {
-    msg += `${shopSettings.receiptFooter}\n`;
-  }
-
   msg += `Please send the transfer slip once payment is made. Thank you! 🙏`;
   return msg;
 };

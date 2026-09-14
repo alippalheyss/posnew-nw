@@ -77,6 +77,34 @@ export const setTelegramWebhook = async (
 };
 
 /**
+ * Bot commands configuration
+ */
+export const BOT_COMMANDS = [
+  { command: 'start', description: 'Connect your store account and activate receipts' },
+  { command: 'balance', description: 'View your current credit tab and outstanding amount' },
+  { command: 'account', description: 'View your linked customer profile details' },
+  { command: 'help', description: 'How to use this bot and store contact details' },
+];
+
+/**
+ * Configure Telegram Bot menu commands via setMyCommands API
+ */
+export const setBotCommands = async (token?: string): Promise<{ ok: boolean; description?: string }> => {
+  const activeToken = (token || DEFAULT_TELEGRAM_BOT_TOKEN).trim();
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${activeToken}/setMyCommands`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ commands: BOT_COMMANDS }),
+    });
+    const data = await res.json();
+    return { ok: Boolean(data.ok), description: data.description };
+  } catch (err: any) {
+    return { ok: false, description: err.message || 'Failed to set bot commands' };
+  }
+};
+
+/**
  * Poll recent Telegram updates (works 100% in browser without any webhook or CLI)
  */
 export const pollTelegramUpdates = async (
@@ -185,6 +213,247 @@ export const sendTelegramMessage = async (
     console.error('sendTelegramMessage error:', err);
     return { ok: false, description: err.message || 'Network error' };
   }
+};
+
+/**
+ * Handle incoming bot commands (/start, /balance, /account, /help)
+ */
+export const handleTelegramBotCommand = async ({
+  text,
+  chatId,
+  senderName,
+  customers,
+  onCustomerLinked,
+  shopSettings,
+  token,
+}: {
+  text: string;
+  chatId: number;
+  senderName?: string;
+  customers: Customer[];
+  onCustomerLinked?: (customerId: string, chatId: number) => Promise<void> | void;
+  shopSettings?: any;
+  token?: string;
+}) => {
+  const cleanText = text.trim();
+  const cmd = cleanText.toLowerCase();
+
+  // 1. /start <code_or_id> or bare /start
+  if (cmd.startsWith('/start') || cmd.startsWith('start')) {
+    const parts = cleanText.split(' ');
+    const ref = (parts[1] || '').trim().toLowerCase();
+
+    if (ref) {
+      const match = customers.find(c => 
+        c.id?.toLowerCase() === ref || 
+        c.code?.toLowerCase() === ref
+      );
+
+      if (match) {
+        if (onCustomerLinked) {
+          await onCustomerLinked(match.id, chatId);
+        }
+        const name = match.name_en || match.name_dv || senderName || 'Valued Customer';
+        const balance = Number(match.outstanding_balance || 0).toFixed(2);
+        const limit = Number(match.credit_limit || 0).toFixed(2);
+        const points = Number(match.loyalty_points || 0).toFixed(0);
+
+        const welcomeMsg = 
+`✅ *Welcome to B BACK, ${name}!*
+━━━━━━━━━━━━━━━━━━━━
+Your Telegram account is now linked to store account: \`${match.code}\`.
+
+💰 *Current Due:* MVR ${balance}
+💳 *Credit Limit:* MVR ${limit}
+⭐ *Loyalty Points:* ${points} pts
+
+━━━━━━━━━━━━━━━━━━━━
+You will automatically receive:
+• 🧾 Real-time sales receipts
+• 💳 Payment settlement confirmations
+• 📊 Monthly credit statements
+
+Type */balance* or */account* anytime! 🙏`;
+
+        await sendTelegramMessage(chatId, welcomeMsg, token);
+        return;
+      }
+    }
+
+    // Bare /start
+    const linkedCustomer = customers.find(c => Number(c.telegram_chat_id) === Number(chatId));
+    if (linkedCustomer) {
+      const name = linkedCustomer.name_en || linkedCustomer.name_dv || senderName || 'Valued Customer';
+      const greeting = 
+`👋 *Welcome back, ${name}!*
+━━━━━━━━━━━━━━━━━━━━
+Your Telegram is connected to store code: \`${linkedCustomer.code}\`.
+
+Available Commands:
+• */balance* - View current credit tab & due amount
+• */account* - View linked customer profile details
+• */help* - Store hours, contact & bank transfer details`;
+
+      await sendTelegramMessage(chatId, greeting, token);
+    } else {
+      const intro = 
+`👋 *Welcome to B BACK Store Bot!*
+━━━━━━━━━━━━━━━━━━━━
+Connect your store account and activate real-time digital receipts:
+
+• Open your customer profile on our shop POS screen
+• Scan the personal QR code displayed
+• Or ask our cashier for your connection link!
+
+Commands:
+• */help* - How to use this bot & store contact details`;
+
+      await sendTelegramMessage(chatId, intro, token);
+    }
+    return;
+  }
+
+  // 2. /balance or balance or /statement
+  if (cmd === '/balance' || cmd === 'balance' || cmd === '/statement' || cmd === 'statement') {
+    const customer = customers.find(c => Number(c.telegram_chat_id) === Number(chatId));
+    if (customer) {
+      const name = customer.name_en || customer.name_dv;
+      const balance = Number(customer.outstanding_balance || 0).toFixed(2);
+      const limit = Number(customer.credit_limit || 0).toFixed(2);
+      const points = Number(customer.loyalty_points || 0).toFixed(0);
+
+      const msg = 
+`📋 *B BACK - Credit Statement*
+━━━━━━━━━━━━━━━━━━━━
+👤 *Customer:* ${name} (\`${customer.code}\`)
+💰 *Current Due:* MVR ${balance}
+💳 *Credit Limit:* MVR ${limit}
+⭐ *Loyalty Points:* ${points} pts
+
+━━━━━━━━━━━━━━━━━━━━
+🏦 *Bank Transfer Payment:*
+Bank of Maldives (BML)
+Account: \`7730000442060\` (B BACK)
+
+_Please send transfer receipt slip to the cashier._`;
+
+      await sendTelegramMessage(chatId, msg, token);
+    } else {
+      await sendTelegramMessage(
+        chatId,
+        `⚠️ Your Telegram is not linked to any store account yet.\n\nPlease ask our cashier to connect your account or scan your QR code on the POS screen.`,
+        token
+      );
+    }
+    return;
+  }
+
+  // 3. /account or account or /profile
+  if (cmd === '/account' || cmd === 'account' || cmd === '/profile' || cmd === 'profile') {
+    const customer = customers.find(c => Number(c.telegram_chat_id) === Number(chatId));
+    if (customer) {
+      const name = customer.name_en || customer.name_dv;
+      const balance = Number(customer.outstanding_balance || 0).toFixed(2);
+      const limit = Number(customer.credit_limit || 0).toFixed(2);
+      const points = Number(customer.loyalty_points || 0).toFixed(0);
+
+      const msg = 
+`👤 *B BACK - Linked Customer Profile*
+━━━━━━━━━━━━━━━━━━━━
+• *Name:* ${name}
+• *Customer Code:* \`${customer.code}\`
+• *Phone:* ${customer.phone || 'Not provided'}
+• *Email:* ${customer.email || 'Not provided'}
+• *Status:* Active ✅
+• *Credit Limit:* MVR ${limit}
+• *Outstanding Due:* MVR ${balance}
+• *Loyalty Points:* ${points} pts
+
+_To update your contact details, please inform the cashier at the counter._`;
+
+      await sendTelegramMessage(chatId, msg, token);
+    } else {
+      await sendTelegramMessage(
+        chatId,
+        `⚠️ Your Telegram is not linked to any store account yet.\n\nPlease ask our cashier to connect your account or scan your QR code on the POS screen.`,
+        token
+      );
+    }
+    return;
+  }
+
+  // 4. /help or help
+  if (cmd === '/help' || cmd === 'help') {
+    const shopName = shopSettings?.shopName || 'B BACK';
+    const shopPhone = shopSettings?.shopPhone || '+960 777-1234';
+    const shopAddress = shopSettings?.shopAddress || 'Malé, Maldives';
+
+    const msg = 
+`🤖 *${shopName} Store Bot - Commands & Help*
+━━━━━━━━━━━━━━━━━━━━
+• */start* - Connect your store account and activate receipts
+• */balance* - View your current credit tab and outstanding amount
+• */account* - View your linked customer profile details
+• */help* - How to use this bot and store contact details
+
+━━━━━━━━━━━━━━━━━━━━
+🏪 *Store Contact Details:*
+📍 *Address:* ${shopAddress}
+📞 *Phone:* ${shopPhone}
+🏦 *BML Account:* \`7730000442060\`
+⏰ *Hours:* Sat - Thu: 08:30 - 22:00 | Fri: 14:00 - 22:00
+
+_For assistance, visit our shop or contact the cashier._`;
+
+    await sendTelegramMessage(chatId, msg, token);
+    return;
+  }
+};
+
+/**
+ * Process any pending updates from Telegram
+ */
+export const processPendingTelegramUpdates = async ({
+  customers,
+  onCustomerLinked,
+  shopSettings,
+  token,
+}: {
+  customers: Customer[];
+  onCustomerLinked?: (customerId: string, chatId: number) => Promise<void> | void;
+  shopSettings?: any;
+  token?: string;
+}): Promise<{ processedCount: number }> => {
+  const result = await pollTelegramUpdates(undefined, token);
+  if (!result.ok || !result.updates || !result.updates.length) {
+    return { processedCount: 0 };
+  }
+
+  let maxUpdateId = 0;
+  for (const update of result.updates) {
+    if (update.update_id > maxUpdateId) maxUpdateId = update.update_id;
+    if (update.message?.text && update.message.chat?.id) {
+      try {
+        await handleTelegramBotCommand({
+          text: update.message.text,
+          chatId: update.message.chat.id,
+          senderName: update.message.from?.first_name,
+          customers,
+          onCustomerLinked,
+          shopSettings,
+          token,
+        });
+      } catch (cmdErr) {
+        console.warn('Error handling bot command:', cmdErr);
+      }
+    }
+  }
+
+  if (maxUpdateId > 0) {
+    await pollTelegramUpdates(maxUpdateId + 1, token).catch(() => {});
+  }
+
+  return { processedCount: result.updates.length };
 };
 
 /**

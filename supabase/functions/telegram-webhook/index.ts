@@ -37,11 +37,12 @@ serve(async (req: Request) => {
 
     if (update.message && update.message.text) {
       const text = update.message.text.trim();
+      const cmd = text.toLowerCase().trim();
       const chatId = update.message.chat.id;
       const firstName = update.message.from?.first_name || "Valued Customer";
 
       // Case 1: Deep link activation /start <CUSTOMER_ID_OR_CODE>
-      if (text.startsWith("/start")) {
+      if (cmd.startsWith("/start") || cmd.startsWith("start")) {
         const parts = text.split(" ");
         const customerRef = parts[1]?.trim();
 
@@ -123,8 +124,8 @@ To link your store account and receive digital receipts, please scan the QR code
       }
 
       // Case 2: Balance enquiry /balance or /statement
-      else if (text === "/balance" || text === "/statement") {
-        const { data: customer, error } = await supabase
+      else if (cmd === "/balance" || cmd === "balance" || cmd === "/statement") {
+        const { data: customer } = await supabase
           .from("customers")
           .select("*")
           .eq("telegram_chat_id", chatId)
@@ -135,15 +136,15 @@ To link your store account and receive digital receipts, please scan the QR code
           const limit = Number(customer.credit_limit || 0).toFixed(2);
 
           const statementMsg = 
-`📋 *B BACK - Account Statement*
+`📋 *B BACK - Credit Statement*
 ━━━━━━━━━━━━━━━━━━━━
 👤 *Customer:* ${customer.name_en || customer.name_dv} (\`${customer.code}\`)
 💰 *Current Due:* MVR ${balance}
 💳 *Credit Limit:* MVR ${limit}
-⭐ *Loyalty Points:* ${(customer.loyalty_points || 0).toFixed(0)}
+⭐ *Loyalty Points:* ${(customer.loyalty_points || 0).toFixed(0)} pts
 
 ━━━━━━━━━━━━━━━━━━━━
-🏦 *Transfer Account:*
+🏦 *Bank Transfer Payment:*
 Bank of Maldives (BML)
 Account: \`7730000442060\` (B BACK)
 
@@ -153,19 +154,63 @@ _Please send transfer slip to cashier after payment._`;
         } else {
           await sendTelegramMessage(
             chatId,
-            `⚠️ Your Telegram is not linked to any store account yet. Please ask our cashier to connect your profile.`
+            `⚠️ Your Telegram is not linked to any store account yet.\n\nPlease ask our cashier to connect your account or scan the QR code on the POS screen.`
           );
         }
       }
 
-      // Case 3: /help
-      else if (text === "/help") {
+      // Case 3: Customer profile enquiry /account
+      else if (cmd === "/account" || cmd === "account") {
+        const { data: customer } = await supabase
+          .from("customers")
+          .select("*")
+          .eq("telegram_chat_id", chatId)
+          .maybeSingle();
+
+        if (customer) {
+          const balance = Number(customer.outstanding_balance || 0).toFixed(2);
+          const limit = Number(customer.credit_limit || 0).toFixed(2);
+
+          const accountMsg = 
+`👤 *B BACK - Linked Account Profile*
+━━━━━━━━━━━━━━━━━━━━
+• *Name:* ${customer.name_en || customer.name_dv}
+• *Customer Code:* \`${customer.code}\`
+• *Phone:* ${customer.phone || "Not provided"}
+• *Email:* ${customer.email || "Not provided"}
+• *Status:* Active ✅
+• *Credit Limit:* MVR ${limit}
+• *Outstanding Due:* MVR ${balance}
+• *Loyalty Points:* ${(customer.loyalty_points || 0).toFixed(0)} pts
+
+_Need to update your contact info? Please notify the cashier at the counter._`;
+
+          await sendTelegramMessage(chatId, accountMsg);
+        } else {
+          await sendTelegramMessage(
+            chatId,
+            `⚠️ Your Telegram is not linked to any store account yet.\n\nPlease ask our cashier to connect your account or scan your QR code on the POS screen.`
+          );
+        }
+      }
+
+      // Case 4: /help
+      else if (cmd === "/help" || cmd === "help") {
         await sendTelegramMessage(
           chatId,
-          `🤖 *B BACK Bot Commands*
+          `🤖 *B BACK Store Bot - Commands & Help*
 ━━━━━━━━━━━━━━━━━━━━
-• */balance* - Check your current credit tab balance
-• */help* - Display this help guide
+• */start* - Connect your store account and activate receipts
+• */balance* - View your current credit tab and outstanding amount
+• */account* - View your linked customer profile details
+• */help* - How to use this bot and store contact details
+
+━━━━━━━━━━━━━━━━━━━━
+🏪 *Store Contact Details:*
+📍 *Shop:* B BACK
+📞 *Phone:* +960 777-1234
+🏦 *BML Account:* \`7730000442060\`
+⏰ *Hours:* Sat - Thu: 08:30 - 22:00 | Fri: 14:00 - 22:00
 
 _For assistance, visit our shop or contact the cashier._`
         );

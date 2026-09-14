@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/components/ThemeProvider';
 
 import { toISODate, toISODatetime, extractDateOnly } from '@/utils/formatters';
+import { processPendingTelegramUpdates } from '@/services/telegramService';
 
 export interface Product {
   id: string;
@@ -1002,6 +1003,52 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       throw error;
     }
   };
+
+  // Background listener for incoming Telegram Bot commands (/start, /balance, /account, /help)
+  useEffect(() => {
+    // Only poll if webhook is not configured
+    if (settings.telegram?.webhookUrl) return;
+
+    let isMounted = true;
+    const checkUpdates = async () => {
+      if (!isMounted) return;
+      try {
+        await processPendingTelegramUpdates({
+          customers,
+          onCustomerLinked: async (customerId: string, chatId: number) => {
+            if (!customerId || !chatId) return;
+            try {
+              if (supabase) {
+                await supabase
+                  .from('customers')
+                  .update({ telegram_chat_id: chatId, updated_at: new Date().toISOString() })
+                  .eq('id', customerId);
+              }
+              setCustomers(prev =>
+                prev.map(c => (c.id === customerId ? { ...c, telegram_chat_id: chatId } : c))
+              );
+            } catch (err) {
+              console.warn('Background link error:', err);
+            }
+          },
+          shopSettings: settings.shop,
+          token: settings.telegram?.botToken,
+        });
+      } catch (err) {
+        // Silent background polling
+      }
+    };
+
+    // Initial check after 3 seconds, then poll every 10 seconds
+    const initialTimer = setTimeout(checkUpdates, 3000);
+    const interval = setInterval(checkUpdates, 10000);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
+  }, [customers, settings.telegram?.webhookUrl, settings.telegram?.botToken, settings.shop]);
 
   const addPendingTransfer = (transfer: any) => {
     setPendingTransfers(prev => [...prev, { ...transfer, id: `transfer-${Date.now()}` }]);

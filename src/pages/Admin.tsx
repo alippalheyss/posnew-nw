@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { ChevronDown, ChevronUp, Upload, Image as ImageIcon, Trash2, Settings, Landmark, Monitor, Layout, FileText, Printer, Building2, X, Edit, UserPlus, Shield, Database, Languages, Palette, Globe, CreditCard, Receipt, Percent, LogOut, Gift, Clock, Users, CheckCircle2, Copy, ExternalLink, RefreshCw, Loader2 } from 'lucide-react';
-import { testTelegramBot, setTelegramWebhook, TelegramBotInfo, DEFAULT_TELEGRAM_BOT_TOKEN, DEFAULT_TELEGRAM_BOT_USERNAME } from '@/services/telegramService';
+import { testTelegramBot, setTelegramWebhook, setBotCommands, BOT_COMMANDS, TelegramBotInfo, DEFAULT_TELEGRAM_BOT_TOKEN, DEFAULT_TELEGRAM_BOT_USERNAME } from '@/services/telegramService';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/AppContext';
@@ -87,6 +87,24 @@ const Admin = () => {
       showError(err.message || 'Error registering webhook');
     } finally {
       setIsRegisteringWebhook(false);
+    }
+  };
+
+  const [isSyncingCommands, setIsSyncingCommands] = useState(false);
+
+  const handleSyncCommands = async () => {
+    try {
+      setIsSyncingCommands(true);
+      const res = await setBotCommands(telegramSettings.botToken);
+      if (res.ok) {
+        showSuccess('Telegram bot menu commands successfully configured! 🤖');
+      } else {
+        showError('Failed to sync bot commands: ' + (res.description || 'Unknown error'));
+      }
+    } catch (err: any) {
+      showError('Error syncing commands: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsSyncingCommands(false);
     }
   };
 
@@ -815,6 +833,47 @@ const Admin = () => {
                         When deployed, Telegram will forward deep-link start requests to this endpoint to automatically save the customer's Chat ID.
                       </p>
                     </div>
+                  </div>
+
+                  {/* Bot Commands Management Card */}
+                  <div className="bg-card border border-border p-6 rounded-3xl space-y-6">
+                    <div className="flex items-center justify-between pb-3 border-b border-border/60">
+                      <Button
+                        type="button"
+                        onClick={handleSyncCommands}
+                        disabled={isSyncingCommands}
+                        className="bg-[#229ED9] hover:bg-[#229ED9]/90 text-white font-bold h-10 px-5 rounded-xl gap-2 text-xs"
+                      >
+                        {isSyncingCommands ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                        <span>Sync Bot Menu</span>
+                      </Button>
+                      <div className="text-right">
+                        <h4 className="text-lg font-black text-foreground">
+                          Bot Menu Commands
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          Official Telegram [/] popup menu buttons & automated responses
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3" dir="ltr">
+                      {BOT_COMMANDS.map((cmd) => (
+                        <div key={cmd.command} className="p-3 bg-muted/60 border border-border/60 rounded-2xl flex items-start gap-3">
+                          <code className="px-2 py-1 bg-primary/10 text-primary font-mono font-bold text-xs rounded-lg shrink-0">
+                            /{cmd.command}
+                          </code>
+                          <div className="text-xs">
+                            <p className="font-bold text-foreground">{cmd.description}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">Automated bot reply enabled ✅</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <p className="text-xs text-muted-foreground text-right" dir="rtl">
+                      ބޮޓުގެ ކޮމާންޑްތައް ޓެލެގްރާމްގެ [/] މެނޫއަށް އަޕްޑޭޓްކުރުމަށް "Sync Bot Menu" އަށް ފިއްތާލައްވާ. ކަސްޓަމަރުން މި ކޮމާންޑްތައް ފޮނުވުމުން އަމިއްލައަށް ޖަވާބު ދެވޭނެއެވެ.
+                    </p>
                   </div>
 
                   {/* Database Migration Instructions */}

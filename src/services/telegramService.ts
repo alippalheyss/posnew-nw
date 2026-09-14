@@ -1,5 +1,5 @@
 import { Customer, Sale } from '@/context/AppContext';
-import { formatDate, formatTime } from '@/utils/formatters';
+import { formatDate, formatTime, formatMaldivesDate, formatMaldivesTime } from '@/utils/formatters';
 
 export const DEFAULT_TELEGRAM_BOT_TOKEN = '8815725998:AAHVMSujW5JM-ND4CJAzPr_Qsj_enXm2cYQ';
 export const DEFAULT_TELEGRAM_BOT_USERNAME = 'Bbacksh0p_bot';
@@ -321,11 +321,15 @@ Commands:
       const balance = Number(customer.outstanding_balance || 0).toFixed(2);
       const limit = Number(customer.credit_limit || 0).toFixed(2);
       const points = Number(customer.loyalty_points || 0).toFixed(0);
+      const now = new Date();
+      const dateStr = formatMaldivesDate(now);
+      const timeStr = formatMaldivesTime(now, true);
 
       const msg = 
 `📋 *B BACK - Credit Statement*
 ━━━━━━━━━━━━━━━━━━━━
 👤 *Customer:* ${name} (\`${customer.code}\`)
+📅 *Date:* ${dateStr} | ${timeStr}
 💰 *Current Due:* MVR ${balance}
 💳 *Credit Limit:* MVR ${limit}
 ⭐ *Loyalty Points:* ${points} pts
@@ -482,8 +486,8 @@ export const sendTelegramPaymentReceipt = async ({
 }) => {
   const shopName = shopSettings?.shopName || 'B BACK';
   const currency = shopSettings?.currency || 'MVR';
-  const now = new Date().toISOString();
-  const formattedDate = `${formatDate(now)} ${formatTime(now)}`;
+  const now = new Date();
+  const formattedDate = `${formatMaldivesDate(now)} | ${formatMaldivesTime(now, true)}`;
 
   let msg = `🧾 *${shopName.toUpperCase()} - PAYMENT RECEIPT*\n`;
   msg += `━━━━━━━━━━━━━━━━━━━━\n`;
@@ -526,7 +530,9 @@ export const sendTelegramOutstandingStatement = async ({
 }) => {
   const shopName = shopSettings?.shopName || 'B BACK';
   const currency = shopSettings?.currency || 'MVR';
-  const now = new Date().toISOString();
+  const now = new Date();
+  const dateStr = formatMaldivesDate(now);
+  const timeStr = formatMaldivesTime(now, true);
   const customerName = customer.name_en || customer.name_dv || 'Customer';
 
   const rawBalance =
@@ -540,7 +546,7 @@ export const sendTelegramOutstandingStatement = async ({
   let msg = `📋 *${shopName.toUpperCase()} - OUTSTANDING STATEMENT*\n`;
   msg += `━━━━━━━━━━━━━━━━━━━━\n`;
   msg += `👤 *Customer:* ${customerName}${customer.code ? ` (\`${customer.code}\`)` : ''}\n`;
-  msg += `📅 *Date:* ${formatDate(now)} | ${formatTime(now)}\n`;
+  msg += `📅 *Date:* ${dateStr} | ${timeStr}\n`;
   msg += `━━━━━━━━━━━━━━━━━━━━\n`;
   msg += `💰 *OUTSTANDING DUE:* *${currency} ${balance}*\n`;
   msg += `💳 *Credit Limit:* ${currency} ${limit}\n`;
@@ -577,11 +583,13 @@ export const sendTelegramSaleReceipt = async ({
   const currency = shopSettings?.currency || 'MVR';
   const invoiceNo = sale.invoiceNumber || sale.id.slice(0, 8).toUpperCase();
   const customerName = customer ? (customer.name_en || customer.name_dv) : 'Walk-in Customer';
+  const saleDateStr = formatMaldivesDate(sale.date);
+  const saleTimeStr = formatMaldivesTime(sale.date, true);
 
   let msg = `🛍️ *${shopName.toUpperCase()} - SALES RECEIPT*\n`;
   msg += `━━━━━━━━━━━━━━━━━━━━\n`;
   msg += `*Invoice:* \`${invoiceNo}\`\n`;
-  msg += `*Date:* ${formatDate(sale.date)} | ${formatTime(sale.date)}\n`;
+  msg += `*Date:* ${saleDateStr} | ${saleTimeStr}\n`;
   if (customer) {
     msg += `*Customer:* ${customerName} (\`${customer.code}\`)\n`;
   }

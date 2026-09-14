@@ -134,11 +134,15 @@ To link your store account and receive digital receipts, please scan the QR code
         if (customer) {
           const balance = Number(customer.outstanding_balance || 0).toFixed(2);
           const limit = Number(customer.credit_limit || 0).toFixed(2);
+          const now = new Date();
+          const dateStr = now.toLocaleDateString('en-GB', { timeZone: 'Indian/Maldives' }).replace(/\//g, '-');
+          const timeStr = now.toLocaleTimeString('en-US', { timeZone: 'Indian/Maldives', hour: '2-digit', minute: '2-digit', hour12: true });
 
           const statementMsg = 
 `📋 *B BACK - Credit Statement*
 ━━━━━━━━━━━━━━━━━━━━
 👤 *Customer:* ${customer.name_en || customer.name_dv} (\`${customer.code}\`)
+📅 *Date:* ${dateStr} | ${timeStr}
 💰 *Current Due:* MVR ${balance}
 💳 *Credit Limit:* MVR ${limit}
 ⭐ *Loyalty Points:* ${(customer.loyalty_points || 0).toFixed(0)} pts

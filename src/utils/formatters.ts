@@ -50,11 +50,57 @@ export const formatDate = (date: string | Date): string => {
   return `${day}-${month}-${year}`;
 };
 
+/**
+ * Format time in Maldives local timezone (UTC+5), e.g. "03:52 PM" or "15:52"
+ */
+export const formatMaldivesTime = (date: string | Date = new Date(), use12Hour: boolean = true): string => {
+  if (!date) return '';
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return '';
+  try {
+    return d.toLocaleTimeString('en-US', {
+      timeZone: 'Indian/Maldives',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: use12Hour,
+    });
+  } catch (e) {
+    const hours = d.getHours();
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    if (use12Hour) {
+      const period = hours >= 12 ? 'PM' : 'AM';
+      const h12 = hours % 12 || 12;
+      return `${String(h12).padStart(2, '0')}:${minutes} ${period}`;
+    }
+    return `${String(hours).padStart(2, '0')}:${minutes}`;
+  }
+};
+
+/**
+ * Format date in Maldives local timezone (UTC+5), e.g. "14-09-2026"
+ */
+export const formatMaldivesDate = (date: string | Date = new Date()): string => {
+  if (!date) return '';
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return formatDate(date);
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Indian/Maldives',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }).format(d);
+    return parts.replace(/\//g, '-');
+  } catch (e) {
+    return formatDate(date);
+  }
+};
+
 export const formatTime = (date: string | Date): string => {
   if (!date) return '';
   
-  // If it's a string with a space (YYYY-MM-DD HH:mm:ss), take the time part directly
-  if (typeof date === 'string' && date.includes(' ')) {
+  // If it's a string with a space (YYYY-MM-DD HH:mm:ss) without timezone, it's pre-formatted local time
+  if (typeof date === 'string' && date.includes(' ') && !date.includes('Z') && !date.includes('+')) {
     const timePart = date.split(' ')[1];
     if (timePart && timePart.includes(':')) {
       const parts = timePart.split(':');
@@ -62,21 +108,30 @@ export const formatTime = (date: string | Date): string => {
     }
   }
 
-  // Handle ISO T format
-  if (typeof date === 'string' && date.includes('T')) {
-    const timePart = date.split('T')[1].split('.')[0];
-    const parts = timePart.split(':');
-    return `${parts[0]}:${parts[1]}${parts[2] ? ':' + parts[2] : ''}`;
-  }
-
   const d = new Date(date);
-  if (isNaN(d.getTime())) return '';
+  if (isNaN(d.getTime())) {
+    if (typeof date === 'string' && date.includes('T')) {
+      const timePart = date.split('T')[1].split('.')[0];
+      return timePart;
+    }
+    return '';
+  }
   
-  const hours = String(d.getHours()).padStart(2, '0');
-  const minutes = String(d.getMinutes()).padStart(2, '0');
-  const seconds = String(d.getSeconds()).padStart(2, '0');
-  
-  return `${hours}:${minutes}:${seconds}`;
+  // Convert to Maldives / local time
+  try {
+    return d.toLocaleTimeString('en-GB', {
+      timeZone: 'Indian/Maldives',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+  } catch (e) {
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
+  }
 };
 
 export const formatDateTime = (date: string | Date): string => {

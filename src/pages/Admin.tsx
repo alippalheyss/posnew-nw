@@ -167,6 +167,65 @@ const Admin = () => {
   const [groupChatIdInput, setGroupChatIdInput] = useState(shopSettings?.telegramGroupChatId || '');
   const [isSendingGroupTest, setIsSendingGroupTest] = useState(false);
 
+  useEffect(() => {
+    if (shopSettings?.telegramGroupChatId) {
+      setGroupChatIdInput(String(shopSettings.telegramGroupChatId));
+    } else {
+      supabase
+        .from('transfer_slips')
+        .select('telegram_chat_id')
+        .eq('file_id', 'group_config')
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.telegram_chat_id) {
+            setGroupChatIdInput(String(data.telegram_chat_id));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [shopSettings?.telegramGroupChatId]);
+
+  const handleSaveGroupChatId = async () => {
+    const idStr = String(groupChatIdInput).trim();
+    if (!idStr) {
+      showError('Please enter a valid Group Chat ID');
+      return;
+    }
+    handleSettingsChange('shop', 'telegramGroupChatId', idStr);
+    try {
+      await updateSettings('shop', {
+        ...shopSettings,
+        telegramGroupChatId: idStr,
+      });
+
+      // Also persist to transfer_slips (100% accessible to anon webhook)
+      const numericId = parseInt(idStr, 10) || 0;
+      const { data: existing } = await supabase
+        .from('transfer_slips')
+        .select('id')
+        .eq('file_id', 'group_config')
+        .maybeSingle();
+
+      const payload = {
+        telegram_chat_id: numericId,
+        customer_name: 'B BACK',
+        file_id: 'group_config',
+        status: 'system_config',
+        caption: JSON.stringify({ telegramGroupChatId: idStr, telegramGroupTitle: 'B BACK' }),
+        updated_at: new Date().toISOString(),
+      };
+
+      if (existing) {
+        await supabase.from('transfer_slips').update(payload).eq('id', existing.id);
+      } else {
+        await supabase.from('transfer_slips').insert(payload);
+      }
+      showSuccess('Group Chat ID saved & synced with bot! ✅');
+    } catch (e: any) {
+      showError('Error saving group: ' + (e.message || 'Unknown error'));
+    }
+  };
+
   const handleTestGroupNotification = async () => {
     const targetId = groupChatIdInput || shopSettings?.telegramGroupChatId;
     if (!targetId) {
@@ -1038,10 +1097,7 @@ const Admin = () => {
                         <div className="flex gap-2" dir="ltr">
                           <Button
                             type="button"
-                            onClick={() => {
-                              handleSettingsChange('shop', 'telegramGroupChatId', groupChatIdInput.trim());
-                              showSuccess('Group Chat ID saved!');
-                            }}
+                            onClick={handleSaveGroupChatId}
                             variant="outline"
                             className="font-bold h-11 px-4 rounded-xl text-xs shrink-0"
                           >

@@ -381,10 +381,22 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         .order('created_at', { ascending: false });
 
       if (!error && data) {
-        setTransferSlips(data as TransferSlip[]);
+        // Extract group config if stored in transfer_slips
+        const configRow = data.find((item: any) => item.status === 'system_config' && item.file_id === 'group_config');
+        if (configRow?.telegram_chat_id) {
+          setShopSettings((prev) => ({
+            ...prev,
+            telegramGroupChatId: prev.telegramGroupChatId || configRow.telegram_chat_id,
+            telegramGroupTitle: prev.telegramGroupTitle || configRow.customer_name || 'B BACK',
+          }));
+        }
+
+        // Only show actual customer transfer slips to cashiers
+        const actualSlips = data.filter((item: any) => item.status !== 'system_config');
+        setTransferSlips(actualSlips as TransferSlip[]);
         if (typeof window !== 'undefined') {
           try {
-            localStorage.setItem('pos_transfer_slips', JSON.stringify(data));
+            localStorage.setItem('pos_transfer_slips', JSON.stringify(actualSlips));
           } catch {}
         }
       }

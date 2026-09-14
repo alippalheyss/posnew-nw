@@ -732,7 +732,34 @@ ${caption ? `📝 *Customer Note:* _${caption}_\n` : ''}━━━━━━━━
         parse_mode: 'Markdown',
       }),
     });
-    return await res.json();
+    const json = await res.json();
+
+    // If Markdown parsing fails due to special characters, retry in plain text
+    if (!json.ok) {
+      console.warn('forwardSlipToTelegramGroup markdown failed, retrying plain text:', json);
+      const plainCaption = 
+`📥 NEW BANK TRANSFER SLIP RECEIVED
+━━━━━━━━━━━━━━━━━━━━
+🏪 Shop: B BACK
+👤 Customer: ${customerName}${customerCode ? ` (${customerCode})` : ''}
+📞 Phone: ${customerPhone || 'Not provided'}
+💰 Current Tab Due: MVR ${balanceStr}
+📅 Submitted: ${dateStr} | ${timeStr}
+${caption ? `📝 Customer Note: ${caption}\n` : ''}━━━━━━━━━━━━━━━━━━━━
+⚡ Awaiting cashier verification & settlement in POS.`;
+
+      const retryRes = await fetch(`https://api.telegram.org/bot${activeToken}/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: groupChatId,
+          [bodyField]: fileId,
+          caption: plainCaption,
+        }),
+      });
+      return await retryRes.json();
+    }
+    return json;
   } catch (err: any) {
     console.error('forwardSlipToTelegramGroup error:', err);
     return { ok: false, error: err.message };

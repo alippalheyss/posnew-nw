@@ -194,8 +194,10 @@ CREATE POLICY "Allow authenticated users full access to products" ON public.prod
     FOR ALL USING (auth.role() = 'authenticated');
 
 -- Customers policies
-CREATE POLICY "Allow authenticated users full access to customers" ON public.customers
-    FOR ALL USING (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "Allow authenticated users full access to customers" ON public.customers;
+DROP POLICY IF EXISTS "Allow all access to customers" ON public.customers;
+CREATE POLICY "Allow all access to customers" ON public.customers
+    FOR ALL USING (true) WITH CHECK (true);
 
 -- Settlements policies
 CREATE POLICY "Allow authenticated users full access to settlements" ON public.settlements

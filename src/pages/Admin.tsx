@@ -1014,7 +1014,7 @@ const Admin = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          navigator.clipboard.writeText("ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS telegram_chat_id BIGINT UNIQUE;\nCREATE INDEX IF NOT EXISTS idx_customers_telegram_chat_id ON public.customers(telegram_chat_id);");
+                          navigator.clipboard.writeText("ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS telegram_chat_id BIGINT UNIQUE;\nCREATE INDEX IF NOT EXISTS idx_customers_telegram_chat_id ON public.customers(telegram_chat_id);\nALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;\nDROP POLICY IF EXISTS \"Allow all access to customers\" ON public.customers;\nCREATE POLICY \"Allow all access to customers\" ON public.customers FOR ALL USING (true) WITH CHECK (true);\nGRANT ALL ON TABLE public.customers TO anon, authenticated;");
                           showSuccess("SQL copied to clipboard!");
                         }}
                         className="h-8 text-xs font-bold gap-1.5"
@@ -1030,7 +1030,11 @@ const Admin = () => {
                     <div className="p-3 bg-muted rounded-xl font-mono text-xs text-foreground/80 overflow-x-auto text-left" dir="ltr">
                       <code>
                         ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS telegram_chat_id BIGINT UNIQUE;<br/>
-                        CREATE INDEX IF NOT EXISTS idx_customers_telegram_chat_id ON public.customers(telegram_chat_id);
+                        CREATE INDEX IF NOT EXISTS idx_customers_telegram_chat_id ON public.customers(telegram_chat_id);<br/>
+                        ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;<br/>
+                        DROP POLICY IF EXISTS "Allow all access to customers" ON public.customers;<br/>
+                        CREATE POLICY "Allow all access to customers" ON public.customers FOR ALL USING (true) WITH CHECK (true);<br/>
+                        GRANT ALL ON TABLE public.customers TO anon, authenticated;
                       </code>
                     </div>
                   </div>

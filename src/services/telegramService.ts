@@ -322,8 +322,11 @@ Type */balance* or */account* anytime! 🙏`;
       }
     }
 
+    // Helper to match customer by chatId
+    const isChatLinked = (c: Customer) => Boolean(c.telegram_chat_id) && String(c.telegram_chat_id).trim() === String(chatId).trim();
+
     // Bare /start
-    const linkedCustomer = customers.find(c => Number(c.telegram_chat_id) === Number(chatId));
+    const linkedCustomer = customers.find(isChatLinked);
     if (linkedCustomer) {
       const name = linkedCustomer.name_en || linkedCustomer.name_dv || senderName || 'Valued Customer';
       const greeting = 
@@ -355,9 +358,12 @@ Commands:
     return;
   }
 
+  // Helper to match customer by chatId
+  const isChatLinked = (c: Customer) => Boolean(c.telegram_chat_id) && String(c.telegram_chat_id).trim() === String(chatId).trim();
+
   // 2. /balance or balance or /statement
   if (cmd === '/balance' || cmd === 'balance' || cmd === '/statement' || cmd === 'statement') {
-    const customer = customers.find(c => Number(c.telegram_chat_id) === Number(chatId));
+    const customer = customers.find(isChatLinked);
     if (customer) {
       const name = customer.name_en || customer.name_dv;
       const balance = Number(customer.outstanding_balance || 0).toFixed(2);
@@ -396,7 +402,7 @@ _Please send transfer receipt slip to the cashier._`;
 
   // 3. /account or account or /profile
   if (cmd === '/account' || cmd === 'account' || cmd === '/profile' || cmd === 'profile') {
-    const customer = customers.find(c => Number(c.telegram_chat_id) === Number(chatId));
+    const customer = customers.find(isChatLinked);
     if (customer) {
       const name = customer.name_en || customer.name_dv;
       const balance = Number(customer.outstanding_balance || 0).toFixed(2);

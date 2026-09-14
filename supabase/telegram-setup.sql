@@ -1,4 +1,4 @@
--- Add Telegram Chat ID column to customers table
+-- Telegram Bot Setup & Customer Table Permissions
 -- Run this in your Supabase SQL Editor (Dashboard -> SQL Editor -> New Query)
 
 -- 1. Add telegram_chat_id column
@@ -9,5 +9,11 @@ ADD COLUMN IF NOT EXISTS telegram_chat_id BIGINT UNIQUE;
 CREATE INDEX IF NOT EXISTS idx_customers_telegram_chat_id 
 ON public.customers(telegram_chat_id);
 
--- 3. Optional: Add a comment
-COMMENT ON COLUMN public.customers.telegram_chat_id IS 'Customer numeric Telegram Chat ID linked via /start QR code';
+-- 3. Allow POS & Telegram Bot (anon and authenticated) full access to customers
+ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all access to customers" ON public.customers;
+CREATE POLICY "Allow all access to customers" ON public.customers 
+    FOR ALL USING (true) WITH CHECK (true);
+
+-- 4. Grant schema permissions
+GRANT ALL ON TABLE public.customers TO anon, authenticated;

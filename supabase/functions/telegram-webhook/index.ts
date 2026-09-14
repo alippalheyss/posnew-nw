@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Supabase Edge Function: telegram-webhook
 // Deploy with: supabase functions deploy telegram-webhook --no-verify-jwt
 // Set secrets with: supabase secrets set TELEGRAM_BOT_TOKEN=8815725998:AAHVMSujW5JM-ND4CJAzPr_Qsj_enXm2cYQ

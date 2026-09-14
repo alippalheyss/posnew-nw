@@ -595,7 +595,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       shop: {
         shopName: 'My Retail Shop',
         shopAddress: 'Male, Maldives',
-        shopPhone: '3301234',
+        shopPhone: '9336337',
         shopEmail: 'info@myshop.com',
         currency: 'MVR',
         taxRate: 8,

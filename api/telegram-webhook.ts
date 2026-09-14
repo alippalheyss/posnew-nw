@@ -219,7 +219,7 @@ _To update your contact details, please inform the cashier at the counter._`
 ━━━━━━━━━━━━━━━━━━━━
 🏪 *Store Contact Details:*
 📍 *Shop:* B BACK
-📞 *Phone:* +960 777-1234
+📞 *Phone:* +960 9336337
 🏦 *BML Account:* \`7730000442060\`
 ⏰ *Hours:* Sat - Thu: 08:30 - 22:00 | Fri: 14:00 - 22:00
 

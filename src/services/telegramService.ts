@@ -437,7 +437,7 @@ _To update your contact details, please inform the cashier at the counter._`;
   // 4. /help or help
   if (cmd === '/help' || cmd === 'help') {
     const shopName = shopSettings?.shopName || 'B BACK';
-    const shopPhone = shopSettings?.shopPhone || '+960 777-1234';
+    const shopPhone = shopSettings?.shopPhone || '+960 9336337';
     const shopAddress = shopSettings?.shopAddress || 'Malé, Maldives';
 
     const msg = 

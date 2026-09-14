@@ -29,6 +29,7 @@ import { Progress } from "@/components/ui/progress";
 import { printContent } from '@/utils/printHelper';
 import { getAdaptedImageUrl } from '@/utils/imageUtils';
 import { TelegramConnectDialog } from '@/components/TelegramConnectDialog';
+import { TransferSlipsDialog } from '@/components/TransferSlipsDialog';
 import { sendTelegramSaleReceipt } from '@/services/telegramService';
 
 interface Cart {
@@ -61,7 +62,8 @@ const POS = () => {
     pendingTransfers,
     resolvePendingTransfer,
     convertAllPendingToCredit,
-    refreshCustomers
+    refreshCustomers,
+    pendingSlipsCount
   } = useAppContext();
 
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
@@ -85,6 +87,7 @@ const POS = () => {
   const [transferAmount, setTransferAmount] = useState<number | ''>(0);
   const [telegramCustomer, setTelegramCustomer] = useState<Customer | null>(null);
   const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false);
+  const [isTransferSlipsDialogOpen, setIsTransferSlipsDialogOpen] = useState(false);
 
   const TelegramIcon = ({ className }: { className?: string }) => (
     <svg viewBox="0 0 24 24" className={className} fill="currentColor">
@@ -985,6 +988,24 @@ const POS = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsTransferSlipsDialogOpen(true)}
+              title="Bank Transfer Slips from Telegram"
+              className={cn(
+                "relative h-11 w-11 rounded-xl bg-muted border border-border hover:bg-amber-500/20 hover:text-amber-500 text-muted-foreground transition-all",
+                pendingSlipsCount > 0 && "border-amber-500/50 bg-amber-500/10 text-amber-500"
+              )}
+            >
+              <CreditCard className="h-5 w-5" />
+              {pendingSlipsCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-black rounded-full text-[10px] font-black flex items-center justify-center border-2 border-background animate-pulse">
+                  {pendingSlipsCount}
+                </span>
+              )}
+            </Button>
+
             <Button
               variant="ghost"
               size="icon"
@@ -2332,6 +2353,12 @@ const POS = () => {
           setIsTelegramDialogOpen(false);
           setTelegramCustomer(null);
         }}
+      />
+
+      {/* Bank Transfer Slips Verification Dialog */}
+      <TransferSlipsDialog
+        open={isTransferSlipsDialogOpen}
+        onOpenChange={setIsTransferSlipsDialogOpen}
       />
     </div>
   );

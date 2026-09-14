@@ -41,7 +41,7 @@ const Sidebar = () => {
     { name_dv: t('admin_settings'), name_en: t('admin_settings', { lng: 'en' }), icon: Settings, path: '/admin', permission: 'canAccessAdmin' as const },
   ];
 
-  const { sidebarCollapsed, setSidebarCollapsed } = useAppContext();
+  const { sidebarCollapsed, setSidebarCollapsed, pendingSlipsCount } = useAppContext();
   const navItems = allNavItems.filter(item => can(item.permission));
 
   if (location.pathname === '/mobile-purchase') {
@@ -91,6 +91,7 @@ const Sidebar = () => {
         <ul className="space-y-1.5">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
+            const isCreditOutstanding = item.path === '/credit-outstanding';
             return (
               <li key={item.path}>
                 <Link
@@ -111,18 +112,25 @@ const Sidebar = () => {
                       "h-9 w-9 rounded-xl flex items-center justify-center transition-all shrink-0",
                       isActive ? "bg-primary text-foreground" : "bg-muted text-muted-foreground group-hover:bg-muted/80 group-hover:text-foreground"
                     )}>
-                       <item.icon className="h-4.5 w-4.5" />
+                        <item.icon className="h-4.5 w-4.5" />
                     </div>
                     <div className="flex flex-col text-right">
                       <span className="text-[11px] font-black leading-none mb-0.5 whitespace-nowrap">{item.name_dv}</span>
                       <span className="text-[9px] font-bold opacity-40 uppercase tracking-widest whitespace-nowrap">{item.name_en}</span>
                     </div>
                   </div>
-                  
-                  <ChevronRight className={cn(
-                    "h-3 w-3 transition-all shrink-0",
-                    isActive ? "text-primary opacity-100" : "opacity-0 group-hover:opacity-20"
-                  )} />
+
+                  <div className="flex items-center gap-2">
+                    {isCreditOutstanding && pendingSlipsCount > 0 && (
+                      <span className="px-2 py-0.5 text-[10px] font-black bg-amber-500 text-black rounded-full animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.5)]">
+                        {pendingSlipsCount}
+                      </span>
+                    )}
+                    <ChevronRight className={cn(
+                      "h-3 w-3 transition-all shrink-0",
+                      isActive ? "text-primary opacity-100" : "opacity-0 group-hover:opacity-20"
+                    )} />
+                  </div>
                 </Link>
               </li>
             );

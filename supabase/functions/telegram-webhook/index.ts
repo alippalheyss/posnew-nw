@@ -27,6 +27,19 @@ async function sendTelegramMessage(chatId: number | string, text: string) {
   }
 }
 
+async function getTelegramFileUrl(fileId: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${encodeURIComponent(fileId)}`);
+    const data = await res.json();
+    if (data.ok && data.result?.file_path) {
+      return `https://api.telegram.org/file/bot${BOT_TOKEN}/${data.result.file_path}`;
+    }
+  } catch (err) {
+    console.warn("Failed to get file path in edge function:", err);
+  }
+  return null;
+}
+
 serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
@@ -34,15 +47,79 @@ serve(async (req: Request) => {
 
   try {
     const update = await req.json();
+    const msg = update?.message;
 
-    if (update.message && update.message.text) {
-      const text = update.message.text.trim();
-      const cmd = text.toLowerCase().trim();
-      const chatId = update.message.chat.id;
-      const firstName = update.message.from?.first_name || "Valued Customer";
+    if (msg && msg.chat?.id) {
+      const chatId = msg.chat.id;
+      const firstName = msg.from?.first_name || "Valued Customer";
 
-      // Case 1: Deep link activation /start <CUSTOMER_ID_OR_CODE>
-      if (cmd.startsWith("/start") || cmd.startsWith("start")) {
+      // Case A: Transfer Slip Photo or Document
+      if (msg.photo || msg.document) {
+        const photoList = msg.photo;
+        const fileId = photoList && photoList.length > 0
+          ? photoList[photoList.length - 1].file_id
+          : msg.document?.file_id;
+
+        if (fileId) {
+          const { data: customer } = await supabase
+            .from("customers")
+            .select("*")
+            .eq("telegram_chat_id", chatId)
+            .maybeSingle();
+
+          if (!customer) {
+            await sendTelegramMessage(
+              chatId,
+              `⚠️ *Your Telegram is not linked yet.*\n\nPlease ask our cashier to connect your account or scan your QR code on the POS screen before sending transfer slips.`
+            );
+          } else {
+            const fileUrl = await getTelegramFileUrl(fileId);
+            const caption = (msg.caption || "").trim();
+            const amtMatch = caption.match(/(?:mvr|rf|ރ)?\s*([0-9]+(?:\.[0-9]{1,2})?)/i);
+            const suggestedAmount = amtMatch ? parseFloat(amtMatch[1]) : null;
+
+            await supabase.from("transfer_slips").insert({
+              customer_id: customer.id,
+              telegram_chat_id: chatId,
+              customer_name: customer.name_en || customer.name_dv || firstName,
+              customer_phone: customer.phone,
+              file_id: fileId,
+              file_url: fileUrl,
+              caption: caption || null,
+              suggested_amount: suggestedAmount,
+              status: "pending",
+              created_at: new Date().toISOString(),
+            });
+
+            const dueStr = Number(customer.outstanding_balance || 0).toFixed(2);
+            const ackMsg = 
+`📥 *Bank Transfer Slip Received!*
+━━━━━━━━━━━━━━━━━━━━
+🏪 *B BACK*
+👤 *Customer:* ${customer.name_en || customer.name_dv || firstName}
+📊 *Current Tab Due:* *MVR ${dueStr}*
+${caption ? `📝 *Note:* _${caption}_\n` : ''}
+━━━━━━━━━━━━━━━━━━━━
+✅ Your slip has been submitted to our cashier for verification.
+Once verified in our bank account, your balance will be settled and you'll receive your official receipt here!
+
+_Thank you!_ 🙏`;
+
+            await sendTelegramMessage(chatId, ackMsg);
+          }
+        }
+        return new Response(JSON.stringify({ ok: true }), {
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      // Case B: Text Commands
+      if (msg.text) {
+        const text = msg.text.trim();
+        const cmd = text.toLowerCase().trim();
+
+        // Case 1: Deep link activation /start <CUSTOMER_ID_OR_CODE>
+        if (cmd.startsWith("/start") || cmd.startsWith("start")) {
         const parts = text.split(" ");
         const customerRef = parts[1]?.trim();
 

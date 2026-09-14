@@ -269,6 +269,31 @@ CREATE TABLE IF NOT EXISTS public.expenses (
 ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all access to expenses" ON public.expenses FOR ALL USING (true) WITH CHECK (true);
 
+-- Create transfer_slips table
+CREATE TABLE IF NOT EXISTS public.transfer_slips (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    customer_id UUID REFERENCES public.customers(id) ON DELETE CASCADE,
+    telegram_chat_id BIGINT NOT NULL,
+    customer_name TEXT,
+    customer_phone TEXT,
+    file_id TEXT NOT NULL,
+    file_url TEXT,
+    caption TEXT,
+    suggested_amount DECIMAL(10, 2),
+    settled_amount DECIMAL(10, 2),
+    status TEXT NOT NULL DEFAULT 'pending',
+    settlement_id TEXT,
+    rejection_reason TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_transfer_slips_status ON public.transfer_slips(status);
+CREATE INDEX IF NOT EXISTS idx_transfer_slips_customer ON public.transfer_slips(customer_id);
+
+ALTER TABLE public.transfer_slips ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all access to transfer_slips" ON public.transfer_slips FOR ALL USING (true) WITH CHECK (true);
+
 -- Grant necessary permissions
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;

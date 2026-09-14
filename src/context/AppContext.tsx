@@ -1,12 +1,12 @@
 "use client";
 
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { showError, showSuccess } from '@/utils/toast';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/components/ThemeProvider';
 
 import { toISODate, toISODatetime, extractDateOnly } from '@/utils/formatters';
-import { processPendingTelegramUpdates } from '@/services/telegramService';
+import { processPendingTelegramUpdates, sendTelegramSlipApprovedMessage, sendTelegramSlipDeclinedMessage } from '@/services/telegramService';
 
 export interface Product {
   id: string;
@@ -32,6 +32,24 @@ export interface Settlement {
   date: string;
   previous_outstanding: number;
   new_outstanding: number;
+}
+
+export interface TransferSlip {
+  id: string;
+  customer_id?: string;
+  telegram_chat_id: number | string;
+  customer_name: string;
+  customer_phone?: string;
+  file_id: string;
+  file_url?: string;
+  caption?: string;
+  suggested_amount?: number | null;
+  settled_amount?: number | null;
+  status: 'pending' | 'confirmed' | 'rejected';
+  settlement_id?: string | null;
+  rejection_reason?: string | null;
+  created_at: string;
+  updated_at?: string;
 }
 
 export interface Customer {
@@ -293,6 +311,12 @@ interface AppContextType {
   addExpense: (expense: Expense) => Promise<void>;
   updateExpense: (expense: Expense) => Promise<void>;
   deleteExpense: (expenseId: string) => Promise<void>;
+  transferSlips: TransferSlip[];
+  pendingSlipsCount: number;
+  fetchTransferSlips: () => Promise<void>;
+  confirmTransferSlip: (slipId: string, amountPaid: number) => Promise<boolean>;
+  rejectTransferSlip: (slipId: string, reason: string) => Promise<boolean>;
+  addTransferSlip: (slip: Partial<TransferSlip>) => Promise<TransferSlip | null>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -328,6 +352,47 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       localStorage.setItem('app_expenses', JSON.stringify(expenses));
     }
   }, [expenses]);
+
+  const [transferSlips, setTransferSlips] = useState<TransferSlip[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('pos_transfer_slips');
+        if (saved) return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error parsing pos_transfer_slips', e);
+      }
+    }
+    return [];
+  });
+
+  const pendingSlipsCount = transferSlips.filter(s => s.status === 'pending').length;
+
+  const fetchTransferSlips = useCallback(async () => {
+    try {
+      if (!supabase) return;
+      const { data, error } = await supabase
+        .from('transfer_slips')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        setTransferSlips(data as TransferSlip[]);
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('pos_transfer_slips', JSON.stringify(data));
+          } catch {}
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch transfer_slips:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTransferSlips();
+    const interval = setInterval(fetchTransferSlips, 15000);
+    return () => clearInterval(interval);
+  }, [fetchTransferSlips]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('sidebar_collapsed');
@@ -1031,6 +1096,35 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
               console.warn('Background link error:', err);
             }
           },
+          onTransferSlipReceived: async (slipData: any) => {
+            try {
+              let savedSlip: TransferSlip = {
+                id: `slip-${Date.now()}`,
+                ...slipData,
+              };
+              if (supabase) {
+                const { data, error } = await supabase
+                  .from('transfer_slips')
+                  .insert(slipData)
+                  .select()
+                  .maybeSingle();
+                if (!error && data) {
+                  savedSlip = data as TransferSlip;
+                }
+              }
+              setTransferSlips(prev => {
+                if (prev.some(s => s.file_id === savedSlip.file_id)) return prev;
+                const next = [savedSlip, ...prev];
+                try {
+                  localStorage.setItem('pos_transfer_slips', JSON.stringify(next));
+                } catch {}
+                return next;
+              });
+              showSuccess(`💳 New transfer slip received from ${slipData.customer_name}!`);
+            } catch (err) {
+              console.warn('Error saving received slip:', err);
+            }
+          },
           shopSettings: settings.shop,
           token: settings.telegram?.botToken,
         });
@@ -1267,6 +1361,164 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       console.error('Error adding settlement:', error);
       showError('Failed to record settlement');
     }
+  };
+
+  const confirmTransferSlip = async (slipId: string, amountPaid: number): Promise<boolean> => {
+    try {
+      const slip = transferSlips.find(s => s.id === slipId);
+      if (!slip) throw new Error('Slip not found');
+
+      const customer = customers.find(c => 
+        (slip.customer_id && c.id === slip.customer_id) || 
+        (c.telegram_chat_id && String(c.telegram_chat_id) === String(slip.telegram_chat_id))
+      );
+      if (!customer) throw new Error('Customer account not found for this slip');
+
+      const previousOutstanding = customer.outstanding_balance || 0;
+      const newOutstanding = Math.max(0, previousOutstanding - amountPaid);
+      const settlementId = `set-${Date.now()}`;
+
+      const settlement: Settlement = {
+        id: settlementId,
+        amount_paid: amountPaid,
+        date: new Date().toLocaleDateString('sv-SE'),
+        previous_outstanding: previousOutstanding,
+        new_outstanding: newOutstanding,
+      };
+
+      // 1. Record debt settlement
+      await addSettlement(customer.id, settlement);
+
+      // 2. Update transfer_slips record in Supabase
+      const nowIso = new Date().toISOString();
+      if (supabase) {
+        try {
+          await supabase
+            .from('transfer_slips')
+            .update({
+              status: 'confirmed',
+              settled_amount: amountPaid,
+              settlement_id: settlementId,
+              updated_at: nowIso,
+            })
+            .eq('id', slipId);
+        } catch (dbErr) {
+          console.warn('Supabase update slip error:', dbErr);
+        }
+      }
+
+      // 3. Update local state
+      setTransferSlips(prev => {
+        const next = prev.map(s => s.id === slipId ? {
+          ...s,
+          status: 'confirmed' as const,
+          settled_amount: amountPaid,
+          settlement_id: settlementId,
+          updated_at: nowIso,
+        } : s);
+        try { localStorage.setItem('pos_transfer_slips', JSON.stringify(next)); } catch {}
+        return next;
+      });
+
+      // 4. Send Telegram confirmation receipt to customer
+      if (slip.telegram_chat_id) {
+        sendTelegramSlipApprovedMessage({
+          chatId: slip.telegram_chat_id,
+          customerName: customer.name_en || customer.name_dv || slip.customer_name,
+          amountPaid,
+          remainingBalance: newOutstanding,
+          receiptNo: settlementId,
+          shopSettings: settings.shop,
+          token: settings.telegram?.botToken,
+        }).catch(err => console.warn('Failed to send Telegram approved message:', err));
+      }
+
+      showSuccess(`Settlement of ${settings.shop.currency} ${amountPaid.toFixed(2)} recorded and receipt sent to customer!`);
+      return true;
+    } catch (err: any) {
+      console.error('confirmTransferSlip error:', err);
+      showError(err.message || 'Failed to confirm slip settlement');
+      return false;
+    }
+  };
+
+  const rejectTransferSlip = async (slipId: string, reason: string): Promise<boolean> => {
+    try {
+      const slip = transferSlips.find(s => s.id === slipId);
+      if (!slip) throw new Error('Slip not found');
+
+      const nowIso = new Date().toISOString();
+      if (supabase) {
+        try {
+          await supabase
+            .from('transfer_slips')
+            .update({
+              status: 'rejected',
+              rejection_reason: reason,
+              updated_at: nowIso,
+            })
+            .eq('id', slipId);
+        } catch (dbErr) {
+          console.warn('Supabase reject slip error:', dbErr);
+        }
+      }
+
+      setTransferSlips(prev => {
+        const next = prev.map(s => s.id === slipId ? {
+          ...s,
+          status: 'rejected' as const,
+          rejection_reason: reason,
+          updated_at: nowIso,
+        } : s);
+        try { localStorage.setItem('pos_transfer_slips', JSON.stringify(next)); } catch {}
+        return next;
+      });
+
+      if (slip.telegram_chat_id) {
+        sendTelegramSlipDeclinedMessage({
+          chatId: slip.telegram_chat_id,
+          customerName: slip.customer_name,
+          reason,
+          shopSettings: settings.shop,
+          token: settings.telegram?.botToken,
+        }).catch(err => console.warn('Failed to send Telegram declined message:', err));
+      }
+
+      showSuccess('Transfer slip declined and customer notified.');
+      return true;
+    } catch (err: any) {
+      console.error('rejectTransferSlip error:', err);
+      showError(err.message || 'Failed to reject slip');
+      return false;
+    }
+  };
+
+  const addTransferSlip = async (slip: Partial<TransferSlip>): Promise<TransferSlip | null> => {
+    const newSlip: TransferSlip = {
+      id: slip.id || `slip-${Date.now()}`,
+      telegram_chat_id: slip.telegram_chat_id || 0,
+      customer_name: slip.customer_name || 'Customer',
+      file_id: slip.file_id || '',
+      file_url: slip.file_url,
+      caption: slip.caption,
+      suggested_amount: slip.suggested_amount,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      ...slip,
+    };
+
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.from('transfer_slips').insert(newSlip).select().maybeSingle();
+        if (!error && data) {
+          setTransferSlips(prev => [data as TransferSlip, ...prev]);
+          return data as TransferSlip;
+        }
+      } catch {}
+    }
+
+    setTransferSlips(prev => [newSlip, ...prev]);
+    return newSlip;
   };
 
   useEffect(() => {
@@ -1823,7 +2075,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       setExpenses,
       addExpense,
       updateExpense,
-      deleteExpense
+      deleteExpense,
+      transferSlips,
+      pendingSlipsCount,
+      fetchTransferSlips,
+      confirmTransferSlip,
+      rejectTransferSlip,
+      addTransferSlip
     }}>
       {children}
     </AppContext.Provider>

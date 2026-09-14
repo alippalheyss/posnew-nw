@@ -24,8 +24,9 @@ import { Progress } from "@/components/ui/progress";
 import { formatDate, formatTime, formatCurrency, toISODate } from '@/utils/formatters';
 import { formatCreditStatementViberMessage, shareViaViber } from '@/utils/viberHelper';
 import { TelegramConnectDialog } from '@/components/TelegramConnectDialog';
+import { TransferSlipsDialog } from '@/components/TransferSlipsDialog';
 import { sendTelegramPaymentReceipt, sendTelegramOutstandingStatement } from '@/services/telegramService';
-import { QrCode, Send, Loader2 } from 'lucide-react';
+import { QrCode, Send, Loader2, CreditCard } from 'lucide-react';
 
 interface Settlement {
   id: string;
@@ -37,9 +38,10 @@ interface Settlement {
 
 const CreditOutstanding = () => {
   const { t } = useTranslation();
-  const { customers, sales, setSales, settings, addSettlement, updateCustomerBalance, addSale } = useAppContext();
+  const { customers, sales, setSales, settings, addSettlement, updateCustomerBalance, addSale, pendingSlipsCount } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [isOutstandingVisible, setIsOutstandingVisible] = useState(false);
+  const [isTransferSlipsDialogOpen, setIsTransferSlipsDialogOpen] = useState(false);
 
   React.useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -497,11 +499,49 @@ const CreditOutstanding = () => {
                  <p className="text-sm text-muted-foreground mt-1">Manage receivables and track customer credit history</p>
               </div>
               <div className="flex gap-2">
+                 <Button
+                   onClick={() => setIsTransferSlipsDialogOpen(true)}
+                   variant="outline"
+                   className="gap-2 h-11 px-5 rounded-xl font-bold border-border relative bg-card hover:bg-muted"
+                 >
+                   <CreditCard className="h-4 w-4 text-primary" />
+                   TRANSFER SLIPS
+                   {pendingSlipsCount > 0 && (
+                     <Badge className="bg-amber-500 text-black font-black text-xs animate-pulse ml-1">
+                       {pendingSlipsCount} NEW
+                     </Badge>
+                   )}
+                 </Button>
                  <Button onClick={() => setIsAddCreditSaleDialogOpen(true)} className="gap-2 bg-primary hover:bg-primary/90 h-11 px-6 rounded-xl font-black shadow-[0_0_20px_rgba(0,132,255,0.3)]">
                     <PlusCircle className="h-4 w-4" /> RECORD CREDIT
                  </Button>
               </div>
-           </div>
+            </div>
+
+            {pendingSlipsCount > 0 && (
+              <div
+                onClick={() => setIsTransferSlipsDialogOpen(true)}
+                className="mb-4 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between cursor-pointer hover:bg-amber-500/15 transition-all shadow-sm group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-black animate-pulse">
+                    <CreditCard className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="font-black text-foreground text-sm flex items-center gap-2">
+                      <span>{pendingSlipsCount} Bank Transfer Slip(s) Awaiting Cashier Verification</span>
+                      <Badge className="bg-amber-500 text-black text-[10px] font-bold">ACTION REQUIRED</Badge>
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Customer submitted transfer slips via Telegram bot. Click here to verify and settle their tabs.
+                    </p>
+                  </div>
+                </div>
+                <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-black font-bold rounded-xl gap-1">
+                  Review & Settle Slips
+                </Button>
+              </div>
+            )}
 
            <ScrollArea className="h-[140px] overflow-hidden">
               <div className="flex gap-4 p-1" dir="ltr">
@@ -938,6 +978,12 @@ const CreditOutstanding = () => {
           setIsTelegramDialogOpen(false);
           setTelegramCustomer(null);
         }}
+      />
+
+      {/* Bank Transfer Slips Review Dialog */}
+      <TransferSlipsDialog
+        open={isTransferSlipsDialogOpen}
+        onOpenChange={setIsTransferSlipsDialogOpen}
       />
     </div>
   );

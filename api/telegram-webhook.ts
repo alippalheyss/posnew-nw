@@ -23,6 +23,19 @@ const sendTelegramMessage = async (chatId: number | string, text: string) => {
   }
 };
 
+const getTelegramFileUrl = async (fileId: string) => {
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${encodeURIComponent(fileId)}`);
+    const data = await res.json();
+    if (data.ok && data.result?.file_path) {
+      return `https://api.telegram.org/file/bot${BOT_TOKEN}/${data.result.file_path}`;
+    }
+  } catch (err) {
+    console.warn('Failed to get file path in webhook:', err);
+  }
+  return null;
+};
+
 export default async function handler(req: any, res: any) {
   if (req.method === 'GET') {
     return res.status(200).json({ ok: true, message: 'B BACK Telegram Webhook is active' });
@@ -34,15 +47,77 @@ export default async function handler(req: any, res: any) {
 
   try {
     const update = req.body;
-    if (update?.message?.text && update?.message?.chat?.id) {
-      const text = String(update.message.text).trim();
-      const chatId = update.message.chat.id;
-      const firstName = update.message.from?.first_name || 'Valued Customer';
-      const cleanCmd = text.split(' ')[0].toLowerCase().replace(/@\w+/g, '');
+    const msg = update?.message;
+    if (msg && msg.chat?.id) {
+      const chatId = msg.chat.id;
+      const firstName = msg.from?.first_name || 'Valued Customer';
 
-      const now = new Date();
-      const dateStr = now.toLocaleDateString('en-GB', { timeZone: 'Indian/Maldives' }).replace(/\//g, '-');
-      const timeStr = now.toLocaleTimeString('en-US', { timeZone: 'Indian/Maldives', hour: '2-digit', minute: '2-digit', hour12: true });
+      // 1. Bank Transfer Slip Photo or Document
+      if (msg.photo || msg.document) {
+        const photoList = msg.photo;
+        const fileId = photoList && photoList.length > 0
+          ? photoList[photoList.length - 1].file_id
+          : msg.document?.file_id;
+
+        if (fileId) {
+          const { data: customer } = await supabase
+            .from('customers')
+            .select('*')
+            .eq('telegram_chat_id', chatId)
+            .maybeSingle();
+
+          if (!customer) {
+            await sendTelegramMessage(
+              chatId,
+              `⚠️ *Your Telegram is not linked yet.*\n\nPlease ask our cashier to connect your account or scan your QR code on the POS screen before sending transfer slips.`
+            );
+          } else {
+            const fileUrl = await getTelegramFileUrl(fileId);
+            const caption = (msg.caption || '').trim();
+            const amtMatch = caption.match(/(?:mvr|rf|ރ)?\s*([0-9]+(?:\.[0-9]{1,2})?)/i);
+            const suggestedAmount = amtMatch ? parseFloat(amtMatch[1]) : null;
+
+            await supabase.from('transfer_slips').insert({
+              customer_id: customer.id,
+              telegram_chat_id: chatId,
+              customer_name: customer.name_en || customer.name_dv || firstName,
+              customer_phone: customer.phone,
+              file_id: fileId,
+              file_url: fileUrl,
+              caption: caption || null,
+              suggested_amount: suggestedAmount,
+              status: 'pending',
+              created_at: new Date().toISOString(),
+            });
+
+            const dueStr = Number(customer.outstanding_balance || 0).toFixed(2);
+            const ackMsg = 
+`📥 *Bank Transfer Slip Received!*
+━━━━━━━━━━━━━━━━━━━━
+🏪 *B BACK*
+👤 *Customer:* ${customer.name_en || customer.name_dv || firstName}
+📊 *Current Tab Due:* *MVR ${dueStr}*
+${caption ? `📝 *Note:* _${caption}_\n` : ''}
+━━━━━━━━━━━━━━━━━━━━
+✅ Your slip has been submitted to our cashier for verification.
+Once verified in our bank account, your balance will be settled and you'll receive your official receipt here!
+
+_Thank you!_ 🙏`;
+
+            await sendTelegramMessage(chatId, ackMsg);
+          }
+        }
+        return res.status(200).json({ ok: true });
+      }
+
+      // 2. Text Commands
+      if (msg.text) {
+        const text = String(msg.text).trim();
+        const cleanCmd = text.split(' ')[0].toLowerCase().replace(/@\w+/g, '');
+
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-GB', { timeZone: 'Indian/Maldives' }).replace(/\//g, '-');
+        const timeStr = now.toLocaleTimeString('en-US', { timeZone: 'Indian/Maldives', hour: '2-digit', minute: '2-digit', hour12: true });
 
       // 1. /start
       if (cleanCmd === '/start' || cleanCmd === 'start') {

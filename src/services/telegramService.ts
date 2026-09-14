@@ -93,9 +93,32 @@ export const getTelegramWebhookInfo = async (
         pending_update_count: data.result?.pending_update_count || 0,
       };
     }
-    return { ok: false, error: data.description };
+    return { ok: false, error: data.description || 'Failed to fetch webhook info' };
   } catch (err: any) {
-    return { ok: false, error: err.message };
+    return { ok: false, error: err.message || 'Network error' };
+  }
+};
+
+/**
+ * Get direct download / preview URL for a Telegram file by file_id
+ */
+export const getTelegramFileDirectUrl = async (
+  fileId: string,
+  token?: string
+): Promise<string | null> => {
+  const activeToken = (token || DEFAULT_TELEGRAM_BOT_TOKEN).trim();
+  if (!fileId || !activeToken) return null;
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${activeToken}/getFile?file_id=${encodeURIComponent(fileId)}`);
+    const data = await res.json();
+    if (data.ok && data.result?.file_path) {
+      return `https://api.telegram.org/file/bot${activeToken}/${data.result.file_path}`;
+    }
+    return null;
+  } catch (err) {
+    console.warn('Failed to get Telegram file path:', err);
+    return null;
   }
 };
 
@@ -468,11 +491,13 @@ _For assistance, visit our shop or contact the cashier._`;
 export const processPendingTelegramUpdates = async ({
   customers,
   onCustomerLinked,
+  onTransferSlipReceived,
   shopSettings,
   token,
 }: {
   customers: Customer[];
   onCustomerLinked?: (customerId: string, chatId: number) => Promise<void> | void;
+  onTransferSlipReceived?: (slipData: any) => Promise<void> | void;
   shopSettings?: any;
   token?: string;
 }): Promise<{ processedCount: number }> => {
@@ -484,12 +509,84 @@ export const processPendingTelegramUpdates = async ({
   let maxUpdateId = 0;
   for (const update of result.updates) {
     if (update.update_id > maxUpdateId) maxUpdateId = update.update_id;
-    if (update.message?.text && update.message.chat?.id) {
+    const msg = update.message;
+    if (!msg || !msg.chat?.id) continue;
+    const chatId = msg.chat.id;
+
+    // A. Check if customer sent a photo or document (Bank Transfer Slip)
+    if (msg.photo || msg.document) {
+      try {
+        const photoList = msg.photo;
+        const fileId = photoList && photoList.length > 0
+          ? photoList[photoList.length - 1].file_id
+          : msg.document?.file_id;
+
+        if (fileId) {
+          const isChatLinked = (c: Customer) => Boolean(c.telegram_chat_id) && String(c.telegram_chat_id).trim() === String(chatId).trim();
+          const customer = customers.find(isChatLinked);
+
+          if (!customer) {
+            await sendTelegramMessage(
+              chatId,
+              `⚠️ *Your Telegram is not linked yet.*\n\nPlease ask our cashier to connect your account or scan your QR code on the POS screen before sending transfer slips.`,
+              token
+            );
+          } else {
+            const fileUrl = await getTelegramFileDirectUrl(fileId, token);
+            const caption = (msg.caption || '').trim();
+            // Parse possible amount from caption
+            const amtMatch = caption.match(/(?:mvr|rf|ރ)?\s*([0-9]+(?:\.[0-9]{1,2})?)/i);
+            const suggestedAmount = amtMatch ? parseFloat(amtMatch[1]) : null;
+
+            const slipData = {
+              customer_id: customer.id,
+              telegram_chat_id: chatId,
+              customer_name: customer.name_en || customer.name_dv || 'Customer',
+              customer_phone: customer.phone,
+              file_id: fileId,
+              file_url: fileUrl || undefined,
+              caption: caption || undefined,
+              suggested_amount: suggestedAmount,
+              status: 'pending',
+              created_at: new Date().toISOString(),
+            };
+
+            if (onTransferSlipReceived) {
+              await onTransferSlipReceived(slipData);
+            }
+
+            const shopName = shopSettings?.shopName || 'B BACK';
+            const currency = shopSettings?.currency || 'MVR';
+            const dueStr = Number(customer.outstanding_balance || 0).toFixed(2);
+            const ackMsg = 
+`📥 *Bank Transfer Slip Received!*
+━━━━━━━━━━━━━━━━━━━━
+🏪 *${shopName}*
+👤 *Customer:* ${slipData.customer_name}
+📊 *Current Tab Due:* *${currency} ${dueStr}*
+${caption ? `📝 *Note:* _${caption}_\n` : ''}
+━━━━━━━━━━━━━━━━━━━━
+✅ Your slip has been submitted to our cashier for verification.
+Once verified in our bank account, your balance will be settled and you'll receive your official receipt here!
+
+_Thank you!_ 🙏`;
+
+            await sendTelegramMessage(chatId, ackMsg, token);
+          }
+        }
+      } catch (slipErr) {
+        console.warn('Error processing incoming transfer slip:', slipErr);
+      }
+      continue;
+    }
+
+    // B. Text commands
+    if (msg.text) {
       try {
         await handleTelegramBotCommand({
-          text: update.message.text,
-          chatId: update.message.chat.id,
-          senderName: update.message.from?.first_name,
+          text: msg.text,
+          chatId,
+          senderName: msg.from?.first_name,
           customers,
           onCustomerLinked,
           shopSettings,
@@ -506,6 +603,89 @@ export const processPendingTelegramUpdates = async ({
   }
 
   return { processedCount: result.updates.length };
+};
+
+/**
+ * Send Transfer Slip Approval & Settlement Message
+ */
+export const sendTelegramSlipApprovedMessage = async ({
+  chatId,
+  customerName,
+  amountPaid,
+  remainingBalance,
+  receiptNo,
+  shopSettings,
+  token,
+}: {
+  chatId: number | string;
+  customerName: string;
+  amountPaid: number;
+  remainingBalance: number;
+  receiptNo: string;
+  shopSettings?: any;
+  token?: string;
+}) => {
+  const shopName = shopSettings?.shopName || 'B BACK';
+  const currency = shopSettings?.currency || 'MVR';
+  const now = new Date();
+  const dateStr = formatMaldivesDate(now);
+  const timeStr = formatMaldivesTime(now, true);
+
+  const msg = 
+`✅ *Transfer Slip Verified & Debt Settled!*
+━━━━━━━━━━━━━━━━━━━━
+🏪 *${shopName}*
+🧾 *Receipt #:* \`${receiptNo}\`
+📅 *Date:* ${dateStr} | ${timeStr}
+━━━━━━━━━━━━━━━━━━━━
+👤 *Customer:* ${customerName}
+💰 *Amount Settled:* *${currency} ${amountPaid.toFixed(2)}*
+📉 *Remaining Due:* ${Number(remainingBalance) <= 0 ? '✅ *CLEARED (0.00)*' : `*${currency} ${Number(remainingBalance).toFixed(2)}*`}
+
+✅ Your bank transfer slip has been verified by the cashier and applied to your account.
+
+_Thank you for your payment!_ 🙏`;
+
+  return sendTelegramMessage(chatId, msg, token);
+};
+
+/**
+ * Send Transfer Slip Declined Message
+ */
+export const sendTelegramSlipDeclinedMessage = async ({
+  chatId,
+  customerName,
+  reason,
+  shopSettings,
+  token,
+}: {
+  chatId: number | string;
+  customerName: string;
+  reason: string;
+  shopSettings?: any;
+  token?: string;
+}) => {
+  const shopName = shopSettings?.shopName || 'B BACK';
+  const shopPhone = shopSettings?.shopPhone || '+960 9336337';
+  const now = new Date();
+  const dateStr = formatMaldivesDate(now);
+  const timeStr = formatMaldivesTime(now, true);
+
+  const msg = 
+`⚠️ *Transfer Slip Not Approved*
+━━━━━━━━━━━━━━━━━━━━
+🏪 *${shopName}*
+📅 *Date:* ${dateStr} | ${timeStr}
+👤 *Customer:* ${customerName}
+
+❌ *Reason:* ${reason}
+
+Please check your bank transfer details or contact the shop:
+📞 *Phone:* ${shopPhone}
+
+_You can also attach a clear copy of the slip again in this chat._`;
+
+  return sendTelegramMessage(chatId, msg, token);
 };
 
 /**

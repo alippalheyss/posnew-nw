@@ -250,6 +250,23 @@ CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
+-- Create expenses table
+CREATE TABLE IF NOT EXISTS public.expenses (
+    id TEXT PRIMARY KEY,
+    date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    category TEXT NOT NULL,
+    title TEXT NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    payment_method TEXT DEFAULT 'cash',
+    reference_number TEXT,
+    notes TEXT,
+    recorded_by TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all access to expenses" ON public.expenses FOR ALL USING (true) WITH CHECK (true);
+
 -- Grant necessary permissions
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;

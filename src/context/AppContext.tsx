@@ -1006,13 +1006,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   // Background listener for incoming Telegram Bot commands (/start, /balance, /account, /help)
   useEffect(() => {
-    // Only poll if webhook is not configured
-    if (settings.telegram?.webhookUrl) return;
-
     let isMounted = true;
+    let isChecking = false;
+
     const checkUpdates = async () => {
-      if (!isMounted) return;
+      if (!isMounted || isChecking) return;
       try {
+        isChecking = true;
         await processPendingTelegramUpdates({
           customers,
           onCustomerLinked: async (customerId: string, chatId: number) => {
@@ -1036,19 +1036,21 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         });
       } catch (err) {
         // Silent background polling
+      } finally {
+        isChecking = false;
       }
     };
 
-    // Initial check after 3 seconds, then poll every 10 seconds
-    const initialTimer = setTimeout(checkUpdates, 3000);
-    const interval = setInterval(checkUpdates, 10000);
+    // Initial check after 1.5 seconds, then poll every 3.5 seconds for instant bot responses
+    const initialTimer = setTimeout(checkUpdates, 1500);
+    const interval = setInterval(checkUpdates, 3500);
 
     return () => {
       isMounted = false;
       clearTimeout(initialTimer);
       clearInterval(interval);
     };
-  }, [customers, settings.telegram?.webhookUrl, settings.telegram?.botToken, settings.shop]);
+  }, [customers, settings.telegram?.botToken, settings.shop]);
 
   const addPendingTransfer = (transfer: any) => {
     setPendingTransfers(prev => [...prev, { ...transfer, id: `transfer-${Date.now()}` }]);

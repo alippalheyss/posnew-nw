@@ -236,7 +236,8 @@ export const handleTelegramBotCommand = async ({
   token?: string;
 }) => {
   const cleanText = text.trim();
-  const cmd = cleanText.toLowerCase();
+  // Strip bot username suffix like /balance@Bbacksh0p_bot -> /balance
+  const cmd = cleanText.split(' ')[0].toLowerCase().replace(/@\w+/g, '');
 
   // 1. /start <code_or_id> or bare /start
   if (cmd.startsWith('/start') || cmd.startsWith('start')) {

@@ -162,6 +162,11 @@ interface ShopSettings {
   receiptFooter: string;
   logo: string; // Base64 or URL
   enableCardPayment: boolean;
+  bankName?: string;
+  accountName?: string;
+  accountNumber?: string;
+  telegramGroupChatId?: string | number;
+  telegramGroupTitle?: string;
 }
 
 interface AccountingSettings {

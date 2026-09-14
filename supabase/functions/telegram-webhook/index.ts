@@ -47,11 +47,68 @@ serve(async (req: Request) => {
 
   try {
     const update = await req.json();
-    const msg = update?.message;
+    const msg = update?.message || update?.channel_post;
+    const myChatMember = update?.my_chat_member;
+
+    // A. Detect Group Member Update (when bot is added to B BACK group)
+    if (myChatMember && (myChatMember.chat?.type === "group" || myChatMember.chat?.type === "supergroup")) {
+      const groupChatId = myChatMember.chat.id;
+      const groupTitle = myChatMember.chat.title || "B BACK";
+      try {
+        const { data: shopRow } = await supabase.from("settings").select("settings").eq("category", "shop").maybeSingle();
+        if (shopRow?.settings) {
+          await supabase.from("settings").update({
+            settings: { ...shopRow.settings, telegramGroupChatId: groupChatId, telegramGroupTitle: groupTitle },
+            updated_at: new Date().toISOString()
+          }).eq("category", "shop");
+        }
+      } catch (e) {
+        console.warn("Error saving groupChatId in edge function:", e);
+      }
+
+      await sendTelegramMessage(
+        groupChatId,
+        `✅ *B BACK Store Bot Connected!*\n━━━━━━━━━━━━━━━━━━━━\n📍 *Group:* ${groupTitle}\n🆔 *Chat ID:* \`${groupChatId}\`\n\nAll customer bank transfer slips will now be forwarded directly to this group with customer details! 🚀`
+      );
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
     if (msg && msg.chat?.id) {
       const chatId = msg.chat.id;
       const firstName = msg.from?.first_name || "Valued Customer";
+
+      // B. Auto-link group when any message or /setgroup is sent in the group
+      if (msg.chat.type === "group" || msg.chat.type === "supergroup") {
+        const groupChatId = msg.chat.id;
+        const groupTitle = msg.chat.title || "B BACK";
+        const msgText = (msg.text || "").trim().toLowerCase();
+
+        if (msgText.startsWith("/setgroup") || msgText.startsWith("/start") || msgText.startsWith("/id") || groupTitle.toLowerCase().includes("b back")) {
+          try {
+            const { data: shopRow } = await supabase.from("settings").select("settings").eq("category", "shop").maybeSingle();
+            if (shopRow?.settings) {
+              await supabase.from("settings").update({
+                settings: { ...shopRow.settings, telegramGroupChatId: groupChatId, telegramGroupTitle: groupTitle },
+                updated_at: new Date().toISOString()
+              }).eq("category", "shop");
+            }
+          } catch (e) {
+            console.warn("Error saving groupChatId:", e);
+          }
+
+          if (msgText.startsWith("/setgroup") || msgText.startsWith("/id")) {
+            await sendTelegramMessage(
+              groupChatId,
+              `✅ *B BACK Store Group Linked!*\n━━━━━━━━━━━━━━━━━━━━\n📍 *Group:* ${groupTitle}\n🆔 *Chat ID:* \`${groupChatId}\`\n\nAll customer bank transfer slips will be automatically forwarded to this group in real-time with customer details! 🚀`
+            );
+          }
+        }
+        return new Response(JSON.stringify({ ok: true }), {
+          headers: { "Content-Type": "application/json" },
+        });
+      }
 
       // Case A: Transfer Slip Photo or Document
       if (msg.photo || msg.document) {
@@ -106,10 +163,55 @@ Once verified in our bank account, your balance will be settled and you'll recei
 _Thank you!_ 🙏`;
 
             await sendTelegramMessage(chatId, ackMsg);
+
+            // Forward to B BACK group if groupChatId is configured
+            try {
+              const { data: shopRow } = await supabase.from("settings").select("settings").eq("category", "shop").maybeSingle();
+              const groupChatId = shopRow?.settings?.telegramGroupChatId;
+
+              if (groupChatId) {
+                const now = new Date();
+                const dateStr = now.toLocaleDateString("en-GB", { timeZone: "Indian/Maldives" }).replace(/\//g, "-");
+                const timeStr = now.toLocaleTimeString("en-US", { timeZone: "Indian/Maldives", hour: "2-digit", minute: "2-digit", hour12: true });
+
+                const groupCaption = 
+`📥 *NEW BANK TRANSFER SLIP RECEIVED*
+━━━━━━━━━━━━━━━━━━━━
+🏪 *Shop:* B BACK
+👤 *Customer:* ${customer.name_en || customer.name_dv || firstName} (\`${customer.code}\`)
+📞 *Phone:* ${customer.phone || "Not provided"}
+💰 *Outstanding Tab:* *MVR ${dueStr}*
+📅 *Submitted:* ${dateStr} | ${timeStr}
+${caption ? `📝 *Customer Note:* _${caption}_\n` : ''}━━━━━━━━━━━━━━━━━━━━
+⚡ _Awaiting cashier verification & settlement in POS._`;
+
+                const endpoint = photoList && photoList.length > 0 ? "sendPhoto" : "sendDocument";
+                const fieldName = photoList && photoList.length > 0 ? "photo" : "document";
+
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${endpoint}`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    chat_id: groupChatId,
+                    [fieldName]: fileId,
+                    caption: groupCaption,
+                    parse_mode: "Markdown",
+                  }),
+                });
+              }
+            } catch (fwdErr) {
+              console.warn("Error forwarding slip to group:", fwdErr);
+            }
           }
         }
         return new Response(JSON.stringify({ ok: true }), {
           headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      // Case B: Text Commands
+      if (msg.text) {
+t-Type": "application/json" },
         });
       }
 

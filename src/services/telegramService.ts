@@ -604,6 +604,22 @@ Once verified in our bank account, your balance will be settled and you'll recei
 _Thank you!_ 🙏`;
 
             await sendTelegramMessage(chatId, ackMsg, token);
+
+            // Forward to B BACK group if configured
+            const groupChatId = shopSettings?.telegramGroupChatId;
+            if (groupChatId) {
+              await forwardSlipToTelegramGroup({
+                fileId,
+                isDocument: Boolean(msg.document),
+                customerName: slipData.customer_name,
+                customerCode: customer.code,
+                customerPhone: customer.phone,
+                outstandingBalance: customer.outstanding_balance,
+                caption,
+                groupChatId,
+                token,
+              }).catch(err => console.warn('Failed to forward slip to group:', err));
+            }
           }
         }
       } catch (slipErr) {
@@ -612,7 +628,29 @@ _Thank you!_ 🙏`;
       continue;
     }
 
-    // B. Text commands
+    // B. Group messages & auto-linking
+    if (msg.chat?.type === 'group' || msg.chat?.type === 'supergroup') {
+      const groupChatId = msg.chat.id;
+      const groupTitle = msg.chat.title || 'B BACK';
+      const text = (msg.text || '').trim().toLowerCase();
+
+      if (text.startsWith('/setgroup') || text.startsWith('/start') || groupTitle.toLowerCase().includes('b back')) {
+        if (shopSettings && shopSettings.telegramGroupChatId !== groupChatId) {
+          shopSettings.telegramGroupChatId = groupChatId;
+          shopSettings.telegramGroupTitle = groupTitle;
+          if (text.startsWith('/setgroup')) {
+            await sendTelegramMessage(
+              groupChatId,
+              `✅ *B BACK Store Group Linked!*\n━━━━━━━━━━━━━━━━━━━━\n📍 *Group:* ${groupTitle}\n🆔 *Chat ID:* \`${groupChatId}\`\n\nAll customer bank transfer slips will be automatically forwarded to this group with customer profile details! 🚀`,
+              token
+            );
+          }
+        }
+      }
+      continue;
+    }
+
+    // C. Text commands
     if (msg.text) {
       try {
         await handleTelegramBotCommand({
@@ -635,6 +673,111 @@ _Thank you!_ 🙏`;
   }
 
   return { processedCount: result.updates.length };
+};
+
+/**
+ * Forward customer bank transfer slip to the store's Telegram group (B BACK)
+ */
+export const forwardSlipToTelegramGroup = async ({
+  fileId,
+  isDocument = false,
+  customerName,
+  customerCode,
+  customerPhone,
+  outstandingBalance,
+  caption,
+  groupChatId,
+  token,
+}: {
+  fileId: string;
+  isDocument?: boolean;
+  customerName: string;
+  customerCode?: string;
+  customerPhone?: string;
+  outstandingBalance?: number;
+  caption?: string;
+  groupChatId: string | number;
+  token?: string;
+}) => {
+  const activeToken = (token || DEFAULT_TELEGRAM_BOT_TOKEN).trim();
+  if (!activeToken || !groupChatId || !fileId) return { ok: false };
+
+  const now = new Date();
+  const dateStr = formatMaldivesDate(now);
+  const timeStr = formatMaldivesTime(now, true);
+  const balanceStr = outstandingBalance !== undefined ? Number(outstandingBalance).toFixed(2) : '0.00';
+
+  const groupCaption = 
+`📥 *NEW BANK TRANSFER SLIP RECEIVED*
+━━━━━━━━━━━━━━━━━━━━
+🏪 *Shop:* B BACK
+👤 *Customer:* ${customerName}${customerCode ? ` (\`${customerCode}\`)` : ''}
+📞 *Phone:* ${customerPhone || 'Not provided'}
+💰 *Current Tab Due:* *MVR ${balanceStr}*
+📅 *Submitted:* ${dateStr} | ${timeStr}
+${caption ? `📝 *Customer Note:* _${caption}_\n` : ''}━━━━━━━━━━━━━━━━━━━━
+⚡ _Awaiting cashier verification & settlement in POS._`;
+
+  const endpoint = isDocument ? 'sendDocument' : 'sendPhoto';
+  const bodyField = isDocument ? 'document' : 'photo';
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${activeToken}/${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: groupChatId,
+        [bodyField]: fileId,
+        caption: groupCaption,
+        parse_mode: 'Markdown',
+      }),
+    });
+    return await res.json();
+  } catch (err: any) {
+    console.error('forwardSlipToTelegramGroup error:', err);
+    return { ok: false, error: err.message };
+  }
+};
+
+/**
+ * Send settlement status update to the store's Telegram group
+ */
+export const sendGroupSlipSettledNotification = async ({
+  groupChatId,
+  customerName,
+  customerCode,
+  settledAmount,
+  remainingBalance,
+  receiptNo,
+  token,
+}: {
+  groupChatId: string | number;
+  customerName: string;
+  customerCode?: string;
+  settledAmount: number;
+  remainingBalance: number;
+  receiptNo: string;
+  token?: string;
+}) => {
+  const activeToken = (token || DEFAULT_TELEGRAM_BOT_TOKEN).trim();
+  if (!activeToken || !groupChatId) return;
+
+  const now = new Date();
+  const dateStr = formatMaldivesDate(now);
+  const timeStr = formatMaldivesTime(now, true);
+
+  const msg = 
+`✅ *TRANSFER SLIP SETTLED IN POS*
+━━━━━━━━━━━━━━━━━━━━
+👤 *Customer:* ${customerName}${customerCode ? ` (\`${customerCode}\`)` : ''}
+💰 *Amount Settled:* *MVR ${settledAmount.toFixed(2)}*
+📉 *Remaining Tab:* *MVR ${remainingBalance.toFixed(2)}*
+🧾 *Receipt #:* \`${receiptNo}\`
+📅 *Time:* ${dateStr} | ${timeStr}
+━━━━━━━━━━━━━━━━━━━━
+_Verified by cashier at the counter._`;
+
+  return sendTelegramMessage(groupChatId, msg, activeToken);
 };
 
 /**

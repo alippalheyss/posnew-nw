@@ -9,8 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { ChevronDown, ChevronUp, Upload, Image as ImageIcon, Trash2, Settings, Landmark, Monitor, Layout, FileText, Printer, Building2, X, Edit, UserPlus, Shield, Database, Languages, Palette, Globe, CreditCard, Receipt, Percent, LogOut, Gift, Clock, Users, CheckCircle2, Copy, ExternalLink, RefreshCw, Loader2 } from 'lucide-react';
-import { testTelegramBot, setTelegramWebhook, getTelegramWebhookInfo, deleteTelegramWebhook, setBotCommands, BOT_COMMANDS, TelegramBotInfo, DEFAULT_TELEGRAM_BOT_TOKEN, DEFAULT_TELEGRAM_BOT_USERNAME } from '@/services/telegramService';
+import { ChevronDown, ChevronUp, Upload, Image as ImageIcon, Trash2, Settings, Landmark, Monitor, Layout, FileText, Printer, Building2, X, Edit, UserPlus, Shield, Database, Languages, Palette, Globe, CreditCard, Receipt, Percent, LogOut, Gift, Clock, Users, CheckCircle2, Copy, ExternalLink, RefreshCw, Loader2, Send } from 'lucide-react';
+import { testTelegramBot, setTelegramWebhook, getTelegramWebhookInfo, deleteTelegramWebhook, setBotCommands, BOT_COMMANDS, TelegramBotInfo, DEFAULT_TELEGRAM_BOT_TOKEN, DEFAULT_TELEGRAM_BOT_USERNAME, sendTelegramMessage } from '@/services/telegramService';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/AppContext';
@@ -161,6 +161,33 @@ const Admin = () => {
       showError('Error syncing commands: ' + (err.message || 'Unknown error'));
     } finally {
       setIsSyncingCommands(false);
+    }
+  };
+
+  const [groupChatIdInput, setGroupChatIdInput] = useState(shopSettings?.telegramGroupChatId || '');
+  const [isSendingGroupTest, setIsSendingGroupTest] = useState(false);
+
+  const handleTestGroupNotification = async () => {
+    const targetId = groupChatIdInput || shopSettings?.telegramGroupChatId;
+    if (!targetId) {
+      showError('Please enter a Group Chat ID or add the bot to the "B BACK" group first');
+      return;
+    }
+    setIsSendingGroupTest(true);
+    try {
+      const res = await sendTelegramMessage(
+        targetId,
+        `🔔 *Test Notification from B BACK POS*\n\nThis group is successfully connected to the POS system! All customer bank transfer slips will be delivered here with customer profile details.`
+      );
+      if (res?.ok) {
+        showSuccess('Test notification sent to Telegram group! 🚀');
+      } else {
+        showError(res?.description || 'Failed to send message to group');
+      }
+    } catch (err: any) {
+      showError(err.message || 'Failed to send test message');
+    } finally {
+      setIsSendingGroupTest(false);
     }
   };
 
@@ -962,6 +989,85 @@ const Admin = () => {
                           className="h-11 bg-muted border-border rounded-xl font-mono text-left text-xs"
                           dir="ltr"
                         />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* B BACK Group Forwarding Card */}
+                  <div className="bg-card border border-border p-6 rounded-3xl space-y-4">
+                    <div className="flex items-center justify-between pb-3 border-b border-border/60">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleTestGroupNotification}
+                          disabled={isSendingGroupTest}
+                          className="h-10 text-xs font-bold gap-1.5 rounded-xl border-border"
+                        >
+                          {isSendingGroupTest ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                          <span>Test Group Message</span>
+                        </Button>
+                      </div>
+                      <div className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <h4 className="text-lg font-black text-foreground">
+                            B BACK Telegram Group Forwarding
+                          </h4>
+                          {shopSettings?.telegramGroupChatId ? (
+                            <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-xs">
+                              CONNECTED
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs">
+                              AUTO-DETECT READY
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Automatically forwards all customer transfer slips and profile details to your "B BACK" group
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-xs font-bold text-foreground block text-right mb-1.5">
+                          Group Chat ID (Auto-detected or Manual)
+                        </Label>
+                        <div className="flex gap-2" dir="ltr">
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              handleSettingsChange('shop', 'telegramGroupChatId', groupChatIdInput.trim());
+                              showSuccess('Group Chat ID saved!');
+                            }}
+                            variant="outline"
+                            className="font-bold h-11 px-4 rounded-xl text-xs shrink-0"
+                          >
+                            Save Group ID
+                          </Button>
+                          <Input
+                            value={groupChatIdInput}
+                            onChange={(e) => setGroupChatIdInput(e.target.value)}
+                            placeholder="e.g. -1001234567890"
+                            className="h-11 bg-muted border-border rounded-xl font-mono text-left text-xs"
+                            dir="ltr"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-muted/60 border border-border/60 rounded-2xl text-xs space-y-1 text-right" dir="rtl">
+                        <p className="font-bold text-foreground">އޮޓޮމެޓިކުން ގްރޫޕް ގުޅައިދޭނެ ގޮތް:</p>
+                        <p className="text-muted-foreground text-[11px]">
+                          1. ޓެލެގްރާމްގައި ހަދާފައިވާ "B BACK" ގްރޫޕަށް <span className="font-mono text-primary font-bold">@Bbacksh0p_bot</span> އެޑްކޮށްލައްވާ.
+                        </p>
+                        <p className="text-muted-foreground text-[11px]">
+                          2. ގްރޫޕަށް ކޮންމެވެސް މެސެޖެއް ނުވަތަ <span className="font-mono text-primary font-bold">/setgroup</span> ފޮނުވާލައްވާ.
+                        </p>
+                        <p className="text-muted-foreground text-[11px]">
+                          3. ބޮޓުން އަމިއްލައަށް ގްރޫޕް ދެނެގަނެ، ކަސްޓަމަރުން ފޮނުވާ ހުރިހާ ސްލިޕްތަކެއް ވަގުތުން މި ގްރޫޕަށް ފޯވާރޑް ކުރާނެއެވެ!
+                        </p>
                       </div>
                     </div>
                   </div>

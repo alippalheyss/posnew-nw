@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { ChevronDown, ChevronUp, Upload, Image as ImageIcon, Trash2, Settings, Landmark, Monitor, Layout, FileText, Printer, Building2, X, Edit, UserPlus, Shield, Database, Languages, Palette, Globe, CreditCard, Receipt, Percent, LogOut, Gift, Clock, Users, CheckCircle2, Copy, ExternalLink, RefreshCw, Loader2 } from 'lucide-react';
-import { testTelegramBot, setTelegramWebhook, setBotCommands, BOT_COMMANDS, TelegramBotInfo, DEFAULT_TELEGRAM_BOT_TOKEN, DEFAULT_TELEGRAM_BOT_USERNAME } from '@/services/telegramService';
+import { testTelegramBot, setTelegramWebhook, getTelegramWebhookInfo, deleteTelegramWebhook, setBotCommands, BOT_COMMANDS, TelegramBotInfo, DEFAULT_TELEGRAM_BOT_TOKEN, DEFAULT_TELEGRAM_BOT_USERNAME } from '@/services/telegramService';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/AppContext';
@@ -85,6 +85,62 @@ const Admin = () => {
       }
     } catch (err: any) {
       showError(err.message || 'Error registering webhook');
+    } finally {
+      setIsRegisteringWebhook(false);
+    }
+  };
+
+  const [webhookLiveUrl, setWebhookLiveUrl] = useState<string | null>(null);
+  const [isLoadingWebhookStatus, setIsLoadingWebhookStatus] = useState(false);
+
+  const fetchWebhookStatus = async () => {
+    try {
+      setIsLoadingWebhookStatus(true);
+      const res = await getTelegramWebhookInfo(telegramSettings.botToken);
+      if (res.ok) {
+        setWebhookLiveUrl(res.url || '');
+      }
+    } catch (e) {
+      // silent
+    } finally {
+      setIsLoadingWebhookStatus(false);
+    }
+  };
+
+  const handleActivateVercelWebhook = async () => {
+    if (typeof window === 'undefined') return;
+    const autoUrl = `${window.location.origin}/api/telegram-webhook`;
+    setWebhookUrlInput(autoUrl);
+    try {
+      setIsRegisteringWebhook(true);
+      const res = await setTelegramWebhook(autoUrl, telegramSettings.botToken);
+      if (res.ok) {
+        showSuccess('24/7 Cloud Webhook successfully activated! 🚀');
+        setWebhookLiveUrl(autoUrl);
+        handleSettingsChange('telegram', 'webhookUrl', autoUrl);
+      } else {
+        showError(res.description || 'Failed to activate webhook');
+      }
+    } catch (err: any) {
+      showError(err.message || 'Error registering webhook');
+    } finally {
+      setIsRegisteringWebhook(false);
+    }
+  };
+
+  const handleDeleteWebhook = async () => {
+    try {
+      setIsRegisteringWebhook(true);
+      const res = await deleteTelegramWebhook(telegramSettings.botToken);
+      if (res.ok) {
+        showSuccess('Switched to Live Browser Polling mode! 🟡');
+        setWebhookLiveUrl('');
+        handleSettingsChange('telegram', 'webhookUrl', '');
+      } else {
+        showError(res.description || 'Failed to switch mode');
+      }
+    } catch (err: any) {
+      showError(err.message || 'Error deleting webhook');
     } finally {
       setIsRegisteringWebhook(false);
     }
@@ -798,40 +854,115 @@ const Admin = () => {
                     </div>
                   </div>
 
-                  {/* Supabase Webhook Configuration */}
+                  {/* 24/7 Cloud Webhook & Hosting Configuration */}
                   <div className="bg-card border border-border p-6 rounded-3xl space-y-6">
                     <div className="flex items-center justify-between pb-3 border-b border-border/60">
-                      <Button
-                        type="button"
-                        onClick={handleRegisterWebhook}
-                        disabled={isRegisteringWebhook || !webhookUrlInput}
-                        className="bg-primary hover:bg-primary/90 text-foreground font-bold h-10 px-5 rounded-xl gap-2 text-xs"
-                      >
-                        {isRegisteringWebhook ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
-                        <span>Register Webhook</span>
-                      </Button>
-                      <h4 className="text-lg font-black text-foreground">
-                        Supabase Webhook URL (for QR Auto-Link)
-                      </h4>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          onClick={fetchWebhookStatus}
+                          disabled={isLoadingWebhookStatus}
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs font-bold gap-1.5"
+                        >
+                          <RefreshCw className={cn("h-3.5 w-3.5", isLoadingWebhookStatus && "animate-spin")} />
+                          <span>Check Status</span>
+                        </Button>
+                        {webhookLiveUrl ? (
+                          <Button
+                            type="button"
+                            onClick={handleDeleteWebhook}
+                            disabled={isRegisteringWebhook}
+                            variant="destructive"
+                            size="sm"
+                            className="h-8 text-xs font-bold"
+                          >
+                            Switch to Browser Mode
+                          </Button>
+                        ) : null}
+                      </div>
+                      <div className="text-right">
+                        <h4 className="text-lg font-black text-foreground">
+                          24/7 Cloud Bot Hosting (Always Active)
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          Keep bot responding 24/7 even when POS computer is turned off
+                        </p>
+                      </div>
                     </div>
 
+                    {/* Current Mode Badge */}
+                    <div className="p-4 rounded-2xl border bg-muted/30 flex items-center justify-between">
+                      <div className="text-left">
+                        {webhookLiveUrl ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> 24/7 Cloud Webhook Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                            🟡 Live Browser Polling Mode (Active while POS open)
+                          </span>
+                        )}
+                        {webhookLiveUrl && (
+                          <p className="text-[11px] font-mono text-muted-foreground mt-1.5 truncate max-w-md">
+                            {webhookLiveUrl}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs font-bold text-foreground">Current Operating Mode</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {webhookLiveUrl ? "Responses handled in cloud 24/7" : "Responses handled by active POS browser tab"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* 1-Click Activate Vercel Webhook */}
+                    <div className="p-4 rounded-2xl border border-primary/20 bg-primary/5 flex items-center justify-between">
+                      <Button
+                        type="button"
+                        onClick={handleActivateVercelWebhook}
+                        disabled={isRegisteringWebhook}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 px-5 rounded-xl gap-2 text-xs"
+                      >
+                        {isRegisteringWebhook ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
+                        <span>🚀 Activate 24/7 Cloud Mode</span>
+                      </Button>
+                      <div className="text-right">
+                        <p className="text-sm font-black text-foreground">One-Click Vercel Cloud Webhook</p>
+                        <p className="text-xs text-muted-foreground">
+                          Connects <code className="text-primary font-mono text-[10px]">/api/telegram-webhook</code> on your live website for 24/7 instant replies
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Custom URL Option */}
                     <div className="space-y-2 text-right">
                       <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                        Supabase Edge Function Webhook URL
+                        Custom Webhook URL (Optional)
                       </Label>
-                      <Input
-                        value={webhookUrlInput}
-                        onChange={(e) => {
-                          setWebhookUrlInput(e.target.value);
-                          handleSettingsChange('telegram', 'webhookUrl', e.target.value);
-                        }}
-                        placeholder="https://YOUR_PROJECT_REF.supabase.co/functions/v1/telegram-webhook"
-                        className="h-12 bg-muted border-border rounded-xl font-mono text-left text-xs"
-                        dir="ltr"
-                      />
-                      <p className="text-[11px] text-muted-foreground mt-1">
-                        When deployed, Telegram will forward deep-link start requests to this endpoint to automatically save the customer's Chat ID.
-                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          onClick={handleRegisterWebhook}
+                          disabled={isRegisteringWebhook || !webhookUrlInput}
+                          variant="outline"
+                          className="font-bold h-11 px-4 rounded-xl text-xs shrink-0"
+                        >
+                          Save Custom URL
+                        </Button>
+                        <Input
+                          value={webhookUrlInput}
+                          onChange={(e) => {
+                            setWebhookUrlInput(e.target.value);
+                            handleSettingsChange('telegram', 'webhookUrl', e.target.value);
+                          }}
+                          placeholder="https://YOUR_DOMAIN/api/telegram-webhook"
+                          className="h-11 bg-muted border-border rounded-xl font-mono text-left text-xs"
+                          dir="ltr"
+                        />
+                      </div>
                     </div>
                   </div>
 

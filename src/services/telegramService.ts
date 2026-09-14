@@ -77,6 +77,47 @@ export const setTelegramWebhook = async (
 };
 
 /**
+ * Get current Telegram Webhook Info
+ */
+export const getTelegramWebhookInfo = async (
+  token?: string
+): Promise<{ ok: boolean; url?: string; pending_update_count?: number; error?: string }> => {
+  const activeToken = (token || DEFAULT_TELEGRAM_BOT_TOKEN).trim();
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${activeToken}/getWebhookInfo`);
+    const data = await res.json();
+    if (data.ok) {
+      return {
+        ok: true,
+        url: data.result?.url || '',
+        pending_update_count: data.result?.pending_update_count || 0,
+      };
+    }
+    return { ok: false, error: data.description };
+  } catch (err: any) {
+    return { ok: false, error: err.message };
+  }
+};
+
+/**
+ * Delete Telegram Webhook (switch back to getUpdates polling)
+ */
+export const deleteTelegramWebhook = async (
+  token?: string
+): Promise<{ ok: boolean; description?: string }> => {
+  const activeToken = (token || DEFAULT_TELEGRAM_BOT_TOKEN).trim();
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${activeToken}/deleteWebhook`, {
+      method: 'POST',
+    });
+    const data = await res.json();
+    return { ok: Boolean(data.ok), description: data.description };
+  } catch (err: any) {
+    return { ok: false, description: err.message };
+  }
+};
+
+/**
  * Bot commands configuration
  */
 export const BOT_COMMANDS = [

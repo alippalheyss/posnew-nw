@@ -14,7 +14,9 @@
     "skipLibCheck": true,
     "allowJs": true,
     "noUnusedLocals": false,
-    "strictNullChecks": false
+    "strictNullChecks": false,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true
   },
   "exclude": ["supabase/functions"]
 }

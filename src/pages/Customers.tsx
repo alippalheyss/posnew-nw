@@ -21,6 +21,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { formatCreditStatementViberMessage, shareViaViber } from '@/utils/viberHelper';
 import { showSuccess, showError } from '@/utils/toast';
+import { TelegramConnectDialog } from '@/components/TelegramConnectDialog';
+import { sendTelegramOutstandingStatement } from '@/services/telegramService';
+import { QrCode, Send, Loader2 } from 'lucide-react';
 
 const Customers = () => {
   const { t } = useTranslation();
@@ -30,6 +33,9 @@ const Customers = () => {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [isAddCustomerDialogOpen, setIsAddCustomerDialogOpen] = useState(false);
   const [isSavingCustomer, setIsSavingCustomer] = useState(false);
+  const [telegramCustomer, setTelegramCustomer] = useState<Customer | null>(null);
+  const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false);
+  const [isSendingTelegram, setIsSendingTelegram] = useState<string | null>(null);
 
   const filteredCustomers = customers.filter(customer =>
     customer.name_dv.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -72,6 +78,62 @@ const Customers = () => {
       <path d="M13.2 7.74c-.2-.04-.41.08-.45.28-.05.2.07.41.28.45 1.48.27 2.65 1.44 2.92 2.92.03.18.18.31.36.31.03 0 .06 0 .09-.02.2-.04.33-.24.29-.45-.33-1.81-1.77-3.25-3.49-3.49zm-.52-1.85c-.2-.04-.4.08-.44.28-.04.2.08.4.28.44 2.44.46 4.37 2.39 4.83 4.83.03.18.18.31.36.31.03 0 .05 0 .08-.01.2-.04.33-.24.29-.44-.52-2.82-2.76-5.05-5.4-5.41zm-1.7 6.47c-.24-.31-.59-.44-.9-.35-.34.1-.73.44-1.09.82-.41-.24-.87-.58-1.33-1.04-.46-.46-.8-.92-1.04-1.33.38-.36.72-.75.82-1.09.09-.31-.04-.66-.35-.9L7.4 8.04c-.32-.25-.76-.23-1.04.06l-.76.77c-.4.4-.55.98-.37 1.52.48 1.43 1.5 3.32 3.03 4.85 1.53 1.53 3.42 2.55 4.85 3.03.54.18 1.12.03 1.52-.37l.77-.76c.29-.28.31-.72.06-1.04l-1.48-1.69z" />
     </svg>
   );
+
+  const TelegramIcon = ({ className }: { className?: string }) => (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z" />
+    </svg>
+  );
+
+  const handleOpenTelegramConnect = (customer: Customer) => {
+    setTelegramCustomer(customer);
+    setIsTelegramDialogOpen(true);
+  };
+
+  const handleSendCustomerTelegram = async (customer: Customer) => {
+    if (!customer.telegram_chat_id) {
+      handleOpenTelegramConnect(customer);
+      return;
+    }
+
+    let balance = Number(customer.outstanding_balance || 0);
+    if (!balance || balance <= 0) {
+      const custCreditSales = (sales || []).filter(s =>
+        (s.customer?.id === customer.id) &&
+        (s.paymentMethod?.toLowerCase() === 'credit' || (s.paymentMethod?.toLowerCase() === 'split' && s.splitDetails?.some((d: any) => d.method?.toLowerCase() === 'credit' && d.customerId === customer.id)))
+      );
+      const totalCredit = custCreditSales.reduce((sum, s) => {
+        if (s.paymentMethod?.toLowerCase() === 'credit') return sum + (s.grandTotal || 0);
+        const splitCredit = s.splitDetails?.filter((d: any) => d.method?.toLowerCase() === 'credit' && d.customerId === customer.id).reduce((ss: number, dd: any) => ss + dd.amount, 0) || 0;
+        return sum + splitCredit;
+      }, 0);
+      const totalSettled = customer.settlement_history?.reduce((sum, s) => sum + (s.amount_paid || 0), 0) || 0;
+      if (totalCredit > 0) {
+        balance = Math.max(0, totalCredit - totalSettled);
+      }
+    }
+
+    try {
+      setIsSendingTelegram(customer.id);
+      const res = await sendTelegramOutstandingStatement({
+        chatId: customer.telegram_chat_id,
+        customer,
+        shopSettings: settings.shop,
+        overrideBalance: balance,
+        token: settings.telegram?.botToken,
+      });
+
+      if (res.ok) {
+        showSuccess(`Statement sent to ${customer.name_en || customer.name_dv} via Telegram! 🚀`);
+      } else {
+        showError(res.description || 'Failed to send Telegram statement');
+      }
+    } catch (err: any) {
+      showError(err.message || 'Failed to send Telegram statement');
+    } finally {
+      setIsSendingTelegram(null);
+    }
+  };
 
   const handleShareCustomerViber = (customer: Customer) => {
     let balance = Number(customer.outstanding_balance || 0);
@@ -155,22 +217,47 @@ const Customers = () => {
               <CardContent className="p-0">
                  <div className="p-6">
                     <div className="flex justify-between items-start mb-6">
-                       <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                          <Users className="h-6 w-6" />
-                       </div>
-                       <DropdownMenu>
-                         <DropdownMenuTrigger asChild>
-                           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/50 hover:text-foreground">
-                             <MoreVertical className="h-4 w-4" />
+                        <div className="flex items-center gap-2">
+                           <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                              <Users className="h-6 w-6" />
+                           </div>
+                           <Button
+                             type="button"
+                             size="sm"
+                             variant="ghost"
+                             onClick={() => handleOpenTelegramConnect(customer)}
+                             className={
+                               customer.telegram_chat_id
+                                 ? "h-7 px-2 text-[10px] font-bold rounded-lg bg-[#229ED9]/10 text-[#229ED9] hover:bg-[#229ED9]/20 gap-1"
+                                 : "h-7 px-2 text-[10px] font-bold rounded-lg bg-muted text-muted-foreground hover:text-[#229ED9] hover:bg-[#229ED9]/10 gap-1"
+                             }
+                             title={customer.telegram_chat_id ? `Telegram Linked (Chat ID: ${customer.telegram_chat_id})` : "Click to connect Telegram"}
+                           >
+                             <TelegramIcon className="h-3 w-3" />
+                             <span>{customer.telegram_chat_id ? 'Linked' : 'Bot Connect'}</span>
                            </Button>
-                         </DropdownMenuTrigger>
-                         <DropdownMenuContent className="bg-card border-border text-foreground" dir="rtl">
-                           <DropdownMenuItem onClick={() => handleEditClick(customer)} className="gap-2 text-right justify-end hover:bg-muted cursor-pointer">
-                             {renderBoth('edit')} <PencilLine className="h-4 w-4 text-blue-400" />
-                           </DropdownMenuItem>
-                         </DropdownMenuContent>
-                       </DropdownMenu>
-                    </div>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/50 hover:text-foreground">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="bg-card border-border text-foreground" dir="rtl">
+                            <DropdownMenuItem onClick={() => handleEditClick(customer)} className="gap-2 text-right justify-end hover:bg-muted cursor-pointer">
+                              {renderBoth('edit')} <PencilLine className="h-4 w-4 text-blue-400" />
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleOpenTelegramConnect(customer)} className="gap-2 text-right justify-end hover:bg-muted cursor-pointer text-[#229ED9]">
+                              <span>Connect Telegram (QR)</span> <QrCode className="h-4 w-4" />
+                            </DropdownMenuItem>
+                            {customer.outstanding_balance > 0 && customer.telegram_chat_id && (
+                              <DropdownMenuItem onClick={() => handleSendCustomerTelegram(customer)} className="gap-2 text-right justify-end hover:bg-muted cursor-pointer text-emerald-400">
+                                <span>Send Telegram Statement</span> <Send className="h-4 w-4" />
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                     </div>
 
                     <div className="text-right mb-6">
                        <h3 className="text-xl font-black text-foreground leading-tight mb-1">{customer.name_dv}</h3>
@@ -216,14 +303,30 @@ const Customers = () => {
                      </div>
 
                      {customer.outstanding_balance > 0 && (
-                        <Button
-                          type="button"
-                          onClick={() => handleShareCustomerViber(customer)}
-                          className="w-full mb-2 bg-[#7360F2]/15 hover:bg-[#7360F2]/25 text-[#7360F2] border border-[#7360F2]/30 text-[10px] font-black h-9 rounded-xl transition-all gap-2 flex items-center justify-center active:scale-95"
-                        >
-                          <ViberIcon className="h-3.5 w-3.5 fill-current" />
-                          <span>Send Statement via Viber (ވައިބަރ)</span>
-                        </Button>
+                        <div className="space-y-1.5 mb-2">
+                          <Button
+                            type="button"
+                            onClick={() => handleSendCustomerTelegram(customer)}
+                            disabled={isSendingTelegram === customer.id}
+                            className="w-full bg-[#229ED9]/15 hover:bg-[#229ED9]/25 text-[#229ED9] border border-[#229ED9]/30 text-[10px] font-black h-9 rounded-xl transition-all gap-2 flex items-center justify-center active:scale-95"
+                          >
+                            {isSendingTelegram === customer.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <TelegramIcon className="h-3.5 w-3.5 fill-current" />
+                            )}
+                            <span>{customer.telegram_chat_id ? 'Send Statement via Telegram (ޓެލެގްރާމް)' : 'Link Telegram to Send Statement'}</span>
+                          </Button>
+
+                          <Button
+                            type="button"
+                            onClick={() => handleShareCustomerViber(customer)}
+                            className="w-full bg-[#7360F2]/15 hover:bg-[#7360F2]/25 text-[#7360F2] border border-[#7360F2]/30 text-[10px] font-black h-9 rounded-xl transition-all gap-2 flex items-center justify-center active:scale-95"
+                          >
+                            <ViberIcon className="h-3.5 w-3.5 fill-current" />
+                            <span>Send Statement via Viber (ވައިބަރ)</span>
+                          </Button>
+                        </div>
                       )}
 
                      <Button 
@@ -321,6 +424,32 @@ const Customers = () => {
                 />
               </div>
             </div>
+
+            <div className="space-y-2 pt-2 border-t border-border/50">
+              <div className="flex justify-between items-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => editingCustomer && handleOpenTelegramConnect(editingCustomer)}
+                  className="text-xs h-8 gap-1.5 text-[#229ED9] border-[#229ED9]/30 hover:bg-[#229ED9]/10 rounded-xl"
+                >
+                  <QrCode className="h-3.5 w-3.5" />
+                  <span>Open Connect QR</span>
+                </Button>
+                <Label htmlFor="telegramChatId" className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                  Telegram Chat ID
+                </Label>
+              </div>
+              <Input
+                id="telegramChatId"
+                placeholder="e.g. 123456789 (or scan QR to link)"
+                value={editingCustomer?.telegram_chat_id || ''}
+                onChange={(e) => setEditingCustomer(prev => prev ? { ...prev, telegram_chat_id: e.target.value ? Number(e.target.value) : null } : null)}
+                className="text-left h-12 bg-muted border-border rounded-xl font-mono text-sm"
+                dir="ltr"
+              />
+            </div>
           </div>
           <DialogFooter className="gap-3 pt-4 border-t border-border">
             <Button variant="ghost" onClick={() => setIsEditCustomerDialogOpen(false)} disabled={isSavingCustomer} className="flex-1 border-border hover:bg-muted text-foreground">
@@ -348,6 +477,19 @@ const Customers = () => {
         isOpen={isAddCustomerDialogOpen}
         onClose={() => setIsAddCustomerDialogOpen(false)}
         onAdd={handleAddNewCustomer}
+      />
+
+      {/* Telegram Connect Dialog */}
+      <TelegramConnectDialog
+        customer={telegramCustomer}
+        isOpen={isTelegramDialogOpen}
+        onClose={() => {
+          setIsTelegramDialogOpen(false);
+          setTelegramCustomer(null);
+        }}
+        onCustomerUpdated={(updated) => {
+          setEditingCustomer(prev => prev && prev.id === updated.id ? updated : prev);
+        }}
       />
     </div>
   );

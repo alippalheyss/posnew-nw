@@ -73,6 +73,7 @@ export interface Database {
                     credit_limit: number;
                     loyalty_points: number;
                     outstanding_balance: number;
+                    telegram_chat_id?: number | null;
                     created_at: string;
                     updated_at: string;
                 };

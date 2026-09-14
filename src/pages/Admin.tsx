@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { ChevronDown, ChevronUp, Upload, Image as ImageIcon, Trash2, Settings, Landmark, Monitor, Layout, FileText, Printer, Building2, X, Edit, UserPlus, Shield, Database, Languages, Palette, Globe, CreditCard, Receipt, Percent, LogOut, Gift, Clock, Users } from 'lucide-react';
+import { ChevronDown, ChevronUp, Upload, Image as ImageIcon, Trash2, Settings, Landmark, Monitor, Layout, FileText, Printer, Building2, X, Edit, UserPlus, Shield, Database, Languages, Palette, Globe, CreditCard, Receipt, Percent, LogOut, Gift, Clock, Users, CheckCircle2, Copy, ExternalLink, RefreshCw, Loader2 } from 'lucide-react';
+import { testTelegramBot, setTelegramWebhook, TelegramBotInfo, DEFAULT_TELEGRAM_BOT_TOKEN, DEFAULT_TELEGRAM_BOT_USERNAME } from '@/services/telegramService';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { useAppContext } from '@/context/AppContext';
@@ -32,6 +33,62 @@ const Admin = () => {
   const generalSettings = settings.general;
   const reportSettings = settings.reports;
   const printingSettings = settings.printing;
+  const telegramSettings = settings.telegram || {
+    botToken: DEFAULT_TELEGRAM_BOT_TOKEN,
+    botUsername: DEFAULT_TELEGRAM_BOT_USERNAME,
+    autoSendPaymentReceipts: true,
+    autoSendSaleReceipts: false,
+    webhookUrl: '',
+  };
+
+  const [botInfo, setBotInfo] = useState<TelegramBotInfo | null>(null);
+  const [isTestingBot, setIsTestingBot] = useState(false);
+  const [webhookUrlInput, setWebhookUrlInput] = useState(telegramSettings.webhookUrl || 'https://zmbbgfpzgfcsoexybrle.supabase.co/functions/v1/telegram-webhook');
+  const [isRegisteringWebhook, setIsRegisteringWebhook] = useState(false);
+
+  const TelegramIcon = ({ className }: { className?: string }) => (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z" />
+    </svg>
+  );
+
+  const handleTestBot = async () => {
+    try {
+      setIsTestingBot(true);
+      const res = await testTelegramBot(telegramSettings.botToken);
+      if (res.ok && res.bot) {
+        setBotInfo(res.bot);
+        showSuccess(`Bot verified: @${res.bot.username} (${res.bot.first_name})`);
+      } else {
+        showError(res.error || 'Failed to authenticate bot');
+      }
+    } catch (err: any) {
+      showError(err.message || 'Error testing bot');
+    } finally {
+      setIsTestingBot(false);
+    }
+  };
+
+  const handleRegisterWebhook = async () => {
+    if (!webhookUrlInput.trim()) {
+      showError('Please enter a valid webhook URL');
+      return;
+    }
+    try {
+      setIsRegisteringWebhook(true);
+      const res = await setTelegramWebhook(webhookUrlInput, telegramSettings.botToken);
+      if (res.ok) {
+        showSuccess('Webhook successfully registered with Telegram! 🚀');
+        handleSettingsChange('telegram', 'webhookUrl', webhookUrlInput);
+      } else {
+        showError(res.description || 'Failed to register webhook');
+      }
+    } catch (err: any) {
+      showError(err.message || 'Error registering webhook');
+    } finally {
+      setIsRegisteringWebhook(false);
+    }
+  };
 
   const [isOfferDialogOpen, setIsOfferDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('shopSettings');
@@ -140,6 +197,7 @@ const Admin = () => {
             <Button variant={activeTab === 'generalSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-xl font-bold h-auto py-3 whitespace-normal text-right" onClick={() => setActiveTab('generalSettings')}><Layout className="h-5 w-5 shrink-0" /> {renderBoth('general_settings')}</Button>
             <Button variant={activeTab === 'reportSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-xl font-bold h-auto py-3 whitespace-normal text-right" onClick={() => setActiveTab('reportSettings')}><FileText className="h-5 w-5 shrink-0" /> {renderBoth('report_settings')}</Button>
             <Button variant={activeTab === 'printingSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-xl font-bold h-auto py-3 whitespace-normal text-right" onClick={() => setActiveTab('printingSettings')}><Printer className="h-5 w-5 shrink-0" /> {renderBoth('printing_settings')}</Button>
+            <Button variant={activeTab === 'telegramSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-xl font-bold h-auto py-3 whitespace-normal text-right text-[#229ED9]" onClick={() => setActiveTab('telegramSettings')}><TelegramIcon className="h-5 w-5 shrink-0" /> Telegram Bot</Button>
             <Button variant={activeTab === 'userManagement' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-xl font-bold h-auto py-3 whitespace-normal text-right" onClick={() => setActiveTab('userManagement')}><Users className="h-5 w-5 shrink-0" /> {renderBoth('user_management')}</Button>
             <Button variant={activeTab === 'dataManagement' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-xl font-bold h-auto py-3 whitespace-normal text-right" onClick={() => setActiveTab('dataManagement')}><Database className="h-5 w-5 shrink-0" /> {renderBoth('data_management')}</Button>
           </div>
@@ -613,6 +671,181 @@ const Admin = () => {
                   
                   </div>
                 )}
+
+              {/* Telegram Integration Settings */}
+              {activeTab === 'telegramSettings' && (
+                <div className="space-y-8 text-right" dir="rtl">
+                  <div>
+                    <h3 className="text-2xl font-black text-foreground flex items-center justify-end gap-3">
+                      <span>Telegram Bot Integration</span>
+                      <TelegramIcon className="h-7 w-7 text-[#229ED9]" />
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Configure automated payment receipts, QR code customer linking, and Telegram webhook
+                    </p>
+                  </div>
+
+                  {/* Bot Credentials & Connection Test */}
+                  <div className="bg-card border border-border p-6 rounded-3xl space-y-6">
+                    <div className="flex items-center justify-between pb-4 border-b border-border/60">
+                      <Button
+                        type="button"
+                        onClick={handleTestBot}
+                        disabled={isTestingBot}
+                        className="bg-[#229ED9] hover:bg-[#229ED9]/90 text-white font-bold h-10 px-5 rounded-xl gap-2 text-xs"
+                      >
+                        {isTestingBot ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                        <span>Test Bot Connection</span>
+                      </Button>
+                      <h4 className="text-lg font-black text-foreground flex items-center gap-2">
+                        <span>Bot Credentials</span>
+                        <TelegramIcon className="h-5 w-5 text-[#229ED9]" />
+                      </h4>
+                    </div>
+
+                    {botInfo && (
+                      <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-right space-y-1">
+                        <p className="text-xs font-black text-emerald-500 flex items-center justify-end gap-1.5">
+                          <span>Bot Verified & Connected Successfully!</span>
+                          <CheckCircle2 className="h-4 w-4" />
+                        </p>
+                        <p className="text-xs font-mono text-muted-foreground">
+                          Name: <b>{botInfo.first_name}</b> • Handle: <b>@{botInfo.username}</b> • ID: <code>{botInfo.id}</code>
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2 text-right">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                          Bot Username (without @)
+                        </Label>
+                        <Input
+                          value={telegramSettings.botUsername || ''}
+                          onChange={(e) => handleSettingsChange('telegram', 'botUsername', e.target.value.replace('@', '').trim())}
+                          placeholder="e.g. Bbacksh0p_bot"
+                          className="h-12 bg-muted border-border rounded-xl font-mono text-left"
+                          dir="ltr"
+                        />
+                      </div>
+
+                      <div className="space-y-2 text-right">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                          Telegram Bot Token (HTTP API)
+                        </Label>
+                        <Input
+                          type="password"
+                          value={telegramSettings.botToken || ''}
+                          onChange={(e) => handleSettingsChange('telegram', 'botToken', e.target.value.trim())}
+                          placeholder="e.g. 8815725998:AAHVMSujW5JM-ND4CJAzPr_Qsj_enXm2cYQ"
+                          className="h-12 bg-muted border-border rounded-xl font-mono text-left text-xs"
+                          dir="ltr"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Automated Receipt Settings */}
+                  <div className="bg-card border border-border p-6 rounded-3xl space-y-6">
+                    <h4 className="text-lg font-black text-foreground pb-3 border-b border-border/60">
+                      Automated Receipt Delivery
+                    </h4>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-4 bg-muted/40 rounded-2xl border border-border">
+                        <Switch
+                          checked={telegramSettings.autoSendPaymentReceipts !== false}
+                          onCheckedChange={(val) => handleSettingsChange('telegram', 'autoSendPaymentReceipts', val)}
+                        />
+                        <div className="text-right">
+                          <p className="text-sm font-black text-foreground">Auto-Send Debt Payment Settlement Receipts</p>
+                          <p className="text-xs text-muted-foreground">
+                            Automatically send a formal receipt to the customer's Telegram whenever a credit balance is settled
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 bg-muted/40 rounded-2xl border border-border">
+                        <Switch
+                          checked={Boolean(telegramSettings.autoSendSaleReceipts)}
+                          onCheckedChange={(val) => handleSettingsChange('telegram', 'autoSendSaleReceipts', val)}
+                        />
+                        <div className="text-right">
+                          <p className="text-sm font-black text-foreground">Auto-Send Sales Receipts (Every Transaction)</p>
+                          <p className="text-xs text-muted-foreground">
+                            Automatically send an itemized receipt to linked customers on standard cash/card/split sales
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Supabase Webhook Configuration */}
+                  <div className="bg-card border border-border p-6 rounded-3xl space-y-6">
+                    <div className="flex items-center justify-between pb-3 border-b border-border/60">
+                      <Button
+                        type="button"
+                        onClick={handleRegisterWebhook}
+                        disabled={isRegisteringWebhook || !webhookUrlInput}
+                        className="bg-primary hover:bg-primary/90 text-foreground font-bold h-10 px-5 rounded-xl gap-2 text-xs"
+                      >
+                        {isRegisteringWebhook ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
+                        <span>Register Webhook</span>
+                      </Button>
+                      <h4 className="text-lg font-black text-foreground">
+                        Supabase Webhook URL (for QR Auto-Link)
+                      </h4>
+                    </div>
+
+                    <div className="space-y-2 text-right">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                        Supabase Edge Function Webhook URL
+                      </Label>
+                      <Input
+                        value={webhookUrlInput}
+                        onChange={(e) => {
+                          setWebhookUrlInput(e.target.value);
+                          handleSettingsChange('telegram', 'webhookUrl', e.target.value);
+                        }}
+                        placeholder="https://YOUR_PROJECT_REF.supabase.co/functions/v1/telegram-webhook"
+                        className="h-12 bg-muted border-border rounded-xl font-mono text-left text-xs"
+                        dir="ltr"
+                      />
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        When deployed, Telegram will forward deep-link start requests to this endpoint to automatically save the customer's Chat ID.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Database Migration Instructions */}
+                  <div className="bg-card border border-border p-6 rounded-3xl space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText("ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS telegram_chat_id BIGINT UNIQUE;\nCREATE INDEX IF NOT EXISTS idx_customers_telegram_chat_id ON public.customers(telegram_chat_id);");
+                          showSuccess("SQL copied to clipboard!");
+                        }}
+                        className="h-8 text-xs font-bold gap-1.5"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                        <span>Copy SQL</span>
+                      </Button>
+                      <h4 className="text-sm font-black text-foreground">
+                        Supabase SQL Migration Required (Once)
+                      </h4>
+                    </div>
+
+                    <div className="p-3 bg-muted rounded-xl font-mono text-xs text-foreground/80 overflow-x-auto text-left" dir="ltr">
+                      <code>
+                        ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS telegram_chat_id BIGINT UNIQUE;<br/>
+                        CREATE INDEX IF NOT EXISTS idx_customers_telegram_chat_id ON public.customers(telegram_chat_id);
+                      </code>
+                    </div>
+                  </div>
+                </div>
+              )}
           </div>
           </ScrollArea>
        </div>

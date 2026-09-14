@@ -28,6 +28,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from "@/components/ui/progress";
 import { printContent } from '@/utils/printHelper';
 import { getAdaptedImageUrl } from '@/utils/imageUtils';
+import { TelegramConnectDialog } from '@/components/TelegramConnectDialog';
+import { sendTelegramSaleReceipt } from '@/services/telegramService';
 
 interface Cart {
   id: string;
@@ -81,6 +83,31 @@ const POS = () => {
   const [isSplitDialogOpen, setIsSplitDialogOpen] = useState(false);
   const [isAwaitingTransferDialogOpen, setIsAwaitingTransferDialogOpen] = useState(false);
   const [transferAmount, setTransferAmount] = useState<number | ''>(0);
+  const [telegramCustomer, setTelegramCustomer] = useState<Customer | null>(null);
+  const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false);
+
+  const TelegramIcon = ({ className }: { className?: string }) => (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z" />
+    </svg>
+  );
+
+  const maybeSendTelegramSaleReceipt = (sale: Sale, customer?: Customer | null) => {
+    if (!customer?.telegram_chat_id) return;
+    if (!settings.telegram?.autoSendSaleReceipts && sale.paymentMethod !== 'credit') return;
+
+    sendTelegramSaleReceipt({
+      chatId: customer.telegram_chat_id,
+      customer,
+      sale,
+      shopSettings: settings.shop,
+      token: settings.telegram?.botToken,
+    }).then(res => {
+      if (res?.ok) {
+        showSuccess('Digital receipt sent to customer Telegram! 🧾');
+      }
+    }).catch(err => console.warn('Telegram receipt dispatch error:', err));
+  };
 
   const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
     event.target.select();
@@ -622,6 +649,7 @@ const POS = () => {
 
       showSuccess(t('cash_payment_successful'));
       setLastSaleForPrint(recordedSale);
+      maybeSendTelegramSaleReceipt(recordedSale, activeCart.customer);
       if (settings.printing.printMode === 'auto') {
         handlePrintReceipt(recordedSale);
       }
@@ -675,6 +703,7 @@ const POS = () => {
 
       showSuccess(t('credit_sale_successful'));
       setLastSaleForPrint(recordedSale);
+      maybeSendTelegramSaleReceipt(recordedSale, activeCart.customer);
       if (settings.printing.printMode === 'auto') {
         handlePrintReceipt(recordedSale);
       }
@@ -858,6 +887,7 @@ const POS = () => {
 
       showSuccess(t('split_payment_successful'));
       setLastSaleForPrint(recordedSale);
+      maybeSendTelegramSaleReceipt(recordedSale, activeCart?.customer || null);
       if (settings.printing.printMode === 'auto') {
         handlePrintReceipt(recordedSale);
       }
@@ -1104,6 +1134,23 @@ const POS = () => {
                 <div className="flex items-center gap-1.5 text-xs font-bold text-primary truncate">
                   <User className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate">{activeCart.customer.name_dv || activeCart.customer.name_en}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTelegramCustomer(activeCart.customer);
+                      setIsTelegramDialogOpen(true);
+                    }}
+                    className={cn(
+                      "h-5 px-1.5 text-[9px] font-bold rounded-md flex items-center gap-1 transition-colors shrink-0",
+                      activeCart.customer.telegram_chat_id
+                        ? "bg-[#229ED9]/15 text-[#229ED9] hover:bg-[#229ED9]/25"
+                        : "bg-muted text-muted-foreground hover:text-[#229ED9] hover:bg-[#229ED9]/10"
+                    )}
+                    title={activeCart.customer.telegram_chat_id ? `Telegram Linked (Chat ID: ${activeCart.customer.telegram_chat_id})` : "Click to connect Telegram"}
+                  >
+                    <TelegramIcon className="h-2.5 w-2.5" />
+                    <span>{activeCart.customer.telegram_chat_id ? 'Linked' : 'Bot Connect'}</span>
+                  </button>
                 </div>
               ) : (
                 <span className="text-xs text-muted-foreground font-semibold">
@@ -2276,6 +2323,16 @@ const POS = () => {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      {/* Telegram Connect Dialog */}
+      <TelegramConnectDialog
+        customer={telegramCustomer}
+        isOpen={isTelegramDialogOpen}
+        onClose={() => {
+          setIsTelegramDialogOpen(false);
+          setTelegramCustomer(null);
+        }}
+      />
     </div>
   );
 };

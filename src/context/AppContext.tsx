@@ -43,6 +43,7 @@ export interface Customer {
   credit_limit: number;
   loyalty_points: number;
   outstanding_balance: number;
+  telegram_chat_id?: number | null;
   settlement_history: Settlement[];
 }
 
@@ -213,6 +214,14 @@ interface PrintSettings {
   useQzTray: boolean;
 }
 
+interface TelegramSettings {
+  botToken: string;
+  botUsername: string;
+  autoSendPaymentReceipts: boolean;
+  autoSendSaleReceipts: boolean;
+  webhookUrl: string;
+}
+
 interface AppSettings {
   shop: ShopSettings;
   accounting: AccountingSettings;
@@ -220,6 +229,7 @@ interface AppSettings {
   general: GeneralSettings;
   reports: ReportSettings;
   printing: PrintSettings;
+  telegram: TelegramSettings;
 }
 
 interface AppContextType {
@@ -648,6 +658,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         enableDirectPrint: false,
         useQzTray: false,
       },
+      telegram: {
+        botToken: '8815725998:AAHVMSujW5JM-ND4CJAzPr_Qsj_enXm2cYQ',
+        botUsername: 'Bbacksh0p_bot',
+        autoSendPaymentReceipts: true,
+        autoSendSaleReceipts: false,
+        webhookUrl: '',
+      },
     };
 
     if (typeof window !== 'undefined') {
@@ -664,6 +681,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
             general: { ...defaultSettings.general, ...(parsed.general || {}) },
             reports: { ...defaultSettings.reports, ...(parsed.reports || {}) },
             printing: { ...defaultSettings.printing, ...(parsed.printing || {}) },
+            telegram: { ...defaultSettings.telegram, ...(parsed.telegram || {}) },
           };
         } catch (e) {
           console.error('Error parsing settings from localStorage', e);
@@ -885,18 +903,23 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       // Strip settlement_history as it's a relation, not a column
       const { settlement_history, ...customerData } = customer;
       
+      const insertPayload: any = {
+        code: customerData.code,
+        name_dv: customerData.name_dv,
+        name_en: customerData.name_en,
+        phone: customerData.phone,
+        email: customerData.email || '',
+        credit_limit: Number(customerData.credit_limit) || 0,
+        loyalty_points: Number(customerData.loyalty_points) || 0,
+        outstanding_balance: Number(customerData.outstanding_balance) || 0
+      };
+      if (customerData.telegram_chat_id) {
+        insertPayload.telegram_chat_id = customerData.telegram_chat_id;
+      }
+      
       const { data, error } = await supabase
         .from('customers')
-        .insert({
-          code: customerData.code,
-          name_dv: customerData.name_dv,
-          name_en: customerData.name_en,
-          phone: customerData.phone,
-          email: customerData.email || '',
-          credit_limit: Number(customerData.credit_limit) || 0,
-          loyalty_points: Number(customerData.loyalty_points) || 0,
-          outstanding_balance: Number(customerData.outstanding_balance) || 0
-        })
+        .insert(insertPayload)
         .select()
         .single();
 
@@ -957,6 +980,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       };
       if (customer.code) {
         payload.code = customer.code;
+      }
+      if (customer.telegram_chat_id !== undefined) {
+        payload.telegram_chat_id = customer.telegram_chat_id ? Number(customer.telegram_chat_id) : null;
       }
 
       const { error } = await supabase

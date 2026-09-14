@@ -150,7 +150,7 @@ const CreditOutstanding = () => {
       const settlement: Settlement = {
         id: `set-${Date.now()}`,
         amount_paid: paymentAmount,
-        date: toISODate(),
+        date: new Date().toISOString(),
         previous_outstanding: previousOutstanding,
         new_outstanding: newOutstanding,
       };

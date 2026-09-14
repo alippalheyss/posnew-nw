@@ -96,15 +96,27 @@ export const formatMaldivesDate = (date: string | Date = new Date()): string => 
   }
 };
 
-export const formatTime = (date: string | Date): string => {
+export const formatTime = (date: string | Date, use12Hour: boolean = true): string => {
   if (!date) return '';
   
+  // If it's a pure date without time (e.g. "YYYY-MM-DD" or "DD-MM-YYYY"), do not fabricate a fake 05:00:00 midnight time!
+  if (typeof date === 'string' && !date.includes(':') && !date.includes('T')) {
+    return '';
+  }
+
   // If it's a string with a space (YYYY-MM-DD HH:mm:ss) without timezone, it's pre-formatted local time
   if (typeof date === 'string' && date.includes(' ') && !date.includes('Z') && !date.includes('+')) {
     const timePart = date.split(' ')[1];
     if (timePart && timePart.includes(':')) {
       const parts = timePart.split(':');
-      return `${parts[0]}:${parts[1]}${parts[2] ? ':' + parts[2] : ''}`;
+      const h = parseInt(parts[0], 10);
+      const m = parts[1];
+      if (use12Hour) {
+        const period = h >= 12 ? 'PM' : 'AM';
+        const h12 = h % 12 || 12;
+        return `${String(h12).padStart(2, '0')}:${m} ${period}`;
+      }
+      return `${String(h).padStart(2, '0')}:${m}${parts[2] ? ':' + parts[2] : ''}`;
     }
   }
 
@@ -117,20 +129,23 @@ export const formatTime = (date: string | Date): string => {
     return '';
   }
   
-  // Convert to Maldives / local time
+  // Convert to Maldives / local time (12-hour format e.g. "05:42 PM")
   try {
-    return d.toLocaleTimeString('en-GB', {
+    return d.toLocaleTimeString('en-US', {
       timeZone: 'Indian/Maldives',
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
+      hour12: use12Hour,
     });
   } catch (e) {
-    const hours = String(d.getHours()).padStart(2, '0');
+    const hours = d.getHours();
     const minutes = String(d.getMinutes()).padStart(2, '0');
-    const seconds = String(d.getSeconds()).padStart(2, '0');
-    return `${hours}:${minutes}:${seconds}`;
+    if (use12Hour) {
+      const period = hours >= 12 ? 'PM' : 'AM';
+      const h12 = hours % 12 || 12;
+      return `${String(h12).padStart(2, '0')}:${minutes} ${period}`;
+    }
+    return `${String(hours).padStart(2, '0')}:${minutes}`;
   }
 };
 

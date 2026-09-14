@@ -458,7 +458,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         
         const formatted = data.map(c => ({
           ...c,
-          settlement_history: settlementsData?.filter(s => s.customer_id === c.id) || []
+          settlement_history: (settlementsData?.filter(s => s.customer_id === c.id) || []).map(s => {
+            const isMidnight = !s.date || !s.date.includes('T') || s.date.endsWith('T00:00:00.000Z') || s.date.endsWith('T00:00:00+00:00') || s.date.endsWith(' 00:00:00');
+            return {
+              ...s,
+              date: (isMidnight && s.created_at) ? s.created_at : (s.date || s.created_at || ''),
+            };
+          })
         }));
         setCustomers(formatted);
         showSuccess('Customers synchronized with database');
@@ -518,7 +524,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       if (customersData) {
         const formattedCustomers = customersData.map(c => ({
           ...c,
-          settlement_history: settlementsData?.filter(s => s.customer_id === c.id) || []
+          settlement_history: (settlementsData?.filter(s => s.customer_id === c.id) || []).map(s => {
+            const isMidnight = !s.date || !s.date.includes('T') || s.date.endsWith('T00:00:00.000Z') || s.date.endsWith('T00:00:00+00:00') || s.date.endsWith(' 00:00:00');
+            return {
+              ...s,
+              date: (isMidnight && s.created_at) ? s.created_at : (s.date || s.created_at || ''),
+            };
+          })
         }));
         setCustomers(formattedCustomers);
       }
@@ -1343,12 +1355,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const addSettlement = async (customerId: string, settlement: Settlement) => {
     try {
+      const settlementDate = settlement.date || new Date().toISOString();
       const { error: settlementError } = await supabase
         .from('settlements')
         .insert({
           customer_id: customerId,
           amount_paid: settlement.amount_paid,
-          date: settlement.date || new Date().toLocaleDateString('sv-SE'),
+          date: settlementDate,
           previous_outstanding: settlement.previous_outstanding,
           new_outstanding: settlement.new_outstanding
         });
@@ -1370,11 +1383,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         }
       }
 
+      const fullSettlement = { ...settlement, date: settlementDate };
       setCustomers(prev => prev.map(c =>
         c.id === customerId ? {
           ...c,
           outstanding_balance: settlement.new_outstanding,
-          settlement_history: [...c.settlement_history, settlement]
+          settlement_history: [...c.settlement_history, fullSettlement]
         } : c
       ));
     } catch (error) {
@@ -1397,11 +1411,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       const previousOutstanding = customer.outstanding_balance || 0;
       const newOutstanding = Math.max(0, previousOutstanding - amountPaid);
       const settlementId = `set-${Date.now()}`;
+      const nowIso = new Date().toISOString();
 
       const settlement: Settlement = {
         id: settlementId,
         amount_paid: amountPaid,
-        date: new Date().toLocaleDateString('sv-SE'),
+        date: nowIso,
         previous_outstanding: previousOutstanding,
         new_outstanding: newOutstanding,
       };
@@ -1410,7 +1425,6 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       await addSettlement(customer.id, settlement);
 
       // 2. Update transfer_slips record in Supabase
-      const nowIso = new Date().toISOString();
       if (supabase) {
         try {
           await supabase

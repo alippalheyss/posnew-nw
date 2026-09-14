@@ -54,13 +54,11 @@ export const TelegramConnectDialog: React.FC<TelegramConnectDialogProps> = ({
   const [isSendingTest, setIsSendingTest] = useState(false);
   const [isCheckingLive, setIsCheckingLive] = useState(false);
 
-  if (!customer) return null;
-
   const botUsername = settings.telegram?.botUsername || 'Bbacksh0p_bot';
   const botToken = settings.telegram?.botToken || '';
+  const isLinked = Boolean(customer?.telegram_chat_id);
   // Use customer ID as primary deep link ref, fallback to code
-  const deepLink = generateTelegramConnectLink(customer.id || customer.code, botUsername);
-  const isLinked = Boolean(customer.telegram_chat_id);
+  const deepLink = customer ? generateTelegramConnectLink(customer.id || customer.code, botUsername) : '';
 
   const checkLiveActivation = async () => {
     if (!customer || isLinked || isCheckingLive) return;
@@ -102,6 +100,8 @@ export const TelegramConnectDialog: React.FC<TelegramConnectDialogProps> = ({
 
     return () => clearInterval(interval);
   }, [isOpen, isLinked, customer?.id]);
+
+  if (!customer) return null;
 
   const handleCopyLink = async () => {
     try {

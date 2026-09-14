@@ -384,10 +384,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         // Extract group config if stored in transfer_slips
         const configRow = data.find((item: any) => item.status === 'system_config' && item.file_id === 'group_config');
         if (configRow?.telegram_chat_id) {
-          setShopSettings((prev) => ({
+          setSettings((prev) => ({
             ...prev,
-            telegramGroupChatId: prev.telegramGroupChatId || configRow.telegram_chat_id,
-            telegramGroupTitle: prev.telegramGroupTitle || configRow.customer_name || 'B BACK',
+            shop: {
+              ...prev.shop,
+              telegramGroupChatId: prev.shop.telegramGroupChatId || configRow.telegram_chat_id,
+              telegramGroupTitle: prev.shop.telegramGroupTitle || configRow.customer_name || 'B BACK',
+            },
           }));
         }
 

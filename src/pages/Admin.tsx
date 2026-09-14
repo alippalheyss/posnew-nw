@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
@@ -13,6 +14,7 @@ import { ChevronDown, ChevronUp, Upload, Image as ImageIcon, Trash2, Settings, L
 import { testTelegramBot, setTelegramWebhook, getTelegramWebhookInfo, deleteTelegramWebhook, setBotCommands, BOT_COMMANDS, TelegramBotInfo, DEFAULT_TELEGRAM_BOT_TOKEN, DEFAULT_TELEGRAM_BOT_USERNAME, sendTelegramMessage } from '@/services/telegramService';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 import { useAppContext } from '@/context/AppContext';
 import { useAuth, User } from '@/context/AuthContext';
 import UserDialog from '@/components/UserDialog';

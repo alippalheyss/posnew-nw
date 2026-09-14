@@ -627,9 +627,10 @@ _For assistance, visit our shop or contact the cashier._`
         );
       }
     }
+  }
 
-    return res.status(200).json({ ok: true });
-  } catch (error: any) {
+  return res.status(200).json({ ok: true });
+} catch (error: any) {
     console.error('Webhook handler error:', error);
     return res.status(200).json({ ok: true, error: error.message });
   }

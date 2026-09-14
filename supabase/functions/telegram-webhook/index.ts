@@ -8,6 +8,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const botToken = Deno.env.get("TELEGRAM_BOT_TOKEN") || "8815725998:AAHVMSujW5JM-ND4CJAzPr_Qsj_enXm2cYQ";
+const BOT_TOKEN = botToken;
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -37,7 +43,6 @@ async function getTelegramFileUrl(fileId: string): Promise<string | null> {
   } catch (err) {
     console.warn("Failed to get file path in edge function:", err);
   }
-  return null;
   return null;
 }
 // Robust Group Config Storage (using transfer_slips which allows anon RLS, plus settings table)
@@ -210,7 +215,7 @@ ${cleanNote ? `📝 Customer Note: ${cleanNote}\n` : "" }━━━━━━━�
   }
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -626,8 +631,9 @@ _For assistance, visit our shop or contact the cashier._`
         );
       }
     }
+  }
 
-    return new Response(JSON.stringify({ ok: true }), {
+  return new Response(JSON.stringify({ ok: true }), {
       headers: { "Content-Type": "application/json" },
       status: 200,
     });

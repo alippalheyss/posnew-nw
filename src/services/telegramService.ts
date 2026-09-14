@@ -146,6 +146,7 @@ export const deleteTelegramWebhook = async (
 export const BOT_COMMANDS = [
   { command: 'start', description: 'Connect your store account and activate receipts' },
   { command: 'balance', description: 'View your current credit tab and outstanding amount' },
+  { command: 'transfer', description: 'Send bank transfer slip' },
   { command: 'account', description: 'View your linked customer profile details' },
   { command: 'help', description: 'How to use this bot and store contact details' },
 ];
@@ -457,6 +458,36 @@ _To update your contact details, please inform the cashier at the counter._`;
     return;
   }
 
+  // 3. /transfer or transfer or /slip or slip
+  if (cmd === '/transfer' || cmd === 'transfer' || cmd === '/slip' || cmd === 'slip') {
+    const customer = customers.find(isChatLinked);
+    const shopName = shopSettings?.shopName || 'B BACK';
+    const currency = shopSettings?.currency || 'MVR';
+    const balance = customer ? Number(customer.outstanding_balance || 0).toFixed(2) : undefined;
+    const name = customer ? (customer.name_en || customer.name_dv) : undefined;
+
+    let msg = `💳 *${shopName} - Bank Transfer Payment*\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+    if (customer) {
+      msg += `👤 *Customer:* ${name} (\`${customer.code}\`)\n`;
+      msg += `💰 *Current Tab Due:* *${currency} ${balance}*\n`;
+      msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+    }
+    msg += `🏪 *Transfer to Our BML Account:*\n`;
+    msg += `• *Bank:* Bank of Maldives (BML)\n`;
+    msg += `• *Account Name:* ${shopName}\n`;
+    msg += `• *Account Number:* \`7730000442060\`\n`;
+    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += `📸 *Please Send Your Slip:*\n`;
+    msg += `1. Complete the transfer on your BML app.\n`;
+    msg += `2. Take a screenshot or save the payment slip.\n`;
+    msg += `3. *Attach and send the slip photo directly in this chat!* 📎\n\n`;
+    msg += `_Our cashier will verify the transfer in our bank account and settle your tab immediately._ 🙏`;
+
+    await sendTelegramMessage(chatId, msg, token);
+    return;
+  }
+
   // 4. /help or help
   if (cmd === '/help' || cmd === 'help') {
     const shopName = shopSettings?.shopName || 'B BACK';
@@ -468,6 +499,7 @@ _To update your contact details, please inform the cashier at the counter._`;
 ━━━━━━━━━━━━━━━━━━━━
 • */start* - Connect your store account and activate receipts
 • */balance* - View your current credit tab and outstanding amount
+• */transfer* - Send bank transfer slip
 • */account* - View your linked customer profile details
 • */help* - How to use this bot and store contact details
 

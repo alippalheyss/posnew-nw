@@ -240,7 +240,39 @@ _Please send transfer slip to cashier after payment._`;
         }
       }
 
-      // Case 3: Customer profile enquiry /account
+      // Case 3: Transfer slip submission /transfer or /slip
+      else if (cmd === "/transfer" || cmd === "transfer" || cmd === "/slip" || cmd === "slip") {
+        const { data: customer } = await supabase
+          .from("customers")
+          .select("*")
+          .eq("telegram_chat_id", chatId)
+          .maybeSingle();
+
+        const name = customer ? (customer.name_en || customer.name_dv || firstName) : undefined;
+        const balance = customer ? Number(customer.outstanding_balance || 0).toFixed(2) : undefined;
+
+        let msg = `💳 *B BACK - Bank Transfer Payment*\n`;
+        msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+        if (customer) {
+          msg += `👤 *Customer:* ${name} (\`${customer.code}\`)\n`;
+          msg += `💰 *Current Tab Due:* *MVR ${balance}*\n`;
+          msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+        }
+        msg += `🏪 *Transfer to Our BML Account:*\n`;
+        msg += `• *Bank:* Bank of Maldives (BML)\n`;
+        msg += `• *Account Name:* B BACK\n`;
+        msg += `• *Account Number:* \`7730000442060\`\n`;
+        msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+        msg += `📸 *Please Send Your Slip:*\n`;
+        msg += `1. Complete the transfer on your BML app.\n`;
+        msg += `2. Take a screenshot or save the payment slip.\n`;
+        msg += `3. *Attach and send the slip photo directly in this chat!* 📎\n\n`;
+        msg += `_Our cashier will verify the transfer in our bank account and settle your tab immediately._ 🙏`;
+
+        await sendTelegramMessage(chatId, msg);
+      }
+
+      // Case 4: Customer profile enquiry /account
       else if (cmd === "/account" || cmd === "account") {
         const { data: customer } = await supabase
           .from("customers")
@@ -275,7 +307,7 @@ _Need to update your contact info? Please notify the cashier at the counter._`;
         }
       }
 
-      // Case 4: /help
+      // Case 5: /help
       else if (cmd === "/help" || cmd === "help") {
         await sendTelegramMessage(
           chatId,
@@ -283,6 +315,7 @@ _Need to update your contact info? Please notify the cashier at the counter._`;
 ━━━━━━━━━━━━━━━━━━━━
 • */start* - Connect your store account and activate receipts
 • */balance* - View your current credit tab and outstanding amount
+• */transfer* - Send bank transfer slip
 • */account* - View your linked customer profile details
 • */help* - How to use this bot and store contact details
 

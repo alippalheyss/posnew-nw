@@ -21,6 +21,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from "@/components/ui/progress";
+import { formatDate, formatTime, formatCurrency, toISODate } from '@/utils/formatters';
 import { formatCreditStatementViberMessage, shareViaViber } from '@/utils/viberHelper';
 import { TelegramConnectDialog } from '@/components/TelegramConnectDialog';
 import { sendTelegramPaymentReceipt, sendTelegramOutstandingStatement } from '@/services/telegramService';

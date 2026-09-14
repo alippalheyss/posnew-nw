@@ -27,3 +27,6 @@ dist-ssr
 # Lock files (use npm only)
 pnpm-lock.yaml
 yarn.lock
+
+# Supabase temp
+supabase/.temp/

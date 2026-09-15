@@ -1403,14 +1403,14 @@ export const formatPoliteCreditReminderMessage = ({
   msg += `👤 *Account Name:* ${accountName}\n`;
   msg += `💳 *Account Number:* \`${accountNumber}\`\n`;
   msg += `━━━━━━━━━━━━━━━━━━━━\n`;
-  msg += `Once transferred, please tap the button below to submit your payment slip directly in this chat, and our cashier will verify and settle your account immediately.\n\n`;
+  msg += `Once transferred, please send your transfer slip photo directly in this chat (or to the cashier), and our team will verify and settle your account immediately.\n\n`;
   msg += `_JazakAllahu Khayran for your continued trust and support!_ 🙏`;
 
   return msg;
 };
 
 /**
- * Send automated credit reminder with interactive [ 📤 Send Transfer Slip ] inline keyboard button
+ * Send automated credit reminder (clean text notification)
  */
 export const sendAutomatedCreditReminder = async ({
   chatId,
@@ -1440,17 +1440,69 @@ export const sendAutomatedCreditReminder = async ({
     creditLimit,
   });
 
-  const replyMarkup = {
-    inline_keyboard: [
-      [
-        {
-          text: '📤 Send Transfer Slip',
-          callback_data: 'cmd_transfer',
-        },
-      ],
-    ],
-  };
+  return await sendTelegramMessage(chatId, text, token, 'Markdown');
+};
 
-  return await sendTelegramMessage(chatId, text, token, 'Markdown', replyMarkup);
+/**
+ * Format notification for when an unconfirmed awaiting transfer is automatically moved to customer credit tab
+ */
+export const formatAutoTransferToCreditMessage = ({
+  customer,
+  amount,
+  newBalance,
+  shopSettings,
+}: {
+  customer: Customer;
+  amount: number;
+  newBalance?: number;
+  shopSettings?: any;
+}): string => {
+  const shopName = shopSettings?.shopName || 'B BACK';
+  const currency = shopSettings?.currency || 'MVR';
+  const customerName = customer.name_en || customer.name_dv || 'Valued Customer';
+  const amountStr = Number(amount || 0).toFixed(2);
+  const newBalanceStr = newBalance !== undefined ? Number(newBalance).toFixed(2) : undefined;
+  const accountNumber = shopSettings?.accountNumber || '7730000442060';
+
+  let msg = `🌙 *As-salamu alaykum ${customerName},*\n\n`;
+  msg += `🏪 *${shopName}* — _(Awaiting Transfer Update)_\n\n`;
+  msg += `Your unconfirmed pending transfer of *${currency} ${amountStr}* has been automatically recorded to your store credit tab.\n\n`;
+  
+  if (newBalanceStr) {
+    msg += `💰 *Updated Tab Balance:* *${currency} ${newBalanceStr}*\n\n`;
+  }
+  
+  msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `If you have already made the transfer to our BML account (\`${accountNumber}\`), please send your transfer receipt photo directly in this chat so our cashier can verify and settle your tab.\n\n`;
+  msg += `_JazakAllahu Khayran for your continued trust and support!_ 🙏`;
+
+  return msg;
+};
+
+/**
+ * Send auto transfer to credit notification to customer Telegram
+ */
+export const sendAutoTransferToCreditNotification = async ({
+  chatId,
+  customer,
+  amount,
+  newBalance,
+  shopSettings,
+  token,
+}: {
+  chatId: string | number;
+  customer: Customer;
+  amount: number;
+  newBalance?: number;
+  shopSettings?: any;
+  token?: string;
+}) => {
+  const text = formatAutoTransferToCreditMessage({
+    customer,
+    amount,
+    newBalance,
+    shopSettings,
+  });
+  return await sendTelegramMessage(chatId, text, token, 'Markdown');
 };
 

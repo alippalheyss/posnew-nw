@@ -12,6 +12,7 @@ import {
   sendTelegramSlipDeclinedMessage,
   sendNightlyExecutiveBriefing,
   sendAutomatedCreditReminder,
+  sendAutoTransferToCreditNotification,
 } from '@/services/telegramService';
 
 export interface Product {
@@ -1328,7 +1329,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     setPendingTransfers(prev => [...prev, { ...transfer, id: `transfer-${Date.now()}` }]);
   };
 
-  const resolvePendingTransfer = async (id: string, action: 'cash' | 'credit', silent: boolean = false) => {
+  const resolvePendingTransfer = async (
+    id: string, 
+    action: 'cash' | 'credit', 
+    silent: boolean = false,
+    isAutoResolved: boolean = false
+  ) => {
     const transfer = pendingTransfers.find(t => t.id === id);
     if (!transfer) return;
 
@@ -1396,6 +1402,25 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
       if (customerToUse) {
         await updateCustomerBalance(customerToUse.id, transfer.grandTotal);
+
+        // If automatically converted by the system at the end of the day and customer is connected to Telegram, send update
+        if (isAutoResolved && customerToUse.telegram_chat_id) {
+          try {
+            const currentBal = Number(customerToUse.outstanding_balance || 0);
+            const newBal = currentBal + Number(transfer.grandTotal || 0);
+            await sendAutoTransferToCreditNotification({
+              chatId: customerToUse.telegram_chat_id,
+              customer: customerToUse,
+              amount: transfer.grandTotal,
+              newBalance: newBal,
+              shopSettings: settings.shop,
+              token: settings.telegram?.botToken,
+            });
+            console.log(`Telegram notification sent to ${customerToUse.name_en || customerToUse.name_dv} for auto-converted awaiting transfer.`);
+          } catch (tgErr) {
+            console.warn('Failed to send auto-transfer credit notification to Telegram:', tgErr);
+          }
+        }
       }
     }
 
@@ -1436,7 +1461,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
       for (const transfer of expired) {
         try {
-          await resolvePendingTransfer(transfer.id, 'credit', true);
+          await resolvePendingTransfer(transfer.id, 'credit', true, true);
           resolvedIds.add(transfer.id);
           resolvedCount++;
         } catch (err) {

@@ -6,11 +6,11 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { PencilLine, CalendarDays, Printer, Trash2, Filter, ChevronRight, Receipt, DollarSign, CreditCard, ArrowRightLeft, TrendingUp, Download, Calendar as CalendarIcon, FileSpreadsheet } from 'lucide-react';
+import { PencilLine, CalendarDays, Printer, Trash2, Filter, ChevronRight, Receipt, DollarSign, CreditCard, ArrowRightLeft, TrendingUp, Download, Calendar as CalendarIcon, FileSpreadsheet, Moon, Send, Loader2 } from 'lucide-react';
 import { useAppContext, Product, Customer, CartItem, Sale } from '@/context/AppContext';
 import { formatDate, formatTime, formatDateTime, toISODate, extractDateOnly } from '@/utils/formatters';
 import SaleEditDialog from '@/components/SaleEditDialog'; 
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
 import { printContent } from '@/utils/printHelper';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -21,12 +21,16 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import type { DateRange } from 'react-day-picker';
 import { format } from 'date-fns';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { calculateExecutiveBriefingData, sendNightlyExecutiveBriefing } from '@/services/telegramService';
 
 const DailySales = () => {
   const { t } = useTranslation();
-  const { sales, setSales, settings } = useAppContext();
+  const { sales, setSales, settings, customers } = useAppContext();
   const [isEditSaleDialogOpen, setIsEditSaleDialogOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [isBriefingDialogOpen, setIsBriefingDialogOpen] = useState(false);
+  const [isSendingBriefing, setIsSendingBriefing] = useState(false);
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'last30' | 'custom'>('today');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(),
@@ -451,6 +455,15 @@ const DailySales = () => {
              <Button
                variant="outline"
                size="sm"
+               onClick={() => setIsBriefingDialogOpen(true)}
+               className="bg-muted border-border hover:bg-[#229ED9]/10 hover:border-[#229ED9]/30 hover:text-[#229ED9] text-foreground gap-2 h-9 px-3 rounded-xl text-xs font-bold transition-all"
+             >
+               <Moon className="h-4 w-4 text-[#229ED9]" />
+               Briefing
+             </Button>
+             <Button
+               variant="outline"
+               size="sm"
                onClick={handleDownloadExcel}
                className="bg-muted border-border hover:bg-emerald-500/10 hover:border-emerald-500/30 hover:text-emerald-500 text-foreground gap-2 h-9 px-3 rounded-xl text-xs font-bold transition-all"
              >
@@ -657,6 +670,179 @@ const DailySales = () => {
           sale={editingSale}
         />
       )}
+
+      {/* Executive Briefing Dialog */}
+      <Dialog open={isBriefingDialogOpen} onOpenChange={setIsBriefingDialogOpen}>
+        <DialogContent className="sm:max-w-[540px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto max-h-[90vh] flex flex-col" dir="rtl">
+          <DialogHeader className="text-right pb-4 border-b border-border/60">
+            <div className="flex items-center justify-between pl-8">
+              <Badge className="bg-[#229ED9]/10 text-[#229ED9] border-[#229ED9]/20 text-xs font-mono font-bold">
+                Owner Report
+              </Badge>
+              <div className="text-right">
+                <DialogTitle className="text-xl font-black text-foreground flex items-center justify-end gap-2">
+                  <span>Store Close Executive Briefing</span>
+                  <Moon className="h-5 w-5 text-[#229ED9]" />
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                  Nightly summary sent to owner's private Telegram at midnight.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {(() => {
+            const allSettlements = customers.flatMap(c => c.settlement_history || []);
+            const data = calculateExecutiveBriefingData({ sales, settlements: allSettlements });
+            const ownerChat = settings.telegram?.ownerChatId || settings.shop?.ownerTelegramChatId;
+            const currency = settings.shop.currency;
+
+            const handleSendToOwner = async () => {
+              if (!ownerChat) {
+                showError('Owner Telegram Chat ID not configured. Please set it in Admin Settings.');
+                return;
+              }
+              setIsSendingBriefing(true);
+              try {
+                const res = await sendNightlyExecutiveBriefing({
+                  chatId: ownerChat,
+                  sales,
+                  settlements: allSettlements,
+                  shopSettings: settings.shop,
+                  token: settings.telegram?.botToken,
+                });
+                if (res?.ok) {
+                  showSuccess('Executive Briefing sent to Owner Telegram! 📊');
+                  setIsBriefingDialogOpen(false);
+                } else {
+                  showError(res?.description || 'Failed to send briefing');
+                }
+              } catch (e: any) {
+                showError(e.message || 'Error sending briefing');
+              } finally {
+                setIsSendingBriefing(false);
+              }
+            };
+
+            return (
+              <div className="flex-1 overflow-y-auto py-4 space-y-4 text-right custom-scrollbar">
+                {/* Header overview card */}
+                <div className="p-4 rounded-2xl bg-muted/40 border border-border flex items-center justify-between">
+                  <div className="text-left">
+                    <p className="text-[10px] uppercase font-black tracking-wider text-muted-foreground">Receipts Issued</p>
+                    <p className="text-lg font-black text-foreground">{data.totalTransactions} transactions</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-black text-foreground">{data.dateStr} | {data.timeStr}</p>
+                    <p className="text-[10px] text-muted-foreground font-bold">{settings.shop.shopName || 'B BACK'}</p>
+                  </div>
+                </div>
+
+                {/* Total Sales with Breakdown */}
+                <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20 space-y-2">
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-2xl font-black text-primary">
+                      {currency} {data.totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    <span className="text-[10px] uppercase font-black tracking-wider text-primary">
+                      Total Sales
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-primary/15 text-center">
+                    <div className="bg-background/60 p-2 rounded-xl border border-primary/10">
+                      <p className="text-[9px] font-bold text-muted-foreground uppercase">Cash</p>
+                      <p className="text-xs font-black text-foreground">{currency} {data.cashSales.toFixed(0)}</p>
+                    </div>
+                    <div className="bg-background/60 p-2 rounded-xl border border-primary/10">
+                      <p className="text-[9px] font-bold text-muted-foreground uppercase">BML / Transfer</p>
+                      <p className="text-xs font-black text-foreground">{currency} {data.transferSales.toFixed(0)}</p>
+                    </div>
+                    <div className="bg-background/60 p-2 rounded-xl border border-primary/10">
+                      <p className="text-[9px] font-bold text-muted-foreground uppercase">Credit</p>
+                      <p className="text-xs font-black text-foreground">{currency} {data.creditSales.toFixed(0)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Credit Collections Settled Today */}
+                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
+                  <span className="text-xl font-black text-emerald-500">
+                    {currency} {data.creditCollections.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                  <div className="text-right">
+                    <p className="text-xs font-black text-foreground">Credit Collections Settled Today</p>
+                    <p className="text-[10px] text-muted-foreground">{data.settlementCount} customer settlements recorded</p>
+                  </div>
+                </div>
+
+                {/* Top Selling Items */}
+                <div className="p-4 rounded-2xl bg-muted/40 border border-border space-y-2">
+                  <p className="text-xs font-black text-muted-foreground uppercase tracking-wider text-right">
+                    Top Selling Items Today:
+                  </p>
+                  {data.topItems.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-2">No items recorded today</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {data.topItems.map((item, idx) => (
+                        <div key={idx} className="flex justify-between items-center p-2 rounded-xl bg-background/60 border border-border text-xs">
+                          <span className="font-mono font-bold text-primary">
+                            {currency} {item.totalAmount.toFixed(2)}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-foreground">{item.name}</span>
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono">
+                              {item.qty} {item.unit && item.unit !== 'Piece' ? item.unit : 'pcs'}
+                            </Badge>
+                            <span className="text-[10px] text-muted-foreground font-black">#{idx + 1}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Owner Connection Info */}
+                <div className="p-3 rounded-xl bg-muted/20 border border-border text-xs flex items-center justify-between text-muted-foreground">
+                  <span className="font-mono text-[11px] font-bold text-foreground">
+                    {ownerChat ? `ID: ${ownerChat}` : '⚠️ Not configured'}
+                  </span>
+                  <span>Owner Telegram Destination:</span>
+                </div>
+
+                <DialogFooter className="pt-3 border-t border-border flex gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsBriefingDialogOpen(false)}
+                    className="flex-1 h-12 rounded-xl font-bold"
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleSendToOwner}
+                    disabled={isSendingBriefing || !ownerChat}
+                    className="flex-[2] h-12 rounded-xl bg-[#229ED9] hover:bg-[#229ED9]/90 text-white font-black text-xs gap-2 shadow-lg shadow-[#229ED9]/20"
+                  >
+                    {isSendingBriefing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Sending to Telegram...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4" />
+                        <span>Send to Owner Telegram Now</span>
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

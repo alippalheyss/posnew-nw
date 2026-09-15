@@ -47,3 +47,22 @@ DROP POLICY IF EXISTS "Allow all access to transfer_slips" ON public.transfer_sl
 CREATE POLICY "Allow all access to transfer_slips" ON public.transfer_slips 
     FOR ALL USING (true) WITH CHECK (true);
 GRANT ALL ON TABLE public.transfer_slips TO anon, authenticated;
+
+-- =========================================================================
+-- 6. Optional: Supabase pg_cron Midnight Trigger for Executive Briefing
+-- =========================================================================
+-- If you have the pg_cron and pg_net extensions enabled in Supabase,
+-- you can run the nightly executive briefing automatically at midnight (19:00 UTC = 00:00 Maldives time):
+/*
+SELECT cron.schedule(
+    'nightly-executive-briefing',
+    '0 19 * * *', -- Midnight Maldives time (UTC+5)
+    $$
+    SELECT net.http_post(
+        url := 'https://zmbbgfpzgfcsoexybrle.supabase.co/functions/v1/telegram-webhook',
+        headers := '{"Content-Type": "application/json"}'::jsonb,
+        body := '{"action": "nightly_briefing"}'::jsonb
+    );
+    $$
+);
+*/

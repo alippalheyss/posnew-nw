@@ -10,8 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { ChevronDown, ChevronUp, Upload, Image as ImageIcon, Trash2, Settings, Landmark, Monitor, Layout, FileText, Printer, Building2, X, Edit, UserPlus, Shield, Database, Languages, Palette, Globe, CreditCard, Receipt, Percent, LogOut, Gift, Clock, Users, CheckCircle2, Copy, ExternalLink, RefreshCw, Loader2, Send } from 'lucide-react';
-import { testTelegramBot, setTelegramWebhook, getTelegramWebhookInfo, deleteTelegramWebhook, setBotCommands, BOT_COMMANDS, TelegramBotInfo, DEFAULT_TELEGRAM_BOT_TOKEN, DEFAULT_TELEGRAM_BOT_USERNAME, sendTelegramMessage } from '@/services/telegramService';
+import { ChevronDown, ChevronUp, Upload, Image as ImageIcon, Trash2, Settings, Landmark, Monitor, Layout, FileText, Printer, Building2, X, Edit, UserPlus, Shield, Database, Languages, Palette, Globe, CreditCard, Receipt, Percent, LogOut, Gift, Clock, Users, CheckCircle2, Copy, ExternalLink, RefreshCw, Loader2, Send, Moon, BellRing } from 'lucide-react';
+import { testTelegramBot, setTelegramWebhook, getTelegramWebhookInfo, deleteTelegramWebhook, setBotCommands, BOT_COMMANDS, TelegramBotInfo, DEFAULT_TELEGRAM_BOT_TOKEN, DEFAULT_TELEGRAM_BOT_USERNAME, sendTelegramMessage, sendNightlyExecutiveBriefing } from '@/services/telegramService';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
@@ -25,7 +25,7 @@ import { useNavigate } from 'react-router-dom';
 
 const Admin = () => {
   const { t, i18n } = useTranslation();
-  const { settings, updateSettings, clearAllData } = useAppContext();
+  const { settings, updateSettings, clearAllData, sales, customers } = useAppContext();
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -41,10 +41,16 @@ const Admin = () => {
     autoSendPaymentReceipts: true,
     autoSendSaleReceipts: false,
     webhookUrl: '',
+    ownerChatId: '',
+    autoExecutiveBriefing: true,
+    autoCreditReminderThreshold: true,
+    creditReminderThresholdPct: 90,
+    autoMonthlyCreditReminder: true,
   };
 
   const [botInfo, setBotInfo] = useState<TelegramBotInfo | null>(null);
   const [isTestingBot, setIsTestingBot] = useState(false);
+  const [isSendingTestBriefing, setIsSendingTestBriefing] = useState(false);
   const [webhookUrlInput, setWebhookUrlInput] = useState(telegramSettings.webhookUrl || 'https://zmbbgfpzgfcsoexybrle.supabase.co/functions/v1/telegram-webhook');
   const [isRegisteringWebhook, setIsRegisteringWebhook] = useState(false);
 
@@ -68,6 +74,34 @@ const Admin = () => {
       showError(err.message || 'Error testing bot');
     } finally {
       setIsTestingBot(false);
+    }
+  };
+
+  const handleTestBriefing = async () => {
+    const ownerChat = telegramSettings.ownerChatId || shopSettings.ownerTelegramChatId;
+    if (!ownerChat) {
+      showError('Please enter an Owner Telegram Chat ID first');
+      return;
+    }
+    setIsSendingTestBriefing(true);
+    try {
+      const allSettlements = (customers || []).flatMap(c => c.settlement_history || []);
+      const res = await sendNightlyExecutiveBriefing({
+        chatId: ownerChat,
+        sales: sales || [],
+        settlements: allSettlements,
+        shopSettings: settings.shop,
+        token: telegramSettings.botToken,
+      });
+      if (res?.ok) {
+        showSuccess('Test Executive Briefing sent to your Telegram! 📊');
+      } else {
+        showError(res?.description || 'Failed to send test briefing');
+      }
+    } catch (err: any) {
+      showError(err.message || 'Failed to send test briefing');
+    } finally {
+      setIsSendingTestBriefing(false);
     }
   };
 
@@ -938,6 +972,121 @@ const Admin = () => {
                             Automatically send an itemized receipt to linked customers on standard cash/card/split sales
                           </p>
                         </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Nightly Store Close Executive Briefing (Owner) */}
+                  <div className="bg-card border border-border p-6 rounded-3xl space-y-6">
+                    <div className="flex items-center justify-between pb-3 border-b border-border/60">
+                      <Button
+                        type="button"
+                        onClick={handleTestBriefing}
+                        disabled={isSendingTestBriefing || !telegramSettings.ownerChatId}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs font-bold gap-1.5 bg-[#229ED9]/10 text-[#229ED9] border-[#229ED9]/30 hover:bg-[#229ED9]/20"
+                      >
+                        {isSendingTestBriefing ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Moon className="h-3.5 w-3.5" />
+                        )}
+                        <span>Send Test Briefing</span>
+                      </Button>
+                      <div className="text-right">
+                        <h4 className="text-lg font-black text-foreground">
+                          Nightly "Store Close" Executive Briefing (Owner)
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          Clean daily summary sent to your private Telegram at midnight
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="space-y-2 text-right">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                          Owner Private Telegram Chat ID
+                        </Label>
+                        <Input
+                          value={telegramSettings.ownerChatId || ''}
+                          onChange={(e) => handleSettingsChange('telegram', 'ownerChatId', e.target.value.trim())}
+                          placeholder="e.g. 123456789 (Type /id or /briefing in private chat with bot to link)"
+                          className="h-12 bg-muted border-border rounded-xl font-mono text-left"
+                          dir="ltr"
+                        />
+                        <p className="text-[11px] text-muted-foreground">
+                          💡 Tip: Send <code>/setowner</code> or <code>/briefing</code> to your store bot in Telegram to link your account automatically.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 bg-muted/40 rounded-2xl border border-border">
+                        <Switch
+                          checked={telegramSettings.autoExecutiveBriefing !== false}
+                          onCheckedChange={(val) => handleSettingsChange('telegram', 'autoExecutiveBriefing', val)}
+                        />
+                        <div className="text-right">
+                          <p className="text-sm font-black text-foreground">Auto-Send Midnight Store Close Summary</p>
+                          <p className="text-xs text-muted-foreground">
+                            Sends daily total sales breakdown (Cash | Transfer | Credit), credit collections settled today, and top selling items
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Automated Customer Tab Overdue & 90% Threshold Reminders */}
+                  <div className="bg-card border border-border p-6 rounded-3xl space-y-6">
+                    <h4 className="text-lg font-black text-foreground pb-3 border-b border-border/60">
+                      Automated Customer Tab Overdue Reminders
+                    </h4>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-4 bg-muted/40 rounded-2xl border border-border">
+                        <Switch
+                          checked={telegramSettings.autoMonthlyCreditReminder !== false}
+                          onCheckedChange={(val) => handleSettingsChange('telegram', 'autoMonthlyCreditReminder', val)}
+                        />
+                        <div className="text-right">
+                          <p className="text-sm font-black text-foreground">1st of Every Month Tab Reminders</p>
+                          <p className="text-xs text-muted-foreground">
+                            Politely sends friendly private balance reminders with direct [ 📤 Send Transfer Slip ] button on the 1st of each month
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 bg-muted/40 rounded-2xl border border-border">
+                        <Switch
+                          checked={telegramSettings.autoCreditReminderThreshold !== false}
+                          onCheckedChange={(val) => handleSettingsChange('telegram', 'autoCreditReminderThreshold', val)}
+                        />
+                        <div className="text-right">
+                          <p className="text-sm font-black text-foreground">Credit Threshold Alert (When Tab Crosses Limit)</p>
+                          <p className="text-xs text-muted-foreground">
+                            Automatically notifies linked customers when their outstanding tab reaches or exceeds threshold percentage
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-muted/40 rounded-2xl border border-border space-y-2 text-right">
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-xs font-bold text-primary">
+                            {telegramSettings.creditReminderThresholdPct || 90}%
+                          </span>
+                          <Label className="text-xs font-black text-foreground">
+                            Credit Limit Threshold Percentage
+                          </Label>
+                        </div>
+                        <Input
+                          type="number"
+                          min="50"
+                          max="100"
+                          value={telegramSettings.creditReminderThresholdPct || 90}
+                          onChange={(e) => handleSettingsChange('telegram', 'creditReminderThresholdPct', Number(e.target.value))}
+                          className="h-10 bg-background border-border rounded-xl font-mono text-left w-32"
+                          dir="ltr"
+                        />
                       </div>
                     </div>
                   </div>

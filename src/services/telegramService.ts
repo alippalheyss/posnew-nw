@@ -1,5 +1,5 @@
 import { Customer, Sale } from '@/context/AppContext';
-import { formatDate, formatTime, formatMaldivesDate, formatMaldivesTime } from '@/utils/formatters';
+import { formatDate, formatTime, formatMaldivesDate, formatMaldivesTime, extractDateOnly, toISODate } from '@/utils/formatters';
 
 export const DEFAULT_TELEGRAM_BOT_TOKEN = '8815725998:AAHVMSujW5JM-ND4CJAzPr_Qsj_enXm2cYQ';
 export const DEFAULT_TELEGRAM_BOT_USERNAME = 'Bbacksh0p_bot';
@@ -245,13 +245,14 @@ export const checkAndLinkCustomerLive = async ({
 };
 
 /**
- * Send raw Telegram Message
+ * Send raw Telegram Message (supports Markdown/HTML and optional inline keyboards/replyMarkup)
  */
 export const sendTelegramMessage = async (
   chatId: string | number,
   text: string,
   token?: string,
-  parseMode: 'Markdown' | 'HTML' = 'Markdown'
+  parseMode: 'Markdown' | 'HTML' = 'Markdown',
+  replyMarkup?: any
 ): Promise<{ ok: boolean; message_id?: number; description?: string }> => {
   const activeToken = (token || DEFAULT_TELEGRAM_BOT_TOKEN).trim();
   if (!activeToken) {
@@ -262,21 +263,56 @@ export const sendTelegramMessage = async (
   }
 
   try {
+    const payload: any = {
+      chat_id: chatId,
+      text: text,
+      parse_mode: parseMode,
+      disable_web_page_preview: true,
+    };
+
+    if (replyMarkup) {
+      payload.reply_markup = replyMarkup;
+    }
+
     const res = await fetch(`https://api.telegram.org/bot${activeToken}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: text,
-        parse_mode: parseMode,
-        disable_web_page_preview: true,
-      }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
     return data;
   } catch (err: any) {
     console.error('sendTelegramMessage error:', err);
     return { ok: false, description: err.message || 'Network error' };
+  }
+};
+
+/**
+ * Answer Telegram Callback Query (for inline buttons)
+ */
+export const answerCallbackQuery = async (
+  callbackQueryId: string,
+  text?: string,
+  showAlert: boolean = false,
+  token?: string
+): Promise<{ ok: boolean }> => {
+  const activeToken = (token || DEFAULT_TELEGRAM_BOT_TOKEN).trim();
+  if (!activeToken || !callbackQueryId) return { ok: false };
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${activeToken}/answerCallbackQuery`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        callback_query_id: callbackQueryId,
+        text: text,
+        show_alert: showAlert,
+      }),
+    });
+    return await res.json();
+  } catch (err) {
+    console.warn('answerCallbackQuery error:', err);
+    return { ok: false };
   }
 };
 
@@ -288,6 +324,8 @@ export const handleTelegramBotCommand = async ({
   chatId,
   senderName,
   customers,
+  sales,
+  settlements,
   onCustomerLinked,
   shopSettings,
   token,
@@ -296,6 +334,8 @@ export const handleTelegramBotCommand = async ({
   chatId: number;
   senderName?: string;
   customers: Customer[];
+  sales?: Sale[];
+  settlements?: any[];
   onCustomerLinked?: (customerId: string, chatId: number) => Promise<void> | void;
   shopSettings?: any;
   token?: string;
@@ -515,6 +555,26 @@ _For assistance, visit our shop or contact the cashier._`;
     await sendTelegramMessage(chatId, msg, token);
     return;
   }
+
+  // 5. /briefing or /close or /today or /summary (Executive Store Close Briefing)
+  if (cmd === '/briefing' || cmd === '/close' || cmd === '/today' || cmd === '/summary') {
+    if (sales && sales.length >= 0) {
+      const briefing = formatExecutiveBriefingMessage({
+        sales,
+        settlements,
+        shopSettings,
+        date: new Date(),
+      });
+      await sendTelegramMessage(chatId, briefing, token);
+    } else {
+      await sendTelegramMessage(
+        chatId,
+        `📊 *Store Close Briefing*\nPlease trigger from POS or check connected sales records.`,
+        token
+      );
+    }
+    return;
+  }
 };
 
 /**
@@ -522,12 +582,16 @@ _For assistance, visit our shop or contact the cashier._`;
  */
 export const processPendingTelegramUpdates = async ({
   customers,
+  sales,
+  settlements,
   onCustomerLinked,
   onTransferSlipReceived,
   shopSettings,
   token,
 }: {
   customers: Customer[];
+  sales?: Sale[];
+  settlements?: any[];
   onCustomerLinked?: (customerId: string, chatId: number) => Promise<void> | void;
   onTransferSlipReceived?: (slipData: any) => Promise<void> | void;
   shopSettings?: any;
@@ -541,6 +605,32 @@ export const processPendingTelegramUpdates = async ({
   let maxUpdateId = 0;
   for (const update of result.updates) {
     if (update.update_id > maxUpdateId) maxUpdateId = update.update_id;
+
+    // Handle Telegram inline keyboard callback query (e.g. [ 📤 Send Transfer Slip ])
+    if (update.callback_query) {
+      const cb = update.callback_query;
+      const cbChatId = cb.message?.chat?.id || cb.from?.id;
+      const data = cb.data;
+      if (data === 'cmd_transfer' || data === 'send_slip') {
+        await answerCallbackQuery(cb.id, 'Please attach your transfer slip photo in this chat! 📎', false, token);
+        const shopName = shopSettings?.shopName || 'B BACK';
+        const bankName = shopSettings?.bankName || 'Bank of Maldives (BML)';
+        const accountNum = shopSettings?.accountNumber || '7730000442060';
+        const promptMsg = 
+`📸 *Upload Your Bank Transfer Slip*
+━━━━━━━━━━━━━━━━━━━━
+🏪 *${shopName}*
+🏦 *Bank:* ${bankName}
+💳 *Account:* \`${accountNum}\`
+
+Please attach and send your transfer receipt/screenshot photo directly in this chat! 📎
+
+Our cashier will immediately verify the transaction and update your account balance. 🙏`;
+        await sendTelegramMessage(cbChatId, promptMsg, token);
+      }
+      continue;
+    }
+
     const msg = update.message;
     if (!msg || !msg.chat?.id) continue;
     const chatId = msg.chat.id;
@@ -658,6 +748,8 @@ _Thank you!_ 🙏`;
           chatId,
           senderName: msg.from?.first_name,
           customers,
+          sales,
+          settlements,
           onCustomerLinked,
           shopSettings,
           token,
@@ -1059,3 +1151,302 @@ export const sendTelegramTestMessage = async (
   const text = `🔔 *Test Message from B BACK*\n\nHello *${customerName}*! Your Telegram connection is working perfectly. You will receive real-time receipts and balance statements here.`;
   return await sendTelegramMessage(chatId, text, token);
 };
+
+// ==========================================
+// 1. NIGHTLY "STORE CLOSE" EXECUTIVE BRIEFING
+// ==========================================
+
+export interface ExecutiveBriefingData {
+  dateStr: string;
+  timeStr: string;
+  totalSales: number;
+  cashSales: number;
+  transferSales: number;
+  creditSales: number;
+  otherSales: number;
+  totalTransactions: number;
+  averageTransaction: number;
+  creditCollections: number;
+  settlementCount: number;
+  topItems: { name: string; qty: number; unit?: string; totalAmount: number }[];
+}
+
+/**
+ * Calculate comprehensive daily sales & collections metrics for the Executive Briefing
+ */
+export const calculateExecutiveBriefingData = ({
+  sales,
+  settlements = [],
+  targetDate,
+}: {
+  sales: Sale[];
+  settlements?: any[];
+  targetDate?: Date | string;
+}): ExecutiveBriefingData => {
+  const now = targetDate ? new Date(targetDate) : new Date();
+  const targetDateStr = extractDateOnly(now.toISOString());
+  const dateStr = formatMaldivesDate(now);
+  const timeStr = formatMaldivesTime(now, true);
+
+  // 1. Filter sales for target date
+  const salesToday = (sales || []).filter(s => {
+    if (!s.date) return false;
+    return extractDateOnly(s.date) === targetDateStr;
+  });
+
+  let totalSales = 0;
+  let cashSales = 0;
+  let transferSales = 0;
+  let creditSales = 0;
+  let otherSales = 0;
+  const itemMap = new Map<string, { name: string; qty: number; unit?: string; totalAmount: number }>();
+
+  salesToday.forEach(s => {
+    const grandTotal = Number(s.grandTotal || 0);
+    totalSales += grandTotal;
+    const method = String(s.paymentMethod || 'cash').toLowerCase();
+
+    if (method === 'cash') {
+      cashSales += grandTotal;
+    } else if (method === 'credit') {
+      creditSales += grandTotal;
+    } else if (method === 'transfer' || method === 'card' || method === 'bml') {
+      transferSales += grandTotal;
+    } else if (method === 'split' && Array.isArray(s.splitDetails) && s.splitDetails.length > 0) {
+      s.splitDetails.forEach((d: any) => {
+        const dMethod = String(d.method || '').toLowerCase();
+        const dAmount = Number(d.amount || 0);
+        if (dMethod === 'cash') cashSales += dAmount;
+        else if (dMethod === 'credit') creditSales += dAmount;
+        else if (dMethod === 'transfer' || dMethod === 'card' || dMethod === 'bml') transferSales += dAmount;
+        else otherSales += dAmount;
+      });
+    } else {
+      otherSales += grandTotal;
+    }
+
+    // Accumulate items
+    if (Array.isArray(s.items)) {
+      s.items.forEach(item => {
+        const name = (item.name_en || item.name_dv || 'Item').trim();
+        const qty = Number(item.qty || 0);
+        const price = Number(item.price || 0);
+        const unit = item.selected_unit || '';
+        const existing = itemMap.get(name);
+        if (existing) {
+          existing.qty += qty;
+          existing.totalAmount += qty * price;
+        } else {
+          itemMap.set(name, { name, qty, unit, totalAmount: qty * price });
+        }
+      });
+    }
+  });
+
+  // Sort top selling items by quantity
+  const topItems = Array.from(itemMap.values())
+    .sort((a, b) => b.qty - a.qty)
+    .slice(0, 5);
+
+  // 2. Filter settlements for target date
+  const settlementsToday = (settlements || []).filter(st => {
+    if (!st.date) return false;
+    return extractDateOnly(st.date) === targetDateStr;
+  });
+
+  const creditCollections = settlementsToday.reduce((sum, st) => sum + Number(st.amount_paid || 0), 0);
+
+  const totalTransactions = salesToday.length;
+  const averageTransaction = totalTransactions > 0 ? totalSales / totalTransactions : 0;
+
+  return {
+    dateStr,
+    timeStr,
+    totalSales,
+    cashSales,
+    transferSales,
+    creditSales,
+    otherSales,
+    totalTransactions,
+    averageTransaction,
+    creditCollections,
+    settlementCount: settlementsToday.length,
+    topItems,
+  };
+};
+
+/**
+ * Format Executive Briefing Telegram message for the Owner
+ */
+export const formatExecutiveBriefingMessage = ({
+  sales,
+  settlements = [],
+  shopSettings,
+  date,
+}: {
+  sales: Sale[];
+  settlements?: any[];
+  shopSettings?: any;
+  date?: Date | string;
+}): string => {
+  const data = calculateExecutiveBriefingData({ sales, settlements, targetDate: date });
+  const shopName = shopSettings?.shopName || 'B BACK';
+  const currency = shopSettings?.currency || 'MVR';
+
+  const formatMvr = (val: number) => `${currency} ${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  let msg = `📊 *STORE CLOSE EXECUTIVE BRIEFING*\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `🏪 *Shop:* ${shopName}\n`;
+  msg += `📅 *Date:* ${data.dateStr} | ${data.timeStr}\n\n`;
+
+  msg += `💰 *Total Sales:* *${formatMvr(data.totalSales)}*\n`;
+  msg += `(💵 Cash: ${formatMvr(data.cashSales)} | 💳 BML/Transfer: ${formatMvr(data.transferSales)} | 📝 Credit: ${formatMvr(data.creditSales)})\n\n`;
+
+  msg += `🧾 *Credit Collections:* *${formatMvr(data.creditCollections)}* settled today\n\n`;
+
+  msg += `🏆 *Top Selling Items:*\n`;
+  if (data.topItems.length === 0) {
+    msg += `_No items recorded today_\n`;
+  } else {
+    data.topItems.forEach((it, idx) => {
+      const unitLabel = it.unit && it.unit !== 'Piece' ? ` ${it.unit}` : ' pcs';
+      msg += `${idx + 1}. *${it.name}* (${it.qty}${unitLabel})\n`;
+    });
+  }
+
+  msg += `\n📈 *Store Performance:*\n`;
+  msg += `• Receipts Issued: *${data.totalTransactions} transactions*\n`;
+  msg += `• Average Ticket: *${formatMvr(data.averageTransaction)}*\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `🌙 _Have a restful night! Store close automated report._`;
+
+  return msg;
+};
+
+/**
+ * Send the Nightly Executive Briefing directly to the owner's Telegram
+ */
+export const sendNightlyExecutiveBriefing = async ({
+  chatId,
+  sales,
+  settlements = [],
+  shopSettings,
+  date,
+  token,
+}: {
+  chatId: string | number;
+  sales: Sale[];
+  settlements?: any[];
+  shopSettings?: any;
+  date?: Date | string;
+  token?: string;
+}) => {
+  const message = formatExecutiveBriefingMessage({ sales, settlements, shopSettings, date });
+  return await sendTelegramMessage(chatId, message, token);
+};
+
+// ==========================================
+// 2. AUTOMATED TAB OVERDUE REMINDERS
+// ==========================================
+
+/**
+ * Format polite, respectful automated credit reminder message
+ */
+export const formatPoliteCreditReminderMessage = ({
+  customer,
+  shopSettings,
+  balance,
+  isThreshold = false,
+  thresholdPct,
+  creditLimit,
+}: {
+  customer: Customer;
+  shopSettings?: any;
+  balance: number;
+  isThreshold?: boolean;
+  thresholdPct?: number;
+  creditLimit?: number;
+}): string => {
+  const shopName = shopSettings?.shopName || 'B BACK';
+  const currency = shopSettings?.currency || 'MVR';
+  const customerName = customer.name_en || customer.name_dv || 'Valued Customer';
+  const bankName = shopSettings?.bankName || 'Bank of Maldives (BML)';
+  const accountName = shopSettings?.accountName || shopName;
+  const accountNumber = shopSettings?.accountNumber || '7730000442060';
+  const balanceStr = Number(balance).toFixed(2);
+  const limit = creditLimit !== undefined ? creditLimit : Number(customer.credit_limit || 0);
+  const limitStr = limit.toFixed(2);
+  const actualPct = thresholdPct || (limit > 0 ? Math.round((balance / limit) * 100) : 90);
+
+  let msg = `🌙 *As-salamu alaykum ${customerName},*\n\n`;
+  msg += `🏪 *${shopName}* — _(Automated Reminder)_\n\n`;
+  msg += `We hope this message finds you in good health.\n\n`;
+
+  if (isThreshold) {
+    msg += `This is a friendly automated notification that your store credit tab has reached *${actualPct}%* of your account limit.\n\n`;
+  } else {
+    msg += `This is a gentle automated reminder regarding your store credit tab for this month.\n\n`;
+  }
+
+  msg += `💰 *Outstanding Balance:* *${currency} ${balanceStr}*\n`;
+  if (isThreshold && limit > 0) {
+    msg += `💳 *Credit Limit:* ${currency} ${limitStr}\n`;
+  }
+  msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `To settle your tab comfortably, you may transfer to our bank account:\n`;
+  msg += `🏦 *Bank:* ${bankName}\n`;
+  msg += `👤 *Account Name:* ${accountName}\n`;
+  msg += `💳 *Account Number:* \`${accountNumber}\`\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `Once transferred, please tap the button below to submit your payment slip directly in this chat, and our cashier will verify and settle your account immediately.\n\n`;
+  msg += `_JazakAllahu Khayran for your continued trust and custom!_ 🙏`;
+
+  return msg;
+};
+
+/**
+ * Send automated credit reminder with interactive [ 📤 Send Transfer Slip ] inline keyboard button
+ */
+export const sendAutomatedCreditReminder = async ({
+  chatId,
+  customer,
+  shopSettings,
+  balance,
+  isThreshold = false,
+  thresholdPct,
+  creditLimit,
+  token,
+}: {
+  chatId: string | number;
+  customer: Customer;
+  shopSettings?: any;
+  balance: number;
+  isThreshold?: boolean;
+  thresholdPct?: number;
+  creditLimit?: number;
+  token?: string;
+}) => {
+  const text = formatPoliteCreditReminderMessage({
+    customer,
+    shopSettings,
+    balance,
+    isThreshold,
+    thresholdPct,
+    creditLimit,
+  });
+
+  const replyMarkup = {
+    inline_keyboard: [
+      [
+        {
+          text: '📤 Send Transfer Slip',
+          callback_data: 'cmd_transfer',
+        },
+      ],
+    ],
+  };
+
+  return await sendTelegramMessage(chatId, text, token, 'Markdown', replyMarkup);
+};
+

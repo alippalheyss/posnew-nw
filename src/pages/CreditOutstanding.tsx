@@ -25,8 +25,14 @@ import { formatDate, formatTime, formatCurrency, toISODate } from '@/utils/forma
 import { formatCreditStatementViberMessage, shareViaViber } from '@/utils/viberHelper';
 import { TelegramConnectDialog } from '@/components/TelegramConnectDialog';
 import { TransferSlipsDialog } from '@/components/TransferSlipsDialog';
-import { sendTelegramPaymentReceipt, sendTelegramOutstandingStatement } from '@/services/telegramService';
-import { QrCode, Send, Loader2, CreditCard } from 'lucide-react';
+import { 
+  sendTelegramPaymentReceipt, 
+  sendTelegramOutstandingStatement,
+  sendAutomatedCreditReminder,
+  formatPoliteCreditReminderMessage,
+} from '@/services/telegramService';
+import { Checkbox } from '@/components/ui/checkbox';
+import { QrCode, Send, Loader2, CreditCard, BellRing, MessageSquareQuote } from 'lucide-react';
 
 interface Settlement {
   id: string;
@@ -60,6 +66,11 @@ const CreditOutstanding = () => {
   const [telegramCustomer, setTelegramCustomer] = useState<Customer | null>(null);
   const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false);
   const [isSendingTelegram, setIsSendingTelegram] = useState<string | null>(null);
+  const [isSendingReminder, setIsSendingReminder] = useState<string | null>(null);
+  const [isBatchRemindersDialogOpen, setIsBatchRemindersDialogOpen] = useState(false);
+  const [selectedCustomerIdsForReminder, setSelectedCustomerIdsForReminder] = useState<string[]>([]);
+  const [isSendingBatch, setIsSendingBatch] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<{ sent: number; total: number }>({ sent: 0, total: 0 });
 
   const toggleTotalReveal = (customerId: string) => {
     setRevealedTotals(prev => {
@@ -464,6 +475,92 @@ const CreditOutstanding = () => {
     });
   };
 
+  const handleSendPoliteReminder = async (customer: Customer) => {
+    if (!customer.telegram_chat_id) {
+      handleOpenTelegramConnect(customer);
+      return;
+    }
+
+    let balance = Number(customer.outstanding_balance || 0);
+    const limit = Number(customer.credit_limit || 0);
+    const isThreshold = limit > 0 && balance >= limit * 0.9;
+    const thresholdPct = limit > 0 ? Math.round((balance / limit) * 100) : undefined;
+
+    try {
+      setIsSendingReminder(customer.id);
+      const res = await sendAutomatedCreditReminder({
+        chatId: customer.telegram_chat_id,
+        customer,
+        shopSettings: settings.shop,
+        balance,
+        isThreshold,
+        thresholdPct,
+        creditLimit: limit,
+        token: settings.telegram?.botToken,
+      });
+
+      if (res?.ok) {
+        showSuccess(`Polite reminder sent to ${customer.name_en || customer.name_dv}! 📤`);
+      } else {
+        showError(res?.description || 'Failed to send reminder via Telegram');
+      }
+    } catch (err: any) {
+      showError(err.message || 'Failed to send reminder');
+    } finally {
+      setIsSendingReminder(null);
+    }
+  };
+
+  const linkedCustomersWithDue = customers.filter(
+    c => Boolean(c.telegram_chat_id) && Number(c.outstanding_balance || 0) > 0
+  );
+
+  const handleOpenBatchRemindersDialog = () => {
+    setSelectedCustomerIdsForReminder(linkedCustomersWithDue.map(c => c.id));
+    setIsBatchRemindersDialogOpen(true);
+  };
+
+  const handleSendBatchReminders = async () => {
+    const targets = linkedCustomersWithDue.filter(c => selectedCustomerIdsForReminder.includes(c.id));
+    if (targets.length === 0) {
+      showError('Please select at least one customer');
+      return;
+    }
+
+    setIsSendingBatch(true);
+    setBatchProgress({ sent: 0, total: targets.length });
+
+    let successCount = 0;
+    for (let i = 0; i < targets.length; i++) {
+      const cust = targets[i];
+      try {
+        const balance = Number(cust.outstanding_balance || 0);
+        const limit = Number(cust.credit_limit || 0);
+        const isThreshold = limit > 0 && balance >= limit * 0.9;
+        const thresholdPct = limit > 0 ? Math.round((balance / limit) * 100) : undefined;
+
+        const res = await sendAutomatedCreditReminder({
+          chatId: cust.telegram_chat_id!,
+          customer: cust,
+          shopSettings: settings.shop,
+          balance,
+          isThreshold,
+          thresholdPct,
+          creditLimit: limit,
+          token: settings.telegram?.botToken,
+        });
+        if (res?.ok) successCount++;
+      } catch (e) {
+        console.warn('Batch reminder error for customer:', cust.name_en, e);
+      }
+      setBatchProgress({ sent: i + 1, total: targets.length });
+    }
+
+    setIsSendingBatch(false);
+    setIsBatchRemindersDialogOpen(false);
+    showSuccess(`Sent automated reminders to ${successCount} customers! 🎉`);
+  };
+
   const renderBoth = (key: string, options?: any) => (
     <>
       {t(key, options)} ({t(key, { ...options, lng: 'en' })})
@@ -599,6 +696,18 @@ const CreditOutstanding = () => {
              className="w-full bg-muted border-border rounded-xl pr-12 h-14 text-right font-bold focus:border-primary/50 transition-all text-lg"
            />
         </div>
+        <Button
+          onClick={handleOpenBatchRemindersDialog}
+          className="h-14 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs gap-2 shadow-lg hover:shadow-emerald-500/20 transition-all flex items-center"
+        >
+          <BellRing className="h-4 w-4" />
+          <span>AUTOMATED REMINDERS</span>
+          {linkedCustomersWithDue.length > 0 && (
+            <Badge className="bg-white/20 text-white border-none text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">
+              {linkedCustomersWithDue.length}
+            </Badge>
+          )}
+        </Button>
         <Button onClick={exportAllOutstanding} variant="outline" className="h-14 px-6 rounded-xl border-border hover:bg-muted gap-2">
            <Download className="h-4 w-4" /> EXPORT REPORT
         </Button>
@@ -615,7 +724,15 @@ const CreditOutstanding = () => {
                         <div className="w-12 h-12 rounded-2xl bg-muted border border-border flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all">
                            <User className="h-6 w-6" />
                         </div>
-                        <Badge className="bg-primary/20 text-primary border-none text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">{customer.code}</Badge>
+                        <div className="flex items-center gap-1.5">
+                          {customer.credit_limit > 0 && (customer.outstanding_balance >= customer.credit_limit * 0.9) && (
+                            <Badge className="bg-red-500/15 text-red-500 border border-red-500/30 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+                              <AlertCircle className="h-2.5 w-2.5" />
+                              {Math.round((customer.outstanding_balance / customer.credit_limit) * 100)}% LIMIT
+                            </Badge>
+                          )}
+                          <Badge className="bg-primary/20 text-primary border-none text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">{customer.code}</Badge>
+                        </div>
                      </div>
 
                      <div className="text-right mb-6">
@@ -671,6 +788,25 @@ const CreditOutstanding = () => {
                      </div>
 
                       <div className="space-y-1.5 mt-2">
+                        {/* Polite Automated Reminder Button with Slip submission */}
+                        <Button
+                           type="button"
+                           onClick={() => handleSendPoliteReminder(customer)}
+                           disabled={isSendingReminder === customer.id}
+                           className="w-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-black h-9 rounded-xl transition-all gap-2 flex items-center justify-center active:scale-95"
+                        >
+                           {isSendingReminder === customer.id ? (
+                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                           ) : (
+                             <Send className="h-3.5 w-3.5" />
+                           )}
+                           <span>
+                             {customer.telegram_chat_id 
+                               ? 'Send Overdue Reminder (އޮޓޮމެޓިކް މެސެޖް)' 
+                               : 'Link Telegram to Auto-Remind'}
+                           </span>
+                        </Button>
+
                         <Button
                            type="button"
                            onClick={() => handleSendCustomerTelegram(customer)}
@@ -980,11 +1116,181 @@ const CreditOutstanding = () => {
         }}
       />
 
-      {/* Bank Transfer Slips Review Dialog */}
-      <TransferSlipsDialog
-        open={isTransferSlipsDialogOpen}
-        onOpenChange={setIsTransferSlipsDialogOpen}
-      />
+      {/* Batch Automated Overdue Reminders Dialog */}
+      <Dialog open={isBatchRemindersDialogOpen} onOpenChange={setIsBatchRemindersDialogOpen}>
+        <DialogContent className="sm:max-w-[620px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto max-h-[90vh] flex flex-col" dir="rtl">
+          <DialogHeader className="text-right pb-4 border-b border-border/60">
+            <div className="flex items-center justify-between pl-8">
+              <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-xs font-mono font-bold">
+                {linkedCustomersWithDue.length} Connected
+              </Badge>
+              <div className="text-right">
+                <DialogTitle className="text-xl font-black text-foreground flex items-center justify-end gap-2">
+                  <span>Automated Tab Overdue Reminders</span>
+                  <BellRing className="h-5 w-5 text-emerald-500" />
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                  Send polite, automated Telegram reminders with instant [ 📤 Send Transfer Slip ] buttons.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto py-4 space-y-5 text-right custom-scrollbar">
+            {/* Summary Banner */}
+            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
+              <div className="text-left">
+                <p className="text-[10px] uppercase font-black tracking-wider text-muted-foreground">Selected Total Due</p>
+                <p className="text-xl font-black text-emerald-500">
+                  {settings.shop.currency} {linkedCustomersWithDue
+                    .filter(c => selectedCustomerIdsForReminder.includes(c.id))
+                    .reduce((sum, c) => sum + (c.outstanding_balance || 0), 0)
+                    .toFixed(2)}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-black text-foreground">
+                  {selectedCustomerIdsForReminder.length} of {linkedCustomersWithDue.length} Customers Selected
+                </p>
+                <div className="flex gap-2 mt-1 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCustomerIdsForReminder(linkedCustomersWithDue.map(c => c.id))}
+                    className="text-[11px] font-bold text-emerald-500 hover:underline"
+                  >
+                    Select All
+                  </button>
+                  <span className="text-muted-foreground/40">•</span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCustomerIdsForReminder([])}
+                    className="text-[11px] font-bold text-muted-foreground hover:underline"
+                  >
+                    Deselect All
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Customer Selection List */}
+            <div className="space-y-2">
+              <Label className="text-xs font-black text-muted-foreground uppercase tracking-wider block text-right">
+                Select Recipients:
+              </Label>
+              <div className="max-h-[220px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                {linkedCustomersWithDue.length === 0 ? (
+                  <div className="p-6 text-center text-muted-foreground text-xs font-bold bg-muted/40 rounded-2xl border border-dashed border-border">
+                    No customers with outstanding balances are currently linked to Telegram.
+                  </div>
+                ) : (
+                  linkedCustomersWithDue.map(c => {
+                    const isSelected = selectedCustomerIdsForReminder.includes(c.id);
+                    const isThreshold = c.credit_limit > 0 && c.outstanding_balance >= c.credit_limit * 0.9;
+                    const pct = c.credit_limit > 0 ? Math.round((c.outstanding_balance / c.credit_limit) * 100) : 0;
+                    return (
+                      <div
+                        key={c.id}
+                        onClick={() => {
+                          setSelectedCustomerIdsForReminder(prev =>
+                            prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id]
+                          );
+                        }}
+                        className={cn(
+                          "p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3",
+                          isSelected ? "bg-emerald-500/10 border-emerald-500/30" : "bg-muted/40 border-border hover:bg-muted/70"
+                        )}
+                      >
+                        <div className="text-left">
+                          <p className="text-sm font-black text-foreground">
+                            {settings.shop.currency} {Number(c.outstanding_balance || 0).toFixed(2)}
+                          </p>
+                          {isThreshold && (
+                            <Badge className="bg-red-500/15 text-red-500 border-none text-[8px] font-black px-1.5 py-0">
+                              {pct}% LIMIT
+                            </Badge>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-3 text-right">
+                          <div>
+                            <p className="text-sm font-black text-foreground">{c.name_en || c.name_dv}</p>
+                            <p className="text-[10px] font-mono text-muted-foreground">{c.code}</p>
+                          </div>
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => {}}
+                            className="h-4 w-4"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Message Preview */}
+            <div className="p-4 rounded-2xl bg-muted/50 border border-border text-right space-y-2">
+              <div className="flex items-center justify-between text-xs font-black text-muted-foreground pb-2 border-b border-border/50">
+                <span className="text-[10px] font-mono text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                  Interactive Telegram Template
+                </span>
+                <span className="flex items-center gap-1">
+                  <MessageSquareQuote className="h-3.5 w-3.5" />
+                  Message Draft Preview
+                </span>
+              </div>
+              <div className="text-xs font-mono leading-relaxed text-foreground/80 whitespace-pre-line text-left bg-background/50 p-3 rounded-xl border border-border" dir="ltr">
+                {`🌙 As-salamu alaykum [Customer Name],
+
+🏪 ${settings.shop.shopName || 'B BACK'} — (Automated Reminder)
+
+This is a gentle automated reminder regarding your store credit tab:
+💰 Outstanding Balance: MVR [Amount]
+
+To settle your tab comfortably, you may transfer to our bank account:
+🏦 Bank: ${settings.shop.bankName || 'Bank of Maldives (BML)'}
+👤 Account Name: ${settings.shop.accountName || settings.shop.shopName || 'B BACK'}
+💳 Account Number: ${settings.shop.accountNumber || '7730000442060'}
+
+Once transferred, tap the button below to submit your payment slip directly in this chat!
+
+[ 📤 Send Transfer Slip ]`}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="pt-4 border-t border-border flex gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsBatchRemindersDialogOpen(false)}
+              disabled={isSendingBatch}
+              className="flex-1 h-12 rounded-xl font-bold"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSendBatchReminders}
+              disabled={isSendingBatch || selectedCustomerIdsForReminder.length === 0}
+              className="flex-[2] h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs gap-2 shadow-lg shadow-emerald-500/20"
+            >
+              {isSendingBatch ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Sending ({batchProgress.sent} / {batchProgress.total})...</span>
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4" />
+                  <span>Send Reminders ({selectedCustomerIdsForReminder.length})</span>
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

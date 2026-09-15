@@ -213,8 +213,161 @@ ${cleanNote ? `📝 Customer Note: ${cleanNote}\n` : "" }━━━━━━━�
     }
   } catch (err) {
     console.error("forwardSlipToGroup network error:", err);
+async function answerCallbackQuery(callbackQueryId: string, text?: string) {
+  try {
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        callback_query_id: callbackQueryId,
+        text: text,
+      }),
+    });
+  } catch (err) {
+    console.warn("Failed to answer callback query:", err);
   }
-};
+}
+
+async function getOwnerChatId(): Promise<string | number | null> {
+  try {
+    const { data: shopRow } = await supabase.from("settings").select("settings").eq("category", "shop").maybeSingle();
+    if (shopRow?.settings?.ownerTelegramChatId) return shopRow.settings.ownerTelegramChatId;
+    if (shopRow?.settings?.ownerChatId) return shopRow.settings.ownerChatId;
+  } catch {}
+
+  const envOwner = Deno.env.get("TELEGRAM_OWNER_CHAT_ID");
+  if (envOwner) return envOwner;
+
+  const groupConfig = await getTelegramGroupConfig();
+  return groupConfig.chatId;
+}
+
+async function generateExecutiveBriefingMessage(targetDateIso?: string): Promise<string> {
+  const now = targetDateIso ? new Date(targetDateIso) : new Date();
+  const dateStr = now.toLocaleDateString("en-GB", { timeZone: "Indian/Maldives" }).replace(/\//g, "-");
+  const timeStr = now.toLocaleTimeString("en-US", { timeZone: "Indian/Maldives", hour: "2-digit", minute: "2-digit", hour12: true });
+
+  let shopName = "B BACK";
+  try {
+    const { data: shopRow } = await supabase.from("settings").select("settings").eq("category", "shop").maybeSingle();
+    if (shopRow?.settings?.shopName) {
+      shopName = shopRow.settings.shopName;
+    }
+  } catch {}
+
+  // Current date formatted as YYYY-MM-DD in Indian/Maldives timezone
+  const yyyy = now.toLocaleDateString("en-CA", { timeZone: "Indian/Maldives" });
+
+  const { data: salesData } = await supabase
+    .from("sales")
+    .select("*")
+    .gte("date", `${yyyy}T00:00:00`)
+    .lte("date", `${yyyy}T23:59:59.999Z`);
+
+  let totalSales = 0;
+  let cashSales = 0;
+  let transferSales = 0;
+  let creditSales = 0;
+  const itemMap = new Map<string, { name: string; qty: number; unit?: string }>();
+
+  if (salesData) {
+    salesData.forEach((s: any) => {
+      const grandTotal = Number(s.grand_total || 0);
+      totalSales += grandTotal;
+      const method = String(s.payment_method || "cash").toLowerCase();
+
+      if (method === "cash") {
+        cashSales += grandTotal;
+      } else if (method === "credit") {
+        creditSales += grandTotal;
+      } else if (method === "transfer" || method === "card" || method === "bml") {
+        transferSales += grandTotal;
+      } else if (method === "split" && s.split_details) {
+        let details = s.split_details;
+        if (typeof details === "string") {
+          try { details = JSON.parse(details); } catch {}
+        }
+        if (Array.isArray(details)) {
+          details.forEach((d: any) => {
+            const dMethod = String(d.method || "").toLowerCase();
+            const dAmount = Number(d.amount || 0);
+            if (dMethod === "cash") cashSales += dAmount;
+            else if (dMethod === "credit") creditSales += dAmount;
+            else if (dMethod === "transfer" || dMethod === "card" || dMethod === "bml") transferSales += dAmount;
+          });
+        }
+      }
+
+      let items = s.items;
+      if (typeof items === "string") {
+        try { items = JSON.parse(items); } catch {}
+      }
+      if (Array.isArray(items)) {
+        items.forEach((item: any) => {
+          const name = (item.name_en || item.name_dv || "Item").trim();
+          const qty = Number(item.qty || 0);
+          const unit = item.selected_unit || "";
+          const existing = itemMap.get(name);
+          if (existing) {
+            existing.qty += qty;
+          } else {
+            itemMap.set(name, { name, qty, unit });
+          }
+        });
+      }
+    });
+  }
+
+  const topItems = Array.from(itemMap.values())
+    .sort((a, b) => b.qty - a.qty)
+    .slice(0, 5);
+
+  let creditCollections = 0;
+  try {
+    const { data: settlementsData } = await supabase
+      .from("settlements")
+      .select("amount_paid, date, created_at")
+      .or(`date.gte.${yyyy}T00:00:00,created_at.gte.${yyyy}T00:00:00`);
+
+    if (settlementsData) {
+      creditCollections = settlementsData.reduce((sum: number, st: any) => sum + Number(st.amount_paid || 0), 0);
+    }
+  } catch (e) {
+    console.warn("Error querying settlements:", e);
+  }
+
+  const totalTx = salesData ? salesData.length : 0;
+  const avgTx = totalTx > 0 ? totalSales / totalTx : 0;
+  const formatMvr = (n: number) => `MVR ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  let msg = `📊 *STORE CLOSE EXECUTIVE BRIEFING*\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `🏪 *Shop:* ${shopName}\n`;
+  msg += `📅 *Date:* ${dateStr} | ${timeStr}\n\n`;
+
+  msg += `💰 *Total Sales:* *${formatMvr(totalSales)}*\n`;
+  msg += `(💵 Cash: ${formatMvr(cashSales)} | 💳 BML/Transfer: ${formatMvr(transferSales)} | 📝 Credit: ${formatMvr(creditSales)})\n\n`;
+
+  msg += `🧾 *Credit Collections:* *${formatMvr(creditCollections)}* settled today\n\n`;
+
+  msg += `🏆 *Top Selling Items:*\n`;
+  if (topItems.length === 0) {
+    msg += `_No items recorded today_\n`;
+  } else {
+    topItems.forEach((it, idx) => {
+      const unitLabel = it.unit && it.unit !== "Piece" ? ` ${it.unit}` : " pcs";
+      msg += `${idx + 1}. *${it.name}* (${it.qty}${unitLabel})\n`;
+    });
+  }
+
+  msg += `\n📈 *Store Performance:*\n`;
+  msg += `• Receipts Issued: *${totalTx} transactions*\n`;
+  msg += `• Average Ticket: *${formatMvr(avgTx)}*\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `🌙 _Have a restful night! Store close automated report._`;
+
+  return msg;
+}
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -222,7 +375,52 @@ serve(async (req: Request) => {
   }
 
   try {
-    const update = await req.json();
+    const bodyText = await req.text();
+    let update: any = {};
+    try {
+      update = JSON.parse(bodyText);
+    } catch {}
+
+    // Direct API Invocation (Cron or POS trigger: action = "nightly_briefing")
+    if (update?.action === "nightly_briefing" || update?.action === "send_briefing") {
+      const ownerChatId = update.chat_id || update.chatId || (await getOwnerChatId());
+      if (ownerChatId) {
+        const briefingMsg = await generateExecutiveBriefingMessage(update.date);
+        await sendTelegramMessage(ownerChatId, briefingMsg);
+        return new Response(JSON.stringify({ ok: true, sent_to: ownerChatId }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ ok: false, error: "No owner chat ID configured" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
+    }
+
+    // Handle inline button callback queries ([ 📤 Send Transfer Slip ])
+    if (update?.callback_query) {
+      const cb = update.callback_query;
+      const cbChatId = cb.message?.chat?.id || cb.from?.id;
+      const data = cb.data;
+
+      if (data === "cmd_transfer" || data === "send_slip") {
+        await answerCallbackQuery(cb.id, "Please attach your transfer slip photo! 📎");
+        const promptMsg = 
+`📸 *Upload Your Bank Transfer Slip*
+━━━━━━━━━━━━━━━━━━━━
+🏪 *B BACK*
+🏦 *Bank:* Bank of Maldives (BML)
+💳 *Account:* \`7730000442060\`
+
+Please attach and send your transfer receipt/screenshot photo directly in this chat! 📎
+
+Our cashier will immediately verify the transaction and credit it to your account. 🙏`;
+        await sendTelegramMessage(cbChatId, promptMsg);
+      }
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     const msg = update?.message || update?.channel_post;
     const myChatMember = update?.my_chat_member;
 
@@ -629,6 +827,30 @@ _Need to update your contact info? Please notify the cashier at the counter._`;
 ⏰ *Hours:* Sat - Thu: 08:30 - 22:00 | Fri: 14:00 - 22:00
 
 _For assistance, visit our shop or contact the cashier._`
+        );
+      }
+
+      // Case 6: Executive Briefing (/briefing, /close, /today, /summary)
+      else if (cmd === "/briefing" || cmd === "briefing" || cmd === "/close" || cmd === "close" || cmd === "/today" || cmd === "/summary") {
+        const briefingMsg = await generateExecutiveBriefingMessage();
+        await sendTelegramMessage(chatId, briefingMsg);
+      }
+
+      // Case 7: Owner registration (/setowner)
+      else if (cmd === "/setowner" || cmd === "setowner") {
+        try {
+          const { data: shopRow } = await supabase.from("settings").select("settings").eq("category", "shop").maybeSingle();
+          if (shopRow?.settings) {
+            await supabase.from("settings").update({
+              settings: { ...shopRow.settings, ownerTelegramChatId: chatId },
+              updated_at: new Date().toISOString(),
+            }).eq("category", "shop");
+          }
+        } catch {}
+
+        await sendTelegramMessage(
+          chatId,
+          `✅ *Owner Telegram Account Connected!*\n━━━━━━━━━━━━━━━━━━━━\n🆔 *Your Chat ID:* \`${chatId}\`\n\nYou will now receive the Nightly Store Close Executive Briefing here at midnight! 📊\n\nType */briefing* anytime to request an instant sales summary.`
         );
       }
     }

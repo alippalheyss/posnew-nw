@@ -6,7 +6,13 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/components/ThemeProvider';
 
 import { toISODate, toISODatetime, extractDateOnly } from '@/utils/formatters';
-import { processPendingTelegramUpdates, sendTelegramSlipApprovedMessage, sendTelegramSlipDeclinedMessage } from '@/services/telegramService';
+import { 
+  processPendingTelegramUpdates, 
+  sendTelegramSlipApprovedMessage, 
+  sendTelegramSlipDeclinedMessage,
+  sendNightlyExecutiveBriefing,
+  sendAutomatedCreditReminder,
+} from '@/services/telegramService';
 
 export interface Product {
   id: string;
@@ -219,6 +225,17 @@ export interface CustomerDisplayOffer {
 }
 
 interface ReportSettings {
+  defaultReportType: string;
+  defaultTimeRange: string;
+  includeZeroSales: boolean;
+  includeReturns: boolean;
+  includeDiscounts: boolean;
+  includeTaxes: boolean;
+  groupBy: string;
+  sortBy: string;
+  sortOrder: 'asc' | 'desc';
+  reportFormat: 'pdf' | 'excel' | 'csv';
+  includeCharts: boolean;
   invoiceHeader: string;
   invoiceFooter: string;
   quotationHeader: string;
@@ -244,6 +261,13 @@ interface TelegramSettings {
   autoSendPaymentReceipts: boolean;
   autoSendSaleReceipts: boolean;
   webhookUrl: string;
+  ownerChatId?: string | number;
+  autoExecutiveBriefing?: boolean;
+  autoCreditReminderThreshold?: boolean;
+  creditReminderThresholdPct?: number; // e.g. 90
+  autoMonthlyCreditReminder?: boolean;
+  lastMonthlyReminderSentMonth?: string;
+  lastNightlyBriefingDate?: string;
 }
 
 interface AppSettings {
@@ -762,6 +786,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         autoSendPaymentReceipts: true,
         autoSendSaleReceipts: false,
         webhookUrl: '',
+        ownerChatId: '',
+        autoExecutiveBriefing: true,
+        autoCreditReminderThreshold: true,
+        creditReminderThresholdPct: 90,
+        autoMonthlyCreditReminder: true,
+        lastMonthlyReminderSentMonth: '',
+        lastNightlyBriefingDate: '',
       },
     };
 
@@ -985,6 +1016,35 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           await updateStock(product.id, product.stock_shop - qtyToDeduct);
         }
       })).catch(err => console.error('Error updating stock after sale:', err));
+
+      // Automatic 90% credit threshold reminder via Telegram
+      if (saleWithInvoice.customer?.id && settings.telegram?.autoCreditReminderThreshold !== false) {
+        const cust = customers.find(c => c.id === saleWithInvoice.customer?.id);
+        if (cust && cust.telegram_chat_id && cust.credit_limit > 0) {
+          const thresholdPct = settings.telegram?.creditReminderThresholdPct || 90;
+          const limit = Number(cust.credit_limit);
+          const isCreditTx = String(saleWithInvoice.paymentMethod).toLowerCase() === 'credit' ||
+            (String(saleWithInvoice.paymentMethod).toLowerCase() === 'split' && saleWithInvoice.splitDetails?.some((d: any) => d.method?.toLowerCase() === 'credit'));
+          const creditAmount = isCreditTx 
+            ? (String(saleWithInvoice.paymentMethod).toLowerCase() === 'credit' 
+                ? Number(saleWithInvoice.grandTotal) 
+                : saleWithInvoice.splitDetails?.filter((d: any) => d.method?.toLowerCase() === 'credit').reduce((s: number, d: any) => s + d.amount, 0) || 0)
+            : 0;
+          const newBalance = (cust.outstanding_balance || 0) + creditAmount;
+          if (newBalance >= limit * (thresholdPct / 100)) {
+            sendAutomatedCreditReminder({
+              chatId: cust.telegram_chat_id,
+              customer: cust,
+              shopSettings: settings.shop,
+              balance: newBalance,
+              isThreshold: true,
+              thresholdPct,
+              creditLimit: limit,
+              token: settings.telegram?.botToken,
+            }).catch(e => console.warn('Credit threshold alert error:', e));
+          }
+        }
+      }
       
       // Do NOT await fetchData() here to prevent race conditions with optimistic state
 
@@ -1112,6 +1172,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         isChecking = true;
         await processPendingTelegramUpdates({
           customers,
+          sales,
+          settlements: customers.flatMap(c => c.settlement_history || []),
           onCustomerLinked: async (customerId: string, chatId: number) => {
             if (!customerId || !chatId) return;
             try {
@@ -1176,7 +1238,91 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       clearTimeout(initialTimer);
       clearInterval(interval);
     };
-  }, [customers, settings.telegram?.botToken, settings.shop]);
+  }, [customers, sales, settings.telegram?.botToken, settings.shop]);
+
+  // Automated Midnight Store Close Executive Briefing & 1st of Month Overdue Reminders Scheduler
+  useEffect(() => {
+    const runScheduledAutomations = async () => {
+      const now = new Date();
+      const todayIso = toISODate(now);
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const ownerChat = settings.telegram?.ownerChatId || settings.shop?.ownerTelegramChatId;
+
+      // 1. Midnight Store Close Executive Briefing
+      if (
+        settings.telegram?.autoExecutiveBriefing !== false &&
+        ownerChat &&
+        settings.telegram?.lastNightlyBriefingDate !== todayIso
+      ) {
+        const hours = now.getHours();
+        const minutes = now.getMinutes();
+        // Fire around midnight window (23:45 to 00:30)
+        const isNearMidnight = (hours === 23 && minutes >= 45) || (hours === 0 && minutes <= 30);
+        if (isNearMidnight) {
+          try {
+            const allSettlements = customers.flatMap(c => c.settlement_history || []);
+            const res = await sendNightlyExecutiveBriefing({
+              chatId: ownerChat,
+              sales,
+              settlements: allSettlements,
+              shopSettings: settings.shop,
+              token: settings.telegram?.botToken,
+            });
+            if (res?.ok) {
+              setSettings(prev => ({
+                ...prev,
+                telegram: { ...prev.telegram, lastNightlyBriefingDate: todayIso },
+              }));
+              console.log('Nightly Executive Briefing automatically sent to owner Telegram!');
+            }
+          } catch (e) {
+            console.warn('Auto briefing error:', e);
+          }
+        }
+      }
+
+      // 2. 1st of Every Month Automated Tab Overdue Reminders
+      if (
+        settings.telegram?.autoMonthlyCreditReminder !== false &&
+        now.getDate() === 1 &&
+        settings.telegram?.lastMonthlyReminderSentMonth !== currentMonth
+      ) {
+        const linkedDueCustomers = customers.filter(
+          c => c.telegram_chat_id && Number(c.outstanding_balance || 0) > 0
+        );
+
+        if (linkedDueCustomers.length > 0) {
+          console.log(`Sending 1st of month automated tab reminders to ${linkedDueCustomers.length} customers...`);
+          for (const c of linkedDueCustomers) {
+            try {
+              await sendAutomatedCreditReminder({
+                chatId: c.telegram_chat_id!,
+                customer: c,
+                shopSettings: settings.shop,
+                balance: c.outstanding_balance,
+                token: settings.telegram?.botToken,
+              });
+            } catch (err) {
+              console.warn(`Error sending monthly reminder to ${c.name_en}:`, err);
+            }
+          }
+          setSettings(prev => ({
+            ...prev,
+            telegram: { ...prev.telegram, lastMonthlyReminderSentMonth: currentMonth },
+          }));
+          showSuccess(`Monthly credit tab reminders sent to ${linkedDueCustomers.length} connected customers! 📅`);
+        }
+      }
+    };
+
+    const initialT = setTimeout(runScheduledAutomations, 5000);
+    const intervalT = setInterval(runScheduledAutomations, 5 * 60 * 1000);
+
+    return () => {
+      clearTimeout(initialT);
+      clearInterval(intervalT);
+    };
+  }, [sales, customers, settings.telegram, settings.shop]);
 
   const addPendingTransfer = (transfer: any) => {
     setPendingTransfers(prev => [...prev, { ...transfer, id: `transfer-${Date.now()}` }]);

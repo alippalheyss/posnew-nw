@@ -788,25 +788,6 @@ const CreditOutstanding = () => {
                      </div>
 
                       <div className="space-y-1.5 mt-2">
-                        {/* Polite Automated Reminder Button with Slip submission */}
-                        <Button
-                           type="button"
-                           onClick={() => handleSendPoliteReminder(customer)}
-                           disabled={isSendingReminder === customer.id}
-                           className="w-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-black h-9 rounded-xl transition-all gap-2 flex items-center justify-center active:scale-95"
-                        >
-                           {isSendingReminder === customer.id ? (
-                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                           ) : (
-                             <Send className="h-3.5 w-3.5" />
-                           )}
-                           <span>
-                             {customer.telegram_chat_id 
-                               ? 'Send Overdue Reminder (އޮޓޮމެޓިކް މެސެޖް)' 
-                               : 'Link Telegram to Auto-Remind'}
-                           </span>
-                        </Button>
-
                         <Button
                            type="button"
                            onClick={() => handleSendCustomerTelegram(customer)}

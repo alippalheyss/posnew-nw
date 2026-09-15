@@ -1246,12 +1246,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       const now = new Date();
       const todayIso = toISODate(now);
       const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      const ownerChat = settings.telegram?.ownerChatId || settings.shop?.ownerTelegramChatId;
+      const groupChat = settings.shop?.telegramGroupChatId || settings.telegram?.groupChatId || settings.telegram?.ownerChatId;
 
-      // 1. Midnight Store Close Executive Briefing
+      // 1. Midnight Store Close Executive Briefing to B BACK Group
       if (
         settings.telegram?.autoExecutiveBriefing !== false &&
-        ownerChat &&
+        groupChat &&
         settings.telegram?.lastNightlyBriefingDate !== todayIso
       ) {
         const hours = now.getHours();
@@ -1262,7 +1262,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           try {
             const allSettlements = customers.flatMap(c => c.settlement_history || []);
             const res = await sendNightlyExecutiveBriefing({
-              chatId: ownerChat,
+              chatId: groupChat,
               sales,
               settlements: allSettlements,
               shopSettings: settings.shop,
@@ -1273,7 +1273,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
                 ...prev,
                 telegram: { ...prev.telegram, lastNightlyBriefingDate: todayIso },
               }));
-              console.log('Nightly Executive Briefing automatically sent to owner Telegram!');
+              console.log('Nightly Store Close Briefing automatically sent to B BACK Telegram group!');
             }
           } catch (e) {
             console.warn('Auto briefing error:', e);

@@ -677,15 +677,15 @@ const DailySales = () => {
           <DialogHeader className="text-right pb-4 border-b border-border/60">
             <div className="flex items-center justify-between pl-8">
               <Badge className="bg-[#229ED9]/10 text-[#229ED9] border-[#229ED9]/20 text-xs font-mono font-bold">
-                Owner Report
+                Store Report
               </Badge>
               <div className="text-right">
                 <DialogTitle className="text-xl font-black text-foreground flex items-center justify-end gap-2">
-                  <span>Store Close Executive Briefing</span>
+                  <span>Store Close Daily Briefing</span>
                   <Moon className="h-5 w-5 text-[#229ED9]" />
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                  Nightly summary sent to owner's private Telegram at midnight.
+                  Daily summary sent directly to the "B BACK" Telegram group.
                 </DialogDescription>
               </div>
             </div>
@@ -694,25 +694,26 @@ const DailySales = () => {
           {(() => {
             const allSettlements = customers.flatMap(c => c.settlement_history || []);
             const data = calculateExecutiveBriefingData({ sales, settlements: allSettlements });
-            const ownerChat = settings.telegram?.ownerChatId || settings.shop?.ownerTelegramChatId;
+            const groupChat = settings.shop?.telegramGroupChatId || settings.telegram?.groupChatId || settings.telegram?.ownerChatId;
+            const groupTitle = settings.shop?.telegramGroupTitle || 'B BACK';
             const currency = settings.shop.currency;
 
-            const handleSendToOwner = async () => {
-              if (!ownerChat) {
-                showError('Owner Telegram Chat ID not configured. Please set it in Admin Settings.');
+            const handleSendToGroup = async () => {
+              if (!groupChat) {
+                showError('B BACK Telegram Group Chat ID not configured. Please link the group in Admin Settings.');
                 return;
               }
               setIsSendingBriefing(true);
               try {
                 const res = await sendNightlyExecutiveBriefing({
-                  chatId: ownerChat,
+                  chatId: groupChat,
                   sales,
                   settlements: allSettlements,
                   shopSettings: settings.shop,
                   token: settings.telegram?.botToken,
                 });
                 if (res?.ok) {
-                  showSuccess('Executive Briefing sent to Owner Telegram! 📊');
+                  showSuccess(`Daily Briefing sent to "${groupTitle}" Telegram group! 📊`);
                   setIsBriefingDialogOpen(false);
                 } else {
                   showError(res?.description || 'Failed to send briefing');
@@ -802,12 +803,12 @@ const DailySales = () => {
                   )}
                 </div>
 
-                {/* Owner Connection Info */}
+                {/* Group Connection Info */}
                 <div className="p-3 rounded-xl bg-muted/20 border border-border text-xs flex items-center justify-between text-muted-foreground">
                   <span className="font-mono text-[11px] font-bold text-foreground">
-                    {ownerChat ? `ID: ${ownerChat}` : '⚠️ Not configured'}
+                    {groupChat ? `${groupTitle} (${groupChat})` : '⚠️ Not linked'}
                   </span>
-                  <span>Owner Telegram Destination:</span>
+                  <span>Destination Telegram Group:</span>
                 </div>
 
                 <DialogFooter className="pt-3 border-t border-border flex gap-3">
@@ -821,8 +822,8 @@ const DailySales = () => {
                   </Button>
                   <Button
                     type="button"
-                    onClick={handleSendToOwner}
-                    disabled={isSendingBriefing || !ownerChat}
+                    onClick={handleSendToGroup}
+                    disabled={isSendingBriefing || !groupChat}
                     className="flex-[2] h-12 rounded-xl bg-[#229ED9] hover:bg-[#229ED9]/90 text-white font-black text-xs gap-2 shadow-lg shadow-[#229ED9]/20"
                   >
                     {isSendingBriefing ? (
@@ -833,7 +834,7 @@ const DailySales = () => {
                     ) : (
                       <>
                         <Send className="h-4 w-4" />
-                        <span>Send to Owner Telegram Now</span>
+                        <span>Send Briefing to "{groupTitle}" Group Now</span>
                       </>
                     )}
                   </Button>

@@ -612,7 +612,7 @@ export const processPendingTelegramUpdates = async ({
       const cbChatId = cb.message?.chat?.id || cb.from?.id;
       const data = cb.data;
       if (data === 'cmd_transfer' || data === 'send_slip') {
-        await answerCallbackQuery(cb.id, 'Please attach your transfer slip photo in this chat! 📎', false, token);
+        await answerCallbackQuery(cb.id, '📸 Please tap the 📎 (attachment) icon below to send your BML transfer slip photo.', true, token);
         const shopName = shopSettings?.shopName || 'B BACK';
         const bankName = shopSettings?.bankName || 'Bank of Maldives (BML)';
         const accountNum = shopSettings?.accountNumber || '7730000442060';
@@ -623,7 +623,7 @@ export const processPendingTelegramUpdates = async ({
 🏦 *Bank:* ${bankName}
 💳 *Account:* \`${accountNum}\`
 
-Please attach and send your transfer receipt/screenshot photo directly in this chat! 📎
+Please tap the 📎 (paperclip) icon at the bottom of your screen to attach and send your transfer receipt/screenshot directly in this chat! 📎
 
 Our cashier will immediately verify the transaction and update your account balance. 🙏`;
         await sendTelegramMessage(cbChatId, promptMsg, token);
@@ -1295,7 +1295,7 @@ export const formatExecutiveBriefingMessage = ({
 
   const formatMvr = (val: number) => `${currency} ${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  let msg = `📊 *STORE CLOSE EXECUTIVE BRIEFING*\n`;
+  let msg = `📊 *STORE CLOSE DAILY BRIEFING - B BACK*\n`;
   msg += `━━━━━━━━━━━━━━━━━━━━\n`;
   msg += `🏪 *Shop:* ${shopName}\n`;
   msg += `📅 *Date:* ${data.dateStr} | ${data.timeStr}\n\n`;
@@ -1325,7 +1325,7 @@ export const formatExecutiveBriefingMessage = ({
 };
 
 /**
- * Send the Nightly Executive Briefing directly to the owner's Telegram
+ * Send the Nightly Executive Briefing directly to the B BACK Telegram group
  */
 export const sendNightlyExecutiveBriefing = async ({
   chatId,
@@ -1335,15 +1335,19 @@ export const sendNightlyExecutiveBriefing = async ({
   date,
   token,
 }: {
-  chatId: string | number;
+  chatId?: string | number;
   sales: Sale[];
   settlements?: any[];
   shopSettings?: any;
   date?: Date | string;
   token?: string;
 }) => {
+  const targetChatId = chatId || shopSettings?.telegramGroupChatId;
+  if (!targetChatId) {
+    return { ok: false, description: 'No B BACK Telegram group Chat ID found in settings.' };
+  }
   const message = formatExecutiveBriefingMessage({ sales, settlements, shopSettings, date });
-  return await sendTelegramMessage(chatId, message, token);
+  return await sendTelegramMessage(targetChatId, message, token);
 };
 
 // ==========================================
@@ -1400,7 +1404,7 @@ export const formatPoliteCreditReminderMessage = ({
   msg += `💳 *Account Number:* \`${accountNumber}\`\n`;
   msg += `━━━━━━━━━━━━━━━━━━━━\n`;
   msg += `Once transferred, please tap the button below to submit your payment slip directly in this chat, and our cashier will verify and settle your account immediately.\n\n`;
-  msg += `_JazakAllahu Khayran for your continued trust and custom!_ 🙏`;
+  msg += `_JazakAllahu Khayran for your continued trust and support!_ 🙏`;
 
   return msg;
 };

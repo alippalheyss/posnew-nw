@@ -78,23 +78,23 @@ const Admin = () => {
   };
 
   const handleTestBriefing = async () => {
-    const ownerChat = telegramSettings.ownerChatId || shopSettings.ownerTelegramChatId;
-    if (!ownerChat) {
-      showError('Please enter an Owner Telegram Chat ID first');
+    const groupChat = groupChatIdInput || shopSettings?.telegramGroupChatId || telegramSettings.ownerChatId;
+    if (!groupChat) {
+      showError('Please configure or link the "B BACK" Telegram Group Chat ID first');
       return;
     }
     setIsSendingTestBriefing(true);
     try {
       const allSettlements = (customers || []).flatMap(c => c.settlement_history || []);
       const res = await sendNightlyExecutiveBriefing({
-        chatId: ownerChat,
+        chatId: groupChat,
         sales: sales || [],
         settlements: allSettlements,
         shopSettings: settings.shop,
         token: telegramSettings.botToken,
       });
       if (res?.ok) {
-        showSuccess('Test Executive Briefing sent to your Telegram! 📊');
+        showSuccess('Test Store Close Briefing sent to B BACK Telegram group! 📊');
       } else {
         showError(res?.description || 'Failed to send test briefing');
       }
@@ -976,13 +976,13 @@ const Admin = () => {
                     </div>
                   </div>
 
-                  {/* Nightly Store Close Executive Briefing (Owner) */}
+                  {/* Nightly Store Close Daily Briefing (B BACK Group) */}
                   <div className="bg-card border border-border p-6 rounded-3xl space-y-6">
                     <div className="flex items-center justify-between pb-3 border-b border-border/60">
                       <Button
                         type="button"
                         onClick={handleTestBriefing}
-                        disabled={isSendingTestBriefing || !telegramSettings.ownerChatId}
+                        disabled={isSendingTestBriefing || (!groupChatIdInput && !shopSettings?.telegramGroupChatId)}
                         variant="outline"
                         size="sm"
                         className="h-8 text-xs font-bold gap-1.5 bg-[#229ED9]/10 text-[#229ED9] border-[#229ED9]/30 hover:bg-[#229ED9]/20"
@@ -992,33 +992,29 @@ const Admin = () => {
                         ) : (
                           <Moon className="h-3.5 w-3.5" />
                         )}
-                        <span>Send Test Briefing</span>
+                        <span>Send Test Briefing to Group</span>
                       </Button>
                       <div className="text-right">
                         <h4 className="text-lg font-black text-foreground">
-                          Nightly "Store Close" Executive Briefing (Owner)
+                          Nightly "Store Close" Daily Briefing (B BACK Group)
                         </h4>
                         <p className="text-xs text-muted-foreground">
-                          Clean daily summary sent to your private Telegram at midnight
+                          Clean daily summary automatically sent to the "B BACK" Telegram group at midnight
                         </p>
                       </div>
                     </div>
 
                     <div className="space-y-4">
-                      <div className="space-y-2 text-right">
-                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                          Owner Private Telegram Chat ID
-                        </Label>
-                        <Input
-                          value={telegramSettings.ownerChatId || ''}
-                          onChange={(e) => handleSettingsChange('telegram', 'ownerChatId', e.target.value.trim())}
-                          placeholder="e.g. 123456789 (Type /id or /briefing in private chat with bot to link)"
-                          className="h-12 bg-muted border-border rounded-xl font-mono text-left"
-                          dir="ltr"
-                        />
-                        <p className="text-[11px] text-muted-foreground">
-                          💡 Tip: Send <code>/setowner</code> or <code>/briefing</code> to your store bot in Telegram to link your account automatically.
-                        </p>
+                      <div className="flex items-center justify-between p-4 bg-muted/40 rounded-2xl border border-border">
+                        <span className="font-mono text-xs font-bold text-foreground bg-background/80 px-3 py-1.5 rounded-lg border border-border">
+                          {groupChatIdInput || shopSettings?.telegramGroupChatId ? `Chat ID: ${groupChatIdInput || shopSettings?.telegramGroupChatId}` : '⚠️ Not configured'}
+                        </span>
+                        <div className="text-right">
+                          <p className="text-sm font-black text-foreground">Destination Group</p>
+                          <p className="text-xs text-muted-foreground">
+                            Delivers directly to the store Telegram group configured above
+                          </p>
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-between p-4 bg-muted/40 rounded-2xl border border-border">

@@ -213,7 +213,10 @@ ${cleanNote ? `📝 Customer Note: ${cleanNote}\n` : "" }━━━━━━━�
     }
   } catch (err) {
     console.error("forwardSlipToGroup network error:", err);
-async function answerCallbackQuery(callbackQueryId: string, text?: string) {
+  }
+};
+
+async function answerCallbackQuery(callbackQueryId: string, text?: string, showAlert: boolean = true) {
   try {
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
       method: "POST",
@@ -221,6 +224,7 @@ async function answerCallbackQuery(callbackQueryId: string, text?: string) {
       body: JSON.stringify({
         callback_query_id: callbackQueryId,
         text: text,
+        show_alert: showAlert,
       }),
     });
   } catch (err) {
@@ -228,18 +232,23 @@ async function answerCallbackQuery(callbackQueryId: string, text?: string) {
   }
 }
 
-async function getOwnerChatId(): Promise<string | number | null> {
+async function getGroupOrOwnerChatId(): Promise<string | number | null> {
+  const groupConfig = await getTelegramGroupConfig();
+  if (groupConfig.chatId) return groupConfig.chatId;
+
   try {
     const { data: shopRow } = await supabase.from("settings").select("settings").eq("category", "shop").maybeSingle();
+    if (shopRow?.settings?.telegramGroupChatId) return shopRow.settings.telegramGroupChatId;
     if (shopRow?.settings?.ownerTelegramChatId) return shopRow.settings.ownerTelegramChatId;
-    if (shopRow?.settings?.ownerChatId) return shopRow.settings.ownerChatId;
   } catch {}
+
+  const envGroup = Deno.env.get("TELEGRAM_GROUP_CHAT_ID");
+  if (envGroup) return envGroup;
 
   const envOwner = Deno.env.get("TELEGRAM_OWNER_CHAT_ID");
   if (envOwner) return envOwner;
 
-  const groupConfig = await getTelegramGroupConfig();
-  return groupConfig.chatId;
+  return null;
 }
 
 async function generateExecutiveBriefingMessage(targetDateIso?: string): Promise<string> {
@@ -340,7 +349,7 @@ async function generateExecutiveBriefingMessage(targetDateIso?: string): Promise
   const avgTx = totalTx > 0 ? totalSales / totalTx : 0;
   const formatMvr = (n: number) => `MVR ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  let msg = `📊 *STORE CLOSE EXECUTIVE BRIEFING*\n`;
+  let msg = `📊 *STORE CLOSE DAILY BRIEFING - B BACK*\n`;
   msg += `━━━━━━━━━━━━━━━━━━━━\n`;
   msg += `🏪 *Shop:* ${shopName}\n`;
   msg += `📅 *Date:* ${dateStr} | ${timeStr}\n\n`;
@@ -383,15 +392,15 @@ serve(async (req: Request) => {
 
     // Direct API Invocation (Cron or POS trigger: action = "nightly_briefing")
     if (update?.action === "nightly_briefing" || update?.action === "send_briefing") {
-      const ownerChatId = update.chat_id || update.chatId || (await getOwnerChatId());
-      if (ownerChatId) {
+      const targetChatId = update.chat_id || update.chatId || (await getGroupOrOwnerChatId());
+      if (targetChatId) {
         const briefingMsg = await generateExecutiveBriefingMessage(update.date);
-        await sendTelegramMessage(ownerChatId, briefingMsg);
-        return new Response(JSON.stringify({ ok: true, sent_to: ownerChatId }), {
+        await sendTelegramMessage(targetChatId, briefingMsg);
+        return new Response(JSON.stringify({ ok: true, sent_to: targetChatId }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      return new Response(JSON.stringify({ ok: false, error: "No owner chat ID configured" }), {
+      return new Response(JSON.stringify({ ok: false, error: "No B BACK group or chat ID configured" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 400,
       });
@@ -404,7 +413,7 @@ serve(async (req: Request) => {
       const data = cb.data;
 
       if (data === "cmd_transfer" || data === "send_slip") {
-        await answerCallbackQuery(cb.id, "Please attach your transfer slip photo! 📎");
+        await answerCallbackQuery(cb.id, "📸 Tap the 📎 (attachment) icon below to send your BML transfer slip photo.", true);
         const promptMsg = 
 `📸 *Upload Your Bank Transfer Slip*
 ━━━━━━━━━━━━━━━━━━━━
@@ -412,9 +421,9 @@ serve(async (req: Request) => {
 🏦 *Bank:* Bank of Maldives (BML)
 💳 *Account:* \`7730000442060\`
 
-Please attach and send your transfer receipt/screenshot photo directly in this chat! 📎
+Please tap the 📎 (paperclip) icon at the bottom of your screen to attach and send your transfer receipt/screenshot directly in this chat! 📎
 
-Our cashier will immediately verify the transaction and credit it to your account. 🙏`;
+Our cashier will immediately verify the transaction and update your account balance. 🙏`;
         await sendTelegramMessage(cbChatId, promptMsg);
       }
       return new Response(JSON.stringify({ ok: true }), {

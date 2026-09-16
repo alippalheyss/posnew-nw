@@ -1557,7 +1557,10 @@ const POS = () => {
                 </Label>
                 <span className="text-[11px] font-mono text-muted-foreground/70" dir="ltr">Tendered Cash</span>
               </div>
-              <div className="relative w-full">
+              <div className="flex items-center rounded-2xl border-2 border-border focus-within:border-primary bg-background overflow-hidden transition-all shadow-inner h-14 w-full" dir="ltr">
+                <div className="bg-muted px-4 h-full flex items-center justify-center font-mono font-black text-base text-primary border-r border-border shrink-0 select-none">
+                  {settings.shop.currency}
+                </div>
                 <Input
                   id="paidAmount"
                   type="number"
@@ -1571,13 +1574,9 @@ const POS = () => {
                       processCashPayment();
                     }
                   }}
-                  className="text-left font-mono h-13 sm:h-14 bg-background border-2 border-border focus:border-primary text-2xl font-black rounded-2xl pl-18 pr-4 transition-all text-foreground [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-inner w-full"
-                  dir="ltr"
+                  className="h-full flex-1 border-0 bg-transparent text-left font-mono text-2xl sm:text-3xl font-black px-4 focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none rounded-none"
                   autoFocus
                 />
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono font-bold text-muted-foreground text-sm select-none">
-                  {settings.shop.currency}
-                </span>
               </div>
             </div>
 

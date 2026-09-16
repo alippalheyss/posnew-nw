@@ -745,27 +745,90 @@ const POS = () => {
     const itemsHtml = sale.items.map((item: any) => `
       <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
         <div style="flex: 1; text-align: left;">
-          ${item.name_dv}${item.selected_unit && item.selected_unit !== 'Piece' ? ` (${item.selected_unit})` : ''}<br/><small>${item.name_en}${item.selected_unit && item.selected_unit !== 'Piece' ? ` (${item.selected_unit})` : ''}</small>
+          ${item.name_dv || item.name_en || ''}${item.selected_unit && item.selected_unit !== 'Piece' ? ` (${item.selected_unit})` : ''}<br/><small style="color: #444;">${item.name_en || ''}${item.selected_unit && item.selected_unit !== 'Piece' ? ` (${item.selected_unit})` : ''}</small>
         </div>
         <div style="width: 60px; text-align: right;">${item.qty} x ${item.price.toFixed(2)}</div>
         <div style="width: 70px; text-align: right;">${(item.qty * item.price).toFixed(2)}</div>
       </div>
     `).join('');
 
-    const gstRate = settings.shop.taxRate;
+    const gstRate = settings.shop.taxRate || 0;
     const subtotalPrint = sale.grandTotal / (1 + (gstRate / 100));
     const gstAmountPrint = sale.grandTotal - subtotalPrint;
 
     const logoHtml = settings.shop.logo ? `
-      <div style="margin-bottom: 10px;">
+      <div style="margin-bottom: 10px; text-align: center;">
         <img src="${settings.shop.logo}" style="max-height: 60px; object-fit: contain;" />
+      </div>
+    ` : '';
+
+    const method = String(sale.paymentMethod || 'cash').toLowerCase();
+    const isCash = method === 'cash';
+    const isCredit = method === 'credit';
+    const isSplit = method === 'split';
+
+    let paid = Number(sale.paidAmount);
+    if (isNaN(paid) || paid <= 0) {
+      paid = isCredit ? 0 : Number(sale.grandTotal);
+    }
+
+    const change = isCash ? Math.max(0, paid - sale.grandTotal) : 0;
+    const balanceDue = isCredit ? sale.grandTotal : Math.max(0, sale.grandTotal - paid);
+
+    let paymentBreakdownHtml = `
+      <div style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 3px;">
+        <span>Payment Method:</span>
+        <span style="font-weight: bold; text-transform: uppercase;">${sale.paymentMethod || 'CASH'}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 3px;">
+        <span>Paid Amount:</span>
+        <span style="font-weight: bold;">${currency} ${paid.toFixed(2)}</span>
+      </div>
+    `;
+
+    if (change > 0) {
+      paymentBreakdownHtml += `
+        <div style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 3px;">
+          <span>Change:</span>
+          <span style="font-weight: bold;">${currency} ${change.toFixed(2)}</span>
+        </div>
+      `;
+    }
+
+    if (balanceDue > 0 && isCredit) {
+      paymentBreakdownHtml += `
+        <div style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 3px;">
+          <span>Balance Due:</span>
+          <span style="font-weight: bold;">${currency} ${balanceDue.toFixed(2)}</span>
+        </div>
+      `;
+    }
+
+    if (isSplit && Array.isArray(sale.splitDetails) && sale.splitDetails.length > 0) {
+      paymentBreakdownHtml += `<div style="margin-top: 4px; font-size: 11px; border-top: 1px dotted #888; padding-top: 4px;">`;
+      sale.splitDetails.forEach((d: any) => {
+        paymentBreakdownHtml += `
+          <div style="display: flex; justify-content: space-between; color: #444;">
+            <span>${d.method || 'Split'}:</span>
+            <span>${currency} ${Number(d.amount || 0).toFixed(2)}</span>
+          </div>
+        `;
+      });
+      paymentBreakdownHtml += `</div>`;
+    }
+
+    const customerHtml = sale.customer ? `
+      <div style="font-size: 11px; margin-top: 6px; text-align: left; border: 1px dashed #ccc; padding: 4px 6px; border-radius: 4px;">
+        <div><strong>Customer:</strong> ${sale.customer.name_dv || ''} (${sale.customer.name_en || ''})</div>
+        ${sale.customer.code ? `<div><strong>Code:</strong> ${sale.customer.code}</div>` : ''}
+        ${sale.customer.phone ? `<div><strong>Phone:</strong> ${sale.customer.phone}</div>` : ''}
       </div>
     ` : '';
 
     const htmlContent = `
       <html>
         <head>
-          <title>Receipt ${sale.id}</title>
+          <title>Receipt ${sale.invoiceNumber || sale.id}</title>
           <style>
             @media print {
               @page { margin: 0; size: ${settings.printing.thermalPrinterWidth === '58mm' ? '58mm' : '80mm'} auto; }
@@ -776,16 +839,29 @@ const POS = () => {
         </head>
         <body>
           ${logoHtml}
-          <div style="font-weight: bold;">${settings.shop.shopName}</div>
-          <div>${settings.shop.shopAddress}</div>
-          <div style="font-size: 10px;">Tel: ${settings.shop.shopPhone}<br/>${formatDate(sale.date)} ${formatTime(sale.date)} | ${sale.invoiceNumber || sale.id}</div>
-          <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
+          <div style="font-weight: bold; font-size: 15px;">${settings.shop.shopName}</div>
+          <div style="font-size: 12px;">${settings.shop.shopAddress}</div>
+          <div style="font-size: 10px; margin-top: 4px;">Tel: ${settings.shop.shopPhone}<br/>${formatDate(sale.date)} ${formatTime(sale.date)} | ${sale.invoiceNumber || sale.id}</div>
+          ${customerHtml}
+          <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
           ${itemsHtml}
-          <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
-          <div style="display: flex; justify-content: space-between;">
-            <span>TOTAL:</span>
-            <span style="font-weight: bold;">${currency} ${sale.grandTotal.toFixed(2)}</span>
+          <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px;">
+            <span>Subtotal:</span>
+            <span>${currency} ${subtotalPrint.toFixed(2)}</span>
           </div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 2px;">
+            <span>GST (${gstRate}%):</span>
+            <span>${currency} ${gstAmountPrint.toFixed(2)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; margin-top: 4px; padding-top: 4px; border-top: 1px solid #000;">
+            <span>TOTAL:</span>
+            <span>${currency} ${sale.grandTotal.toFixed(2)}</span>
+          </div>
+          <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+          ${paymentBreakdownHtml}
+          <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+          <div style="font-size: 10px; margin-top: 10px; font-style: italic;">Thank you for shopping with us!</div>
         </body>
       </html>
     `;

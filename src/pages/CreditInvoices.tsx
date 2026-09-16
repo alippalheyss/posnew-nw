@@ -135,6 +135,14 @@ const CreditInvoices = () => {
               <span>Grand Total:</span>
               <span>${currency} ${sale.grandTotal.toFixed(2)}</span>
             </div>
+            <div class="total-row">
+              <span>Paid Amount:</span>
+              <span>${currency} ${(sale.paidAmount || 0).toFixed(2)}</span>
+            </div>
+            <div class="total-row" style="color: #ea580c; font-weight: bold;">
+              <span>Balance Due:</span>
+              <span>${currency} ${(sale.grandTotal - (sale.paidAmount || 0)).toFixed(2)}</span>
+            </div>
           </div>
           <div class="footer">
             <p>Terms: Credit invoice payment is due within the agreed period.</p>

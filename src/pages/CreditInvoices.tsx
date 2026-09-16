@@ -28,7 +28,7 @@ const CreditInvoices = () => {
   const [isEditSaleDialogOpen, setIsEditSaleDialogOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'custom'>('all');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'custom'>('today');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(),
     to: new Date()

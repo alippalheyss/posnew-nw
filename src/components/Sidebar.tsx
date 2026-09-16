@@ -12,6 +12,8 @@ import { useAuth } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAppContext } from '@/context/AppContext';
 import { Button } from './ui/button';
+import { PWAInstallButton } from './PWAInstallButton';
+
 
 const Sidebar = () => {
   const { t } = useTranslation();
@@ -139,8 +141,9 @@ const Sidebar = () => {
       </div>
 
       {/* Bottom User Section */}
-      <div className={cn("p-6 mt-auto border-t border-border bg-muted/30", sidebarCollapsed ? "hidden" : "block")}>
-        <div className="flex items-center justify-between mb-6 px-2">
+      <div className={cn("p-6 mt-auto border-t border-border bg-muted/30 flex flex-col gap-3", sidebarCollapsed ? "hidden" : "block")}>
+        <PWAInstallButton />
+        <div className="flex items-center justify-between px-2">
           <div className="text-right">
             <p className="text-[9px] text-primary uppercase font-black tracking-widest mb-0.5">{currentUser?.role}</p>
             <p className="text-sm font-black text-foreground truncate w-32">{currentUser?.name_dv}</p>

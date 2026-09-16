@@ -4,6 +4,11 @@ import "./globals.css";
 import "./lib/i18n.ts"; // Import i18n configuration
 import { AppProviderWithPriceDialog } from "./context/AppProviderWithPriceDialog.tsx"; // Import wrapper with price dialog
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { registerSW } from "virtual:pwa-register";
+
+// Auto-update service worker
+registerSW({ immediate: true });
+
 
 createRoot(document.getElementById("root")!).render(
   <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">

@@ -130,6 +130,32 @@ const POS = () => {
   const [splitSearchTerm, setSplitSearchTerm] = useState('');
   const [splitEntries, setSplitEntries] = useState<Array<{ id: string, amount: number, method: 'Cash' | 'Card' | 'Transfer' | 'Credit', customerId?: string }>>([]);
 
+  const activeCart = openCarts.get(activeCartId);
+
+  const calculateTotals = () => {
+    const currentItems = activeCart?.items || [];
+    const taxableTotal = currentItems.filter(i => !i.is_zero_tax).reduce((sum, item) => sum + item.price * item.qty, 0);
+    const zeroTaxTotal = currentItems.filter(i => i.is_zero_tax).reduce((sum, item) => sum + item.price * item.qty, 0);
+    const subtotalNoDiscount = taxableTotal + zeroTaxTotal;
+
+    const loyaltyPointsValue = settings.general.loyaltyPointsValue || 100;
+    const loyaltyDiscount = pointsToRedeem / loyaltyPointsValue;
+    const grandTotalValue = Math.max(0, subtotalNoDiscount - loyaltyDiscount);
+
+    const gstRate = settings.shop.taxRate / 100;
+    const taxableRatio = subtotalNoDiscount > 0 ? taxableTotal / subtotalNoDiscount : 0;
+    const taxablePartAfterDiscount = grandTotalValue * taxableRatio;
+
+    const subtotalExcludingGstForTaxable = taxablePartAfterDiscount / (1 + gstRate);
+    const gstAmount = taxablePartAfterDiscount - subtotalExcludingGstForTaxable;
+    const subtotalValue = grandTotalValue - gstAmount;
+
+    return { subtotal: subtotalValue, gstAmount, grandTotal: grandTotalValue, subtotalNoDiscount, loyaltyDiscount };
+  };
+
+  const { subtotal, gstAmount, grandTotal, subtotalNoDiscount, loyaltyDiscount } = calculateTotals();
+  const balance = typeof paidAmount === 'number' ? paidAmount - grandTotal : -grandTotal;
+
   const searchInputRef = useRef<HTMLInputElement>(null);
   const lastQtyInputRef = useRef<HTMLInputElement>(null);
 
@@ -290,8 +316,6 @@ const POS = () => {
     });
     setPointsToRedeem(0);
   };
-
-  const activeCart = openCarts.get(activeCartId);
 
   useEffect(() => {
     if (!activeCartId && openCarts.size > 0) {
@@ -538,30 +562,6 @@ const POS = () => {
       items: prevCart.items.filter(item => !(item.id === id && (item.selected_unit || 'Piece') === unitName)),
     }));
   };
-
-  const calculateTotals = () => {
-    const currentItems = activeCart?.items || [];
-    const taxableTotal = currentItems.filter(i => !i.is_zero_tax).reduce((sum, item) => sum + item.price * item.qty, 0);
-    const zeroTaxTotal = currentItems.filter(i => i.is_zero_tax).reduce((sum, item) => sum + item.price * item.qty, 0);
-    const subtotalNoDiscount = taxableTotal + zeroTaxTotal;
-
-    const loyaltyPointsValue = settings.general.loyaltyPointsValue || 100;
-    const loyaltyDiscount = pointsToRedeem / loyaltyPointsValue;
-    const grandTotalValue = Math.max(0, subtotalNoDiscount - loyaltyDiscount);
-
-    const gstRate = settings.shop.taxRate / 100;
-    const taxableRatio = subtotalNoDiscount > 0 ? taxableTotal / subtotalNoDiscount : 0;
-    const taxablePartAfterDiscount = grandTotalValue * taxableRatio;
-
-    const subtotalExcludingGstForTaxable = taxablePartAfterDiscount / (1 + gstRate);
-    const gstAmount = taxablePartAfterDiscount - subtotalExcludingGstForTaxable;
-    const subtotalValue = grandTotalValue - gstAmount;
-
-    return { subtotal: subtotalValue, gstAmount, grandTotal: grandTotalValue, subtotalNoDiscount, loyaltyDiscount };
-  };
-
-  const { subtotal, gstAmount, grandTotal, subtotalNoDiscount, loyaltyDiscount } = calculateTotals();
-  const balance = typeof paidAmount === 'number' ? paidAmount - grandTotal : -grandTotal;
 
   useEffect(() => {
     if (activeCart) {

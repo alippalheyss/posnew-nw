@@ -8,22 +8,15 @@
  * if the browser is launched in Kiosk Mode (--kiosk-printing).
  */
 export const printViaIframe = (htmlContent: string) => {
-  // Remove any leftover print iframes
-  const existingIframe = document.getElementById('print-iframe');
-  if (existingIframe && document.body.contains(existingIframe)) {
-    document.body.removeChild(existingIframe);
-  }
-
   const iframe = document.createElement('iframe');
   
-  // Position off-screen rather than 0x0 to ensure render engine formats print pages properly
+  // Hide the iframe
   iframe.style.position = 'fixed';
-  iframe.style.left = '-9999px';
-  iframe.style.top = '-9999px';
-  iframe.style.width = '100px';
-  iframe.style.height = '100px';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
   iframe.style.border = '0';
-  iframe.style.opacity = '0';
   iframe.setAttribute('id', 'print-iframe');
   
   document.body.appendChild(iframe);
@@ -31,40 +24,34 @@ export const printViaIframe = (htmlContent: string) => {
   const doc = iframe.contentWindow?.document || iframe.contentDocument;
   if (!doc) {
     console.error('Could not access iframe document');
-    window.print();
     return;
   }
 
-  doc.open();
   doc.write(htmlContent);
   doc.close();
 
+  // Wait for resources to load if any
   let printed = false;
-  const triggerPrint = () => {
+  const print = () => {
     if (printed) return;
     printed = true;
-    try {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-    } catch (err) {
-      console.warn('Iframe print error, falling back to window.print():', err);
-      window.print();
-    }
+    iframe.contentWindow?.focus();
+    iframe.contentWindow?.print();
     
-    // Remove the iframe after printing has spooled
+    // Remove the iframe after some time to allow printing to start
     setTimeout(() => {
       if (document.body.contains(iframe)) {
         document.body.removeChild(iframe);
       }
-    }, 2000);
+    }, 1000);
   };
 
-  // Give images and styles time to compute
   if (iframe.contentWindow) {
-    iframe.contentWindow.onload = triggerPrint;
-    setTimeout(triggerPrint, 350);
+    iframe.contentWindow.onload = print;
+    // Fallback if onload doesn't fire
+    setTimeout(print, 500);
   } else {
-    triggerPrint();
+    print();
   }
 };
 

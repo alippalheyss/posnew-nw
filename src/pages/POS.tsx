@@ -131,6 +131,7 @@ const POS = () => {
   const [splitEntries, setSplitEntries] = useState<Array<{ id: string, amount: number, method: 'Cash' | 'Card' | 'Transfer' | 'Credit', customerId?: string }>>([]);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const lastQtyInputRef = useRef<HTMLInputElement>(null);
 
   const focusSearchBar = () => {
     setTimeout(() => {
@@ -139,6 +140,37 @@ const POS = () => {
         searchInputRef.current.select();
       }
     }, 60);
+  };
+
+  const focusQuantityInput = () => {
+    const currentCart = openCarts.get(activeCartId);
+    if (!currentCart || currentCart.items.length === 0) {
+      showError(t('cart_empty_error') || 'ކާޓުގައި އެއްވެސް އައިޓަމެއް ނެތް (Cart is empty)');
+      return;
+    }
+    setTimeout(() => {
+      if (lastQtyInputRef.current) {
+        lastQtyInputRef.current.focus();
+        lastQtyInputRef.current.select();
+      } else {
+        const qtyInputs = document.querySelectorAll<HTMLInputElement>('.cart-qty-input');
+        if (qtyInputs.length > 0) {
+          const lastInput = qtyInputs[qtyInputs.length - 1];
+          lastInput.focus();
+          lastInput.select();
+        }
+      }
+    }, 60);
+  };
+
+  const openCashDialog = () => {
+    const currentCart = openCarts.get(activeCartId);
+    if (!currentCart || currentCart.items.length === 0) {
+      showError(t('cart_empty_error') || 'Cart is empty');
+      return;
+    }
+    setPaidAmount(grandTotal);
+    setIsCashDialogOpen(true);
   };
 
   const LOW_STOCK_THRESHOLD = 10;
@@ -151,6 +183,12 @@ const POS = () => {
   useEffect(() => {
     focusSearchBar();
   }, []);
+
+  useEffect(() => {
+    if (isCashDialogOpen) {
+      setPaidAmount(grandTotal);
+    }
+  }, [isCashDialogOpen, grandTotal]);
 
   useEffect(() => {
     localStorage.setItem('pos_active', 'true');
@@ -173,7 +211,21 @@ const POS = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (document.activeElement?.tagName === 'INPUT' && document.activeElement !== searchInputRef.current) {
+      // Global F2 shortcut - focus product search anytime
+      if (e.key === 'F2') {
+        e.preventDefault();
+        focusSearchBar();
+        return;
+      }
+
+      // Global F10 shortcut - focus quantity of last cart item
+      if (e.key === 'F10') {
+        e.preventDefault();
+        focusQuantityInput();
+        return;
+      }
+
+      if (document.activeElement?.tagName === 'INPUT' && document.activeElement !== searchInputRef.current && !document.activeElement.classList.contains('cart-qty-input')) {
         if (e.key === 'Escape') {
           (document.activeElement as HTMLElement).blur();
         }
@@ -205,14 +257,14 @@ const POS = () => {
 
       if (e.key === 'Enter') {
         e.preventDefault();
-        setIsCashDialogOpen(true);
+        openCashDialog();
       } else if (e.key === 'F11') {
         e.preventDefault();
         setCreditDialogStep(1);
         setIsCreditDialogOpen(true);
       } else if (e.key === 'F4') {
         e.preventDefault();
-        searchInputRef.current?.focus();
+        focusSearchBar();
       } else if (e.key === 'F6') {
         e.preventDefault();
         setIsSplitDialogOpen(true);
@@ -1044,22 +1096,28 @@ const POS = () => {
                     handleSearchSubmit();
                   }
                 }}
-                className="w-full bg-muted border-border rounded-xl px-10 text-right font-bold h-11 focus:border-primary/50 focus:ring-0 transition-all placeholder:text-foreground/10 text-foreground"
+                className="w-full bg-muted border-border rounded-xl px-12 text-right font-bold h-11 focus:border-primary/50 focus:ring-0 transition-all placeholder:text-foreground/20 text-foreground"
                 dir="rtl"
               />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchTerm('');
-                    searchInputRef.current?.focus();
-                  }}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted-foreground/10 transition-colors"
-                  title="Clear search"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                {searchTerm ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchTerm('');
+                      searchInputRef.current?.focus();
+                    }}
+                    className="text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted-foreground/10 transition-colors"
+                    title="Clear search"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                ) : (
+                  <kbd className="hidden sm:inline-flex items-center text-[10px] font-mono font-bold text-muted-foreground/70 bg-background/80 border border-border/80 px-1.5 py-0.5 rounded shadow-xs select-none" title="Press F2 anytime to focus">
+                    F2
+                  </kbd>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1269,14 +1327,14 @@ const POS = () => {
             </div>
           ) : (
             <div className="space-y-2 pb-6">
-              {activeCart.items.map((item) => (
+              {activeCart.items.map((item, idx) => (
                 <div key={`${item.id}-${item.selected_unit || 'Piece'}`} className="group relative bg-muted hover:bg-muted/80 border border-border rounded-xl p-3 transition-all">
                   <div className="flex gap-4 items-start">
                     <div className="flex flex-col gap-2 items-start">
                       <div className="text-[16px] font-black text-primary whitespace-nowrap">
                         {settings.shop.currency} {item.price.toFixed(2)}
                       </div>
-                      <div className="flex items-center gap-1 bg-black/40 rounded-lg p-0.5 border border-border h-10">
+                      <div className="flex items-center gap-1 bg-black/40 rounded-lg p-0.5 border border-border h-10 relative">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1285,10 +1343,17 @@ const POS = () => {
                         ><Minus className="h-4 w-4" /></Button>
                         <Input
                           type="number"
+                          ref={idx === activeCart.items.length - 1 ? lastQtyInputRef : undefined}
                           value={item.qty}
                           onChange={(e) => setCartItemQty(item.id, parseFloat(e.target.value) || 0, item.selected_unit)}
                           onFocus={handleFocus}
-                          className="w-14 text-center text-[14px] font-black text-foreground bg-transparent border-none h-8 p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              focusSearchBar();
+                            }
+                          }}
+                          className="cart-qty-input w-14 text-center text-[14px] font-black text-foreground bg-transparent border-none h-8 p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:bg-background/80 focus:ring-1 focus:ring-primary rounded"
                         />
                         <Button
                           variant="ghost"
@@ -1428,7 +1493,7 @@ const POS = () => {
           </div>
 
           <Button
-            onClick={() => setIsCashDialogOpen(true)}
+            onClick={openCashDialog}
             className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground text-lg font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/30"
           >
             {renderBoth('checkout')}
@@ -1452,46 +1517,168 @@ const POS = () => {
       />
 
       <Dialog open={isCashDialogOpen} onOpenChange={setIsCashDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] font-faruma bg-card text-foreground border-border shadow-2xl" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-right text-2xl font-black">{renderBoth('cash_payment')}</DialogTitle>
-            <DialogDescription className="text-right text-muted-foreground">{renderBoth('enter_paid_amount')}</DialogDescription>
+        <DialogContent className="sm:max-w-[490px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border text-right p-5 sm:p-7 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+          <DialogHeader className="pb-3 text-right space-y-1.5 border-b border-border/60">
+            <div className="flex items-center justify-between pl-8">
+              <div className="text-right flex-1 min-w-0">
+                <DialogTitle className="text-xl md:text-2xl font-black text-foreground flex items-center gap-2.5">
+                  <DollarSign className="h-6 w-6 text-primary shrink-0" />
+                  <span>{renderBoth('cash_payment')}</span>
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-1 text-right">
+                  {renderBoth('enter_paid_amount')}
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="grid gap-6 py-4">
-            <div className="space-y-2">
-              <Label className="text-right block text-muted-foreground uppercase text-[10px] font-black tracking-widest">{renderBoth('total_amount')}</Label>
-              <div className="text-4xl font-black text-primary text-right">{settings.shop.currency} {grandTotal.toFixed(2)}</div>
+
+          <div className="py-4 space-y-4">
+            {/* Total Amount Card */}
+            <div className="bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border border-primary/25 rounded-2xl p-4 flex items-center justify-between shadow-inner">
+              <div className="text-left font-mono">
+                <div className="text-[11px] font-bold text-primary/70 uppercase tracking-widest">Total Payable</div>
+                <div className="text-3xl font-black text-primary leading-none mt-1">
+                  {settings.shop.currency} {grandTotal.toFixed(2)}
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-xs font-black text-muted-foreground uppercase tracking-widest block">ޖުމްލަ އަދަދު</span>
+                <span className="text-[11px] text-muted-foreground/80 font-bold block mt-0.5">({t('total_amount') || 'Total Amount'})</span>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="paidAmount" className="text-right block text-muted-foreground uppercase text-[10px] font-black tracking-widest">{renderBoth('paid_amount')}</Label>
-              <Input
-                id="paidAmount"
-                type="number"
-                value={paidAmount}
-                onChange={(e) => setPaidAmount(parseFloat(e.target.value) || '')}
-                onFocus={handleFocus}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    processCashPayment();
-                  }
-                }}
-                className="text-right h-14 bg-background border-border text-2xl font-black focus:border-primary transition-all text-foreground"
-                autoFocus
-              />
+
+            {/* Paid Amount Input */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono text-muted-foreground/70">Tendered Cash</span>
+                <Label htmlFor="paidAmount" className="text-right block text-foreground font-black text-xs uppercase tracking-wider">
+                  {renderBoth('paid_amount')}
+                </Label>
+              </div>
+              <div className="relative">
+                <Input
+                  id="paidAmount"
+                  type="number"
+                  step="any"
+                  value={paidAmount}
+                  onChange={(e) => setPaidAmount(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                  onFocus={handleFocus}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      processCashPayment();
+                    }
+                  }}
+                  className="text-left font-mono h-14 bg-background border-2 border-border focus:border-primary text-2xl font-black rounded-2xl pl-16 pr-4 transition-all text-foreground [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  autoFocus
+                />
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono font-bold text-muted-foreground text-sm">
+                  {settings.shop.currency}
+                </span>
+              </div>
             </div>
-            <div className="space-y-1 text-right">
-              <Label className="text-muted-foreground uppercase text-[10px] font-black tracking-widest">{renderBoth('balance')}</Label>
-              <div className={cn(
-                "text-2xl font-black",
-                balance < 0 ? "text-red-500" : "text-green-500"
-              )}>
-                {settings.shop.currency} {balance.toFixed(2)}
+
+            {/* Quick Tender Denomination Chips */}
+            <div className="space-y-1.5">
+              <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground text-right">
+                އަވަސް ފައިސާ (Quick Tender)
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setPaidAmount(grandTotal)}
+                  className="h-8 px-2.5 rounded-xl border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-black"
+                >
+                  Exact ({settings.shop.currency} {grandTotal.toFixed(2)})
+                </Button>
+                {[
+                  Math.ceil(grandTotal / 10) * 10,
+                  Math.ceil(grandTotal / 50) * 50,
+                  Math.ceil(grandTotal / 100) * 100,
+                  Math.ceil(grandTotal / 500) * 500,
+                  Math.ceil(grandTotal / 1000) * 1000,
+                ]
+                  .filter((val, idx, arr) => val > grandTotal && arr.indexOf(val) === idx)
+                  .slice(0, 3)
+                  .map((presetVal) => (
+                    <Button
+                      key={presetVal}
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setPaidAmount(presetVal)}
+                      className="h-8 px-2.5 rounded-xl border-border hover:bg-muted text-xs font-mono font-bold"
+                    >
+                      {settings.shop.currency} {presetVal}
+                    </Button>
+                  ))}
+                {[10, 20, 50, 100, 500].map((addVal) => (
+                  <Button
+                    key={addVal}
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setPaidAmount((prev) => (typeof prev === 'number' ? prev + addVal : addVal))}
+                    className="h-8 px-2 rounded-xl bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground text-[11px] font-mono font-bold"
+                  >
+                    +{addVal}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Change / Shortage Status Card */}
+            <div className={cn(
+              "p-3.5 rounded-2xl border transition-all flex items-center justify-between",
+              balance >= 0 
+                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400" 
+                : "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
+            )}>
+              <div className="text-left font-mono">
+                <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">
+                  {balance >= 0 ? "Change Due" : "Shortage / Remaining"}
+                </div>
+                <div className="text-2xl font-black leading-none mt-0.5">
+                  {settings.shop.currency} {Math.abs(balance).toFixed(2)}
+                </div>
+              </div>
+              <div className="text-right flex items-center gap-2">
+                <div>
+                  <span className="text-xs font-black block">
+                    {balance >= 0 ? "ބާކީ ދޭންވީ" : "އަދި މަދުވާ އަދަދު"}
+                  </span>
+                  <span className="text-[10px] opacity-80 block">
+                    {balance >= 0 ? "(Change to Return)" : "(Remaining Due)"}
+                  </span>
+                </div>
+                {balance >= 0 ? (
+                  <CheckCircle2 className="h-6 w-6 text-emerald-500 shrink-0" />
+                ) : (
+                  <AlertTriangle className="h-6 w-6 text-amber-500 shrink-0" />
+                )}
               </div>
             </div>
           </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setIsCashDialogOpen(false)} className="flex-1 border-border hover:bg-muted text-foreground">{renderBoth('cancel')}</Button>
-            <Button onClick={processCashPayment} disabled={typeof paidAmount !== 'number' || paidAmount < grandTotal} className="flex-1 btn-gradient-blue text-white font-bold">{renderBoth('confirm_payment')}</Button>
+
+          <DialogFooter className="gap-2 sm:gap-2.5 pt-3 border-t border-border/60">
+            <Button
+              variant="outline"
+              onClick={() => setIsCashDialogOpen(false)}
+              className="h-12 px-5 rounded-2xl border-border hover:bg-muted text-foreground font-bold"
+            >
+              {renderBoth('cancel')}
+            </Button>
+            <Button
+              onClick={processCashPayment}
+              disabled={typeof paidAmount === 'number' && paidAmount < grandTotal}
+              className="h-12 flex-1 rounded-2xl btn-gradient-blue text-white font-black text-base shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 gap-2"
+            >
+              <Check className="h-5 w-5" />
+              <span>{renderBoth('confirm_payment')}</span>
+              <kbd className="hidden sm:inline-block text-[10px] font-mono bg-white/20 px-1.5 py-0.5 rounded ml-1">↵ Enter</kbd>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

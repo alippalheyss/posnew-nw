@@ -1517,47 +1517,47 @@ const POS = () => {
       />
 
       <Dialog open={isCashDialogOpen} onOpenChange={setIsCashDialogOpen}>
-        <DialogContent className="sm:max-w-[580px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border text-right p-6 sm:p-8 shadow-2xl rounded-3xl box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
-          <DialogHeader className="pb-4 text-right space-y-1.5 border-b border-border/60 pl-10 pr-1">
+        <DialogContent className="sm:max-w-[600px] w-[94vw] font-faruma bg-card text-foreground border border-border text-right p-5 sm:p-7 shadow-2xl rounded-3xl box-border overflow-hidden [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+          <DialogHeader className="pb-3.5 text-right space-y-1.5 border-b border-border/60 pl-10 pr-1">
             <div className="flex items-center justify-between">
               <div className="text-right flex-1 min-w-0">
-                <DialogTitle className="text-2xl sm:text-3xl font-black text-foreground flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
-                    <DollarSign className="h-6 w-6" />
+                <DialogTitle className="text-xl sm:text-2xl font-black text-foreground flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                    <DollarSign className="h-5 w-5" />
                   </div>
                   <span>{renderBoth('cash_payment')}</span>
                 </DialogTitle>
-                <DialogDescription className="text-xs sm:text-sm text-muted-foreground mt-1 text-right">
+                <DialogDescription className="text-xs sm:text-sm text-muted-foreground mt-0.5 text-right">
                   {renderBoth('enter_paid_amount')}
                 </DialogDescription>
               </div>
             </div>
           </DialogHeader>
 
-          <div className="py-5 space-y-5">
+          <div className="py-3 space-y-3.5 w-full max-w-full overflow-hidden">
             {/* Total Amount Card */}
-            <div className="bg-gradient-to-l from-primary/20 via-primary/10 to-muted/40 border border-primary/30 rounded-2xl p-4 sm:p-5 flex items-center justify-between shadow-sm">
+            <div className="bg-gradient-to-l from-primary/20 via-primary/10 to-muted/40 border border-primary/30 rounded-2xl p-4 flex items-center justify-between shadow-sm w-full box-border">
               <div className="text-right">
-                <span className="text-sm sm:text-base font-black text-foreground block">ޖުމްލަ އަދަދު</span>
-                <span className="text-xs text-muted-foreground font-bold block mt-0.5">({t('total_amount') || 'Total Payable'})</span>
+                <span className="text-sm font-black text-foreground block">ޖުމްލަ އަދަދު</span>
+                <span className="text-[11px] text-muted-foreground font-bold block mt-0.5">({t('total_amount') || 'Total Payable'})</span>
               </div>
-              <div className="text-left font-mono pl-3" dir="ltr">
-                <div className="text-[10px] sm:text-[11px] font-bold text-primary/80 uppercase tracking-widest">Total Payable</div>
-                <div className="text-3xl sm:text-4xl font-black text-primary leading-tight mt-0.5">
+              <div className="text-left font-mono pl-2" dir="ltr">
+                <div className="text-[10px] font-bold text-primary/80 uppercase tracking-widest">Total Payable</div>
+                <div className="text-2xl sm:text-3xl font-black text-primary leading-tight mt-0.5">
                   {settings.shop.currency} {grandTotal.toFixed(2)}
                 </div>
               </div>
             </div>
 
             {/* Paid Amount Input */}
-            <div className="space-y-2">
+            <div className="space-y-1.5 w-full box-border">
               <div className="flex items-center justify-between px-1">
-                <Label htmlFor="paidAmount" className="text-right block text-foreground font-black text-xs sm:text-sm uppercase tracking-wider">
+                <Label htmlFor="paidAmount" className="text-right block text-foreground font-black text-xs uppercase tracking-wider">
                   {renderBoth('paid_amount')}
                 </Label>
                 <span className="text-[11px] font-mono text-muted-foreground/70" dir="ltr">Tendered Cash</span>
               </div>
-              <div className="relative">
+              <div className="relative w-full">
                 <Input
                   id="paidAmount"
                   type="number"
@@ -1571,33 +1571,35 @@ const POS = () => {
                       processCashPayment();
                     }
                   }}
-                  className="text-left font-mono h-14 sm:h-16 bg-background border-2 border-border focus:border-primary text-2xl sm:text-3xl font-black rounded-2xl pl-20 pr-4 transition-all text-foreground [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-inner"
+                  className="text-left font-mono h-13 sm:h-14 bg-background border-2 border-border focus:border-primary text-2xl font-black rounded-2xl pl-18 pr-4 transition-all text-foreground [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-inner w-full"
                   dir="ltr"
                   autoFocus
                 />
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono font-bold text-muted-foreground text-base sm:text-lg select-none">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono font-bold text-muted-foreground text-sm select-none">
                   {settings.shop.currency}
                 </span>
               </div>
             </div>
 
             {/* Quick Tender Denomination Chips */}
-            <div className="space-y-2">
+            <div className="space-y-1.5 w-full box-border">
               <div className="flex items-center justify-between px-1">
-                <div className="text-[11px] font-black uppercase tracking-wider text-muted-foreground text-right">
+                <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground text-right">
                   އަވަސް ފައިސާ (Quick Tender Presets)
                 </div>
                 <span className="text-[10px] text-muted-foreground/70 font-mono">Fast Click</span>
               </div>
-              <div className="flex flex-wrap gap-2">
+              
+              {/* Presets Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 w-full">
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
                   onClick={() => setPaidAmount(grandTotal)}
-                  className="h-9 px-3.5 rounded-xl border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 text-xs sm:text-sm font-black transition-all active:scale-95"
+                  className="h-8.5 px-2 rounded-xl border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-black transition-all active:scale-95 w-full truncate"
                 >
-                  Exact ({settings.shop.currency} {grandTotal.toFixed(2)})
+                  Exact ({grandTotal.toFixed(2)})
                 </Button>
                 {[
                   Math.ceil(grandTotal / 10) * 10,
@@ -1615,11 +1617,15 @@ const POS = () => {
                       size="sm"
                       variant="outline"
                       onClick={() => setPaidAmount(presetVal)}
-                      className="h-9 px-3.5 rounded-xl border-border hover:bg-muted text-xs sm:text-sm font-mono font-bold transition-all active:scale-95"
+                      className="h-8.5 px-2 rounded-xl border-border hover:bg-muted text-xs font-mono font-bold transition-all active:scale-95 w-full truncate"
                     >
                       {settings.shop.currency} {presetVal}
                     </Button>
                   ))}
+              </div>
+
+              {/* Quick Additions Grid */}
+              <div className="grid grid-cols-5 gap-1.5 w-full">
                 {[10, 20, 50, 100, 500].map((addVal) => (
                   <Button
                     key={addVal}
@@ -1627,7 +1633,7 @@ const POS = () => {
                     size="sm"
                     variant="ghost"
                     onClick={() => setPaidAmount((prev) => (typeof prev === 'number' ? prev + addVal : addVal))}
-                    className="h-9 px-3 rounded-xl bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground text-xs font-mono font-bold transition-all active:scale-95"
+                    className="h-8 px-1 rounded-xl bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground text-xs font-mono font-bold transition-all active:scale-95 w-full"
                   >
                     +{addVal}
                   </Button>
@@ -1637,58 +1643,58 @@ const POS = () => {
 
             {/* Change / Shortage Status Card */}
             <div className={cn(
-              "p-4 sm:p-5 rounded-2xl border transition-all flex items-center justify-between shadow-sm",
+              "p-3.5 sm:p-4 rounded-2xl border transition-all flex items-center justify-between shadow-sm w-full box-border",
               balance >= 0 
                 ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400" 
                 : "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
             )}>
-              <div className="text-right flex items-center gap-3">
+              <div className="text-right flex items-center gap-2.5">
                 {balance >= 0 ? (
-                  <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 flex items-center justify-center shrink-0">
-                    <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="h-4.5 w-4.5 text-emerald-500" />
                   </div>
                 ) : (
-                  <div className="w-10 h-10 rounded-2xl bg-amber-500/20 flex items-center justify-center shrink-0">
-                    <AlertTriangle className="h-6 w-6 text-amber-500" />
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
+                    <AlertTriangle className="h-4.5 w-4.5 text-amber-500" />
                   </div>
                 )}
                 <div>
-                  <span className="text-sm sm:text-base font-black block">
+                  <span className="text-xs sm:text-sm font-black block">
                     {balance >= 0 ? "ބާކީ ދޭންވީ" : "އަދި މަދުވާ އަދަދު"}
                   </span>
-                  <span className="text-[11px] opacity-80 block mt-0.5">
+                  <span className="text-[10px] opacity-80 block mt-0.5">
                     {balance >= 0 ? "(Change to Return)" : "(Remaining Due)"}
                   </span>
                 </div>
               </div>
 
-              <div className="text-left font-mono pl-3" dir="ltr">
-                <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider opacity-80">
+              <div className="text-left font-mono pl-2" dir="ltr">
+                <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">
                   {balance >= 0 ? "Change Due" : "Shortage"}
                 </div>
-                <div className="text-2xl sm:text-3xl font-black leading-tight mt-0.5">
+                <div className="text-xl sm:text-2xl font-black leading-tight mt-0.5">
                   {settings.shop.currency} {Math.abs(balance).toFixed(2)}
                 </div>
               </div>
             </div>
           </div>
 
-          <DialogFooter className="gap-3 pt-4 border-t border-border/60">
+          <DialogFooter className="gap-2.5 pt-3 border-t border-border/60 w-full flex flex-col-reverse sm:flex-row">
             <Button
               variant="outline"
               onClick={() => setIsCashDialogOpen(false)}
-              className="h-12 sm:h-13 px-6 rounded-2xl border-border hover:bg-muted text-foreground font-bold text-sm sm:text-base"
+              className="h-11 sm:h-12 px-5 rounded-2xl border-border hover:bg-muted text-foreground font-bold text-xs sm:text-sm"
             >
               {renderBoth('cancel')}
             </Button>
             <Button
               onClick={processCashPayment}
               disabled={typeof paidAmount === 'number' && paidAmount < grandTotal}
-              className="h-12 sm:h-13 flex-1 rounded-2xl btn-gradient-blue text-white font-black text-base sm:text-lg shadow-lg shadow-blue-500/25 hover:shadow-blue-500/35 gap-2"
+              className="h-11 sm:h-12 flex-1 rounded-2xl btn-gradient-blue text-white font-black text-sm sm:text-base shadow-lg shadow-blue-500/25 hover:shadow-blue-500/35 gap-2"
             >
-              <Check className="h-5 w-5" />
+              <Check className="h-4 w-4" />
               <span>{renderBoth('confirm_payment')}</span>
-              <kbd className="hidden sm:inline-block text-[10px] font-mono bg-white/20 px-2 py-0.5 rounded-md ml-1.5 font-bold">↵ Enter</kbd>
+              <kbd className="hidden sm:inline-block text-[10px] font-mono bg-white/20 px-1.5 py-0.5 rounded-md ml-1 font-bold">↵ Enter</kbd>
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,10 +1,10 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Home, Package, Boxes, Users, DollarSign, Settings, BarChart, 
-  Receipt, CalendarDays, AlertTriangle, Building2, LogOut, FileText, ChevronRight, ChevronLeft, Activity, Pin, PinOff, Wallet
+  Receipt, CalendarDays, AlertTriangle, Building2, LogOut, FileText, ChevronRight, ChevronLeft, Activity, Pin, PinOff, Wallet, Menu, X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
@@ -13,7 +13,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useAppContext } from '@/context/AppContext';
 import { Button } from './ui/button';
 import { PWAInstallButton } from './PWAInstallButton';
-
+import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 
 const Sidebar = () => {
   const { t } = useTranslation();
@@ -21,6 +21,7 @@ const Sidebar = () => {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
   const { can } = usePermissions();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -50,46 +51,28 @@ const Sidebar = () => {
     return null;
   }
 
-  return (
-    <>
-      <div className={cn("flex-shrink-0 transition-all duration-300 hidden md:block", sidebarCollapsed ? "w-0" : "w-[280px]")} />
-      <div className={cn(
-        "hidden md:flex flex-col h-screen font-faruma overflow-hidden z-[100] transition-all duration-300 group/sidebar fixed right-0 top-0 bottom-0",
-        sidebarCollapsed 
-          ? "w-2 hover:w-[280px] bg-transparent hover:bg-background hover:border-l hover:border-border hover:shadow-[-20px_0_50px_rgba(0,0,0,0.5)]" 
-          : "w-[280px] bg-background border-l border-border shadow-[-20px_0_50px_rgba(0,0,0,0.5)]"
-      )}>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className={cn(
-            "absolute top-6 left-6 z-[110] transition-all h-8 w-8 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded-lg border border-border",
-            sidebarCollapsed ? "opacity-0 group-hover/sidebar:opacity-100" : "opacity-100"
-          )}
-        >
-          {sidebarCollapsed ? <Pin className="h-4 w-4" /> : <PinOff className="h-4 w-4" />}
-        </Button>
+  const renderNavContent = (isMobile = false) => (
+    <div className="flex flex-col h-full font-faruma text-foreground" dir="rtl">
       {/* Branding */}
-      <div className={cn("p-8 pb-10 transition-all duration-300", sidebarCollapsed ? "opacity-0 group-hover/sidebar:opacity-100 px-8" : "opacity-100")}>
-        <div className="flex items-center gap-4 mb-2">
-          <div className="w-12 h-12 flex-shrink-0 bg-primary rounded-[1rem] flex items-center justify-center shadow-[0_0_30px_rgba(0,132,255,0.4)] rotate-3">
-            <span className="text-foreground text-xl font-black tracking-tighter -rotate-3">MV</span>
+      <div className="p-6 pb-4">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-11 h-11 flex-shrink-0 bg-primary rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(249,115,22,0.4)]">
+            <span className="text-foreground text-lg font-black tracking-tighter">MV</span>
           </div>
-          <div className={cn("text-right whitespace-nowrap transition-all duration-300", sidebarCollapsed ? "w-0 overflow-hidden group-hover/sidebar:w-auto" : "w-auto")}>
-            <h1 className="text-2xl font-black text-foreground leading-tight tracking-tighter">
+          <div className="text-right whitespace-nowrap">
+            <h1 className="text-xl font-black text-foreground leading-tight tracking-tight">
               {t('mvpos')}
             </h1>
             <div className="flex items-center justify-end gap-1.5 opacity-60">
-               <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-               <p className="text-[10px] text-foreground font-bold uppercase tracking-widest">System Online</p>
+              <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <p className="text-[10px] text-foreground font-bold uppercase tracking-widest">System Online</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Navigation */}
-      <div className={cn("flex-1 overflow-y-auto px-4 custom-scrollbar whitespace-nowrap", sidebarCollapsed ? "py-6 opacity-0 group-hover/sidebar:opacity-100 transition-opacity duration-300 delay-75" : "")} dir="rtl">
+      {/* Navigation Links */}
+      <div className="flex-1 overflow-y-auto px-4 custom-scrollbar whitespace-nowrap py-2">
         <ul className="space-y-1.5">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
@@ -98,23 +81,24 @@ const Sidebar = () => {
               <li key={item.path}>
                 <Link
                   to={item.path}
+                  onClick={() => isMobile && setMobileOpen(false)}
                   className={cn(
-                    "flex items-center justify-between p-3.5 rounded-2xl transition-all group relative overflow-hidden",
+                    "flex items-center justify-between p-3 rounded-2xl transition-all group relative overflow-hidden",
                     isActive 
-                      ? "bg-muted text-foreground" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                      ? "bg-muted text-foreground font-bold" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                   )}
                 >
                   {isActive && (
-                    <div className="absolute right-0 top-0 bottom-0 w-1 bg-primary rounded-l-full shadow-[0_0_15px_rgba(0,132,255,1)]" />
+                    <div className="absolute right-0 top-0 bottom-0 w-1 bg-primary rounded-l-full shadow-[0_0_15px_rgba(249,115,22,1)]" />
                   )}
                   
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3">
                     <div className={cn(
-                      "h-9 w-9 rounded-xl flex items-center justify-center transition-all shrink-0",
+                      "h-8 w-8 rounded-xl flex items-center justify-center transition-all shrink-0",
                       isActive ? "bg-primary text-foreground" : "bg-muted text-muted-foreground group-hover:bg-muted/80 group-hover:text-foreground"
                     )}>
-                        <item.icon className="h-4.5 w-4.5" />
+                      <item.icon className="h-4 w-4" />
                     </div>
                     <div className="flex flex-col text-right">
                       <span className="text-[11px] font-black leading-none mb-0.5 whitespace-nowrap">{item.name_dv}</span>
@@ -140,20 +124,68 @@ const Sidebar = () => {
         </ul>
       </div>
 
-      {/* Bottom User Section */}
-      <div className={cn("p-6 mt-auto border-t border-border bg-muted/30 flex flex-col gap-3", sidebarCollapsed ? "hidden" : "block")}>
+      {/* Bottom Install & User Section */}
+      <div className="p-5 mt-auto border-t border-border bg-muted/40 flex flex-col gap-3">
         <PWAInstallButton />
-        <div className="flex items-center justify-between px-2">
+        <div className="flex items-center justify-between px-1">
           <div className="text-right">
             <p className="text-[9px] text-primary uppercase font-black tracking-widest mb-0.5">{currentUser?.role}</p>
             <p className="text-sm font-black text-foreground truncate w-32">{currentUser?.name_dv}</p>
           </div>
-          <div className="w-10 h-10 rounded-2xl bg-muted border border-border flex items-center justify-center relative">
-             <Users className="h-5 w-5 text-muted-foreground" />
-             <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[#050510]" />
+          <div className="w-9 h-9 rounded-xl bg-muted border border-border flex items-center justify-center relative">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-background" />
           </div>
         </div>
       </div>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Mobile Floating Menu Button */}
+      <div className="md:hidden fixed top-4 right-4 z-[90]">
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetTrigger asChild>
+            <Button 
+              variant="default" 
+              size="icon" 
+              className="h-11 w-11 rounded-2xl bg-primary text-foreground shadow-lg shadow-primary/30 flex items-center justify-center"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="p-0 w-[290px] bg-background border-border">
+            {renderNavContent(true)}
+          </SheetContent>
+        </Sheet>
+      </div>
+
+      {/* Desktop Sidebar Spacer */}
+      <div className={cn("flex-shrink-0 transition-all duration-300 hidden md:block", sidebarCollapsed ? "w-0" : "w-[280px]")} />
+      
+      {/* Desktop Fixed Sidebar */}
+      <div className={cn(
+        "hidden md:flex flex-col h-screen font-faruma overflow-hidden z-[100] transition-all duration-300 group/sidebar fixed right-0 top-0 bottom-0",
+        sidebarCollapsed 
+          ? "w-2 hover:w-[280px] bg-transparent hover:bg-background hover:border-l hover:border-border hover:shadow-[-20px_0_50px_rgba(0,0,0,0.5)]" 
+          : "w-[280px] bg-background border-l border-border shadow-[-20px_0_50px_rgba(0,0,0,0.5)]"
+      )}>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          className={cn(
+            "absolute top-5 left-5 z-[110] transition-all h-8 w-8 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded-xl border border-border",
+            sidebarCollapsed ? "opacity-0 group-hover/sidebar:opacity-100" : "opacity-100"
+          )}
+        >
+          {sidebarCollapsed ? <Pin className="h-4 w-4" /> : <PinOff className="h-4 w-4" />}
+        </Button>
+
+        <div className={cn("flex-1 flex flex-col h-full transition-opacity duration-300", sidebarCollapsed ? "opacity-0 group-hover/sidebar:opacity-100" : "opacity-100")}>
+          {renderNavContent(false)}
+        </div>
       </div>
     </>
   );

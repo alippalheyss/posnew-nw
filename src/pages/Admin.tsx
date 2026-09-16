@@ -22,6 +22,8 @@ import CustomerDisplayOfferDialog from '@/components/CustomerDisplayOfferDialog'
 import { CustomerDisplayOffer } from '@/context/AppContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
+import { PWAInstallButton } from '@/components/PWAInstallButton';
+
 
 const Admin = () => {
   const { t, i18n } = useTranslation();
@@ -512,6 +514,46 @@ const Admin = () => {
                   
                   </div>
                 )}
+
+             {/* Software & PWA App Settings */}
+             {activeTab === 'softwareSettings' && (
+                  <div className="space-y-8">
+                     <div className="p-6 bg-muted/40 border border-border rounded-3xl space-y-6">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                           <div className="w-full md:w-64">
+                              <PWAInstallButton />
+                           </div>
+                           <div className="text-right">
+                              <h3 className="text-lg font-black text-foreground flex items-center justify-end gap-2">
+                                <span>Progressive Web App (PWA)</span>
+                                <Monitor className="h-5 w-5 text-primary" />
+                              </h3>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Install MVPOS as a native standalone desktop / mobile application with offline caching and silent kiosk printing.
+                              </p>
+                           </div>
+                        </div>
+
+                        <Separator className="bg-border" />
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-right">
+                           <div className="p-4 bg-muted rounded-2xl border border-border space-y-2">
+                              <h4 className="text-sm font-black text-orange-400">Silent Kiosk Printing in PWA</h4>
+                              <p className="text-xs text-muted-foreground leading-relaxed">
+                                To bypass the browser print dialog completely, add <code className="px-1.5 py-0.5 bg-background rounded text-foreground font-mono">--kiosk-printing</code> to the end of the Windows PWA desktop shortcut's <strong>Target</strong> property.
+                              </p>
+                           </div>
+
+                           <div className="p-4 bg-muted rounded-2xl border border-border space-y-2">
+                              <h4 className="text-sm font-black text-emerald-400">Offline & Fast Caching</h4>
+                              <p className="text-xs text-muted-foreground leading-relaxed">
+                                Once installed, MVPOS service worker precaches all core assets, icons, fonts, and UI scripts for lightning-fast loading even with slow connectivity.
+                              </p>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                 )}
 
              {/* Loyalty Settings */}
              {activeTab === 'generalSettings' && (

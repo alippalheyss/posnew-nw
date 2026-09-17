@@ -263,6 +263,7 @@ interface TelegramSettings {
   autoSendSaleReceipts: boolean;
   webhookUrl: string;
   ownerChatId?: string | number;
+  groupChatId?: string | number;
   autoExecutiveBriefing?: boolean;
   autoCreditReminderThreshold?: boolean;
   creditReminderThresholdPct?: number; // e.g. 90
@@ -764,6 +765,17 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         customerDisplayOffers: [],
       },
       reports: {
+        defaultReportType: 'sales',
+        defaultTimeRange: 'today',
+        includeZeroSales: false,
+        includeReturns: true,
+        includeDiscounts: true,
+        includeTaxes: true,
+        groupBy: 'day',
+        sortBy: 'date',
+        sortOrder: 'desc',
+        reportFormat: 'pdf',
+        includeCharts: true,
         invoiceHeader: 'INVOICE',
         invoiceFooter: 'Thank you for your business!',
         quotationHeader: 'QUOTATION',

@@ -54,6 +54,7 @@
   html {
     font-size: 15px; /* Default for compact screens & small laptops (<= 1280px) */
     -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   @media screen and (min-width: 1280px) {

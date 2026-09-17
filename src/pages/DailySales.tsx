@@ -626,7 +626,7 @@ const DailySales = () => {
 
                      <div className="flex items-center gap-8">
                         <div className="text-right">
-                           <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest mb-1">Grand Total</p>
+                           <p className="text-xs font-black text-muted-foreground uppercase tracking-wider mb-1">Grand Total</p>
                            <p className="text-2xl font-black text-primary">{settings.shop.currency} {sale.grandTotal.toFixed(2)}</p>
                         </div>
                         <div className="flex gap-2">
@@ -693,13 +693,13 @@ const DailySales = () => {
                        </div>
 
                        <div className="text-center">
-                          <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest mb-1">Items</p>
+                          <p className="text-xs font-black text-muted-foreground uppercase tracking-wider mb-1">Items</p>
                           <p className="text-sm font-black text-foreground">{transfer.items.length}</p>
                        </div>
 
                        <div className="flex items-center gap-8">
                           <div className="text-right">
-                             <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest mb-1">Amount</p>
+                             <p className="text-xs font-black text-muted-foreground uppercase tracking-wider mb-1">Amount</p>
                              <p className="text-2xl font-black text-yellow-500">{settings.shop.currency} {transfer.grandTotal.toFixed(2)}</p>
                           </div>
                           <div className="flex gap-2">

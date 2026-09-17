@@ -88,8 +88,8 @@ const ExpiryAlerts = () => {
 
                          <div className="text-right mb-6">
                             <h3 className="text-lg font-black text-foreground leading-tight mb-1 truncate">{product.name_dv}</h3>
-                            <p className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest truncate">{product.name_en}</p>
-                            <p className="text-[10px] font-mono text-primary mt-2">ID: {product.item_code}</p>
+                            <p className="text-xs sm:text-[13px] font-bold text-muted-foreground uppercase tracking-wider truncate">{product.name_en}</p>
+                            <p className="text-xs font-mono text-primary font-bold mt-2">ID: {product.item_code}</p>
                          </div>
 
                          <div className={cn(

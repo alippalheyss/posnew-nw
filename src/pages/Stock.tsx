@@ -160,13 +160,13 @@ const Stock = () => {
 
                      <div className="text-right mb-6">
                         <h3 className="text-xl font-black text-foreground leading-tight mb-1 truncate">{item.name_dv}</h3>
-                        <p className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest truncate">{item.name_en}</p>
+                        <p className="text-xs sm:text-[13px] font-bold text-muted-foreground uppercase tracking-wider truncate">{item.name_en}</p>
                      </div>
 
                      <div className="grid grid-cols-2 gap-4 mb-6">
                         <div className="bg-muted p-4 rounded-2xl border border-border group-hover:bg-muted/80 transition-all">
-                           <div className="flex items-center justify-end gap-2 text-[10px] font-black text-foreground/30 uppercase tracking-widest mb-2">
-                              {renderBoth('shop')} <Store className="h-3 w-3" />
+                           <div className="flex items-center justify-end gap-2 text-xs font-black text-muted-foreground uppercase tracking-wider mb-2">
+                              {renderBoth('shop')} <Store className="h-3.5 w-3.5" />
                            </div>
                            <p className={cn(
                              "text-2xl font-black text-right",
@@ -174,8 +174,8 @@ const Stock = () => {
                            )}>{item.stock_shop}</p>
                         </div>
                         <div className="bg-muted p-4 rounded-2xl border border-border group-hover:bg-muted/80 transition-all">
-                           <div className="flex items-center justify-end gap-2 text-[10px] font-black text-foreground/30 uppercase tracking-widest mb-2">
-                              {renderBoth('godown')} <Warehouse className="h-3 w-3" />
+                           <div className="flex items-center justify-end gap-2 text-xs font-black text-muted-foreground uppercase tracking-wider mb-2">
+                              {renderBoth('godown')} <Warehouse className="h-3.5 w-3.5" />
                            </div>
                            <p className="text-2xl font-black text-foreground text-right">{item.stock_godown}</p>
                         </div>

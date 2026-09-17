@@ -1193,12 +1193,12 @@ const POS = () => {
                   </div>
 
                   <div className="text-center px-1">
-                    <h3 className="text-xs font-black text-foreground leading-tight truncate mb-0.5">{product.name_dv}</h3>
-                    <p className="text-[8px] font-bold text-foreground/30 truncate uppercase tracking-widest mb-2">{product.name_en}</p>
+                    <h3 className="text-sm font-black text-foreground leading-tight truncate mb-0.5">{product.name_dv}</h3>
+                    <p className="text-[11px] font-bold text-muted-foreground truncate uppercase tracking-normal mb-1.5">{product.name_en}</p>
 
                     <div className="flex items-center justify-center gap-1.5">
-                      <span className="text-[11px] font-black text-primary leading-none">{settings.shop.currency} {product.price.toFixed(2)}</span>
-                      <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-foreground scale-0 group-hover:scale-100 transition-transform shadow-[0_0_15px_rgba(0,132,255,0.5)]">
+                      <span className="text-xs font-black text-primary leading-none">{settings.shop.currency} {product.price.toFixed(2)}</span>
+                      <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white scale-0 group-hover:scale-100 transition-transform shadow-[0_0_15px_rgba(0,132,255,0.5)]">
                         <PlusCircle className="h-4 w-4" />
                       </div>
                     </div>
@@ -1216,8 +1216,8 @@ const POS = () => {
             <div className="flex items-center gap-3 px-4 py-1.5 bg-primary/20 rounded-xl text-primary border border-primary/20">
               <ShoppingCart className="h-4 w-4" />
               <div className="flex flex-col items-start leading-none gap-0.5">
-                <span className="text-[8px] font-black uppercase text-primary/60 tracking-tighter">(Cart)</span>
-                <span className="text-[10px] font-black">{t('cart')}</span>
+                <span className="text-[9px] font-black uppercase text-primary/80 tracking-tighter">(Cart)</span>
+                <span className="text-xs font-black">{t('cart')}</span>
               </div>
             </div>
 
@@ -1230,8 +1230,8 @@ const POS = () => {
             >
               <PlusCircle className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
               <div className="flex flex-col items-end leading-none gap-0.5">
-                <span className="text-[10px] font-black">{t('add_new_cart')}</span>
-                <span className="text-[8px] font-black uppercase text-foreground/30 tracking-tighter">(Add New Cart)</span>
+                <span className="text-xs font-black">{t('add_new_cart')}</span>
+                <span className="text-[9px] font-bold uppercase text-muted-foreground tracking-tight">(Add New Cart)</span>
               </div>
             </Button>
           </div>
@@ -1371,7 +1371,7 @@ const POS = () => {
                         </button>
                         <div className="flex-1 min-w-0">
                           <p className="text-[18px] font-black text-foreground leading-tight mb-1">{item.name_dv}</p>
-                          <p className="text-[13px] font-bold text-foreground/50 leading-tight uppercase mb-1">{item.name_en}</p>
+                          <p className="text-[14px] font-bold text-muted-foreground leading-tight uppercase mb-1">{item.name_en}</p>
                           {(() => {
                             const prod = products.find(p => p.id === item.id);
                             const hasUnits = prod?.units && prod.units.length > 0;

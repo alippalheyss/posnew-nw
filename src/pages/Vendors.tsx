@@ -209,10 +209,10 @@ const Vendors = () => {
                                                 <span className="font-mono text-sm text-primary font-black bg-primary/10 px-3 py-1 rounded-full">{vendor.code}</span>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <div className="flex flex-col">
-                                                   <span className="font-black text-foreground group-hover:text-primary transition-colors">{vendor.name_dv || vendor.name_en}</span>
-                                                   <span className="text-[10px] text-muted-foreground uppercase font-bold">{vendor.name_en}</span>
-                                                </div>
+                                                 <div className="flex flex-col">
+                                                    <span className="font-black text-foreground group-hover:text-primary transition-colors text-base">{vendor.name_dv || vendor.name_en}</span>
+                                                    <span className="text-xs text-muted-foreground uppercase font-bold">{vendor.name_en}</span>
+                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex flex-col gap-1">

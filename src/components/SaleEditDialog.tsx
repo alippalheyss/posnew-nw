@@ -173,9 +173,9 @@ const SaleEditDialog: React.FC<SaleEditDialogProps> = ({ isOpen, onClose, sale, 
                     {editedSale.items.map(item => (
                        <div key={item.id} className="flex items-center justify-between bg-black/20 p-3 rounded-2xl border border-border group">
                           <div className="text-right flex-1">
-                             <p className="text-[11px] font-black text-foreground">{item.name_dv}</p>
-                             <p className="text-[9px] text-foreground/30">{item.name_en}</p>
-                             <p className="text-[10px] font-black text-primary mt-1">{settings.shop.currency} {(item.price * item.qty).toFixed(2)}</p>
+                             <p className="text-xs font-black text-foreground">{item.name_dv}</p>
+                             <p className="text-[11px] font-bold text-muted-foreground">{item.name_en}</p>
+                             <p className="text-xs font-black text-primary mt-1">{settings.shop.currency} {(item.price * item.qty).toFixed(2)}</p>
                           </div>
                           <div className="flex items-center gap-2 mr-4">
                              <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5 border border-border">

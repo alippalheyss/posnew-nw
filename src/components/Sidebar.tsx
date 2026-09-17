@@ -95,14 +95,14 @@ const Sidebar = () => {
                   
                   <div className="flex items-center gap-3">
                     <div className={cn(
-                      "h-8 w-8 rounded-xl flex items-center justify-center transition-all shrink-0",
-                      isActive ? "bg-primary text-foreground" : "bg-muted text-muted-foreground group-hover:bg-muted/80 group-hover:text-foreground"
+                      "h-9 w-9 rounded-xl flex items-center justify-center transition-all shrink-0",
+                      isActive ? "bg-primary text-white" : "bg-muted text-muted-foreground group-hover:bg-muted/80 group-hover:text-foreground"
                     )}>
-                      <item.icon className="h-4 w-4" />
+                      <item.icon className="h-4.5 w-4.5" />
                     </div>
                     <div className="flex flex-col text-right">
-                      <span className="text-[11px] font-black leading-none mb-0.5 whitespace-nowrap">{item.name_dv}</span>
-                      <span className="text-[9px] font-bold opacity-40 uppercase tracking-widest whitespace-nowrap">{item.name_en}</span>
+                      <span className="text-[14px] sm:text-[15px] font-black leading-tight mb-0.5 whitespace-nowrap">{item.name_dv}</span>
+                      <span className="text-[11px] sm:text-xs font-bold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{item.name_en}</span>
                     </div>
                   </div>
 
@@ -113,8 +113,8 @@ const Sidebar = () => {
                       </span>
                     )}
                     <ChevronRight className={cn(
-                      "h-3 w-3 transition-all shrink-0",
-                      isActive ? "text-primary opacity-100" : "opacity-0 group-hover:opacity-20"
+                      "h-3.5 w-3.5 transition-all shrink-0",
+                      isActive ? "text-primary opacity-100" : "opacity-0 group-hover:opacity-30"
                     )} />
                   </div>
                 </Link>
@@ -129,8 +129,8 @@ const Sidebar = () => {
         <PWAInstallButton />
         <div className="flex items-center justify-between px-1">
           <div className="text-right">
-            <p className="text-[9px] text-primary uppercase font-black tracking-widest mb-0.5">{currentUser?.role}</p>
-            <p className="text-sm font-black text-foreground truncate w-32">{currentUser?.name_dv}</p>
+            <p className="text-[10px] text-primary uppercase font-black tracking-wider mb-0.5">{currentUser?.role}</p>
+            <p className="text-base font-black text-foreground truncate w-32">{currentUser?.name_dv}</p>
           </div>
           <div className="w-9 h-9 rounded-xl bg-muted border border-border flex items-center justify-center relative">
             <Users className="h-4 w-4 text-muted-foreground" />

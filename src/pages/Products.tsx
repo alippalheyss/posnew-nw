@@ -249,7 +249,7 @@ const Products = () => {
 
                       <div className="p-3 text-right">
                          <h3 className="text-sm font-black text-foreground leading-tight mb-0.5 truncate">{product.name_dv}</h3>
-                         <p className="text-[9px] font-bold text-foreground/30 uppercase tracking-widest truncate">{product.name_en}</p>
+                         <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider truncate">{product.name_en}</p>
                          
                          <div className="flex items-center justify-between mt-3">
                             <div className="text-right">
@@ -296,8 +296,8 @@ const Products = () => {
                       <td className="p-4">
                         <div className="flex items-center gap-3 justify-end">
                           <div className="text-right">
-                            <p className="font-black text-foreground">{product.name_dv}</p>
-                            <p className="text-[10px] text-muted-foreground">{product.name_en}</p>
+                            <p className="font-black text-foreground text-sm">{product.name_dv}</p>
+                            <p className="text-xs font-bold text-muted-foreground">{product.name_en}</p>
                           </div>
                           <div className="h-10 w-10 rounded-lg bg-muted border border-border flex items-center justify-center overflow-hidden">
                              {product.image ? <img src={getAdaptedImageUrl(product.image, product.name_en || product.name_dv, product.item_code)} className="w-full h-full object-cover dark:opacity-100 opacity-95" /> : <Package className="h-4 w-4 text-muted-foreground/50" />}

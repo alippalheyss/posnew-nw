@@ -261,30 +261,30 @@ const Customers = () => {
 
                     <div className="text-right mb-6">
                        <h3 className="text-xl font-black text-foreground leading-tight mb-1">{customer.name_dv}</h3>
-                       <p className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest">{customer.name_en}</p>
-                       <p className="text-[10px] font-mono text-primary mt-2">ID: {customer.code}</p>
+                       <p className="text-xs sm:text-[13px] font-bold text-muted-foreground uppercase tracking-wider">{customer.name_en}</p>
+                       <p className="text-xs font-mono text-primary font-bold mt-2">ID: {customer.code}</p>
                     </div>
 
                     <div className="space-y-3 mb-6">
-                       <div className="flex items-center justify-end gap-3 text-muted-foreground/80">
+                       <div className="flex items-center justify-end gap-3 text-muted-foreground">
                           <span className="text-xs font-bold">{customer.phone}</span>
-                          <Phone className="h-3.5 w-3.5 text-muted-foreground/50" />
+                          <Phone className="h-3.5 w-3.5 text-muted-foreground/70" />
                        </div>
                        {customer.email && (
-                         <div className="flex items-center justify-end gap-3 text-muted-foreground/80">
+                         <div className="flex items-center justify-end gap-3 text-muted-foreground">
                             <span className="text-xs font-bold truncate max-w-[150px]">{customer.email}</span>
-                            <Mail className="h-3.5 w-3.5 text-muted-foreground/50" />
+                            <Mail className="h-3.5 w-3.5 text-muted-foreground/70" />
                          </div>
                        )}
                     </div>
                      <div className="space-y-4 mb-6">
                         <div className="space-y-2">
-                           <div className="flex justify-between text-[10px] font-black uppercase tracking-wider mb-1">
+                           <div className="flex justify-between text-xs font-black uppercase tracking-wider mb-1">
                               <span className="text-primary">{settings.shop.currency} {customer.outstanding_balance.toFixed(2)}</span>
-                              <span className="text-foreground/30">Used Credit</span>
+                              <span className="text-muted-foreground font-bold">Used Credit</span>
                            </div>
                            <Progress value={Math.min(100, (customer.outstanding_balance / (customer.credit_limit || 1)) * 100)} className="h-1.5 bg-muted" />
-                           <div className="flex justify-between text-[9px] font-bold opacity-30">
+                           <div className="flex justify-between text-xs font-bold text-muted-foreground">
                               <span>Limit: {settings.shop.currency} {customer.credit_limit.toFixed(2)}</span>
                               <span>{Math.round((customer.outstanding_balance / (customer.credit_limit || 1)) * 100)}%</span>
                            </div>
@@ -292,11 +292,11 @@ const Customers = () => {
 
                         <div className="grid grid-cols-2 gap-3">
                            <div className="bg-muted p-3 rounded-2xl border border-border text-right">
-                              <p className="text-[8px] font-black text-foreground/30 uppercase tracking-widest mb-1">{renderBoth('loyalty_points')}</p>
-                              <p className="text-sm font-black text-blue-400">{(customer.loyalty_points || 0).toFixed(0)} <span className="text-[8px] font-normal opacity-50">PTS</span></p>
+                              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-1">{renderBoth('loyalty_points')}</p>
+                              <p className="text-sm font-black text-blue-400">{(customer.loyalty_points || 0).toFixed(0)} <span className="text-[9px] font-normal opacity-70">PTS</span></p>
                            </div>
                            <div className="bg-muted p-3 rounded-2xl border border-border text-right">
-                              <p className="text-[8px] font-black text-foreground/30 uppercase tracking-widest mb-1">{renderBoth('credit_limit')}</p>
+                              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-1">{renderBoth('credit_limit')}</p>
                               <p className="text-sm font-black text-orange-500">{settings.shop.currency} {customer.credit_limit.toFixed(0)}</p>
                            </div>
                         </div>

@@ -505,7 +505,7 @@ const CreditInvoices = () => {
 
                    <div className="flex items-center gap-8">
                       <div className="text-right">
-                         <p className="text-[10px] font-black text-foreground/30 uppercase tracking-widest mb-1">Balance Due</p>
+                         <p className="text-xs font-black text-muted-foreground uppercase tracking-wider mb-1">Balance Due</p>
                          <p className="text-2xl font-black text-orange-500">{settings.shop.currency} {sale.grandTotal.toFixed(2)}</p>
                       </div>
                       <div className="flex gap-2">

@@ -737,11 +737,11 @@ const CreditOutstanding = () => {
 
                      <div className="text-right mb-6">
                         <h3 className="text-xl font-black text-foreground leading-tight mb-1">{customer.name_dv}</h3>
-                        <p className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest">{customer.name_en}</p>
+                        <p className="text-xs sm:text-[13px] font-bold text-muted-foreground uppercase tracking-wider">{customer.name_en}</p>
                      </div>
 
                      <div className="bg-red-500/5 p-4 rounded-2xl border border-red-500/10 mb-6 text-right group-hover:bg-red-500/10 transition-all">
-                        <p className="text-[8px] font-black text-red-500/40 uppercase tracking-widest mb-1">Total Due</p>
+                        <p className="text-[9px] font-black text-red-500/60 uppercase tracking-widest mb-1">Total Due</p>
                         <div className="flex justify-between items-end mb-1">
                           <span className={cn(
                             "text-2xl font-black cursor-pointer transition-all duration-300",
@@ -753,13 +753,13 @@ const CreditOutstanding = () => {
                         </div>
                         <div className="space-y-1.5 mt-3">
                           <Progress value={Math.min(100, (customer.outstanding_balance / (customer.credit_limit || 1)) * 100)} className="h-1.5 bg-muted" />
-                          <div className="flex justify-between text-[9px] font-bold opacity-30 uppercase tracking-tighter">
+                          <div className="flex justify-between text-xs font-bold text-muted-foreground uppercase tracking-tight">
                              <span>Limit: {settings.shop.currency} {customer.credit_limit.toFixed(2)}</span>
                              <span>{Math.round((customer.outstanding_balance / (customer.credit_limit || 1)) * 100)}% Used</span>
                           </div>
                         </div>
-                        <div className="flex items-center justify-end gap-2 text-[10px] text-muted-foreground/50 mt-2 font-bold">
-                           <Clock className="h-3 w-3" />
+                        <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground/80 mt-2 font-bold">
+                           <Clock className="h-3.5 w-3.5" />
                            <span>LAST SETTLED: {customer.settlement_history.length > 0 ? formatDate(customer.settlement_history[customer.settlement_history.length - 1].date) : 'NONE'}</span>
                         </div>
                      </div>
@@ -767,21 +767,21 @@ const CreditOutstanding = () => {
                      <div className="grid grid-cols-3 gap-2">
                         <Button 
                           onClick={() => handleSettlePaymentClick(customer)}
-                          className="bg-primary hover:bg-primary/90 text-foreground text-[9px] font-black h-10 rounded-xl transition-all uppercase px-1"
+                          className="bg-primary hover:bg-primary/90 text-white text-xs font-black h-10 rounded-xl transition-all uppercase px-1 shadow-md shadow-primary/20"
                         >
                           SETTLE
                         </Button>
                         <Button 
                           variant="ghost"
                           onClick={() => handleViewSettlementHistory(customer)}
-                          className="bg-muted hover:bg-muted/80 text-foreground text-[9px] font-black h-10 rounded-xl border border-border transition-all uppercase px-1"
+                          className="bg-muted hover:bg-muted/80 text-foreground text-xs font-black h-10 rounded-xl border border-border transition-all uppercase px-1"
                         >
                           HISTORY
                         </Button>
                         <Button 
                           variant="ghost"
                           onClick={() => handleViewCreditPurchases(customer)}
-                          className="bg-muted hover:bg-muted/80 text-foreground text-[9px] font-black h-10 rounded-xl border border-border transition-all uppercase px-1"
+                          className="bg-muted hover:bg-muted/80 text-foreground text-xs font-black h-10 rounded-xl border border-border transition-all uppercase px-1"
                         >
                           DETAILS
                         </Button>

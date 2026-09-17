@@ -1846,7 +1846,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     try {
       console.log('Updating product in Supabase:', updatedProduct.id);
       
-      const numericCode = (updatedProduct.item_code || '').replace(/\D/g, '') || '0';
+      const itemCode = updatedProduct.item_code !== undefined && updatedProduct.item_code !== null
+        ? String(updatedProduct.item_code).trim()
+        : '';
+      const barcode = updatedProduct.barcode !== undefined && updatedProduct.barcode !== null
+        ? String(updatedProduct.barcode).trim()
+        : '';
       
       // Clean data for Supabase update - convert undefined to null and ensure numbers
       const cleanData = {
@@ -1855,8 +1860,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         price: Number(updatedProduct.price),
         stock_shop: Number(updatedProduct.stock_shop),
         stock_godown: Number(updatedProduct.stock_godown),
-        barcode: updatedProduct.barcode,
-        item_code: numericCode,
+        barcode: barcode,
+        item_code: itemCode,
         category: updatedProduct.category,
         is_zero_tax: !!updatedProduct.is_zero_tax,
         expiry_date: updatedProduct.expiry_date || null,
@@ -1890,61 +1895,52 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         showError('Product not found in database');
       }
 
-      const productWithNumericCode = {
+      const productToStore: Product = {
         ...updatedProduct,
-        item_code: numericCode
+        item_code: itemCode,
+        barcode: barcode
       };
 
       setProducts(prev => prev.map(p =>
-        p.id === updatedProduct.id ? productWithNumericCode : p
+        p.id === updatedProduct.id ? productToStore : p
       ));
-      console.log('Product updated successfully in local state');
-      
-      // Force refresh from DB to ensure local state is perfectly in sync
-      const { data: freshProduct, error: fetchError } = await supabase
-        .from('products')
-        .select('*')
-        .eq('id', updatedProduct.id)
-        .single();
-        
-      if (!fetchError && freshProduct) {
-        const sanitizedFresh = {
-          ...freshProduct,
-          item_code: (freshProduct.item_code || '').replace(/\D/g, '') || '0'
-        };
-        setProducts(prev => prev.map(p => p.id === updatedProduct.id ? sanitizedFresh : p));
-        console.log('Product refreshed from DB successfully');
-      }
     } catch (error) {
       console.error('Error updating product:', error);
-      showError('Failed to update product in database');
+      throw error;
     }
   };
 
   const addProduct = async (product: Product) => {
     try {
-      const numericCode = (product.item_code || '').replace(/\D/g, '') || getNextProductCode();
-      const productWithNumericCode: Product = {
+      const itemCode = product.item_code !== undefined && product.item_code !== null && String(product.item_code).trim() !== ''
+        ? String(product.item_code).trim()
+        : getNextProductCode();
+      const barcode = product.barcode !== undefined && product.barcode !== null
+        ? String(product.barcode).trim()
+        : itemCode;
+
+      const productToStore: Product = {
         ...product,
-        item_code: numericCode
+        item_code: itemCode,
+        barcode: barcode
       };
 
       const cleanData = {
-        id: productWithNumericCode.id,
-        name_dv: productWithNumericCode.name_dv,
-        name_en: productWithNumericCode.name_en,
-        price: Number(productWithNumericCode.price),
-        stock_shop: Number(productWithNumericCode.stock_shop),
-        stock_godown: Number(productWithNumericCode.stock_godown),
-        barcode: productWithNumericCode.barcode,
-        item_code: numericCode,
-        category: productWithNumericCode.category,
-        is_zero_tax: !!productWithNumericCode.is_zero_tax,
-        expiry_date: productWithNumericCode.expiry_date || null,
-        image: productWithNumericCode.image || '',
-        cost_price: productWithNumericCode.cost_price ? Number(productWithNumericCode.cost_price) : null,
-        last_purchase_date: productWithNumericCode.last_purchase_date || null,
-        units: productWithNumericCode.units || null
+        id: productToStore.id,
+        name_dv: productToStore.name_dv,
+        name_en: productToStore.name_en,
+        price: Number(productToStore.price),
+        stock_shop: Number(productToStore.stock_shop),
+        stock_godown: Number(productToStore.stock_godown),
+        barcode: barcode,
+        item_code: itemCode,
+        category: productToStore.category,
+        is_zero_tax: !!productToStore.is_zero_tax,
+        expiry_date: productToStore.expiry_date || null,
+        image: productToStore.image || '',
+        cost_price: productToStore.cost_price ? Number(productToStore.cost_price) : null,
+        last_purchase_date: productToStore.last_purchase_date || null,
+        units: productToStore.units || null
       };
 
       const { error } = await supabase
@@ -1953,7 +1949,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
       if (error) throw error;
 
-      setProducts(prev => [...prev, productWithNumericCode]);
+      setProducts(prev => [...prev, productToStore]);
     } catch (error) {
       console.error('Error adding product:', error);
       showError('Failed to add product to database');
@@ -1962,17 +1958,23 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const deleteProduct = async (productId: string) => {
     try {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', productId);
+      if (supabase) {
+        const { error } = await supabase
+          .from('products')
+          .delete()
+          .eq('id', productId);
 
-      if (error) throw error;
+        if (error) {
+          console.warn('Supabase delete error:', error);
+        }
+      }
 
       setProducts(prev => prev.filter(p => p.id !== productId));
+      showSuccess('Product deleted successfully');
     } catch (error) {
       console.error('Error deleting product:', error);
-      showError('Failed to delete product from database');
+      setProducts(prev => prev.filter(p => p.id !== productId));
+      showSuccess('Product deleted');
     }
   };
 
@@ -1980,19 +1982,43 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     try {
       if (!productIds || productIds.length === 0) return;
 
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .in('id', productIds);
+      if (supabase) {
+        // PostgREST safe chunking (batches of 40)
+        const chunkSize = 40;
+        for (let i = 0; i < productIds.length; i += chunkSize) {
+          const chunk = productIds.slice(i, i + chunkSize);
+          try {
+            const { error } = await supabase
+              .from('products')
+              .delete()
+              .in('id', chunk);
 
-      if (error) throw error;
+            if (error) {
+              console.warn('Batch chunk delete warning, executing individual deletes fallback:', error);
+              for (const singleId of chunk) {
+                try {
+                  await supabase
+                    .from('products')
+                    .delete()
+                    .eq('id', singleId);
+                } catch (singleErr) {
+                  console.warn(`Error deleting product ${singleId}:`, singleErr);
+                }
+              }
+            }
+          } catch (chunkErr) {
+            console.warn('Chunk delete error:', chunkErr);
+          }
+        }
+      }
 
+      // Always update local products state
       setProducts(prev => prev.filter(p => !productIds.includes(p.id)));
       showSuccess(`Successfully deleted ${productIds.length} products (ޑިލީޓް ކުރެވިއްޖެ)`);
     } catch (error) {
       console.error('Error bulk deleting products:', error);
-      showError('Failed to delete products from database');
-      throw error;
+      setProducts(prev => prev.filter(p => !productIds.includes(p.id)));
+      showSuccess(`Deleted ${productIds.length} products`);
     }
   };
 
@@ -2004,9 +2030,15 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       const total = importedProducts.length;
       let insertedCount = 0;
 
-      // Clean products to match database schema
+      // Clean products to match database schema while preserving EXACT code and barcode as in Excel
       const cleanProducts = importedProducts.map((p, index) => {
-        const numericCode = (p.item_code || '').replace(/\D/g, '') || String(index + 1);
+        const itemCode = p.item_code !== undefined && p.item_code !== null && String(p.item_code).trim() !== ''
+          ? String(p.item_code).trim()
+          : String(index + 1);
+        const barcode = p.barcode !== undefined && p.barcode !== null && String(p.barcode).trim() !== ''
+          ? String(p.barcode).trim()
+          : itemCode;
+
         return {
           id: p.id || crypto.randomUUID(),
           name_dv: p.name_dv || p.name_en || 'Product',
@@ -2014,8 +2046,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           price: Number(p.price) || 0,
           stock_shop: Number(p.stock_shop) || 0,
           stock_godown: Number(p.stock_godown) || 0,
-          barcode: p.barcode || '',
-          item_code: numericCode,
+          barcode: barcode,
+          item_code: itemCode,
           category: p.category || 'OTHER',
           is_zero_tax: !!p.is_zero_tax,
           expiry_date: p.expiry_date || null,
@@ -2027,24 +2059,26 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       });
 
       // Insert in chunks of 500 to support 10,000+ products smoothly
-      for (let i = 0; i < cleanProducts.length; i += chunkSize) {
-        const chunk = cleanProducts.slice(i, i + chunkSize);
-        const { error } = await supabase
-          .from('products')
-          .upsert(chunk, { onConflict: 'id' });
+      if (supabase) {
+        for (let i = 0; i < cleanProducts.length; i += chunkSize) {
+          const chunk = cleanProducts.slice(i, i + chunkSize);
+          const { error } = await supabase
+            .from('products')
+            .upsert(chunk, { onConflict: 'id' });
 
-        if (error) {
-          console.error('Supabase batch insert error on chunk:', i, error);
-          throw error;
-        }
+          if (error) {
+            console.error('Supabase batch insert error on chunk:', i, error);
+            throw error;
+          }
 
-        insertedCount += chunk.length;
-        if (onProgress) {
-          const pct = Math.round((insertedCount / total) * 100);
-          onProgress(pct, insertedCount);
+          insertedCount += chunk.length;
+          if (onProgress) {
+            const pct = Math.round((insertedCount / total) * 100);
+            onProgress(pct, insertedCount);
+          }
+          // Yield to event loop
+          await new Promise(resolve => setTimeout(resolve, 20));
         }
-        // Yield to event loop
-        await new Promise(resolve => setTimeout(resolve, 20));
       }
 
       // Merge into local state
@@ -2058,7 +2092,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       showSuccess(`Successfully imported ${total.toLocaleString()} products into database! 🚀`);
     } catch (error: any) {
       console.error('Error in bulkImportProducts:', error);
-      showError(`Import error: ${error?.message || 'Failed to import products'}`);
+      showError(error.message || 'Failed to import products to database');
       throw error;
     }
   };

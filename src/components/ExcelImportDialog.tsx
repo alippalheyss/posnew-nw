@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
-import { Upload, CheckCircle, XCircle, FileSpreadsheet, AlertTriangle, Loader2 } from 'lucide-react';
+import { Upload, CheckCircle, XCircle, FileSpreadsheet, AlertTriangle, Loader2, Download, HelpCircle } from 'lucide-react';
 import { Product, useAppContext } from '@/context/AppContext';
 import { showSuccess, showError } from '@/utils/toast';
 import { generatePlaceholderImage } from '@/utils/imageUtils';
@@ -42,6 +42,92 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
         }
     };
 
+    // Download clean pre-formatted Excel template
+    const handleDownloadTemplate = () => {
+        const headers = [
+            "Item Code",
+            "Barcode",
+            "Product Name (English)",
+            "Product Name (Dhivehi)",
+            "Category",
+            "Selling Price",
+            "Cost Price",
+            "Shop Stock",
+            "Godown Stock",
+            "Is Tax Exempt"
+        ];
+
+        const sampleRows = [
+            [
+                "PRD001",
+                "8901030383821",
+                "Coca Cola 330ml Can",
+                "ކޮކާ ކޯލާ 330އެމްއެލް",
+                "BEVERAGES",
+                15.00,
+                11.50,
+                50,
+                100,
+                "No"
+            ],
+            [
+                "PRD002",
+                "8901030383822",
+                "Basmati Rice 5kg",
+                "ބާސްމަތީ ހަނޑޫ 5ކިލޯ",
+                "ESSENTIALS",
+                120.00,
+                95.00,
+                30,
+                60,
+                "Yes"
+            ],
+            [
+                "PRD003",
+                "8901030383823",
+                "Full Cream Milk 1L",
+                "ފުލް ކްރީމް ކިރު 1ލީޓަރު",
+                "DAIRY",
+                28.00,
+                22.00,
+                40,
+                80,
+                "Yes"
+            ],
+            [
+                "PRD004",
+                "8901030383824",
+                "Lipton Yellow Label Tea 100s",
+                "ލިޕްޓަން ސައިފަތް 100",
+                "BEVERAGES",
+                65.00,
+                50.00,
+                25,
+                50,
+                "No"
+            ]
+        ];
+
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
+        ws['!cols'] = [
+            { wch: 15 },
+            { wch: 18 },
+            { wch: 30 },
+            { wch: 30 },
+            { wch: 18 },
+            { wch: 14 },
+            { wch: 14 },
+            { wch: 14 },
+            { wch: 14 },
+            { wch: 16 }
+        ];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Product Template");
+        XLSX.writeFile(wb, "Product_Import_Template.xlsx");
+        showSuccess("Sample Excel template downloaded! (ސާމްޕަލް އެކްސެލް ފޯމެޓް ޑައުންލޯޑް ކުރެވިއްޖެ)");
+    };
+
     const parseExcelFile = async () => {
         if (!file) return;
 
@@ -60,7 +146,6 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
                 return;
             }
 
-            const timestamp = Date.now();
             const parsed: ParsedProduct[] = jsonData.map((row: any, index: number) => {
                 const errors: string[] = [];
 
@@ -79,16 +164,16 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
                     return '';
                 };
 
-                const nameDv = String(getVal(['Product Name (Dhivehi)', 'name_dv', 'Dhivehi Name', 'Product Name', 'Name'])).trim();
-                const nameEn = String(getVal(['Product Name (English)', 'name_en', 'English Name', 'Product Name', 'Name'])).trim();
-                const rawItemCode = String(getVal(['Item Code', 'item_code', 'Code', 'ItemCode'])).trim();
-                const barcode = String(getVal(['Barcode', 'barcode', 'Bar Code'])).trim();
-                const category = String(getVal(['Category', 'category', 'Cat'])).trim() || 'OTHER';
+                const nameDv = String(getVal(['Product Name (Dhivehi)', 'name_dv', 'Dhivehi Name', 'Dhivehi', 'ނަން'])).trim();
+                const nameEn = String(getVal(['Product Name (English)', 'name_en', 'English Name', 'English', 'Product Name', 'Name', 'Description'])).trim();
+                const rawItemCode = String(getVal(['Item Code', 'item_code', 'Product Code', 'Code', 'ItemCode', 'SKU', 'ކޯޑް'])).trim();
+                const rawBarcode = String(getVal(['Barcode', 'barcode', 'Bar Code', 'UPC', 'EAN', 'ބާކޯޑް'])).trim();
+                const category = String(getVal(['Category', 'category', 'Cat', 'Department', 'ބައި'])).trim() || 'OTHER';
                 
-                const rawPrice = getVal(['Selling Price', 'price', 'Price', 'SellingPrice']);
-                const rawCost = getVal(['Cost Price', 'cost_price', 'Cost', 'CostPrice']);
-                const rawStockShop = getVal(['Shop Stock', 'stock_shop', 'Stock', 'ShopStock', 'Quantity', 'Qty']);
-                const rawStockGodown = getVal(['Godown Stock', 'stock_godown', 'GodownStock']);
+                const rawPrice = getVal(['Selling Price', 'price', 'Price', 'SellingPrice', 'Rate', 'MRP', 'ވިއްކާ އަގު']);
+                const rawCost = getVal(['Cost Price', 'cost_price', 'Cost', 'CostPrice', 'Purchase Price', 'ގަތް އަގު']);
+                const rawStockShop = getVal(['Shop Stock', 'stock_shop', 'Stock', 'ShopStock', 'Quantity', 'Qty', 'Shop Qty', 'ތަކެތީގެ އަދަދު']);
+                const rawStockGodown = getVal(['Godown Stock', 'stock_godown', 'GodownStock', 'Godown Qty', 'Warehouse Stock']);
 
                 // Validation
                 if (!nameDv && !nameEn) errors.push('Missing product name');
@@ -98,14 +183,15 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
                 const taxExemptValue = String(getVal(['Is Tax Exempt', 'is_zero_tax', 'Tax Exempt', 'Zero Tax'])).toLowerCase().trim();
                 const isTaxExempt = taxExemptValue === 'yes' || taxExemptValue === '1' || taxExemptValue === 'true';
 
-                const numericCode = rawItemCode.replace(/\D/g, '') || String(index + 1);
-                const finalBarcode = barcode || numericCode;
+                // PRESERVE EXACT ITEM CODE AND BARCODE AS IN EXCEL
+                const finalItemCode = rawItemCode ? rawItemCode : (rawBarcode ? rawBarcode : String(index + 1));
+                const finalBarcode = rawBarcode ? rawBarcode : (rawItemCode ? rawItemCode : '');
 
                 const product: Product = {
                     id: crypto.randomUUID(),
                     name_dv: nameDv || nameEn || 'Product',
                     name_en: nameEn || nameDv || 'Product',
-                    item_code: numericCode,
+                    item_code: finalItemCode,
                     barcode: finalBarcode,
                     category: category.toUpperCase() || 'OTHER',
                     price: Number(rawPrice) || 0,
@@ -113,7 +199,7 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
                     stock_shop: Number(rawStockShop) || 0,
                     stock_godown: Number(rawStockGodown) || 0,
                     is_zero_tax: isTaxExempt,
-                    image: generatePlaceholderImage(nameEn || nameDv || 'Product', numericCode)
+                    image: generatePlaceholderImage(nameEn || nameDv || 'Product', finalItemCode)
                 };
 
                 return {
@@ -174,12 +260,24 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
         <Dialog open={isOpen} onOpenChange={handleClose}>
             <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto font-faruma bg-card border border-border text-foreground shadow-2xl rounded-3xl p-6 sm:p-7 box-border" dir="rtl">
                 <DialogHeader className="text-right pb-3 border-b border-border/60">
-                    <DialogTitle className="text-xl font-black text-foreground flex items-center justify-end gap-2.5">
-                        <span>{t('import_excel') || 'Excel Import Products'} (އެކްސެލް އިން ޕްރޮޑަކްޓް އެތެރެކުރުން)</span>
-                        <FileSpreadsheet className="h-6 w-6 text-primary" />
-                    </DialogTitle>
+                    <div className="flex items-center justify-between">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleDownloadTemplate}
+                            className="rounded-xl border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs gap-1.5 h-9"
+                        >
+                            <Download className="h-4 w-4" />
+                            <span>Download Excel Template (ސާމްޕަލް ފޯމެޓް)</span>
+                        </Button>
+                        <DialogTitle className="text-xl font-black text-foreground flex items-center justify-end gap-2.5">
+                            <span>{t('import_excel') || 'Excel Import Products'} (އެކްސެލް އިން ޕްރޮޑަކްޓް އެތެރެކުރުން)</span>
+                            <FileSpreadsheet className="h-6 w-6 text-primary" />
+                        </DialogTitle>
+                    </div>
                     <DialogDescription className="text-xs text-muted-foreground text-right mt-1">
-                        Easily upload and import large inventory catalogs (supports 10,000+ products with automatic chunked database synchronization).
+                        Easily upload and import large inventory catalogs. The system preserves your exact Item Code and Barcode values without alteration.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -187,7 +285,7 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
                     {/* File Upload Section */}
                     <div className="space-y-2 text-right">
                         <Label htmlFor="excel-file" className="text-xs font-black uppercase text-muted-foreground">
-                            {t('select_file') || 'Select Excel File (.xlsx, .xls)'}*
+                            {t('select_file') || 'Select Excel File (.xlsx, .xls, .csv)'}*
                         </Label>
                         <div className="flex flex-col sm:flex-row gap-3">
                             <Input
@@ -230,16 +328,39 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
 
                     {/* Expected Format Guide */}
                     {!parsedProducts.length && !isProcessing && (
-                        <div className="bg-muted/60 p-4 rounded-2xl border border-border text-right space-y-2">
-                            <p className="text-xs font-black text-foreground flex items-center justify-end gap-1.5">
-                                <span>Expected Columns (ކޮލަމްތައް):</span>
-                                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                            </p>
-                            <p className="text-[11px] text-muted-foreground font-mono leading-relaxed">
-                                Product Name (Dhivehi), Product Name (English), Item Code, Barcode, Category, Selling Price, Cost Price, Shop Stock, Godown Stock, Is Tax Exempt
-                            </p>
+                        <div className="bg-muted/60 p-4 rounded-2xl border border-border text-right space-y-3">
+                            <div className="flex items-center justify-between">
+                                <Button
+                                    type="button"
+                                    variant="link"
+                                    size="sm"
+                                    onClick={handleDownloadTemplate}
+                                    className="p-0 h-auto text-xs text-primary font-bold gap-1"
+                                >
+                                    <Download className="h-3.5 w-3.5" />
+                                    <span>Download Ready Template .xlsx</span>
+                                </Button>
+                                <p className="text-xs font-black text-foreground flex items-center justify-end gap-1.5">
+                                    <span>Excel Column Header Format (ބޭނުންކުރަންވީ ކޮލަމްތައް):</span>
+                                    <HelpCircle className="h-4 w-4 text-primary" />
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px] font-mono text-center">
+                                <div className="p-2 rounded-lg bg-card border border-border font-bold">Item Code</div>
+                                <div className="p-2 rounded-lg bg-card border border-border font-bold">Barcode</div>
+                                <div className="p-2 rounded-lg bg-card border border-border font-bold">Product Name (English)</div>
+                                <div className="p-2 rounded-lg bg-card border border-border font-bold">Product Name (Dhivehi)</div>
+                                <div className="p-2 rounded-lg bg-card border border-border font-bold">Category</div>
+                                <div className="p-2 rounded-lg bg-card border border-border font-bold">Selling Price</div>
+                                <div className="p-2 rounded-lg bg-card border border-border font-bold">Cost Price</div>
+                                <div className="p-2 rounded-lg bg-card border border-border font-bold">Shop Stock</div>
+                                <div className="p-2 rounded-lg bg-card border border-border font-bold">Godown Stock</div>
+                                <div className="p-2 rounded-lg bg-card border border-border font-bold">Is Tax Exempt</div>
+                            </div>
+
                             <p className="text-[10px] text-muted-foreground/80">
-                                💡 Tip: You can import files with 10,000+ items smoothly. System processes records in safe batches.
+                                💡 Tip: The system will keep your Item Code and Barcode values exactly as written in the Excel file without changing them.
                             </p>
                         </div>
                     )}
@@ -275,7 +396,8 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
                                             <TableHead className="text-right">Item Code</TableHead>
                                             <TableHead className="text-right">Barcode</TableHead>
                                             <TableHead className="text-right">Price</TableHead>
-                                            <TableHead className="text-right">Stock</TableHead>
+                                            <TableHead className="text-right">Cost</TableHead>
+                                            <TableHead className="text-right">Shop Stock</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody className="divide-y divide-border/60">
@@ -290,9 +412,10 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
                                                 </TableCell>
                                                 <TableCell className="font-black">{item.product.name_dv}</TableCell>
                                                 <TableCell className="font-mono text-muted-foreground">{item.product.name_en}</TableCell>
-                                                <TableCell className="font-mono">{item.product.item_code}</TableCell>
-                                                <TableCell className="font-mono">{item.product.barcode}</TableCell>
+                                                <TableCell className="font-mono font-bold text-foreground">{item.product.item_code}</TableCell>
+                                                <TableCell className="font-mono font-bold text-foreground">{item.product.barcode}</TableCell>
                                                 <TableCell className="font-mono font-bold text-primary">{item.product.price}</TableCell>
+                                                <TableCell className="font-mono">{item.product.cost_price || '-'}</TableCell>
                                                 <TableCell className="font-mono">{item.product.stock_shop}</TableCell>
                                             </TableRow>
                                         ))}
@@ -337,3 +460,4 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
 };
 
 export default ExcelImportDialog;
+

@@ -49,8 +49,8 @@ const ProductImportDialog: React.FC<ProductImportDialogProps> = ({ isOpen, onClo
           id: `imported-${Date.now()}-${index}`, // Generate a unique ID
           name_dv: row['name_dv'] || '',
           name_en: row['name_en'] || '',
-          barcode: row['barcode'] ? String(row['barcode']) : '',
-          item_code: row['item_code'] ? String(row['item_code']).replace(/\D/g, '') : '',
+          barcode: row['barcode'] ? String(row['barcode']).trim() : '',
+          item_code: row['item_code'] ? String(row['item_code']).trim() : '',
           price: parseFloat(row['price']) || 0,
           image: row['image'] || '/placeholder.svg', // Default image if not provided
         }));

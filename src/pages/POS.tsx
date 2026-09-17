@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ShoppingCart, PlusCircle, Minus, Trash2, MonitorPlay, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, ArrowLeft, Plus, ChevronDown, Boxes, X, CheckCircle2, Package, Loader2, Check } from 'lucide-react';
+import { ShoppingCart, PlusCircle, Minus, Trash2, MonitorPlay, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, ArrowLeft, Plus, ChevronDown, Boxes, X, CheckCircle2, Package, Loader2, Check, Printer } from 'lucide-react';
 import { formatDate, toISODate, toISODatetime, formatTime, formatDateTime } from '@/utils/formatters';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   DropdownMenu,
@@ -88,6 +89,7 @@ const POS = () => {
   const [telegramCustomer, setTelegramCustomer] = useState<Customer | null>(null);
   const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false);
   const [isTransferSlipsDialogOpen, setIsTransferSlipsDialogOpen] = useState(false);
+  const [shouldPrintCashReceipt, setShouldPrintCashReceipt] = useState<boolean>(() => localStorage.getItem('pos_print_cash_receipt') === 'true');
 
   const TelegramIcon = ({ className }: { className?: string }) => (
     <svg viewBox="0 0 24 24" className={className} fill="currentColor">
@@ -97,6 +99,8 @@ const POS = () => {
 
   const maybeSendTelegramSaleReceipt = (sale: Sale, customer?: Customer | null) => {
     if (!customer?.telegram_chat_id) return;
+    // Do NOT send telegram receipt for cash sales even if a credit customer is selected
+    if (sale.paymentMethod === 'cash') return;
     if (!settings.telegram?.autoSendSaleReceipts && sale.paymentMethod !== 'credit') return;
 
     sendTelegramSaleReceipt({
@@ -704,8 +708,7 @@ const POS = () => {
 
       showSuccess(t('cash_payment_successful'));
       setLastSaleForPrint(recordedSale);
-      maybeSendTelegramSaleReceipt(recordedSale, activeCart.customer);
-      if (settings.printing.printMode === 'auto') {
+      if (shouldPrintCashReceipt) {
         handlePrintReceipt(recordedSale);
       }
       clearActiveCart();
@@ -759,9 +762,6 @@ const POS = () => {
       showSuccess(t('credit_sale_successful'));
       setLastSaleForPrint(recordedSale);
       maybeSendTelegramSaleReceipt(recordedSale, activeCart.customer);
-      if (settings.printing.printMode === 'auto') {
-        handlePrintReceipt(recordedSale);
-      }
       clearActiveCart();
       setIsCreditDialogOpen(false);
       focusSearchBar();
@@ -1019,9 +1019,6 @@ const POS = () => {
       showSuccess(t('split_payment_successful'));
       setLastSaleForPrint(recordedSale);
       maybeSendTelegramSaleReceipt(recordedSale, activeCart?.customer || null);
-      if (settings.printing.printMode === 'auto') {
-        handlePrintReceipt(recordedSale);
-      }
       clearActiveCart();
       setIsSplitDialogOpen(false);
       setSplitEntries([{ id: '1', amount: 0, method: 'Cash' }]);
@@ -1675,6 +1672,34 @@ const POS = () => {
                   {settings.shop.currency} {Math.abs(balance).toFixed(2)}
                 </div>
               </div>
+            </div>
+
+            {/* Print Receipt Toggle Option */}
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-muted/50 border border-border w-full box-border">
+              <div className="flex items-center gap-2.5">
+                <div className={cn(
+                  "w-8 h-8 rounded-xl flex items-center justify-center transition-colors shrink-0",
+                  shouldPrintCashReceipt ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                )}>
+                  <Printer className="h-4 w-4" />
+                </div>
+                <div className="text-right">
+                  <Label htmlFor="printCashReceipt" className="text-xs font-black text-foreground cursor-pointer block">
+                    ރަސީދު ޕްރިންޓް ކުރޭ (Print Receipt)
+                  </Label>
+                  <span className="text-[10px] text-muted-foreground block">
+                    {shouldPrintCashReceipt ? 'ޕްރިންޓް ކުރެވޭނެ (Will print receipt)' : 'ޕްރިންޓެއް ނުކުރާނެ (No receipt print)'}
+                  </span>
+                </div>
+              </div>
+              <Switch
+                id="printCashReceipt"
+                checked={shouldPrintCashReceipt}
+                onCheckedChange={(checked) => {
+                  setShouldPrintCashReceipt(checked);
+                  localStorage.setItem('pos_print_cash_receipt', String(checked));
+                }}
+              />
             </div>
           </div>
 

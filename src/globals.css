@@ -56,7 +56,7 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-weight: 600;
-    font-family: 'Faruma', 'Roboto', system-ui, -apple-system, sans-serif;
+    font-family: 'Roboto', 'Faruma', system-ui, -apple-system, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -67,15 +67,17 @@
   h1, h2, h3, h4, h5, h6 {
     font-weight: 800;
     letter-spacing: -0.015em;
+    font-family: 'Roboto', 'Faruma', system-ui, -apple-system, sans-serif;
   }
 
   p, span, label, input, button, select, textarea, th, td, a, li, kbd {
     font-weight: 600;
+    font-family: 'Roboto', 'Faruma', system-ui, -apple-system, sans-serif;
   }
 
   /* Faruma and Dhivehi Thaana bold readability */
   .font-faruma {
-    font-family: 'Faruma', 'Roboto', system-ui, -apple-system, sans-serif;
+    font-family: 'Roboto', 'Faruma', system-ui, -apple-system, sans-serif;
     font-weight: 700;
     letter-spacing: 0.015em;
   }
@@ -147,6 +149,7 @@
   font-weight: 400;
   font-style: normal;
   font-display: swap;
+  unicode-range: U+0780-07BF, U+0600-06FF, U+FB50-FDFF, U+FE70-FEFF;
 }
 
 @font-face {
@@ -157,6 +160,7 @@
   font-weight: 600;
   font-style: normal;
   font-display: swap;
+  unicode-range: U+0780-07BF, U+0600-06FF, U+FB50-FDFF, U+FE70-FEFF;
 }
 
 @font-face {
@@ -167,6 +171,7 @@
   font-weight: 700;
   font-style: normal;
   font-display: swap;
+  unicode-range: U+0780-07BF, U+0600-06FF, U+FB50-FDFF, U+FE70-FEFF;
 }
 
 @font-face {
@@ -177,6 +182,7 @@
   font-weight: 800;
   font-style: normal;
   font-display: swap;
+  unicode-range: U+0780-07BF, U+0600-06FF, U+FB50-FDFF, U+FE70-FEFF;
 }
 
 @font-face {
@@ -187,9 +193,10 @@
   font-weight: 900;
   font-style: normal;
   font-display: swap;
+  unicode-range: U+0780-07BF, U+0600-06FF, U+FB50-FDFF, U+FE70-FEFF;
 }
 
 .font-faruma {
-  font-family: 'Faruma', 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Roboto', 'Faruma', system-ui, -apple-system, sans-serif;
   font-weight: 700;
 }

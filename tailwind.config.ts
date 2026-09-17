@@ -19,7 +19,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        faruma: ['Faruma', 'Roboto', 'Noto Sans Arabic', 'Segoe UI', 'Tahoma', 'Geneva', 'Verdana', 'sans-serif'],
+        sans: ['Roboto', 'Faruma', 'system-ui', 'sans-serif'],
+        faruma: ['Roboto', 'Faruma', 'Noto Sans Arabic', 'Segoe UI', 'Tahoma', 'Geneva', 'Verdana', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",

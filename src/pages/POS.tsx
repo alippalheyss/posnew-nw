@@ -1247,7 +1247,8 @@ const POS = () => {
             </Button>
           </div>
           <div className="flex flex-wrap gap-2 mb-3">
-            {[...openCarts.values()].map(cart => {
+            {[...openCarts.values()].map((cart, idx) => {
+              const displayNumber = idx + 1;
               const isActive = activeCartId === cart.id;
               const customerName = cart.customer ? (cart.customer.name_dv || cart.customer.name_en) : null;
               return (
@@ -1263,7 +1264,7 @@ const POS = () => {
                         : "bg-muted/70 border-border text-foreground/80 hover:text-foreground hover:bg-muted"
                     )}
                   >
-                    <span>Cart #{cart.displayNumber}</span>
+                    <span>Cart #{displayNumber}</span>
                     {customerName && (
                       <span className={cn(
                         "max-w-[90px] truncate text-[10px] px-1.5 py-0.5 rounded-md font-medium",
@@ -1291,12 +1292,25 @@ const POS = () => {
           <div className="flex items-center justify-between px-4 py-2.5 bg-muted/60 rounded-2xl border border-border mb-3">
             <div className="flex items-center gap-2.5 min-w-0">
               <span className="px-2.5 py-1 bg-primary text-white text-xs font-black rounded-lg shadow-sm shrink-0">
-                CART #{activeCart?.displayNumber || 1}
+                CART #{[...openCarts.keys()].indexOf(activeCartId) + 1 || 1}
               </span>
               {activeCart?.customer ? (
-                <div className="flex items-center gap-1.5 text-xs font-bold text-primary truncate">
+                <div className="flex items-center gap-2 text-xs font-bold text-primary truncate">
                   <User className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate">{activeCart.customer.name_dv || activeCart.customer.name_en}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateActiveCart(prev => ({ ...prev, customer: null }));
+                      setPointsToRedeem(0);
+                      showSuccess('Switched to Walk-in Cash Customer (ކަސްޓަމަރު ވަކިކުރެވިއްޖެ)');
+                    }}
+                    className="h-5 px-2 text-[9px] font-black bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-md flex items-center gap-1 transition-all shrink-0 border border-red-500/20 active:scale-95"
+                    title="Remove customer from cart (Change to Walk-in Cash Customer)"
+                  >
+                    <X className="h-2.5 w-2.5 stroke-[3]" />
+                    <span>Deselect (ވަކިކުރޭ)</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
@@ -2118,16 +2132,16 @@ const POS = () => {
       </Dialog>
 
       <Dialog open={isExpiryDialogOpen} onOpenChange={setIsExpiryDialogOpen}>
-        <DialogContent className="sm:max-w-[460px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border text-right p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+        <DialogContent className="sm:max-w-[500px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto font-faruma bg-card text-foreground border border-border text-right p-6 sm:p-7 shadow-2xl rounded-3xl box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
           <DialogHeader className="pb-3 text-right space-y-2 border-b border-border/60">
-            <div className="flex items-start justify-between gap-2 pl-8">
+            <div className="flex items-start justify-between gap-3 pl-10">
               {selectedProductForExpiry?.expiry_date && (
-                <Badge variant="outline" className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30 text-[11px] font-black shrink-0 mt-0.5">
+                <Badge variant="outline" className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30 text-[11px] font-black shrink-0 mt-0.5 px-2.5 py-1">
                   {formatDate(selectedProductForExpiry.expiry_date)}
                 </Badge>
               )}
               <div className="text-right flex-1 min-w-0">
-                <DialogTitle className="text-lg font-black text-orange-600 dark:text-orange-400 flex items-center justify-end gap-2">
+                <DialogTitle className="text-xl font-black text-orange-600 dark:text-orange-400 flex items-center justify-end gap-2">
                   <span className="truncate">{t('item_near_expiry')}</span>
                   <AlertTriangle className="h-5 w-5 shrink-0 text-orange-500" />
                 </DialogTitle>
@@ -2144,7 +2158,7 @@ const POS = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="bg-orange-500/10 dark:bg-orange-500/20 p-4 rounded-2xl border border-orange-500/30 text-right space-y-3 box-border w-full my-1">
+          <div className="bg-orange-500/10 dark:bg-orange-500/20 p-4 sm:p-5 rounded-2xl border border-orange-500/30 text-right space-y-3.5 box-border w-full my-2">
             <div className="flex justify-between items-center">
               <span className="text-xl font-black text-orange-600 dark:text-orange-300 font-mono">
                 {expiryDiscountPercent}% {t('discount')}

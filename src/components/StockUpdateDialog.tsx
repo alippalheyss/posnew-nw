@@ -57,8 +57,8 @@ const StockUpdateDialog: React.FC<StockUpdateDialogProps> = ({ isOpen, onClose, 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[440px] font-faruma bg-card border-border text-foreground shadow-2xl rounded-3xl p-6" dir="rtl">
-        <DialogHeader className="text-right pb-2 space-y-1">
+      <DialogContent className="sm:max-w-[500px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto font-faruma bg-card border-border text-foreground shadow-2xl rounded-3xl p-6 sm:p-7 box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+        <DialogHeader className="text-right pb-3 space-y-1 border-b border-border/60 pl-10">
           <DialogTitle className="text-xl font-black flex items-center justify-end gap-2.5">
              <span>{renderBoth('update_stock')}</span>
              <Edit3 className="h-5 w-5 text-primary" />

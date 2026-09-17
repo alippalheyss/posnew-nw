@@ -1,18 +1,23 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Minus, X, Maximize2, ShoppingBag, RotateCcw, Plus, Building2 } from 'lucide-react';
-import { useAppContext, Purchase, Vendor } from '@/context/AppContext';
+import { Minus, X, Maximize2, ShoppingBag, Plus, Building2, Trash2, Search, Package, Check, Calculator, AlertCircle, Save } from 'lucide-react';
+import { useAppContext, Purchase, Vendor, PurchaseItem, Product } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { showSuccess, showError } from '@/utils/toast';
+
+interface DraftPurchaseItem {
+  id: string;
+  productId: string;
+  quantity: number | '';
+  unitPrice: number | '';
+  isZeroTax: boolean;
+}
 
 const LocalPurchaseWindow = () => {
   const { t } = useTranslation();
@@ -22,23 +27,24 @@ const LocalPurchaseWindow = () => {
     isPurchaseWindowMinimized, 
     setIsPurchaseWindowMinimized,
     vendors,
+    products,
     addPurchase,
     addVendor,
     settings
   } = useAppContext();
 
-  const [newPurchase, setNewPurchase] = useState({
-    vendorId: '',
-    billNumber: '',
-    date: new Date().toISOString().split('T')[0],
-    totalAmount: '',
-    gstAmount: '',
-    zeroTaxAmount: '',
-    description: ''
-  });
+  const [vendorId, setVendorId] = useState('');
+  const [billNumber, setBillNumber] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [description, setDescription] = useState('');
+  
+  // Product Line Items
+  const [items, setItems] = useState<DraftPurchaseItem[]>([
+    { id: crypto.randomUUID(), productId: '', quantity: 1, unitPrice: '', isZeroTax: false }
+  ]);
+  const [productSearchQueries, setProductSearchQueries] = useState<Record<string, string>>({});
+  const [activeSearchRowId, setActiveSearchRowId] = useState<string | null>(null);
 
-  const [isCustomGst, setIsCustomGst] = useState(false);
-  const [showZeroTaxInput, setShowZeroTaxInput] = useState(false);
   const [vendorSearchQuery, setVendorSearchQuery] = useState('');
 
   // Quick Add Vendor State
@@ -47,47 +53,79 @@ const LocalPurchaseWindow = () => {
   const [quickVendorPhone, setQuickVendorPhone] = useState('');
   const [quickVendorTin, setQuickVendorTin] = useState('');
   const [isAddingVendor, setIsAddingVendor] = useState(false);
+  const [isSavingPurchase, setIsSavingPurchase] = useState(false);
+
+  const taxRate = settings?.shop?.taxRate || 8;
+  const currency = settings?.shop?.currency || 'MVR';
 
   const filteredVendors = vendors.filter(v => 
     v.name_en?.toLowerCase().includes(vendorSearchQuery.toLowerCase()) || 
-    v.name_dv?.toLowerCase().includes(vendorSearchQuery.toLowerCase())
+    v.name_dv?.toLowerCase().includes(vendorSearchQuery.toLowerCase()) ||
+    v.code?.toLowerCase().includes(vendorSearchQuery.toLowerCase())
   );
 
-  const computeAutoGst = (totalVal: string, zeroTaxVal: string) => {
-    const total = parseFloat(totalVal) || 0;
-    const zeroTax = parseFloat(zeroTaxVal) || 0;
-    const taxable = Math.max(0, total - zeroTax);
-    const taxRate = settings.shop.taxRate || 8;
-    const gst = taxable > 0 ? taxable - (taxable / (1 + (taxRate / 100))) : 0;
-    return gst > 0 ? gst.toFixed(2) : '0.00';
+  const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    event.target.select();
   };
 
-  const handleTotalChange = (val: string) => {
-    setNewPurchase(prev => {
-      const nextGst = isCustomGst ? prev.gstAmount : (val ? computeAutoGst(val, prev.zeroTaxAmount) : '');
-      return { ...prev, totalAmount: val, gstAmount: nextGst };
-    });
-  };
-
-  const handleZeroTaxChange = (val: string) => {
-    setNewPurchase(prev => {
-      const nextGst = isCustomGst ? prev.gstAmount : (prev.totalAmount ? computeAutoGst(prev.totalAmount, val) : '');
-      return { ...prev, zeroTaxAmount: val, gstAmount: nextGst };
-    });
-  };
-
-  const handleGstChange = (val: string) => {
-    setIsCustomGst(true);
-    setNewPurchase(prev => ({ ...prev, gstAmount: val }));
-  };
-
-  const resetToAutoGst = () => {
-    setIsCustomGst(false);
-    setNewPurchase(prev => ({
+  const handleAddItemRow = () => {
+    setItems(prev => [
       ...prev,
-      gstAmount: prev.totalAmount ? computeAutoGst(prev.totalAmount, prev.zeroTaxAmount) : ''
+      { id: crypto.randomUUID(), productId: '', quantity: 1, unitPrice: '', isZeroTax: false }
+    ]);
+  };
+
+  const handleRemoveItemRow = (rowId: string) => {
+    if (items.length <= 1) {
+      setItems([{ id: crypto.randomUUID(), productId: '', quantity: 1, unitPrice: '', isZeroTax: false }]);
+      return;
+    }
+    setItems(prev => prev.filter(item => item.id !== rowId));
+  };
+
+  const handleProductSelect = (rowId: string, prod: Product) => {
+    setItems(prev => prev.map(item => {
+      if (item.id !== rowId) return item;
+      return {
+        ...item,
+        productId: prod.id,
+        unitPrice: prod.cost_price ? Number(prod.cost_price) : '',
+        isZeroTax: !!prod.is_zero_tax
+      };
+    }));
+    setActiveSearchRowId(null);
+  };
+
+  const handleUpdateItem = (rowId: string, field: keyof DraftPurchaseItem, value: any) => {
+    setItems(prev => prev.map(item => {
+      if (item.id !== rowId) return item;
+      return { ...item, [field]: value };
     }));
   };
+
+  // Calculations
+  const calculatedItems = items.map(item => {
+    const qty = typeof item.quantity === 'number' ? item.quantity : 0;
+    const price = typeof item.unitPrice === 'number' ? item.unitPrice : 0;
+    const lineSubtotal = qty * price;
+    // Input GST calculation
+    const gstRate = item.isZeroTax ? 0 : (taxRate / 100);
+    const lineGst = lineSubtotal > 0 ? (lineSubtotal * gstRate) : 0;
+    const lineTotal = lineSubtotal + lineGst;
+    return {
+      ...item,
+      qty,
+      price,
+      lineSubtotal,
+      lineGst,
+      lineTotal
+    };
+  });
+
+  const totalQuantity = calculatedItems.reduce((sum, i) => sum + i.qty, 0);
+  const totalSubtotal = calculatedItems.reduce((sum, i) => sum + i.lineSubtotal, 0);
+  const totalInputGst = calculatedItems.reduce((sum, i) => sum + i.lineGst, 0);
+  const grandTotal = totalSubtotal + totalInputGst;
 
   const handleQuickAddVendor = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,12 +150,12 @@ const LocalPurchaseWindow = () => {
 
     try {
       await addVendor(newV);
-      setNewPurchase(prev => ({ ...prev, vendorId: newV.id }));
+      setVendorId(newV.id);
       setIsQuickAddVendorOpen(false);
       setQuickVendorName('');
       setQuickVendorPhone('');
       setQuickVendorTin('');
-      showSuccess(t('vendor_added_successfully') || `Vendor "${newV.name_en}" added successfully`);
+      showSuccess(`Vendor "${newV.name_en}" added successfully`);
     } catch (err) {
       console.error('Error adding vendor:', err);
       showError('Failed to add vendor');
@@ -126,81 +164,88 @@ const LocalPurchaseWindow = () => {
     }
   };
 
-  const totalNum = parseFloat(newPurchase.totalAmount) || 0;
-  const gstNum = parseFloat(newPurchase.gstAmount) || 0;
-  const subtotalNum = Math.max(0, totalNum - gstNum);
-
-  const handleAddPurchase = async () => {
-    if (!newPurchase.vendorId || !newPurchase.totalAmount) {
-      showError(t('please_fill_required_fields') || 'Please fill required fields');
+  const handleSavePurchase = async () => {
+    if (!vendorId) {
+      showError(t('select_vendor') || 'Please select a vendor');
       return;
     }
 
-    const vendor = vendors.find(v => v.id === newPurchase.vendorId);
+    if (!billNumber.trim()) {
+      showError('Please enter invoice / bill number (ބިލް ނަންބަރު ލިޔުއްވާ)');
+      return;
+    }
+
+    const validLineItems = calculatedItems.filter(i => i.productId && i.qty > 0 && i.price > 0);
+    if (validLineItems.length === 0) {
+      showError('Please add at least 1 product with valid quantity and price (މަދުވެގެން 1 އައިޓަމް އަދަދާއި އަގު ޖައްސަވާ)');
+      return;
+    }
+
+    const vendor = vendors.find(v => v.id === vendorId);
     if (!vendor) return;
 
-    const total = parseFloat(newPurchase.totalAmount);
-    if (isNaN(total) || total <= 0) {
-      showError(t('enter_valid_amount') || 'Please enter a valid total amount');
-      return;
-    }
+    setIsSavingPurchase(true);
 
-    const gst = parseFloat(newPurchase.gstAmount) || 0;
-    if (gst > total) {
-      showError(t('gst_exceeds_total') || 'GST amount cannot exceed total bill amount');
-      return;
-    }
-
-    const subtotal = Math.max(0, total - gst);
+    const purchaseItemsPayload: PurchaseItem[] = validLineItems.map(item => {
+      const prod = products.find(p => p.id === item.productId);
+      return {
+        product_id: item.productId,
+        product_name: prod ? (prod.name_dv || prod.name_en) : 'Product',
+        quantity: item.qty,
+        unit_price: item.price,
+        subtotal: parseFloat(item.lineSubtotal.toFixed(2)),
+        gst_amount: parseFloat(item.lineGst.toFixed(2)),
+        total: parseFloat(item.lineTotal.toFixed(2))
+      };
+    });
 
     const purchase: Purchase = {
       id: crypto.randomUUID(),
       vendorId: vendor.id,
-      vendor: vendor.name_en, // Legacy field
-      billNumber: newPurchase.billNumber,
-      description: newPurchase.description,
-      amount: parseFloat(subtotal.toFixed(2)),
-      gstAmount: parseFloat(gst.toFixed(2)),
-      date: newPurchase.date,
+      vendor: vendor.name_en,
+      billNumber: billNumber.trim(),
+      description: description.trim() || `Local purchase invoice #${billNumber.trim()} with ${validLineItems.length} items`,
+      amount: parseFloat(totalSubtotal.toFixed(2)),
+      gstAmount: parseFloat(totalInputGst.toFixed(2)),
+      date: date,
+      items: purchaseItemsPayload,
+      subtotal: parseFloat(totalSubtotal.toFixed(2))
     };
 
     try {
       await addPurchase(purchase);
-      showSuccess(t('purchase_added_successfully') || 'Purchase added successfully');
       handleClose();
     } catch (error) {
-      console.error('Error adding purchase:', error);
-      showError('Failed to save purchase');
+      console.error('Error saving purchase:', error);
+      showError('Failed to save purchase bill');
+    } finally {
+      setIsSavingPurchase(false);
     }
   };
 
   const handleClose = () => {
     setIsPurchaseWindowOpen(false);
     setIsPurchaseWindowMinimized(false);
-    setIsCustomGst(false);
-    setShowZeroTaxInput(false);
-    setNewPurchase({
-      vendorId: '',
-      billNumber: '',
-      date: new Date().toISOString().split('T')[0],
-      totalAmount: '',
-      gstAmount: '',
-      zeroTaxAmount: '',
-      description: ''
-    });
+    setVendorId('');
+    setBillNumber('');
+    setDate(new Date().toISOString().split('T')[0]);
+    setDescription('');
+    setItems([{ id: crypto.randomUUID(), productId: '', quantity: 1, unitPrice: '', isZeroTax: false }]);
+    setProductSearchQueries({});
+    setActiveSearchRowId(null);
   };
 
   if (!isPurchaseWindowOpen) return null;
 
   if (isPurchaseWindowMinimized) {
     return (
-      <div className="fixed bottom-4 right-4 z-[100] flex items-center gap-3 bg-card/95 backdrop-blur-xl border border-primary/30 p-3 rounded-2xl shadow-2xl shadow-primary/20 animate-in slide-in-from-bottom-5">
-        <div className="flex items-center gap-2 px-2 border-r border-border mr-1 pr-3">
+      <div className="fixed bottom-4 right-4 z-[100] flex items-center gap-3 bg-card/95 backdrop-blur-xl border border-primary/30 p-3.5 rounded-2xl shadow-2xl shadow-primary/20 animate-in slide-in-from-bottom-5">
+        <div className="flex items-center gap-2.5 px-2 border-r border-border mr-1 pr-3">
           <ShoppingBag className="w-5 h-5 text-primary" />
           <div className="flex flex-col">
             <span className="text-xs font-black text-foreground uppercase tracking-widest">{t('record_local_purchase') || 'Record Purchase'}</span>
-            <span className="text-[9px] text-muted-foreground">
-              {newPurchase.totalAmount ? `${settings.shop.currency} ${newPurchase.totalAmount} (GST: ${newPurchase.gstAmount || '0.00'})` : 'Draft'}
+            <span className="text-[10px] text-muted-foreground font-mono">
+              {grandTotal > 0 ? `${currency} ${grandTotal.toFixed(2)} (${totalQuantity} items)` : 'Draft Bill'}
             </span>
           </div>
         </div>
@@ -216,7 +261,7 @@ const LocalPurchaseWindow = () => {
 
   return (
     <div 
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in cursor-pointer"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in cursor-pointer"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           setIsPurchaseWindowMinimized(true);
@@ -224,15 +269,15 @@ const LocalPurchaseWindow = () => {
       }}
     >
       <div 
-        className="w-full max-w-lg bg-card border border-border rounded-3xl shadow-2xl overflow-hidden flex flex-col font-faruma relative cursor-default" 
+        className="w-full max-w-4xl max-h-[92vh] bg-card border border-border rounded-3xl shadow-2xl overflow-hidden flex flex-col font-faruma relative cursor-default" 
         dir="rtl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 md:p-6 border-b border-border bg-muted/70 gap-4">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-border bg-muted/70 gap-4 shrink-0">
           <div className="flex items-center gap-2 shrink-0" dir="ltr">
             <Button 
-              type="button"
+              type="button" 
               variant="outline" 
               size="icon" 
               onClick={() => setIsPurchaseWindowMinimized(true)} 
@@ -242,7 +287,7 @@ const LocalPurchaseWindow = () => {
               <Minus className="h-4 w-4 stroke-[2.5]" />
             </Button>
             <Button 
-              type="button"
+              type="button" 
               variant="outline" 
               size="icon" 
               onClick={handleClose} 
@@ -253,246 +298,349 @@ const LocalPurchaseWindow = () => {
             </Button>
           </div>
           <div className="text-right flex-1 min-w-0">
-            <h2 className="text-xl md:text-2xl font-black text-foreground flex items-center justify-end gap-2.5 truncate">
-              {t('record_local_purchase') || 'Record Purchase'} <ShoppingBag className="h-5 w-5 md:h-6 md:w-6 text-primary shrink-0" />
+            <h2 className="text-lg sm:text-xl font-black text-foreground flex items-center justify-end gap-2.5 truncate">
+              <span>{t('record_local_purchase') || 'Local Purchase Bill'} (ލޯކަލް ޕަރޗޭސް ބިލް)</span> 
+              <ShoppingBag className="h-5 w-5 text-primary shrink-0" />
             </h2>
-            <p className="text-xs md:text-sm text-muted-foreground truncate">{t('record_purchase_description') || 'Enter local purchase bill details'}</p>
+            <p className="text-xs text-muted-foreground truncate">
+              Select vendor, enter invoice items, auto-calculate GST, and automatically update product inventory stock.
+            </p>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-5 overflow-y-auto max-h-[65vh]">
-          <div className="space-y-2">
+        {/* Scrollable Content Body */}
+        <div className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
+          {/* Bill Master Information Header */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/40 border border-border rounded-2xl">
+            {/* Vendor Selector */}
+            <div className="space-y-1.5 text-right">
+              <div className="flex items-center justify-between">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsQuickAddVendorOpen(true)}
+                  className="h-6 px-2 text-[11px] font-black text-primary hover:bg-primary/10 gap-1 rounded-md"
+                >
+                  <Plus className="h-3 w-3" />
+                  <span>+ New Vendor</span>
+                </Button>
+                <Label className="text-xs font-black uppercase text-muted-foreground">
+                  {t('select_vendor') || 'Vendor'}*
+                </Label>
+              </div>
+              <Select value={vendorId} onValueChange={setVendorId}>
+                <SelectTrigger className="w-full bg-background border-border text-right h-11 rounded-xl font-bold">
+                  <SelectValue placeholder="Choose Vendor (ވެންޑަރ އިޚްތިޔާރުކުރޭ)" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border text-foreground !z-[110]">
+                  <div className="p-2 sticky top-0 bg-card border-b border-border z-10">
+                    <Input 
+                      placeholder="Search vendors / ހޯއްދަވާ..." 
+                      value={vendorSearchQuery}
+                      onChange={(e) => setVendorSearchQuery(e.target.value)}
+                      className="h-8 bg-muted border-border text-right text-xs"
+                    />
+                  </div>
+                  <ScrollArea className="h-44">
+                    {filteredVendors.map(v => (
+                      <SelectItem key={v.id} value={v.id} className="text-right hover:bg-muted font-bold text-xs">
+                        {v.name_dv || v.name_en} {v.tin_number ? `(TIN: ${v.tin_number})` : ''}
+                      </SelectItem>
+                    ))}
+                  </ScrollArea>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Invoice / Bill Number */}
+            <div className="space-y-1.5 text-right">
+              <Label className="text-xs font-black uppercase text-muted-foreground">
+                Invoice / Bill Number (ބިލް ނަންބަރު)*
+              </Label>
+              <Input
+                value={billNumber}
+                onChange={(e) => setBillNumber(e.target.value)}
+                placeholder="e.g. INV-2026-001"
+                className="bg-background border-border font-bold h-11 rounded-xl text-right font-mono"
+              />
+            </div>
+
+            {/* Bill Date */}
+            <div className="space-y-1.5 text-right">
+              <Label className="text-xs font-black uppercase text-muted-foreground">
+                Bill Date (ތާރީޚް)*
+              </Label>
+              <Input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="bg-background border-border font-bold h-11 rounded-xl text-right font-mono"
+              />
+            </div>
+          </div>
+
+          {/* Product Items Table Section */}
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setIsQuickAddVendorOpen(true)}
-                className="h-7 px-2.5 text-xs font-bold text-primary border-primary/30 hover:bg-primary/10 gap-1 rounded-lg transition-colors"
+                onClick={handleAddItemRow}
+                className="h-8 px-3 text-xs font-black text-primary border-primary/30 hover:bg-primary/10 gap-1.5 rounded-xl transition-all"
               >
                 <Plus className="h-3.5 w-3.5" />
-                {t('add_vendor') || 'Add Vendor'}
+                <span>Add Item (އައިޓަމެއް އިތުރުކުރޭ)</span>
               </Button>
-              <Label className="text-right block text-xs font-black uppercase tracking-widest text-muted-foreground">
-                {t('select_vendor') || 'Select Vendor'}*
-              </Label>
+              <h3 className="text-sm font-black text-foreground flex items-center gap-2">
+                <span>Invoice Items (ބިލުގައިވާ ތަކެތި)</span>
+                <Package className="h-4 w-4 text-primary" />
+              </h3>
             </div>
-            <Select value={newPurchase.vendorId} onValueChange={(val) => setNewPurchase({ ...newPurchase, vendorId: val })}>
-              <SelectTrigger className="w-full bg-muted border-border text-right h-12 rounded-xl font-bold">
-                <SelectValue placeholder="Choose Vendor" />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border text-foreground !z-[110]">
-                <div className="p-2 sticky top-0 bg-card border-b border-border z-10">
-                  <Input 
-                    placeholder="Search vendors..." 
-                    value={vendorSearchQuery}
-                    onChange={(e) => setVendorSearchQuery(e.target.value)}
-                    className="h-9 bg-muted border-border text-right text-xs"
-                  />
-                </div>
-                <ScrollArea className="h-40">
-                  {filteredVendors.map(v => (
-                    <SelectItem key={v.id} value={v.id} className="text-right hover:bg-muted">
-                      {v.name_dv || v.name_en}
-                    </SelectItem>
-                  ))}
-                </ScrollArea>
-              </SelectContent>
-            </Select>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-right block text-xs font-black uppercase tracking-widest text-muted-foreground">{t('bill_number') || 'Bill Number'}</Label>
-              <Input 
-                value={newPurchase.billNumber} 
-                onChange={(e) => setNewPurchase({ ...newPurchase, billNumber: e.target.value })} 
-                className="text-right h-12 bg-muted border-border rounded-xl font-bold" 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-right block text-xs font-black uppercase tracking-widest text-muted-foreground">{t('date') || 'Date'}</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full text-right h-12 bg-muted border-border rounded-xl font-bold justify-between",
-                      !newPurchase.date && "text-muted-foreground"
-                    )}
-                  >
-                    {newPurchase.date ? format(new Date(newPurchase.date), "PPP") : <span>Pick a date</span>}
-                    <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 z-[120]" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={newPurchase.date ? new Date(newPurchase.date) : undefined}
-                    onSelect={(date) => {
-                      if (date) {
-                         const offset = date.getTimezoneOffset();
-                         date = new Date(date.getTime() - (offset*60*1000));
-                         setNewPurchase({ ...newPurchase, date: date.toISOString().split('T')[0] })
-                      }
-                    }}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
+            <div className="border border-border rounded-2xl overflow-hidden bg-card shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-right text-xs">
+                  <thead className="bg-muted/80 border-b border-border text-muted-foreground font-black uppercase tracking-wider">
+                    <tr>
+                      <th className="p-3 text-right">Product Item (ޕްރޮޑަކްޓް)</th>
+                      <th className="p-3 text-center w-24">Current Stock</th>
+                      <th className="p-3 text-center w-24">Invoice Qty*</th>
+                      <th className="p-3 text-center w-28">Cost Price ({currency})*</th>
+                      <th className="p-3 text-center w-28">Subtotal ({currency})</th>
+                      <th className="p-3 text-center w-20">Zero Tax</th>
+                      <th className="p-3 text-center w-12"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60">
+                    {items.map((item, index) => {
+                      const selectedProd = products.find(p => p.id === item.productId);
+                      const currentStock = selectedProd ? (Number(selectedProd.stock_shop) || 0) : null;
+                      const isNegativeStock = currentStock !== null && currentStock < 0;
+                      const calculated = calculatedItems.find(c => c.id === item.id);
+                      const isSearching = activeSearchRowId === item.id;
+                      const query = productSearchQueries[item.id] || '';
 
-          {/* Total Bill Amount Box */}
-          <div className="space-y-2 p-4 bg-primary/5 border border-primary/20 rounded-2xl">
-            <Label className="text-right block text-xs font-black uppercase tracking-widest text-primary">
-              {t('total_amount_incl_gst') || 'Total Bill Amount (incl. GST)'}*
-            </Label>
-            <div className="relative mt-2">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-black text-foreground/40" dir="ltr">
-                {settings.shop.currency}
-              </span>
-              <Input 
-                type="number" 
-                step="0.01"
-                value={newPurchase.totalAmount} 
-                onChange={(e) => handleTotalChange(e.target.value)} 
-                className="text-right h-16 bg-transparent border-none outline-none focus-visible:ring-0 rounded-xl font-black text-3xl pl-16 px-2 shadow-none text-foreground" 
-                placeholder="0.00"
-              />
-            </div>
-          </div>
+                      const matchingProducts = query
+                        ? products.filter(p =>
+                            p.name_en.toLowerCase().includes(query.toLowerCase()) ||
+                            p.name_dv.toLowerCase().includes(query.toLowerCase()) ||
+                            p.barcode.includes(query) ||
+                            p.item_code.toLowerCase().includes(query.toLowerCase())
+                          ).slice(0, 15)
+                        : products.slice(0, 15);
 
-          {/* GST & Tax Breakdown Section */}
-          <div className="p-4 bg-muted/40 border border-border rounded-2xl space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {isCustomGst ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={resetToAutoGst}
-                    className="h-6 px-2 text-[10px] font-black text-primary hover:bg-primary/10 gap-1 rounded-md"
-                  >
-                    <RotateCcw className="h-3 w-3" />
-                    {t('reset_to_auto') || 'Reset to Auto'}
-                  </Button>
-                ) : (
-                  <span className="text-[10px] font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-md uppercase tracking-wider">
-                    {t('auto_calculated') || 'Auto-calculated'}
-                  </span>
-                )}
+                      return (
+                        <tr key={item.id} className="hover:bg-muted/30 transition-colors">
+                          {/* Product Selection */}
+                          <td className="p-2.5 relative min-w-[220px]">
+                            {selectedProd && !isSearching ? (
+                              <div 
+                                onClick={() => setActiveSearchRowId(item.id)}
+                                className="flex items-center justify-between p-2 rounded-xl bg-muted/60 hover:bg-muted border border-border/80 cursor-pointer group"
+                              >
+                                <div className="text-right min-w-0 flex-1">
+                                  <p className="font-black text-foreground truncate">{selectedProd.name_dv || selectedProd.name_en}</p>
+                                  <p className="text-[10px] text-muted-foreground font-mono truncate">{selectedProd.name_en} {selectedProd.barcode ? `• ${selectedProd.barcode}` : ''}</p>
+                                </div>
+                                <span className="text-[9px] text-primary group-hover:underline font-bold mr-2">Change</span>
+                              </div>
+                            ) : (
+                              <div className="relative">
+                                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  placeholder="Search product name, barcode..."
+                                  value={query}
+                                  onChange={(e) => {
+                                    setProductSearchQueries(prev => ({ ...prev, [item.id]: e.target.value }));
+                                    setActiveSearchRowId(item.id);
+                                  }}
+                                  onFocus={() => setActiveSearchRowId(item.id)}
+                                  className="h-10 bg-background border-border text-right text-xs pr-9 rounded-xl font-bold font-faruma"
+                                />
+                                {isSearching && (
+                                  <div className="absolute top-11 right-0 w-full z-50 bg-card border border-border rounded-2xl shadow-2xl p-1 max-h-48 overflow-y-auto">
+                                    {matchingProducts.map(p => {
+                                      const pStock = p.stock_shop || 0;
+                                      return (
+                                        <div
+                                          key={p.id}
+                                          onClick={() => handleProductSelect(item.id, p)}
+                                          className="p-2 hover:bg-muted rounded-xl cursor-pointer text-right flex items-center justify-between gap-2 border-b border-border/30 last:border-none"
+                                        >
+                                          <div className="flex items-center gap-1.5">
+                                            <span className={cn(
+                                              "text-[9px] font-black px-1.5 py-0.5 rounded font-mono",
+                                              pStock < 0 ? "bg-red-500/20 text-red-500" : "bg-muted text-muted-foreground"
+                                            )}>
+                                              Stock: {pStock}
+                                            </span>
+                                            {p.cost_price && (
+                                              <span className="text-[9px] text-muted-foreground font-mono">
+                                                Cost: {p.cost_price}
+                                              </span>
+                                            )}
+                                          </div>
+                                          <div className="min-w-0 text-right">
+                                            <p className="font-black text-xs text-foreground truncate">{p.name_dv || p.name_en}</p>
+                                            <p className="text-[10px] text-muted-foreground font-mono">{p.name_en}</p>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                    {matchingProducts.length === 0 && (
+                                      <p className="text-center py-3 text-xs text-muted-foreground">No product found</p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </td>
+
+                          {/* Current Stock Indicator */}
+                          <td className="p-2.5 text-center">
+                            {currentStock !== null ? (
+                              <div className="flex flex-col items-center">
+                                <span className={cn(
+                                  "font-mono font-black text-xs px-2 py-0.5 rounded-lg",
+                                  isNegativeStock ? "bg-red-500/20 text-red-500 border border-red-500/30 animate-pulse" : "bg-muted text-foreground"
+                                )}>
+                                  {currentStock}
+                                </span>
+                                {isNegativeStock && (
+                                  <span className="text-[8px] font-black text-red-500 mt-0.5">
+                                    Minus Stock
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-[10px]">-</span>
+                            )}
+                          </td>
+
+                          {/* Invoice Quantity */}
+                          <td className="p-2.5 text-center">
+                            <Input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) => handleUpdateItem(item.id, 'quantity', parseFloat(e.target.value) || '')}
+                              onFocus={handleFocus}
+                              className="h-10 bg-background border-border text-center font-black text-sm font-mono rounded-xl w-20 mx-auto"
+                              placeholder="1"
+                            />
+                          </td>
+
+                          {/* Unit Purchase Price */}
+                          <td className="p-2.5 text-center">
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.unitPrice}
+                              onChange={(e) => handleUpdateItem(item.id, 'unitPrice', parseFloat(e.target.value) || '')}
+                              onFocus={handleFocus}
+                              className="h-10 bg-background border-border text-center font-black text-sm font-mono rounded-xl w-24 mx-auto"
+                              placeholder="0.00"
+                            />
+                          </td>
+
+                          {/* Subtotal */}
+                          <td className="p-2.5 text-center font-mono font-black text-xs text-foreground">
+                            {currency} {(calculated?.lineSubtotal || 0).toFixed(2)}
+                          </td>
+
+                          {/* Zero Tax Toggle */}
+                          <td className="p-2.5 text-center">
+                            <input
+                              type="checkbox"
+                              checked={item.isZeroTax}
+                              onChange={(e) => handleUpdateItem(item.id, 'isZeroTax', e.target.checked)}
+                              className="h-4 w-4 rounded accent-primary cursor-pointer"
+                              title="Check if this item is exempt from GST"
+                            />
+                          </td>
+
+                          {/* Delete Row Button */}
+                          <td className="p-2.5 text-center">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveItemRow(item.id)}
+                              className="h-8 w-8 text-red-500 hover:bg-red-500/10 hover:text-red-600 rounded-lg"
+                              title="Remove item"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-              <Label className="text-xs font-black uppercase tracking-widest text-foreground flex items-center gap-1">
-                {t('gst_amount') || `GST Amount (${settings.shop.taxRate}%)`}
-              </Label>
             </div>
+          </div>
 
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground" dir="ltr">
-                {settings.shop.currency}
-              </span>
+          {/* Description & Summary Totals Card */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+            <div className="space-y-1.5 text-right">
+              <Label className="text-xs font-black uppercase text-muted-foreground">
+                Bill Notes / Description (އިތުރު ތަފްޞީލް)
+              </Label>
               <Input
-                type="number"
-                step="0.01"
-                value={newPurchase.gstAmount}
-                onChange={(e) => handleGstChange(e.target.value)}
-                placeholder="0.00"
-                className={cn(
-                  "text-right h-11 bg-background border-border font-black text-lg pl-14 pr-3 rounded-xl transition-all",
-                  isCustomGst ? "border-orange-500 text-orange-600 dark:text-orange-400 focus:border-orange-500" : "text-foreground"
-                )}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Optional purchase details or payment reference..."
+                className="bg-background border-border text-right h-11 rounded-xl font-bold"
               />
             </div>
 
-            {/* Zero-Tax Helper Toggle */}
-            <div className="pt-1">
-              {!showZeroTaxInput ? (
-                <button
-                  type="button"
-                  onClick={() => setShowZeroTaxInput(true)}
-                  className="text-[11px] font-bold text-primary hover:underline flex items-center justify-end gap-1 w-full text-right"
-                >
-                  + {t('bill_has_zero_tax') || 'Bill contains Zero-Tax / Exempt items?'}
-                </button>
-              ) : (
-                <div className="space-y-1.5 p-3 bg-background border border-border rounded-xl animate-in fade-in-50">
-                  <div className="flex justify-between items-center">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowZeroTaxInput(false);
-                        handleZeroTaxChange('');
-                      }}
-                      className="text-[10px] text-muted-foreground hover:text-red-500"
-                    >
-                      {t('remove') || 'Remove'}
-                    </button>
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                      {t('zero_tax_amount') || 'Zero-Tax Items Total (0% GST)'}
-                    </Label>
-                  </div>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground" dir="ltr">
-                      {settings.shop.currency}
-                    </span>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={newPurchase.zeroTaxAmount}
-                      onChange={(e) => handleZeroTaxChange(e.target.value)}
-                      placeholder="0.00"
-                      className="text-right h-10 bg-muted/30 border-border font-bold text-sm pl-14 pr-3 rounded-lg"
-                    />
-                  </div>
-                  <p className="text-[10px] text-muted-foreground text-right">
-                    GST is calculated only on the remaining taxable portion.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Live Calculation Summary */}
-            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border text-right">
-              <div className="p-2.5 bg-background rounded-xl border border-border">
-                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block mb-0.5">
-                  {t('subtotal_excl_gst') || 'Subtotal (Excl. GST)'}
+            {/* Calculations Breakdown */}
+            <div className="bg-muted/60 border border-border rounded-2xl p-4 space-y-2.5 text-right font-faruma">
+              <div className="flex justify-between items-center text-xs text-muted-foreground font-bold">
+                <span className="font-mono font-black text-foreground">{currency} {totalSubtotal.toFixed(2)}</span>
+                <span>Subtotal ({totalQuantity} Items):</span>
+              </div>
+              <div className="flex justify-between items-center text-xs text-muted-foreground font-bold">
+                <span className="font-mono font-black text-orange-500">
+                  {currency} {totalInputGst.toFixed(2)} ({taxRate}% Input GST)
+                </span>
+                <span>Input GST (އިންޕުޓް ޓެކްސް):</span>
+              </div>
+              <div className="pt-2 border-t border-border flex justify-between items-center">
+                <span className="text-xl font-black text-foreground font-mono">
+                  {currency} {grandTotal.toFixed(2)}
                 </span>
                 <span className="text-sm font-black text-foreground">
-                  {settings.shop.currency} {subtotalNum.toFixed(2)}
-                </span>
-              </div>
-              <div className="p-2.5 bg-background rounded-xl border border-border">
-                <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block mb-0.5">
-                  {t('actual_gst') || 'Actual GST'}
-                </span>
-                <span className="text-sm font-black text-orange-600 dark:text-orange-400">
-                  {settings.shop.currency} {gstNum.toFixed(2)}
+                  Grand Total (ޖުމްލަ އަގު):
                 </span>
               </div>
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-right block text-xs font-black uppercase tracking-widest text-muted-foreground">{t('description') || 'Description'}</Label>
-            <Input 
-              value={newPurchase.description} 
-              onChange={(e) => setNewPurchase({ ...newPurchase, description: e.target.value })} 
-              className="text-right h-12 bg-muted border-border rounded-xl font-bold" 
-              placeholder="Optional notes..."
-            />
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="p-4 bg-muted border-t border-border flex gap-3">
-          <Button variant="ghost" onClick={handleClose} className="flex-1 h-12 rounded-xl font-black uppercase tracking-widest text-xs border border-border hover:bg-muted/80 hover:text-foreground">
+        {/* Footer Actions */}
+        <div className="p-4 sm:p-5 border-t border-border bg-muted/70 flex flex-row gap-3 items-center justify-between shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleClose}
+            className="h-12 px-6 rounded-2xl border-border hover:bg-muted text-foreground font-bold text-xs"
+          >
             {t('cancel') || 'Cancel'}
           </Button>
-          <Button onClick={handleAddPurchase} className="flex-1 h-12 rounded-xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest text-xs shadow-[0_0_20px_rgba(0,132,255,0.3)] hover:shadow-[0_0_30px_rgba(0,132,255,0.5)] transition-all">
-            {t('save_purchase') || 'Save Purchase'}
+
+          <Button
+            type="button"
+            onClick={handleSavePurchase}
+            disabled={isSavingPurchase || !vendorId || !billNumber.trim() || grandTotal <= 0}
+            className="flex-1 max-w-sm h-12 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs sm:text-sm shadow-xl shadow-primary/20 uppercase gap-2"
+          >
+            <Save className="h-4 w-4" />
+            <span>{isSavingPurchase ? 'Saving & Updating Stock...' : 'Save Paid Bill & Update Stock (ބިލް ސޭވްކުރޭ)'}</span>
           </Button>
         </div>
       </div>
@@ -521,11 +669,11 @@ const LocalPurchaseWindow = () => {
               </button>
               <div className="text-right">
                 <h3 className="text-lg font-black flex items-center justify-end gap-2">
-                  {t('add_vendor') || 'Add New Vendor'}
+                  <span>{t('add_vendor') || 'Add New Vendor'}</span>
                   <Building2 className="w-5 h-5 text-primary" />
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {t('enter_vendor_details') || 'Enter vendor name and contact details'}
+                  Enter vendor name and contact details
                 </p>
               </div>
             </div>

@@ -301,6 +301,7 @@ interface AppContextType {
   updateProduct: (updatedProduct: Product) => Promise<void>;
   addProduct: (product: Product) => Promise<void>;
   deleteProduct: (productId: string) => Promise<void>;
+  bulkDeleteProducts: (productIds: string[]) => Promise<void>;
   transferStock: (productId: string, from: 'shop' | 'godown', to: 'shop' | 'godown', amount: number) => Promise<void>;
   openCarts: Map<string, Cart>;
   setOpenCarts: React.Dispatch<React.SetStateAction<Map<string, Cart>>>;
@@ -1974,6 +1975,26 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
+  const bulkDeleteProducts = async (productIds: string[]) => {
+    try {
+      if (!productIds || productIds.length === 0) return;
+
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .in('id', productIds);
+
+      if (error) throw error;
+
+      setProducts(prev => prev.filter(p => !productIds.includes(p.id)));
+      showSuccess(`Successfully deleted ${productIds.length} products (ޑިލީޓް ކުރެވިއްޖެ)`);
+    } catch (error) {
+      console.error('Error bulk deleting products:', error);
+      showError('Failed to delete products from database');
+      throw error;
+    }
+  };
+
   const addPurchase = async (purchase: Purchase) => {
     try {
       const { error } = await supabase
@@ -1991,13 +2012,42 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
       if (error) throw error;
 
-      // Update cost prices for products in the purchase
+      // Update cost prices and stock quantities for products in the purchase
       if (purchase.items && purchase.items.length > 0) {
         for (const item of purchase.items) {
-          await updateProductCostPrice(item.product_id, item.unit_price, purchase.date);
+          const product = products.find(p => p.id === item.product_id);
+          const currentShopStock = product ? (Number(product.stock_shop) || 0) : 0;
+          const addedQty = Number(item.quantity) || 0;
+          // Handles minus/negative stock automatically: -3 + 10 = 7
+          const newShopStock = currentShopStock + addedQty;
+          const newCostPrice = Number(item.unit_price) > 0 ? Number(item.unit_price) : (product?.cost_price || null);
+
+          try {
+            await supabase
+              .from('products')
+              .update({
+                stock_shop: newShopStock,
+                cost_price: newCostPrice,
+                last_purchase_date: purchase.date
+              })
+              .eq('id', item.product_id);
+          } catch (dbErr) {
+            console.warn('Supabase product stock update error during purchase:', dbErr);
+          }
+
+          setProducts(prev => prev.map(p => {
+            if (p.id !== item.product_id) return p;
+            return {
+              ...p,
+              stock_shop: newShopStock,
+              cost_price: newCostPrice || p.cost_price,
+              last_purchase_date: purchase.date
+            };
+          }));
         }
       }
-      setPurchases(prev => [...prev, purchase]);
+      setPurchases(prev => [purchase, ...prev]);
+      showSuccess('Purchase bill saved & product inventory stock updated! 📦');
     } catch (error) {
       console.error('Error adding purchase:', error);
       showError('Failed to save purchase');
@@ -2268,6 +2318,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       updateProduct,
       addProduct,
       deleteProduct,
+      bulkDeleteProducts,
       openCarts,
       setOpenCarts,
       activeCartId,

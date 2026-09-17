@@ -129,8 +129,9 @@ export const deleteTelegramWebhook = async (
   token?: string
 ): Promise<{ ok: boolean; description?: string }> => {
   const activeToken = (token || DEFAULT_TELEGRAM_BOT_TOKEN).trim();
+  if (!activeToken) return { ok: false, description: 'No token' };
   try {
-    const res = await fetch(`https://api.telegram.org/bot${activeToken}/deleteWebhook`, {
+    const res = await fetch(`https://api.telegram.org/bot${activeToken}/deleteWebhook?drop_pending_updates=false`, {
       method: 'POST',
     });
     const data = await res.json();
@@ -169,6 +170,8 @@ export const setBotCommands = async (token?: string): Promise<{ ok: boolean; des
   }
 };
 
+let hasAttemptedWebhookCleanup = false;
+
 /**
  * Poll recent Telegram updates (works 100% in browser without any webhook or CLI)
  */
@@ -177,15 +180,32 @@ export const pollTelegramUpdates = async (
   token?: string
 ): Promise<{ ok: boolean; updates: any[]; error?: string }> => {
   const activeToken = (token || DEFAULT_TELEGRAM_BOT_TOKEN).trim();
+  if (!activeToken) return { ok: false, updates: [], error: 'Bot token missing' };
+
   try {
     const url = offset
       ? `https://api.telegram.org/bot${activeToken}/getUpdates?offset=${offset}&timeout=0`
       : `https://api.telegram.org/bot${activeToken}/getUpdates?timeout=0`;
     const res = await fetch(url);
     const data = await res.json();
+
     if (data.ok) {
+      hasAttemptedWebhookCleanup = false;
       return { ok: true, updates: data.result || [] };
     }
+
+    // Auto-resolve Telegram 409 Conflict error
+    // If a webhook was active, delete it so browser getUpdates polling resumes immediately
+    if (res.status === 409 || data.error_code === 409) {
+      if (!hasAttemptedWebhookCleanup) {
+        hasAttemptedWebhookCleanup = true;
+        try {
+          await deleteTelegramWebhook(activeToken);
+        } catch (e) {}
+      }
+      return { ok: false, updates: [], error: data.description || '409 Conflict' };
+    }
+
     return { ok: false, updates: [], error: data.description };
   } catch (err: any) {
     return { ok: false, updates: [], error: err.message };

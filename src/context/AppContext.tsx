@@ -1184,6 +1184,16 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
+  const customersRef = React.useRef(customers);
+  const salesRef = React.useRef(sales);
+  const settingsRef = React.useRef(settings);
+
+  useEffect(() => {
+    customersRef.current = customers;
+    salesRef.current = sales;
+    settingsRef.current = settings;
+  }, [customers, sales, settings]);
+
   // Background listener for incoming Telegram Bot commands (/start, /balance, /account, /help)
   useEffect(() => {
     let isMounted = true;
@@ -1193,10 +1203,14 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       if (!isMounted || isChecking) return;
       try {
         isChecking = true;
+        const currentCustomers = customersRef.current;
+        const currentSales = salesRef.current;
+        const currentSettings = settingsRef.current;
+
         await processPendingTelegramUpdates({
-          customers,
-          sales,
-          settlements: customers.flatMap(c => c.settlement_history || []),
+          customers: currentCustomers,
+          sales: currentSales,
+          settlements: currentCustomers.flatMap(c => c.settlement_history || []),
           onCustomerLinked: async (customerId: string, chatId: number) => {
             if (!customerId || !chatId) return;
             try {
@@ -1242,8 +1256,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
               console.warn('Error saving received slip:', err);
             }
           },
-          shopSettings: settings.shop,
-          token: settings.telegram?.botToken,
+          shopSettings: currentSettings.shop,
+          token: currentSettings.telegram?.botToken,
         });
       } catch (err) {
         // Silent background polling
@@ -1252,16 +1266,16 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       }
     };
 
-    // Initial check after 1.5 seconds, then poll every 3.5 seconds for instant bot responses
+    // Initial check after 1.5 seconds, then poll steadily every 4 seconds
     const initialTimer = setTimeout(checkUpdates, 1500);
-    const interval = setInterval(checkUpdates, 3500);
+    const interval = setInterval(checkUpdates, 4000);
 
     return () => {
       isMounted = false;
       clearTimeout(initialTimer);
       clearInterval(interval);
     };
-  }, [customers, sales, settings.telegram?.botToken, settings.shop]);
+  }, []);
 
   // Automated Midnight Store Close Executive Briefing & 1st of Month Overdue Reminders Scheduler
   useEffect(() => {

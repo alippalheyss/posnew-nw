@@ -302,6 +302,7 @@ interface AppContextType {
   addProduct: (product: Product) => Promise<void>;
   deleteProduct: (productId: string) => Promise<void>;
   bulkDeleteProducts: (productIds: string[]) => Promise<void>;
+  bulkImportProducts: (importedProducts: Product[], onProgress?: (percent: number, count: number) => void) => Promise<void>;
   transferStock: (productId: string, from: 'shop' | 'godown', to: 'shop' | 'godown', amount: number) => Promise<void>;
   openCarts: Map<string, Cart>;
   setOpenCarts: React.Dispatch<React.SetStateAction<Map<string, Cart>>>;
@@ -1995,6 +1996,73 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
+  const bulkImportProducts = async (importedProducts: Product[], onProgress?: (percent: number, count: number) => void) => {
+    try {
+      if (!importedProducts || importedProducts.length === 0) return;
+
+      const chunkSize = 500;
+      const total = importedProducts.length;
+      let insertedCount = 0;
+
+      // Clean products to match database schema
+      const cleanProducts = importedProducts.map((p, index) => {
+        const numericCode = (p.item_code || '').replace(/\D/g, '') || String(index + 1);
+        return {
+          id: p.id || crypto.randomUUID(),
+          name_dv: p.name_dv || p.name_en || 'Product',
+          name_en: p.name_en || p.name_dv || 'Product',
+          price: Number(p.price) || 0,
+          stock_shop: Number(p.stock_shop) || 0,
+          stock_godown: Number(p.stock_godown) || 0,
+          barcode: p.barcode || '',
+          item_code: numericCode,
+          category: p.category || 'OTHER',
+          is_zero_tax: !!p.is_zero_tax,
+          expiry_date: p.expiry_date || null,
+          image: p.image || '',
+          cost_price: p.cost_price ? Number(p.cost_price) : null,
+          last_purchase_date: p.last_purchase_date || null,
+          units: p.units || null
+        };
+      });
+
+      // Insert in chunks of 500 to support 10,000+ products smoothly
+      for (let i = 0; i < cleanProducts.length; i += chunkSize) {
+        const chunk = cleanProducts.slice(i, i + chunkSize);
+        const { error } = await supabase
+          .from('products')
+          .upsert(chunk, { onConflict: 'id' });
+
+        if (error) {
+          console.error('Supabase batch insert error on chunk:', i, error);
+          throw error;
+        }
+
+        insertedCount += chunk.length;
+        if (onProgress) {
+          const pct = Math.round((insertedCount / total) * 100);
+          onProgress(pct, insertedCount);
+        }
+        // Yield to event loop
+        await new Promise(resolve => setTimeout(resolve, 20));
+      }
+
+      // Merge into local state
+      setProducts(prev => {
+        const map = new Map<string, Product>();
+        prev.forEach(p => map.set(p.id, p));
+        cleanProducts.forEach(p => map.set(p.id, p as Product));
+        return Array.from(map.values());
+      });
+
+      showSuccess(`Successfully imported ${total.toLocaleString()} products into database! 🚀`);
+    } catch (error: any) {
+      console.error('Error in bulkImportProducts:', error);
+      showError(`Import error: ${error?.message || 'Failed to import products'}`);
+      throw error;
+    }
+  };
+
   const addPurchase = async (purchase: Purchase) => {
     try {
       const { error } = await supabase
@@ -2319,6 +2387,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       addProduct,
       deleteProduct,
       bulkDeleteProducts,
+      bulkImportProducts,
       openCarts,
       setOpenCarts,
       activeCartId,

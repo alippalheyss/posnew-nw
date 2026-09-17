@@ -379,7 +379,7 @@ const Products = () => {
                return (
                  <Card 
                    key={product.id} 
-                   onClick={() => handleSelectProduct(product.id)}
+                   onClick={() => handleEditClick(product)}
                    className={cn(
                      "bg-card border-border hover:border-primary/50 transition-all overflow-hidden group rounded-2xl cursor-pointer relative",
                      isSelected && "ring-2 ring-primary border-primary shadow-lg shadow-primary/10"
@@ -400,7 +400,10 @@ const Products = () => {
                            {/* Selection Checkbox */}
                            <button
                              type="button"
-                             onClick={() => handleSelectProduct(product.id)}
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               handleSelectProduct(product.id);
+                             }}
                              className={cn(
                                "h-7 w-7 rounded-lg flex items-center justify-center backdrop-blur-md transition-all border",
                                isSelected 

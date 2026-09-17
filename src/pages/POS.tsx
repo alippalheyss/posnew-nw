@@ -556,7 +556,7 @@ const POS = () => {
         item.id === id && (item.selected_unit || 'Piece') === unitName
           ? { ...item, qty: Math.max(0, qty) }
           : item
-      ).filter(item => item.qty > 0),
+      ),
     }));
   };
 
@@ -1413,9 +1413,25 @@ const POS = () => {
                         ><Minus className="h-4 w-4" /></Button>
                         <Input
                           type="number"
+                          step="any"
+                          min="0.001"
                           ref={idx === activeCart.items.length - 1 ? lastQtyInputRef : undefined}
-                          value={item.qty}
-                          onChange={(e) => setCartItemQty(item.id, parseFloat(e.target.value) || 0, item.selected_unit)}
+                          value={item.qty === 0 ? '' : item.qty}
+                          placeholder="0"
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === '' || val === '.') {
+                              setCartItemQty(item.id, 0, item.selected_unit);
+                            } else {
+                              const num = parseFloat(val);
+                              setCartItemQty(item.id, isNaN(num) ? 0 : num, item.selected_unit);
+                            }
+                          }}
+                          onBlur={() => {
+                            if (!item.qty || item.qty <= 0) {
+                              setCartItemQty(item.id, 1, item.selected_unit);
+                            }
+                          }}
                           onFocus={handleFocus}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
@@ -1423,7 +1439,7 @@ const POS = () => {
                               focusSearchBar();
                             }
                           }}
-                          className="cart-qty-input w-14 text-center text-[14px] font-black text-foreground bg-transparent border-none h-8 p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:bg-background/80 focus:ring-1 focus:ring-primary rounded"
+                          className="cart-qty-input w-16 text-center text-[14px] font-black text-foreground bg-transparent border-none h-8 p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:bg-background/80 focus:ring-1 focus:ring-primary rounded font-mono"
                         />
                         <Button
                           variant="ghost"

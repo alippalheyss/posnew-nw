@@ -344,7 +344,7 @@ const Customers = () => {
 
       {/* Edit Customer Dialog */}
       <Dialog open={isEditCustomerDialogOpen} onOpenChange={setIsEditCustomerDialogOpen}>
-        <DialogContent className="sm:max-w-[450px] font-faruma bg-card border-border text-foreground" dir="rtl">
+        <DialogContent className="sm:max-w-[32rem] 2xl:max-w-[38rem] w-[calc(100vw-2rem)] font-faruma bg-card border-border text-foreground" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-right text-2xl font-black">{renderBoth('edit_customer')}</DialogTitle>
             <DialogDescription className="text-right text-muted-foreground">

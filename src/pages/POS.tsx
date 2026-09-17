@@ -1210,7 +1210,7 @@ const POS = () => {
         </ScrollArea>
       </div>
 
-      <div className="w-[600px] flex flex-col bg-card/80 backdrop-blur-xl border-l border-border shadow-2xl z-20">
+      <div className="w-[32rem] xl:w-[36rem] 2xl:w-[40rem] max-w-[45vw] flex flex-col bg-card/80 backdrop-blur-xl border-l border-border shadow-2xl z-20">
         <div className="p-6 pb-2">
           <div className="flex items-center gap-1 bg-muted p-1 rounded-2xl border border-border mb-6">
             <div className="flex items-center gap-3 px-4 py-1.5 bg-primary/20 rounded-xl text-primary border border-primary/20">
@@ -1514,7 +1514,7 @@ const POS = () => {
       />
 
       <Dialog open={isCashDialogOpen} onOpenChange={setIsCashDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] w-[94vw] font-faruma bg-card text-foreground border border-border text-right p-5 sm:p-7 shadow-2xl rounded-3xl box-border overflow-hidden [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+        <DialogContent className="sm:max-w-[38rem] 2xl:max-w-[44rem] w-[94vw] font-faruma bg-card text-foreground border border-border text-right p-5 sm:p-7 shadow-2xl rounded-3xl box-border overflow-hidden [&>button]:left-4 [&>button]:right-auto" dir="rtl">
           <DialogHeader className="pb-3.5 text-right space-y-1.5 border-b border-border/60 pl-10 pr-1">
             <div className="flex items-center justify-between">
               <div className="text-right flex-1 min-w-0">
@@ -1725,7 +1725,7 @@ const POS = () => {
       </Dialog>
 
       <Dialog open={isCreditDialogOpen} onOpenChange={setIsCreditDialogOpen}>
-        <DialogContent className="sm:max-w-[560px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border text-right p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+        <DialogContent className="sm:max-w-[36rem] 2xl:max-w-[42rem] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border text-right p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
           <DialogHeader className="pb-3 text-right space-y-1.5 border-b border-border/60">
             <div className="flex items-center justify-between pl-8">
               <div className="text-right flex-1 min-w-0">
@@ -2397,7 +2397,7 @@ const POS = () => {
       </Dialog>
 
       <Dialog open={isAwaitingTransferDialogOpen} onOpenChange={setIsAwaitingTransferDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] w-[calc(100vw-2rem)] max-h-[92vh] overflow-y-auto font-faruma bg-card text-foreground border border-border text-right p-6 sm:p-7 shadow-2xl rounded-3xl box-border custom-scrollbar [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+        <DialogContent className="sm:max-w-[38rem] 2xl:max-w-[44rem] w-[calc(100vw-2rem)] max-h-[92vh] overflow-y-auto font-faruma bg-card text-foreground border border-border text-right p-6 sm:p-7 shadow-2xl rounded-3xl box-border custom-scrollbar [&>button]:left-4 [&>button]:right-auto" dir="rtl">
           <DialogHeader className="pb-4 text-right space-y-1.5 border-b border-border/60">
             <div className="flex items-center justify-between pl-8">
               <div className="text-right flex-1 min-w-0">
@@ -2571,7 +2571,7 @@ const POS = () => {
       />
 
       <Dialog open={isPendingTransfersDialogOpen} onOpenChange={setIsPendingTransfersDialogOpen}>
-        <DialogContent className="sm:max-w-[620px] w-[calc(100vw-2rem)] font-faruma bg-card border border-border text-foreground text-right p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+        <DialogContent className="sm:max-w-[40rem] 2xl:max-w-[46rem] w-[calc(100vw-2rem)] font-faruma bg-card border border-border text-foreground text-right p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
           <DialogHeader className="pb-3 text-right space-y-1.5 border-b border-border/60">
             <div className="flex items-center justify-between pl-8">
               <div className="text-right flex-1 min-w-0">

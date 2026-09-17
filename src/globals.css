@@ -50,6 +50,48 @@
 }
 
 @layer base {
+  /* Dynamic Auto-Scaling for Screen Sizes (13" Laptops, 21.5"-24" Desktop Displays, 2K/4K) */
+  html {
+    font-size: 15px; /* Default for compact screens & small laptops (<= 1280px) */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  @media screen and (min-width: 1280px) {
+    html {
+      font-size: 16px; /* Standard 13"-15" laptops */
+    }
+  }
+
+  @media screen and (min-width: 1440px) {
+    html {
+      font-size: 17.5px; /* 14"-16" high-res laptops / mid-size desktop */
+    }
+  }
+
+  @media screen and (min-width: 1680px) {
+    html {
+      font-size: 18.5px; /* Standard desktop 1080p (21.5" - 24" monitors) */
+    }
+  }
+
+  @media screen and (min-width: 1920px) {
+    html {
+      font-size: 19.5px; /* Full 1080p / 23.8" - 24" desktop monitors */
+    }
+  }
+
+  @media screen and (min-width: 2200px) {
+    html {
+      font-size: 22px; /* 2K / 1440p displays */
+    }
+  }
+
+  @media screen and (min-width: 2560px) {
+    html {
+      font-size: 24px; /* 4K / Ultra-wide displays */
+    }
+  }
+
   * {
     @apply border-border;
   }

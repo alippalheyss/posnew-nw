@@ -738,7 +738,7 @@ const DailySales = () => {
 
       {/* Executive Briefing Dialog */}
       <Dialog open={isBriefingDialogOpen} onOpenChange={setIsBriefingDialogOpen}>
-        <DialogContent className="sm:max-w-[540px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto max-h-[90vh] flex flex-col" dir="rtl">
+        <DialogContent className="sm:max-w-[36rem] 2xl:max-w-[44rem] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto max-h-[90vh] flex flex-col" dir="rtl">
           <DialogHeader className="text-right pb-4 border-b border-border/60">
             <div className="flex items-center justify-between pl-8">
               <Badge className="bg-[#229ED9]/10 text-[#229ED9] border-[#229ED9]/20 text-xs font-mono font-bold">

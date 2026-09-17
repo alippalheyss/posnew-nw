@@ -225,7 +225,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[1040px] max-h-[92vh] overflow-hidden flex flex-col font-faruma bg-card border-border text-foreground p-0 shadow-2xl rounded-3xl" dir="rtl">
+            <DialogContent className="sm:max-w-[65rem] 2xl:max-w-[78rem] w-[95vw] max-h-[92vh] overflow-hidden flex flex-col font-faruma bg-card border-border text-foreground p-0 shadow-2xl rounded-3xl" dir="rtl">
                 {/* Header */}
                 <DialogHeader className="text-right px-6 pt-5 pb-3 border-b border-border bg-muted/20">
                     <DialogTitle className="text-xl font-black flex items-center justify-end gap-2.5 text-foreground">

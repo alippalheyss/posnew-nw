@@ -155,21 +155,21 @@ const Sidebar = () => {
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="p-0 w-[290px] bg-background border-border">
+          <SheetContent side="right" className="p-0 w-80 bg-background border-border">
             {renderNavContent(true)}
           </SheetContent>
         </Sheet>
       </div>
 
       {/* Desktop Sidebar Spacer */}
-      <div className={cn("flex-shrink-0 transition-all duration-300 hidden md:block", sidebarCollapsed ? "w-0" : "w-[280px]")} />
+      <div className={cn("flex-shrink-0 transition-all duration-300 hidden md:block", sidebarCollapsed ? "w-0" : "w-72 xl:w-80 2xl:w-88")} />
       
       {/* Desktop Fixed Sidebar */}
       <div className={cn(
         "hidden md:flex flex-col h-screen font-faruma overflow-hidden z-[100] transition-all duration-300 group/sidebar fixed right-0 top-0 bottom-0",
         sidebarCollapsed 
-          ? "w-2 hover:w-[280px] bg-transparent hover:bg-background hover:border-l hover:border-border hover:shadow-[-20px_0_50px_rgba(0,0,0,0.5)]" 
-          : "w-[280px] bg-background border-l border-border shadow-[-20px_0_50px_rgba(0,0,0,0.5)]"
+          ? "w-2 hover:w-72 xl:hover:w-80 2xl:hover:w-88 bg-transparent hover:bg-background hover:border-l hover:border-border hover:shadow-[-20px_0_50px_rgba(0,0,0,0.5)]" 
+          : "w-72 xl:w-80 2xl:w-88 bg-background border-l border-border shadow-[-20px_0_50px_rgba(0,0,0,0.5)]"
       )}>
         <Button
           variant="ghost"

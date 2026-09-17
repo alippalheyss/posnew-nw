@@ -715,7 +715,7 @@ const CreditOutstanding = () => {
 
       {/* Customers List */}
       <ScrollArea className="flex-1 custom-scrollbar">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 pb-6">
           {filteredCustomers.map((customer) => (
             <Card key={customer.id} className="bg-card border-border hover:border-primary/30 transition-all rounded-[2rem] overflow-hidden group">
                <CardContent className="p-0">
@@ -820,7 +820,7 @@ const CreditOutstanding = () => {
 
       {/* Dialogs updated with dark theme styling... (Settle Payment, Settlement History, Credit Purchases) */}
       <Dialog open={isSettlePaymentDialogOpen} onOpenChange={setIsSettlePaymentDialogOpen}>
-        <DialogContent className="sm:max-w-[460px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+        <DialogContent className="sm:max-w-[32rem] 2xl:max-w-[38rem] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
           <DialogHeader className="text-right pb-3 border-b border-border/60">
             <div className="flex items-start justify-between gap-3 pl-8">
               <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[11px] font-mono font-bold mt-1">
@@ -954,7 +954,7 @@ const CreditOutstanding = () => {
 
       {/* Settlement History Dialog */}
       <Dialog open={isSettlementHistoryDialogOpen} onOpenChange={setIsSettlementHistoryDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] w-[calc(100vw-2rem)] font-faruma bg-card border border-border text-foreground p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+        <DialogContent className="sm:max-w-[36rem] 2xl:max-w-[42rem] w-[calc(100vw-2rem)] font-faruma bg-card border border-border text-foreground p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
           <DialogHeader className="text-right pb-3 border-b border-border/60">
             <div className="pl-8">
               <DialogTitle className="text-xl font-black flex items-center justify-end gap-2">
@@ -1001,7 +1001,7 @@ const CreditOutstanding = () => {
 
       {/* Credit Purchases (Details) Dialog */}
       <Dialog open={isCreditPurchasesDialogOpen} onOpenChange={setIsCreditPurchasesDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] w-[calc(100vw-2rem)] font-faruma bg-card border border-border text-foreground p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+        <DialogContent className="sm:max-w-[42rem] 2xl:max-w-[50rem] w-[calc(100vw-2rem)] font-faruma bg-card border border-border text-foreground p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
           <DialogHeader className="text-right pb-3 border-b border-border/60">
             <div className="pl-8">
               <DialogTitle className="text-xl font-black flex items-center justify-end gap-2">
@@ -1099,7 +1099,7 @@ const CreditOutstanding = () => {
 
       {/* Batch Automated Overdue Reminders Dialog */}
       <Dialog open={isBatchRemindersDialogOpen} onOpenChange={setIsBatchRemindersDialogOpen}>
-        <DialogContent className="sm:max-w-[620px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto max-h-[90vh] flex flex-col" dir="rtl">
+        <DialogContent className="sm:max-w-[44rem] 2xl:max-w-[52rem] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto max-h-[90vh] flex flex-col" dir="rtl">
           <DialogHeader className="text-right pb-4 border-b border-border/60">
             <div className="flex items-center justify-between pl-8">
               <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-xs font-mono font-bold">

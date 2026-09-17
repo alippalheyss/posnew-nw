@@ -85,7 +85,7 @@ const CustomerAddDialog: React.FC<CustomerAddDialogProps> = ({ isOpen, onClose, 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] font-faruma bg-card border-border text-foreground" dir="rtl">
+      <DialogContent className="sm:max-w-[34rem] 2xl:max-w-[40rem] w-[calc(100vw-2rem)] font-faruma bg-card border-border text-foreground" dir="rtl">
         <DialogHeader className="text-right">
           <DialogTitle className="text-2xl font-black flex items-center justify-end gap-3">
              {renderBoth('add_new_customer')} <UserPlus className="h-6 w-6 text-primary" />

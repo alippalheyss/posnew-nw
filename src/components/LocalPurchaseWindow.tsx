@@ -1,6 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Minus, X, Maximize2, ShoppingBag, Plus, Building2, Trash2, Search, Package, Check, Calculator, AlertCircle, Save } from 'lucide-react';
+import { 
+  Minus, 
+  X, 
+  Maximize2, 
+  ShoppingBag, 
+  Plus, 
+  Building2, 
+  Trash2, 
+  Search, 
+  Package, 
+  Check, 
+  Calculator, 
+  AlertCircle, 
+  Save,
+  Tag,
+  ShieldCheck,
+  Percent,
+  Layers
+} from 'lucide-react';
 import { useAppContext, Purchase, Vendor, PurchaseItem, Product } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,8 +34,42 @@ interface DraftPurchaseItem {
   productId: string;
   quantity: number | '';
   unitPrice: number | '';
+  subtotal: number | '';
   isZeroTax: boolean;
 }
+
+// Smart zero-tax detection helper
+export const isProductZeroTax = (prod?: Product | null): boolean => {
+  if (!prod) return false;
+  if (prod.is_zero_tax === true || (prod as any).is_zero_tax === 1 || (prod as any).is_zero_tax === 'true' || (prod as any).is_zero_tax === '1') {
+    return true;
+  }
+  const nameEn = (prod.name_en || '').toLowerCase();
+  const nameDv = (prod.name_dv || '').toLowerCase();
+  const category = (prod.category || '').toLowerCase();
+
+  if (category.includes('zero') || category.includes('exempt') || category.includes('essential')) {
+    return true;
+  }
+
+  // Common Maldivian zero-rated essential items (GST Act Schedule)
+  const zeroKeywords = [
+    'rice', 'sugar', 'flour', 'milk', 'egg', 'eggs', 'bread', 'onion', 'onions', 
+    'potato', 'potatoes', 'lentil', 'lentils', 'dhal', 'garlic', 'ginger',
+    'baby food', 'infant formula', 'medicine', 'diesel', 'petrol', 'cooking oil',
+    'vegetable oil', 'sanitary', 'salt', 'coconut', 'water 5l', 'mineral water',
+    'ހަނޑޫ', 'ހަކުރު', 'ފުށް', 'ކިރު', 'ބިސް', 'ޕާން', 'ފިޔާ', 'އަލުވި', 'މުގު',
+    'ތެޔޮ', 'ބޭސް', 'ލޮނުމެދު', 'އިނގުރު', 'ލޮނު'
+  ];
+
+  for (const kw of zeroKeywords) {
+    if (nameEn.includes(kw) || nameDv.includes(kw)) {
+      return true;
+    }
+  }
+
+  return false;
+};
 
 const LocalPurchaseWindow = () => {
   const { t } = useTranslation();
@@ -40,10 +92,15 @@ const LocalPurchaseWindow = () => {
   
   // Product Line Items
   const [items, setItems] = useState<DraftPurchaseItem[]>([
-    { id: crypto.randomUUID(), productId: '', quantity: 1, unitPrice: '', isZeroTax: false }
+    { id: crypto.randomUUID(), productId: '', quantity: 1, unitPrice: '', subtotal: '', isZeroTax: false }
   ]);
   const [productSearchQueries, setProductSearchQueries] = useState<Record<string, string>>({});
   const [activeSearchRowId, setActiveSearchRowId] = useState<string | null>(null);
+
+  // Dedicated Product Catalog Browser Modal
+  const [isCatalogPickerOpen, setIsCatalogPickerOpen] = useState(false);
+  const [catalogSearchQuery, setCatalogSearchQuery] = useState('');
+  const [catalogSelectedCategory, setCatalogSelectedCategory] = useState('all');
 
   const [vendorSearchQuery, setVendorSearchQuery] = useState('');
 
@@ -71,61 +128,170 @@ const LocalPurchaseWindow = () => {
   const handleAddItemRow = () => {
     setItems(prev => [
       ...prev,
-      { id: crypto.randomUUID(), productId: '', quantity: 1, unitPrice: '', isZeroTax: false }
+      { id: crypto.randomUUID(), productId: '', quantity: 1, unitPrice: '', subtotal: '', isZeroTax: false }
     ]);
   };
 
   const handleRemoveItemRow = (rowId: string) => {
     if (items.length <= 1) {
-      setItems([{ id: crypto.randomUUID(), productId: '', quantity: 1, unitPrice: '', isZeroTax: false }]);
+      setItems([{ id: crypto.randomUUID(), productId: '', quantity: 1, unitPrice: '', subtotal: '', isZeroTax: false }]);
       return;
     }
     setItems(prev => prev.filter(item => item.id !== rowId));
   };
 
   const handleProductSelect = (rowId: string, prod: Product) => {
+    const cost = prod.cost_price ? Number(prod.cost_price) : '';
+    const isZero = isProductZeroTax(prod);
+
     setItems(prev => prev.map(item => {
       if (item.id !== rowId) return item;
+      const qty = typeof item.quantity === 'number' ? item.quantity : 1;
+      const sub = typeof cost === 'number' ? parseFloat((qty * cost).toFixed(2)) : '';
       return {
         ...item,
         productId: prod.id,
-        unitPrice: prod.cost_price ? Number(prod.cost_price) : '',
-        isZeroTax: !!prod.is_zero_tax
+        quantity: qty,
+        unitPrice: cost,
+        subtotal: sub,
+        isZeroTax: isZero
       };
     }));
     setActiveSearchRowId(null);
   };
 
-  const handleUpdateItem = (rowId: string, field: keyof DraftPurchaseItem, value: any) => {
+  // Add Product directly from Catalog Picker
+  const handleAddProductFromCatalog = (prod: Product) => {
+    const cost = prod.cost_price ? Number(prod.cost_price) : '';
+    const isZero = isProductZeroTax(prod);
+
+    setItems(prev => {
+      // Check if there is an empty row we can fill
+      const emptyIndex = prev.findIndex(item => !item.productId);
+      if (emptyIndex !== -1) {
+        const newItems = [...prev];
+        const qty = typeof newItems[emptyIndex].quantity === 'number' ? newItems[emptyIndex].quantity : 1;
+        const sub = typeof cost === 'number' ? parseFloat((qty * cost).toFixed(2)) : '';
+        newItems[emptyIndex] = {
+          ...newItems[emptyIndex],
+          productId: prod.id,
+          quantity: qty,
+          unitPrice: cost,
+          subtotal: sub,
+          isZeroTax: isZero
+        };
+        return newItems;
+      }
+      // Otherwise append new row
+      return [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          productId: prod.id,
+          quantity: 1,
+          unitPrice: cost,
+          subtotal: cost !== '' ? cost : '',
+          isZeroTax: isZero
+        }
+      ];
+    });
+
+    showSuccess(`Added "${prod.name_dv || prod.name_en}" to purchase bill`);
+  };
+
+  const handleUpdateItemField = (rowId: string, field: 'quantity' | 'unitPrice' | 'subtotal' | 'isZeroTax', value: any) => {
     setItems(prev => prev.map(item => {
       if (item.id !== rowId) return item;
-      return { ...item, [field]: value };
+
+      const updated = { ...item };
+
+      if (field === 'quantity') {
+        const newQty = value === '' ? '' : Math.max(0, parseFloat(value) || 0);
+        updated.quantity = newQty;
+        // Recalculate subtotal if unitPrice is present
+        if (typeof updated.unitPrice === 'number' && typeof newQty === 'number') {
+          updated.subtotal = parseFloat((newQty * updated.unitPrice).toFixed(2));
+        } else if (typeof updated.subtotal === 'number' && typeof newQty === 'number' && newQty > 0) {
+          updated.unitPrice = parseFloat((updated.subtotal / newQty).toFixed(4));
+        }
+      } else if (field === 'unitPrice') {
+        const newPrice = value === '' ? '' : Math.max(0, parseFloat(value) || 0);
+        updated.unitPrice = newPrice;
+        // Recalculate subtotal
+        if (typeof updated.quantity === 'number' && typeof newPrice === 'number') {
+          updated.subtotal = parseFloat((updated.quantity * newPrice).toFixed(2));
+        }
+      } else if (field === 'subtotal') {
+        const newSub = value === '' ? '' : Math.max(0, parseFloat(value) || 0);
+        updated.subtotal = newSub;
+        // Recalculate unitPrice
+        if (typeof updated.quantity === 'number' && updated.quantity > 0 && typeof newSub === 'number') {
+          updated.unitPrice = parseFloat((newSub / updated.quantity).toFixed(4));
+        }
+      } else if (field === 'isZeroTax') {
+        updated.isZeroTax = Boolean(value);
+      }
+
+      return updated;
     }));
   };
 
-  // Calculations
+  // Calculations with zero-tax detection
   const calculatedItems = items.map(item => {
     const qty = typeof item.quantity === 'number' ? item.quantity : 0;
-    const price = typeof item.unitPrice === 'number' ? item.unitPrice : 0;
-    const lineSubtotal = qty * price;
+    let price = typeof item.unitPrice === 'number' ? item.unitPrice : 0;
+    let lineSubtotal = typeof item.subtotal === 'number' ? item.subtotal : (qty * price);
+
+    if (lineSubtotal === 0 && qty > 0 && price > 0) {
+      lineSubtotal = qty * price;
+    }
+
     // Input GST calculation
-    const gstRate = item.isZeroTax ? 0 : (taxRate / 100);
+    const isZero = !!item.isZeroTax;
+    const gstRate = isZero ? 0 : (taxRate / 100);
     const lineGst = lineSubtotal > 0 ? (lineSubtotal * gstRate) : 0;
     const lineTotal = lineSubtotal + lineGst;
+
     return {
       ...item,
       qty,
       price,
       lineSubtotal,
       lineGst,
-      lineTotal
+      lineTotal,
+      isZeroTax: isZero
     };
   });
 
   const totalQuantity = calculatedItems.reduce((sum, i) => sum + i.qty, 0);
   const totalSubtotal = calculatedItems.reduce((sum, i) => sum + i.lineSubtotal, 0);
+  const taxableSubtotal = calculatedItems.filter(i => !i.isZeroTax).reduce((sum, i) => sum + i.lineSubtotal, 0);
+  const zeroTaxSubtotal = calculatedItems.filter(i => i.isZeroTax).reduce((sum, i) => sum + i.lineSubtotal, 0);
   const totalInputGst = calculatedItems.reduce((sum, i) => sum + i.lineGst, 0);
   const grandTotal = totalSubtotal + totalInputGst;
+
+  // Categories list for catalog browser
+  const catalogCategories = useMemo(() => {
+    const cats = new Set<string>();
+    products.forEach(p => {
+      if (p.category) cats.add(p.category);
+    });
+    return Array.from(cats);
+  }, [products]);
+
+  // Catalog filtered products
+  const catalogFilteredProducts = useMemo(() => {
+    return products.filter(p => {
+      const matchesSearch = !catalogSearchQuery || 
+        p.name_en.toLowerCase().includes(catalogSearchQuery.toLowerCase()) ||
+        p.name_dv.toLowerCase().includes(catalogSearchQuery.toLowerCase()) ||
+        p.barcode.includes(catalogSearchQuery) ||
+        p.item_code.toLowerCase().includes(catalogSearchQuery.toLowerCase());
+      
+      const matchesCat = catalogSelectedCategory === 'all' || p.category === catalogSelectedCategory;
+      return matchesSearch && matchesCat;
+    });
+  }, [products, catalogSearchQuery, catalogSelectedCategory]);
 
   const handleQuickAddVendor = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,9 +341,9 @@ const LocalPurchaseWindow = () => {
       return;
     }
 
-    const validLineItems = calculatedItems.filter(i => i.productId && i.qty > 0 && i.price > 0);
+    const validLineItems = calculatedItems.filter(i => i.productId && i.qty > 0 && (i.price > 0 || i.lineSubtotal > 0));
     if (validLineItems.length === 0) {
-      showError('Please add at least 1 product with valid quantity and price (މަދުވެގެން 1 އައިޓަމް އަދަދާއި އަގު ޖައްސަވާ)');
+      showError('Please add at least 1 product with valid quantity and price/subtotal (މަދުވެގެން 1 އައިޓަމް އަދަދާއި އަގު ޖައްސަވާ)');
       return;
     }
 
@@ -195,7 +361,8 @@ const LocalPurchaseWindow = () => {
         unit_price: item.price,
         subtotal: parseFloat(item.lineSubtotal.toFixed(2)),
         gst_amount: parseFloat(item.lineGst.toFixed(2)),
-        total: parseFloat(item.lineTotal.toFixed(2))
+        total: parseFloat(item.lineTotal.toFixed(2)),
+        is_zero_tax: item.isZeroTax
       };
     });
 
@@ -230,9 +397,10 @@ const LocalPurchaseWindow = () => {
     setBillNumber('');
     setDate(new Date().toISOString().split('T')[0]);
     setDescription('');
-    setItems([{ id: crypto.randomUUID(), productId: '', quantity: 1, unitPrice: '', isZeroTax: false }]);
+    setItems([{ id: crypto.randomUUID(), productId: '', quantity: 1, unitPrice: '', subtotal: '', isZeroTax: false }]);
     setProductSearchQueries({});
     setActiveSearchRowId(null);
+    setIsCatalogPickerOpen(false);
   };
 
   if (!isPurchaseWindowOpen) return null;
@@ -261,7 +429,7 @@ const LocalPurchaseWindow = () => {
 
   return (
     <div 
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in cursor-pointer"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-md p-2 sm:p-4 animate-in fade-in cursor-pointer"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           setIsPurchaseWindowMinimized(true);
@@ -269,11 +437,11 @@ const LocalPurchaseWindow = () => {
       }}
     >
       <div 
-        className="w-full max-w-4xl max-h-[92vh] bg-card border border-border rounded-3xl shadow-2xl overflow-hidden flex flex-col font-faruma relative cursor-default" 
+        className="w-[98vw] max-w-[1520px] h-[96vh] sm:h-[94vh] bg-card border border-border rounded-3xl shadow-2xl overflow-hidden flex flex-col font-faruma relative cursor-default" 
         dir="rtl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
+        {/* Top Header */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-border bg-muted/70 gap-4 shrink-0">
           <div className="flex items-center gap-2 shrink-0" dir="ltr">
             <Button 
@@ -281,7 +449,7 @@ const LocalPurchaseWindow = () => {
               variant="outline" 
               size="icon" 
               onClick={() => setIsPurchaseWindowMinimized(true)} 
-              className="h-8 w-8 rounded-xl border border-border/80 bg-background hover:bg-amber-500/15 hover:border-amber-500/50 hover:text-amber-500 text-foreground shadow-sm transition-all active:scale-90"
+              className="h-9 w-9 rounded-xl border border-border/80 bg-background hover:bg-amber-500/15 hover:border-amber-500/50 hover:text-amber-500 text-foreground shadow-sm transition-all active:scale-90"
               title="Minimize (ކުޑަކޮށްލާ)"
             >
               <Minus className="h-4 w-4 stroke-[2.5]" />
@@ -291,19 +459,24 @@ const LocalPurchaseWindow = () => {
               variant="outline" 
               size="icon" 
               onClick={handleClose} 
-              className="h-8 w-8 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/25 text-red-500 shadow-sm transition-all active:scale-90"
+              className="h-9 w-9 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/25 text-red-500 shadow-sm transition-all active:scale-90"
               title="Close (ބަންދުކޮށްލާ)"
             >
               <X className="h-4 w-4 stroke-[2.5]" />
             </Button>
           </div>
           <div className="text-right flex-1 min-w-0">
-            <h2 className="text-lg sm:text-xl font-black text-foreground flex items-center justify-end gap-2.5 truncate">
-              <span>{t('record_local_purchase') || 'Local Purchase Bill'} (ލޯކަލް ޕަރޗޭސް ބިލް)</span> 
-              <ShoppingBag className="h-5 w-5 text-primary shrink-0" />
-            </h2>
-            <p className="text-xs text-muted-foreground truncate">
-              Select vendor, enter invoice items, auto-calculate GST, and automatically update product inventory stock.
+            <div className="flex items-center justify-end gap-3 flex-wrap">
+              <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20">
+                GST Input Tax & Inventory Management
+              </span>
+              <h2 className="text-xl sm:text-2xl font-black text-foreground flex items-center justify-end gap-2.5 truncate">
+                <span>{t('record_local_purchase') || 'Local Purchase Bill'} (ލޯކަލް ޕަރޗޭސް ބިލް)</span> 
+                <ShoppingBag className="h-6 w-6 text-primary shrink-0" />
+              </h2>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5 truncate">
+              Select vendor, add invoice items, auto-detect 0% zero-tax products, auto-calculate Input GST, and update stock.
             </p>
           </div>
         </div>
@@ -311,7 +484,7 @@ const LocalPurchaseWindow = () => {
         {/* Scrollable Content Body */}
         <div className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
           {/* Bill Master Information Header */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/40 border border-border rounded-2xl">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/40 border border-border rounded-2xl shadow-xs">
             {/* Vendor Selector */}
             <div className="space-y-1.5 text-right">
               <div className="flex items-center justify-between">
@@ -323,7 +496,7 @@ const LocalPurchaseWindow = () => {
                   className="h-6 px-2 text-[11px] font-black text-primary hover:bg-primary/10 gap-1 rounded-md"
                 >
                   <Plus className="h-3 w-3" />
-                  <span>+ New Vendor</span>
+                  <span>+ New Vendor (އައު ވެންޑަރ)</span>
                 </Button>
                 <Label className="text-xs font-black uppercase text-muted-foreground">
                   {t('select_vendor') || 'Vendor'}*
@@ -342,7 +515,7 @@ const LocalPurchaseWindow = () => {
                       className="h-8 bg-muted border-border text-right text-xs"
                     />
                   </div>
-                  <ScrollArea className="h-44">
+                  <ScrollArea className="h-48">
                     {filteredVendors.map(v => (
                       <SelectItem key={v.id} value={v.id} className="text-right hover:bg-muted font-bold text-xs">
                         {v.name_dv || v.name_en} {v.tin_number ? `(TIN: ${v.tin_number})` : ''}
@@ -362,7 +535,7 @@ const LocalPurchaseWindow = () => {
                 value={billNumber}
                 onChange={(e) => setBillNumber(e.target.value)}
                 placeholder="e.g. INV-2026-001"
-                className="bg-background border-border font-bold h-11 rounded-xl text-right font-mono"
+                className="bg-background border-border font-bold h-11 rounded-xl text-right font-mono text-sm"
               />
             </div>
 
@@ -375,42 +548,63 @@ const LocalPurchaseWindow = () => {
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="bg-background border-border font-bold h-11 rounded-xl text-right font-mono"
+                className="bg-background border-border font-bold h-11 rounded-xl text-right font-mono text-sm"
               />
             </div>
           </div>
 
           {/* Product Items Table Section */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleAddItemRow}
-                className="h-8 px-3 text-xs font-black text-primary border-primary/30 hover:bg-primary/10 gap-1.5 rounded-xl transition-all"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                <span>Add Item (އައިޓަމެއް އިތުރުކުރޭ)</span>
-              </Button>
-              <h3 className="text-sm font-black text-foreground flex items-center gap-2">
-                <span>Invoice Items (ބިލުގައިވާ ތަކެތި)</span>
-                <Package className="h-4 w-4 text-primary" />
-              </h3>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddItemRow}
+                  className="h-9 px-3.5 text-xs font-black text-primary border-primary/30 hover:bg-primary/10 gap-1.5 rounded-xl transition-all shadow-xs"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Add Line Row (އައިޓަމެއް އިތުރުކުރޭ)</span>
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setIsCatalogPickerOpen(true)}
+                  className="h-9 px-3.5 text-xs font-black bg-muted/80 hover:bg-muted text-foreground border border-border gap-1.5 rounded-xl transition-all shadow-xs"
+                >
+                  <Layers className="h-4 w-4 text-purple-500" />
+                  <span>Browse Products Catalog (ޕްރޮޑަކްޓް ލިސްޓް)</span>
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-2 text-right">
+                <span className="text-xs text-muted-foreground font-bold font-mono">
+                  {items.length} Rows • {totalQuantity} Units
+                </span>
+                <h3 className="text-sm font-black text-foreground flex items-center gap-2">
+                  <span>Invoice Items (ބިލުގައިވާ ތަކެތި)</span>
+                  <Package className="h-4 w-4 text-primary" />
+                </h3>
+              </div>
             </div>
 
-            <div className="border border-border rounded-2xl overflow-hidden bg-card shadow-sm">
-              <div className="overflow-x-auto">
+            {/* Main Products Table */}
+            <div className="border border-border rounded-2xl bg-card shadow-sm overflow-visible">
+              <div className="w-full">
                 <table className="w-full text-right text-xs">
                   <thead className="bg-muted/80 border-b border-border text-muted-foreground font-black uppercase tracking-wider">
                     <tr>
-                      <th className="p-3 text-right">Product Item (ޕްރޮޑަކްޓް)</th>
-                      <th className="p-3 text-center w-24">Current Stock</th>
-                      <th className="p-3 text-center w-24">Invoice Qty*</th>
-                      <th className="p-3 text-center w-28">Cost Price ({currency})*</th>
-                      <th className="p-3 text-center w-28">Subtotal ({currency})</th>
-                      <th className="p-3 text-center w-20">Zero Tax</th>
-                      <th className="p-3 text-center w-12"></th>
+                      <th className="p-3.5 text-center w-12">#</th>
+                      <th className="p-3.5 text-right min-w-[280px]">Product Item (ޕްރޮޑަކްޓް)</th>
+                      <th className="p-3.5 text-center w-28">Current Stock</th>
+                      <th className="p-3.5 text-center w-28">Invoice Qty*</th>
+                      <th className="p-3.5 text-center w-36">Unit Cost ({currency})*</th>
+                      <th className="p-3.5 text-center w-36">Subtotal ({currency})*</th>
+                      <th className="p-3.5 text-center w-28">0% Tax (Zero GST)</th>
+                      <th className="p-3.5 text-center w-14"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60">
@@ -428,48 +622,75 @@ const LocalPurchaseWindow = () => {
                             p.name_dv.toLowerCase().includes(query.toLowerCase()) ||
                             p.barcode.includes(query) ||
                             p.item_code.toLowerCase().includes(query.toLowerCase())
-                          ).slice(0, 15)
-                        : products.slice(0, 15);
+                          ).slice(0, 20)
+                        : products.slice(0, 20);
 
                       return (
                         <tr key={item.id} className="hover:bg-muted/30 transition-colors">
+                          {/* Row Number */}
+                          <td className="p-3 text-center font-mono font-bold text-muted-foreground">
+                            {index + 1}
+                          </td>
+
                           {/* Product Selection */}
-                          <td className="p-2.5 relative min-w-[220px]">
+                          <td className="p-3 relative">
                             {selectedProd && !isSearching ? (
                               <div 
                                 onClick={() => setActiveSearchRowId(item.id)}
-                                className="flex items-center justify-between p-2 rounded-xl bg-muted/60 hover:bg-muted border border-border/80 cursor-pointer group"
+                                className="flex items-center justify-between p-2.5 rounded-xl bg-muted/60 hover:bg-muted border border-border/80 cursor-pointer group transition-all"
                               >
                                 <div className="text-right min-w-0 flex-1">
-                                  <p className="font-black text-foreground truncate">{selectedProd.name_dv || selectedProd.name_en}</p>
-                                  <p className="text-[10px] text-muted-foreground font-mono truncate">{selectedProd.name_en} {selectedProd.barcode ? `• ${selectedProd.barcode}` : ''}</p>
+                                  <div className="flex items-center justify-start gap-2 flex-wrap mb-0.5">
+                                    <p className="font-black text-foreground text-xs truncate">{selectedProd.name_dv || selectedProd.name_en}</p>
+                                    {item.isZeroTax && (
+                                      <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30 text-[9px] px-1.5 py-0">
+                                        0% Zero Tax
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-[10px] text-muted-foreground font-mono truncate">
+                                    {selectedProd.name_en} {selectedProd.barcode ? `• Barcode: ${selectedProd.barcode}` : ''} {selectedProd.category ? `• [${selectedProd.category}]` : ''}
+                                  </p>
                                 </div>
-                                <span className="text-[9px] text-primary group-hover:underline font-bold mr-2">Change</span>
+                                <span className="text-[10px] text-primary group-hover:underline font-bold mr-2 shrink-0">
+                                  Change (ބަދަލުކުރޭ)
+                                </span>
                               </div>
                             ) : (
                               <div className="relative">
                                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                  placeholder="Search product name, barcode..."
+                                  placeholder="Search product name, barcode, item code..."
                                   value={query}
                                   onChange={(e) => {
                                     setProductSearchQueries(prev => ({ ...prev, [item.id]: e.target.value }));
                                     setActiveSearchRowId(item.id);
                                   }}
                                   onFocus={() => setActiveSearchRowId(item.id)}
-                                  className="h-10 bg-background border-border text-right text-xs pr-9 rounded-xl font-bold font-faruma"
+                                  className="h-11 bg-background border-border text-right text-xs pr-9 rounded-xl font-bold font-faruma"
                                 />
                                 {isSearching && (
-                                  <div className="absolute top-11 right-0 w-full z-50 bg-card border border-border rounded-2xl shadow-2xl p-1 max-h-48 overflow-y-auto">
+                                  <div className="absolute top-12 right-0 w-full z-[120] bg-card border border-border rounded-2xl shadow-2xl p-1.5 max-h-60 overflow-y-auto custom-scrollbar">
+                                    <div className="p-1.5 border-b border-border/40 text-[10px] font-bold text-muted-foreground flex justify-between items-center">
+                                      <button 
+                                        type="button" 
+                                        onClick={() => setActiveSearchRowId(null)}
+                                        className="text-red-500 hover:underline"
+                                      >
+                                        Close (ލައްޕާ)
+                                      </button>
+                                      <span>Select a product ({matchingProducts.length} results):</span>
+                                    </div>
                                     {matchingProducts.map(p => {
                                       const pStock = p.stock_shop || 0;
+                                      const isZero = isProductZeroTax(p);
                                       return (
                                         <div
                                           key={p.id}
                                           onClick={() => handleProductSelect(item.id, p)}
-                                          className="p-2 hover:bg-muted rounded-xl cursor-pointer text-right flex items-center justify-between gap-2 border-b border-border/30 last:border-none"
+                                          className="p-2 hover:bg-muted rounded-xl cursor-pointer text-right flex items-center justify-between gap-2 border-b border-border/30 last:border-none transition-colors"
                                         >
-                                          <div className="flex items-center gap-1.5">
+                                          <div className="flex items-center gap-1.5 flex-wrap">
                                             <span className={cn(
                                               "text-[9px] font-black px-1.5 py-0.5 rounded font-mono",
                                               pStock < 0 ? "bg-red-500/20 text-red-500" : "bg-muted text-muted-foreground"
@@ -477,20 +698,36 @@ const LocalPurchaseWindow = () => {
                                               Stock: {pStock}
                                             </span>
                                             {p.cost_price && (
-                                              <span className="text-[9px] text-muted-foreground font-mono">
+                                              <span className="text-[9px] text-muted-foreground font-mono bg-muted/70 px-1 rounded">
                                                 Cost: {p.cost_price}
+                                              </span>
+                                            )}
+                                            {isZero && (
+                                              <span className="text-[9px] font-black text-amber-500 bg-amber-500/15 px-1.5 py-0.5 rounded">
+                                                0% Tax
                                               </span>
                                             )}
                                           </div>
                                           <div className="min-w-0 text-right">
                                             <p className="font-black text-xs text-foreground truncate">{p.name_dv || p.name_en}</p>
-                                            <p className="text-[10px] text-muted-foreground font-mono">{p.name_en}</p>
+                                            <p className="text-[10px] text-muted-foreground font-mono truncate">{p.name_en} {p.barcode ? `• ${p.barcode}` : ''}</p>
                                           </div>
                                         </div>
                                       );
                                     })}
                                     {matchingProducts.length === 0 && (
-                                      <p className="text-center py-3 text-xs text-muted-foreground">No product found</p>
+                                      <div className="text-center py-4 text-xs text-muted-foreground">
+                                        <p>No matching products found.</p>
+                                        <Button
+                                          type="button"
+                                          variant="link"
+                                          size="sm"
+                                          onClick={() => setIsCatalogPickerOpen(true)}
+                                          className="text-xs text-primary font-bold mt-1"
+                                        >
+                                          Open Full Catalog Browser
+                                        </Button>
+                                      </div>
                                     )}
                                   </div>
                                 )}
@@ -499,17 +736,17 @@ const LocalPurchaseWindow = () => {
                           </td>
 
                           {/* Current Stock Indicator */}
-                          <td className="p-2.5 text-center">
+                          <td className="p-3 text-center">
                             {currentStock !== null ? (
                               <div className="flex flex-col items-center">
                                 <span className={cn(
-                                  "font-mono font-black text-xs px-2 py-0.5 rounded-lg",
+                                  "font-mono font-black text-xs px-2.5 py-1 rounded-lg",
                                   isNegativeStock ? "bg-red-500/20 text-red-500 border border-red-500/30 animate-pulse" : "bg-muted text-foreground"
                                 )}>
                                   {currentStock}
                                 </span>
                                 {isNegativeStock && (
-                                  <span className="text-[8px] font-black text-red-500 mt-0.5">
+                                  <span className="text-[8px] font-black text-red-500 mt-0.5 uppercase tracking-wide">
                                     Minus Stock
                                   </span>
                                 )}
@@ -520,57 +757,79 @@ const LocalPurchaseWindow = () => {
                           </td>
 
                           {/* Invoice Quantity */}
-                          <td className="p-2.5 text-center">
+                          <td className="p-3 text-center">
                             <Input
                               type="number"
-                              min="1"
+                              min="0.01"
+                              step="any"
                               value={item.quantity}
-                              onChange={(e) => handleUpdateItem(item.id, 'quantity', parseFloat(e.target.value) || '')}
+                              onChange={(e) => handleUpdateItemField(item.id, 'quantity', e.target.value)}
                               onFocus={handleFocus}
-                              className="h-10 bg-background border-border text-center font-black text-sm font-mono rounded-xl w-20 mx-auto"
+                              className="h-10 bg-background border-border text-center font-black text-sm font-mono rounded-xl w-24 mx-auto"
                               placeholder="1"
                             />
                           </td>
 
-                          {/* Unit Purchase Price */}
-                          <td className="p-2.5 text-center">
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={item.unitPrice}
-                              onChange={(e) => handleUpdateItem(item.id, 'unitPrice', parseFloat(e.target.value) || '')}
-                              onFocus={handleFocus}
-                              className="h-10 bg-background border-border text-center font-black text-sm font-mono rounded-xl w-24 mx-auto"
-                              placeholder="0.00"
-                            />
+                          {/* Unit Purchase Price (Editable) */}
+                          <td className="p-3 text-center">
+                            <div className="relative w-28 mx-auto">
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={item.unitPrice}
+                                onChange={(e) => handleUpdateItemField(item.id, 'unitPrice', e.target.value)}
+                                onFocus={handleFocus}
+                                className="h-10 bg-background border-border text-center font-black text-sm font-mono rounded-xl w-full"
+                                placeholder="0.00"
+                              />
+                            </div>
                           </td>
 
-                          {/* Subtotal */}
-                          <td className="p-2.5 text-center font-mono font-black text-xs text-foreground">
-                            {currency} {(calculated?.lineSubtotal || 0).toFixed(2)}
+                          {/* Subtotal (Editable & Auto-Syncing with Unit Cost) */}
+                          <td className="p-3 text-center">
+                            <div className="relative w-32 mx-auto">
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={item.subtotal}
+                                onChange={(e) => handleUpdateItemField(item.id, 'subtotal', e.target.value)}
+                                onFocus={handleFocus}
+                                className="h-10 bg-background border-primary/40 focus:border-primary text-center font-black text-sm font-mono rounded-xl w-full text-foreground"
+                                placeholder="0.00"
+                              />
+                            </div>
                           </td>
 
-                          {/* Zero Tax Toggle */}
-                          <td className="p-2.5 text-center">
-                            <input
-                              type="checkbox"
-                              checked={item.isZeroTax}
-                              onChange={(e) => handleUpdateItem(item.id, 'isZeroTax', e.target.checked)}
-                              className="h-4 w-4 rounded accent-primary cursor-pointer"
-                              title="Check if this item is exempt from GST"
-                            />
+                          {/* Zero Tax Auto-Detect & Toggle */}
+                          <td className="p-3 text-center">
+                            <div className="flex flex-col items-center justify-center gap-1">
+                              <input
+                                type="checkbox"
+                                checked={item.isZeroTax}
+                                onChange={(e) => handleUpdateItemField(item.id, 'isZeroTax', e.target.checked)}
+                                className="h-4 w-4 rounded accent-primary cursor-pointer"
+                                title="Check if this product is 0% GST (Tax Exempt)"
+                              />
+                              <span className={cn(
+                                "text-[9px] font-black",
+                                item.isZeroTax ? "text-amber-500" : "text-muted-foreground/60"
+                              )}>
+                                {item.isZeroTax ? "0% GST" : `${taxRate}% GST`}
+                              </span>
+                            </div>
                           </td>
 
                           {/* Delete Row Button */}
-                          <td className="p-2.5 text-center">
+                          <td className="p-3 text-center">
                             <Button
                               type="button"
                               variant="ghost"
                               size="icon"
                               onClick={() => handleRemoveItemRow(item.id)}
                               className="h-8 w-8 text-red-500 hover:bg-red-500/10 hover:text-red-600 rounded-lg"
-                              title="Remove item"
+                              title="Remove line item"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -585,36 +844,60 @@ const LocalPurchaseWindow = () => {
           </div>
 
           {/* Description & Summary Totals Card */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-            <div className="space-y-1.5 text-right">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start pt-2">
+            <div className="space-y-2 text-right">
               <Label className="text-xs font-black uppercase text-muted-foreground">
                 Bill Notes / Description (އިތުރު ތަފްޞީލް)
               </Label>
               <Input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Optional purchase details or payment reference..."
-                className="bg-background border-border text-right h-11 rounded-xl font-bold"
+                placeholder="Optional purchase details, supplier bill remarks, or payment reference..."
+                className="bg-background border-border text-right h-12 rounded-xl font-bold text-xs sm:text-sm"
               />
+
+              <div className="p-3 bg-muted/40 rounded-xl border border-border text-xs text-muted-foreground space-y-1">
+                <p className="font-black text-foreground flex items-center justify-end gap-1.5">
+                  <span>Smart Tax & Stock Automation (ޓެކްސް އަދި ސްޓޮކް އަޕްޑޭޓް)</span>
+                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                </p>
+                <p className="text-[11px] leading-relaxed">
+                  Saving this purchase bill will automatically increase the shop inventory stock, record the new unit cost price, and calculate input GST statements.
+                </p>
+              </div>
             </div>
 
             {/* Calculations Breakdown */}
-            <div className="bg-muted/60 border border-border rounded-2xl p-4 space-y-2.5 text-right font-faruma">
-              <div className="flex justify-between items-center text-xs text-muted-foreground font-bold">
+            <div className="bg-muted/70 border border-border rounded-2xl p-5 space-y-3 text-right font-faruma shadow-sm">
+              <div className="flex justify-between items-center text-xs font-bold text-muted-foreground">
                 <span className="font-mono font-black text-foreground">{currency} {totalSubtotal.toFixed(2)}</span>
-                <span>Subtotal ({totalQuantity} Items):</span>
+                <span>Subtotal ({totalQuantity} Items Total):</span>
               </div>
-              <div className="flex justify-between items-center text-xs text-muted-foreground font-bold">
+
+              {zeroTaxSubtotal > 0 && (
+                <div className="flex justify-between items-center text-xs font-bold text-amber-500">
+                  <span className="font-mono font-black">{currency} {zeroTaxSubtotal.toFixed(2)}</span>
+                  <span>Zero-Rated / Exempt Items (0% Tax):</span>
+                </div>
+              )}
+
+              <div className="flex justify-between items-center text-xs font-bold text-muted-foreground">
+                <span className="font-mono font-black text-foreground">{currency} {taxableSubtotal.toFixed(2)}</span>
+                <span>Taxable Items ({taxRate}% GST Basis):</span>
+              </div>
+
+              <div className="flex justify-between items-center text-xs font-bold text-muted-foreground">
                 <span className="font-mono font-black text-orange-500">
-                  {currency} {totalInputGst.toFixed(2)} ({taxRate}% Input GST)
+                  {currency} {totalInputGst.toFixed(2)}
                 </span>
                 <span>Input GST (އިންޕުޓް ޓެކްސް):</span>
               </div>
-              <div className="pt-2 border-t border-border flex justify-between items-center">
-                <span className="text-xl font-black text-foreground font-mono">
+
+              <div className="pt-3 border-t border-border flex justify-between items-center">
+                <span className="text-2xl font-black text-foreground font-mono text-primary">
                   {currency} {grandTotal.toFixed(2)}
                 </span>
-                <span className="text-sm font-black text-foreground">
+                <span className="text-base font-black text-foreground">
                   Grand Total (ޖުމްލަ އަގު):
                 </span>
               </div>
@@ -622,8 +905,8 @@ const LocalPurchaseWindow = () => {
           </div>
         </div>
 
-        {/* Footer Actions */}
-        <div className="p-4 sm:p-5 border-t border-border bg-muted/70 flex flex-row gap-3 items-center justify-between shrink-0">
+        {/* Sticky Footer Actions */}
+        <div className="p-4 sm:p-5 border-t border-border bg-muted/80 flex flex-row gap-4 items-center justify-between shrink-0">
           <Button
             type="button"
             variant="outline"
@@ -637,7 +920,7 @@ const LocalPurchaseWindow = () => {
             type="button"
             onClick={handleSavePurchase}
             disabled={isSavingPurchase || !vendorId || !billNumber.trim() || grandTotal <= 0}
-            className="flex-1 max-w-sm h-12 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs sm:text-sm shadow-xl shadow-primary/20 uppercase gap-2"
+            className="flex-1 max-w-md h-12 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs sm:text-sm shadow-xl shadow-primary/20 uppercase gap-2"
           >
             <Save className="h-4 w-4" />
             <span>{isSavingPurchase ? 'Saving & Updating Stock...' : 'Save Paid Bill & Update Stock (ބިލް ސޭވްކުރޭ)'}</span>
@@ -645,10 +928,143 @@ const LocalPurchaseWindow = () => {
         </div>
       </div>
 
+      {/* Full Product Catalog Browser Modal */}
+      {isCatalogPickerOpen && (
+        <div 
+          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsCatalogPickerOpen(false);
+          }}
+        >
+          <div 
+            className="w-full max-w-4xl max-h-[85vh] bg-card border border-border rounded-3xl p-6 shadow-2xl flex flex-col font-faruma text-foreground relative animate-in zoom-in-95"
+            dir="rtl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Catalog Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-border gap-4 shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => setIsCatalogPickerOpen(false)}
+                className="h-9 w-9 rounded-xl border border-border bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+              <div className="text-right">
+                <h3 className="text-lg font-black flex items-center justify-end gap-2 text-foreground">
+                  <span>Product Catalog Browser (ޕްރޮޑަކްޓް ލިސްޓް)</span>
+                  <Package className="w-5 h-5 text-primary" />
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Click any product to add it directly into the local purchase invoice.
+                </p>
+              </div>
+            </div>
+
+            {/* Search and Filters */}
+            <div className="py-4 grid grid-cols-1 sm:grid-cols-3 gap-3 shrink-0">
+              <div className="sm:col-span-2 relative">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by product name, barcode, code..."
+                  value={catalogSearchQuery}
+                  onChange={(e) => setCatalogSearchQuery(e.target.value)}
+                  className="h-11 pr-9 bg-muted border-border font-bold text-xs sm:text-sm rounded-xl text-right"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <Select value={catalogSelectedCategory} onValueChange={setCatalogSelectedCategory}>
+                  <SelectTrigger className="h-11 bg-muted border-border rounded-xl font-bold text-xs text-right">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border-border text-foreground !z-[140]">
+                    <SelectItem value="all" className="text-right font-bold text-xs">All Categories (ހުރިހާ ބައިތައް)</SelectItem>
+                    {catalogCategories.map(cat => (
+                      <SelectItem key={cat} value={cat} className="text-right font-bold text-xs">{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Catalog Grid */}
+            <ScrollArea className="flex-1 max-h-[50vh] custom-scrollbar">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 p-1">
+                {catalogFilteredProducts.map(prod => {
+                  const pStock = Number(prod.stock_shop) || 0;
+                  const isZero = isProductZeroTax(prod);
+                  return (
+                    <div
+                      key={prod.id}
+                      onClick={() => handleAddProductFromCatalog(prod)}
+                      className="p-3.5 rounded-2xl bg-muted/50 hover:bg-primary/10 border border-border/80 hover:border-primary/50 cursor-pointer transition-all flex flex-col justify-between group shadow-xs active:scale-[0.98]"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className={cn(
+                            "text-[9px] font-black px-2 py-0.5 rounded-md font-mono",
+                            pStock < 0 ? "bg-red-500/20 text-red-500" : "bg-card text-muted-foreground border border-border"
+                          )}>
+                            Stock: {pStock}
+                          </span>
+                          {isZero && (
+                            <span className="text-[9px] font-black text-amber-500 bg-amber-500/15 px-1.5 py-0.5 rounded">
+                              0% Tax
+                            </span>
+                          )}
+                        </div>
+                        <p className="font-black text-xs sm:text-sm text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                          {prod.name_dv || prod.name_en}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground font-mono line-clamp-1 mt-0.5">
+                          {prod.name_en}
+                        </p>
+                      </div>
+
+                      <div className="pt-2 mt-2 border-t border-border/60 flex items-center justify-between text-xs">
+                        <span className="text-[10px] font-bold text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                          + Add to Bill
+                        </span>
+                        <span className="font-mono font-bold text-foreground">
+                          {currency} {prod.cost_price ? Number(prod.cost_price).toFixed(2) : (Number(prod.price) || 0).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {catalogFilteredProducts.length === 0 && (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Package className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
+                  <p className="font-bold text-sm">No products found matching search</p>
+                </div>
+              )}
+            </ScrollArea>
+
+            {/* Catalog Modal Footer */}
+            <div className="pt-4 border-t border-border flex justify-end shrink-0 mt-2">
+              <Button
+                type="button"
+                onClick={() => setIsCatalogPickerOpen(false)}
+                className="h-10 px-5 rounded-xl bg-primary text-primary-foreground font-black text-xs"
+              >
+                Done / Return to Bill (ނިމުނީ)
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Quick Add Vendor Modal */}
       {isQuickAddVendorOpen && (
         <div 
-          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in"
+          className="fixed inset-0 z-[140] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in"
           onClick={(e) => {
             e.stopPropagation();
             setIsQuickAddVendorOpen(false);
@@ -734,3 +1150,4 @@ const LocalPurchaseWindow = () => {
 };
 
 export default LocalPurchaseWindow;
+

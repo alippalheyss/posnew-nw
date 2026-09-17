@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ShoppingCart, PlusCircle, Minus, Trash2, MonitorPlay, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, ArrowLeft, Plus, ChevronDown, Boxes, X, CheckCircle2, Package, Loader2, Check, Printer } from 'lucide-react';
+import { ShoppingCart, PlusCircle, Minus, Trash2, MonitorPlay, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, ArrowLeft, Plus, ChevronDown, Boxes, X, CheckCircle2, Package, Loader2, Check, Printer, Gift } from 'lucide-react';
 import { formatDate, toISODate, toISODatetime, formatTime, formatDateTime } from '@/utils/formatters';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
@@ -142,7 +142,7 @@ const POS = () => {
     const zeroTaxTotal = currentItems.filter(i => i.is_zero_tax).reduce((sum, item) => sum + item.price * item.qty, 0);
     const subtotalNoDiscount = taxableTotal + zeroTaxTotal;
 
-    const loyaltyPointsValue = settings.general.loyaltyPointsValue || 100;
+    const loyaltyPointsValue = settings.general.loyaltyPointsValue || 10;
     const loyaltyDiscount = pointsToRedeem / loyaltyPointsValue;
     const grandTotalValue = Math.max(0, subtotalNoDiscount - loyaltyDiscount);
 
@@ -339,6 +339,7 @@ const POS = () => {
 
   const switchCart = (cartId: string) => {
     setActiveCartId(cartId);
+    setPointsToRedeem(0);
   };
 
   const handleRemoveCartClick = (cartId: string) => {
@@ -694,7 +695,7 @@ const POS = () => {
       const recordedSale = await addSale(newSale);
 
       if (activeCart.customer) {
-        if (settings.general.enableLoyaltyProgram) {
+        if (settings.general.enableLoyaltyProgram ?? true) {
           if (pointsToRedeem > 0) {
             await redeemLoyaltyPoints(activeCart.customer.id, pointsToRedeem);
           }
@@ -751,7 +752,7 @@ const POS = () => {
 
       if (activeCart.customer) {
         await updateCustomerBalance(activeCart.customer.id, grandTotal);
-        if (settings.general.enableLoyaltyProgram) {
+        if (settings.general.enableLoyaltyProgram ?? true) {
           if (pointsToRedeem > 0) {
             await redeemLoyaltyPoints(activeCart.customer.id, pointsToRedeem);
           }
@@ -1013,7 +1014,17 @@ const POS = () => {
       for (const entry of splitEntries) {
         if (entry.method === 'Credit' && entry.customerId) {
           await updateCustomerBalance(entry.customerId, entry.amount);
+        } else if (entry.customerId && (settings.general.enableLoyaltyProgram ?? true)) {
+          const loyaltyAmountPerPoint = settings.general.loyaltyAmountPerPoint || 20;
+          const pointsEarned = Math.floor(entry.amount / loyaltyAmountPerPoint);
+          if (pointsEarned > 0) {
+            await awardLoyaltyPoints(entry.customerId, pointsEarned);
+          }
         }
+      }
+
+      if (activeCart?.customer && (settings.general.enableLoyaltyProgram ?? true) && pointsToRedeem > 0) {
+        await redeemLoyaltyPoints(activeCart.customer.id, pointsToRedeem);
       }
 
       showSuccess(t('split_payment_successful'));
@@ -1314,6 +1325,54 @@ const POS = () => {
               {activeCart?.items.length || 0} {t('items') || 'items'}
             </span>
           </div>
+
+          {/* Customer Loyalty Points Card & Redeem Action */}
+          {activeCart?.customer && (settings.general.enableLoyaltyProgram ?? true) && (
+            <div className="flex items-center justify-between px-3.5 py-2.5 bg-amber-500/10 border border-amber-500/25 rounded-2xl mb-3 transition-all">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0 shadow-sm">
+                  <Gift className="h-4 w-4" />
+                </div>
+                <div className="text-right">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-black text-foreground font-mono">
+                      {(activeCart.customer.loyalty_points || 0).toFixed(0)} PTS
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-mono font-bold">
+                      (≈ {settings.shop.currency} {((activeCart.customer.loyalty_points || 0) / (settings.general.loyaltyPointsValue || 10)).toFixed(2)})
+                    </span>
+                  </div>
+                  <span className="text-[9px] text-amber-600 dark:text-amber-400 font-bold block mt-0.5">
+                    ލޯޔަލްޓީ ޕޮއިންޓް (Loyalty Balance)
+                  </span>
+                </div>
+              </div>
+
+              {pointsToRedeem > 0 ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setPointsToRedeem(0)}
+                  className="h-8 px-2.5 text-xs font-black border-red-500/30 text-red-500 hover:bg-red-500/10 rounded-xl"
+                  title="Cancel loyalty discount"
+                >
+                  Cancel ({pointsToRedeem} pts)
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={(activeCart.customer.loyalty_points || 0) < (settings.general.loyaltyMinRedeemPoints || 10) || activeCart.items.length === 0}
+                  onClick={() => setIsLoyaltyRedemptionDialogOpen(true)}
+                  className="h-8 bg-amber-500 hover:bg-amber-600 text-black text-xs font-black px-3 rounded-xl shadow-sm gap-1.5 active:scale-95 disabled:opacity-40"
+                >
+                  <Gift className="h-3.5 w-3.5" />
+                  <span>Redeem (ބޭނުންކުރޭ)</span>
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         <ScrollArea className="flex-1 px-6 custom-scrollbar">
@@ -1451,6 +1510,15 @@ const POS = () => {
               <span>GST ({settings.shop.taxRate}%)</span>
               <span>{settings.shop.currency} {gstAmount.toFixed(2)}</span>
             </div>
+            {loyaltyDiscount > 0 && (
+              <div className="flex justify-between text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20">
+                <span className="flex items-center gap-1.5">
+                  <Gift className="h-3.5 w-3.5" />
+                  <span>Loyalty Discount ({pointsToRedeem} PTS):</span>
+                </span>
+                <span className="font-mono font-black">- {settings.shop.currency} {loyaltyDiscount.toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between items-end pt-2">
               <span className="text-sm font-black text-foreground uppercase tracking-tighter">{renderBoth('grand_total')}</span>
               <span className="text-4xl font-black text-primary leading-none">

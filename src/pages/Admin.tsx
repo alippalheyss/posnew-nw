@@ -558,25 +558,24 @@ const Admin = () => {
              {/* Loyalty Settings */}
              {activeTab === 'generalSettings' && (
                   <div className="space-y-8">
-                    
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="flex items-center justify-between p-4 bg-muted rounded-2xl border border-border">
                            <Gift className="h-5 w-5 text-primary" />
                            <div className="text-right">
                               <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2 block">Enable Loyalty Program</Label>
                               <Switch 
-                                checked={generalSettings.enableLoyaltyProgram} 
+                                checked={generalSettings.enableLoyaltyProgram ?? true} 
                                 onCheckedChange={(val) => handleSettingsChange('general', 'enableLoyaltyProgram', val)}
                                 className="data-[state=checked]:bg-primary"
                               />
                            </div>
                         </div>
                         <div className="space-y-2">
-                           <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Amount to earn 1 Point</Label>
+                           <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Amount to earn 1 Point ({shopSettings.currency})</Label>
                            <div className="relative">
                               <Input 
                                 type="number"
-                                value={generalSettings.loyaltyAmountPerPoint || 20} 
+                                value={generalSettings.loyaltyAmountPerPoint ?? 20} 
                                 onChange={(e) => handleSettingsChange('general', 'loyaltyAmountPerPoint', parseFloat(e.target.value))}
                                 className="bg-muted border-border h-12 rounded-xl text-right font-bold"
                               />
@@ -585,11 +584,11 @@ const Admin = () => {
                      </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-2">
-                           <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Points for 1 {shopSettings.currency} discount</Label>
+                           <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Points for 1.00 {shopSettings.currency} discount</Label>
                            <div className="relative">
                               <Input 
                                 type="number"
-                                value={generalSettings.loyaltyPointsValue || 100} 
+                                value={generalSettings.loyaltyPointsValue ?? 10} 
                                 onChange={(e) => handleSettingsChange('general', 'loyaltyPointsValue', parseFloat(e.target.value))}
                                 className="bg-muted border-border h-12 rounded-xl text-right font-bold"
                               />
@@ -600,7 +599,7 @@ const Admin = () => {
                            <div className="relative">
                               <Input 
                                 type="number"
-                                value={generalSettings.loyaltyMinRedeemPoints || 1000} 
+                                value={generalSettings.loyaltyMinRedeemPoints ?? 10} 
                                 onChange={(e) => handleSettingsChange('general', 'loyaltyMinRedeemPoints', parseFloat(e.target.value))}
                                 className="bg-muted border-border h-12 rounded-xl text-right font-bold"
                               />

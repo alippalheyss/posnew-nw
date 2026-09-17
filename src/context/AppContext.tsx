@@ -755,10 +755,10 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         barcodeScannerEnabled: true,
         receiptPrinterEnabled: true,
         defaultDiscount: 0,
-        enableLoyaltyProgram: false,
+        enableLoyaltyProgram: true,
         loyaltyAmountPerPoint: 20,
-        loyaltyPointsValue: 100,
-        loyaltyMinRedeemPoints: 1000,
+        loyaltyPointsValue: 10,
+        loyaltyMinRedeemPoints: 10,
         enableCustomerDisplay: true,
         customerDisplayIdleTimeout: 10,
         customerDisplayOffers: [],
@@ -882,19 +882,23 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   const awardLoyaltyPoints = async (customerId: string, points: number) => {
     try {
       const customer = customers.find(c => c.id === customerId);
-      if (!customer) return;
+      const currentPts = customer?.loyalty_points || 0;
+      const newPoints = currentPts + points;
 
-      const newPoints = (customer.loyalty_points || 0) + points;
       const { error } = await supabase
         .from('customers')
         .update({ loyalty_points: newPoints })
         .eq('id', customerId);
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Supabase update loyalty_points error:', error);
+      }
 
       setCustomers(prev => prev.map(c =>
-        c.id === customerId ? { ...c, loyalty_points: newPoints } : c
+        c.id === customerId ? { ...c, loyalty_points: (c.loyalty_points || 0) + points } : c
       ));
+
+      showSuccess(`⭐ +${points} Loyalty Points (ލޯޔަލްޓީ ޕޮއިންޓް) awarded!`);
     } catch (error) {
       console.error('Error awarding loyalty points:', error);
     }
@@ -903,19 +907,23 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   const redeemLoyaltyPoints = async (customerId: string, points: number) => {
     try {
       const customer = customers.find(c => c.id === customerId);
-      if (!customer) return;
+      const currentPts = customer?.loyalty_points || 0;
+      const newPoints = Math.max(0, currentPts - points);
 
-      const newPoints = Math.max(0, (customer.loyalty_points || 0) - points);
       const { error } = await supabase
         .from('customers')
         .update({ loyalty_points: newPoints })
         .eq('id', customerId);
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Supabase update loyalty_points error:', error);
+      }
 
       setCustomers(prev => prev.map(c =>
-        c.id === customerId ? { ...c, loyalty_points: newPoints } : c
+        c.id === customerId ? { ...c, loyalty_points: Math.max(0, (c.loyalty_points || 0) - points) } : c
       ));
+
+      showSuccess(`⭐ -${points} Loyalty Points (ލޯޔަލްޓީ ޕޮއިންޓް) redeemed!`);
     } catch (error) {
       console.error('Error redeeming loyalty points:', error);
     }
@@ -1351,6 +1359,14 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         paidAmount: transfer.grandTotal,
         balance: 0
       });
+
+      if (transfer.customer && (settings.general.enableLoyaltyProgram ?? true)) {
+        const loyaltyAmountPerPoint = settings.general.loyaltyAmountPerPoint || 20;
+        const pointsEarned = Math.floor(transfer.grandTotal / loyaltyAmountPerPoint);
+        if (pointsEarned > 0) {
+          await awardLoyaltyPoints(transfer.customer.id, pointsEarned);
+        }
+      }
     } else {
       let customerToUse = transfer.customer;
       if (!customerToUse && transfer.tempCustomerName) {
@@ -1546,7 +1562,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
       if (customerError) throw customerError;
 
-      if (settings.general.enableLoyaltyProgram) {
+      if (settings.general.enableLoyaltyProgram ?? true) {
         const loyaltyAmountPerPoint = settings.general.loyaltyAmountPerPoint || 20;
         const pointsEarned = Math.floor(settlement.amount_paid / loyaltyAmountPerPoint);
         if (pointsEarned > 0) {

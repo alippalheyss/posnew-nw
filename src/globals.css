@@ -56,7 +56,7 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-weight: 600;
-    font-family: 'Faruma', 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Faruma', 'Roboto', system-ui, -apple-system, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -75,7 +75,7 @@
 
   /* Faruma and Dhivehi Thaana bold readability */
   .font-faruma {
-    font-family: 'Faruma', 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Faruma', 'Roboto', system-ui, -apple-system, sans-serif;
     font-weight: 700;
     letter-spacing: 0.015em;
   }

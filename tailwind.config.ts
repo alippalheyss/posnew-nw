@@ -19,7 +19,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        faruma: ['Faruma', 'Noto Sans Arabic', 'Segoe UI', 'Tahoma', 'Geneva', 'Verdana', 'sans-serif'],
+        faruma: ['Faruma', 'Roboto', 'Noto Sans Arabic', 'Segoe UI', 'Tahoma', 'Geneva', 'Verdana', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",

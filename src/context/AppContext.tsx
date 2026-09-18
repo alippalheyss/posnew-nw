@@ -503,53 +503,73 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
+  // Robust helper to fetch all rows across pages (bypasses Supabase 1000-row PostgREST default limit)
+  const fetchAllFromTable = async (tableName: string, selectFields = '*', orderBy?: { column: string; ascending?: boolean }) => {
+    if (!supabase) return [];
+    const PAGE_SIZE = 1000;
+    let allRows: any[] = [];
+    let from = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      let query = supabase.from(tableName).select(selectFields);
+      if (orderBy) {
+        query = query.order(orderBy.column, { ascending: orderBy.ascending ?? true });
+      } else {
+        query = query.order('id', { ascending: true });
+      }
+      const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
+
+      if (error) {
+        console.error(`Error fetching page for ${tableName} (range ${from}-${from + PAGE_SIZE - 1}):`, error);
+        break;
+      }
+
+      if (data && data.length > 0) {
+        allRows = allRows.concat(data);
+        if (data.length < PAGE_SIZE) {
+          hasMore = false;
+        } else {
+          from += PAGE_SIZE;
+        }
+      } else {
+        hasMore = false;
+      }
+    }
+    return allRows;
+  };
+
   // Central data fetching from Supabase
   const fetchData = async () => {
     try {
       const [
-        { data: productsData },
-        { data: customersData },
+        productsData,
+        customersData,
         { data: salesData },
-        { data: vendorsData },
-        { data: purchasesData },
-        { data: settlementsData },
+        vendorsData,
+        purchasesData,
+        settlementsData,
         { data: settingsData }
       ] = await Promise.all([
-        supabase.from('products').select('*'),
-        supabase.from('customers').select('*').order('name_en', { ascending: true }),
-        supabase.from('sales').select('*').order('date', { ascending: false }).limit(1000),
-        supabase.from('vendors').select('*'),
-        supabase.from('purchases').select('*'),
-        supabase.from('settlements').select('*'),
+        fetchAllFromTable('products'),
+        fetchAllFromTable('customers', '*', { column: 'name_en', ascending: true }),
+        supabase.from('sales').select('*').order('date', { ascending: false }).limit(2000),
+        fetchAllFromTable('vendors'),
+        fetchAllFromTable('purchases'),
+        fetchAllFromTable('settlements'),
         supabase.from('settings').select('*')
       ]);
 
-      if (productsData) {
+      if (productsData && productsData.length > 0) {
         const sanitizedProducts = productsData.map(p => ({
           ...p,
-          item_code: (p.item_code || '').replace(/\D/g, '') || '0'
+          item_code: p.item_code !== undefined && p.item_code !== null ? String(p.item_code).trim() : '',
+          barcode: p.barcode !== undefined && p.barcode !== null ? String(p.barcode).trim() : ''
         }));
         setProducts(sanitizedProducts);
-
-        // Auto-migrate any legacy non-numeric product codes in Supabase in background
-        const legacyProducts = productsData.filter(p => /\D/.test(p.item_code || ''));
-        if (legacyProducts.length > 0 && supabase) {
-          (async () => {
-            try {
-              for (const p of legacyProducts) {
-                const numericCode = (p.item_code || '').replace(/\D/g, '');
-                if (numericCode) {
-                  await supabase.from('products').update({ item_code: numericCode }).eq('id', p.id);
-                }
-              }
-              console.log(`Migrated ${legacyProducts.length} legacy product codes to numeric only.`);
-            } catch (err) {
-              console.warn('Background product code migration error:', err);
-            }
-          })();
-        }
+        console.log(`Successfully fetched all ${sanitizedProducts.length} products from Supabase!`);
       }
-      if (customersData) {
+      if (customersData && customersData.length > 0) {
         const formattedCustomers = customersData.map(c => ({
           ...c,
           settlement_history: (settlementsData?.filter(s => s.customer_id === c.id) || []).map(s => {

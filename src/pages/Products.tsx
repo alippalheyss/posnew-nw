@@ -50,6 +50,14 @@ const Products = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [visibleCount, setVisibleCount] = useState(30);
 
+  const availableCategories = useMemo(() => {
+    const cats = new Set<string>(['ALL', 'DRINKS', 'FOOD', 'HARDWARE', 'COSMETICS', 'OTHER']);
+    products.forEach(p => {
+      if (p.category && p.category.trim()) cats.add(p.category.trim().toUpperCase());
+    });
+    return Array.from(cats);
+  }, [products]);
+
   // Bulk Selection State
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
@@ -273,7 +281,7 @@ const Products = () => {
 
           <div className="flex flex-wrap items-center gap-2">
              <div className="bg-muted rounded-xl p-1 border border-border flex gap-1 overflow-x-auto max-w-full">
-                {['ALL', 'DRINKS', 'FOOD', 'HARDWARE', 'COSMETICS', 'OTHER'].map((cat) => (
+                {availableCategories.map((cat) => (
                   <Button 
                     key={cat}
                     variant={selectedCategory === cat ? "default" : "ghost"} 

@@ -69,6 +69,7 @@ const POS = () => {
 
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState<boolean>(false);
+  const [visibleCatalogueCount, setVisibleCatalogueCount] = useState<number>(60);
 
   const cartCounter = useRef(openCarts.size);
   const [searchTerm, setSearchTerm] = useState('');
@@ -590,18 +591,32 @@ const POS = () => {
     }
   }, [activeCart, subtotal, gstAmount, grandTotal, subtotalNoDiscount, loyaltyDiscount]);
 
-  const displayProducts = products.filter(product => {
-    const matchesSearch = !searchTerm ||
-      product.name_dv.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.barcode.includes(searchTerm) ||
-      product.item_code.toLowerCase().includes(searchTerm.toLowerCase());
+  const availableCategories = useMemo(() => {
+    const cats = new Set<string>(['ALL', 'DRINKS', 'FOOD', 'HARDWARE', 'COSMETICS', 'OTHER']);
+    products.forEach(p => {
+      if (p.category && p.category.trim()) cats.add(p.category.trim().toUpperCase());
+    });
+    return Array.from(cats);
+  }, [products]);
 
-    const matchesCategory = selectedCategory === 'ALL' || product.category === selectedCategory;
-    const matchesFavorite = !showFavoritesOnly || favoriteProductIds.includes(product.id);
+  const filteredCatalogueProducts = useMemo(() => {
+    return products.filter(product => {
+      const matchesSearch = !searchTerm ||
+        product.name_dv.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.barcode.includes(searchTerm) ||
+        product.item_code.toLowerCase().includes(searchTerm.toLowerCase());
 
-    return matchesSearch && matchesCategory && matchesFavorite;
-  }).slice(0, 50);
+      const matchesCategory = selectedCategory === 'ALL' || product.category === selectedCategory;
+      const matchesFavorite = !showFavoritesOnly || favoriteProductIds.includes(product.id);
+
+      return matchesSearch && matchesCategory && matchesFavorite;
+    });
+  }, [products, searchTerm, selectedCategory, showFavoritesOnly, favoriteProductIds]);
+
+  const displayProducts = useMemo(() => {
+    return filteredCatalogueProducts.slice(0, visibleCatalogueCount);
+  }, [filteredCatalogueProducts, visibleCatalogueCount]);
 
   const handleSearchSubmit = (termToSubmit?: string) => {
     const rawTerm = (termToSubmit !== undefined ? termToSubmit : searchTerm).trim();
@@ -1064,12 +1079,12 @@ const POS = () => {
               CUSTOMER DISPLAY
             </Button>
             <div className="flex items-center gap-2">
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <Select value={selectedCategory} onValueChange={(val) => { setSelectedCategory(val); setVisibleCatalogueCount(60); }}>
                 <SelectTrigger className="w-[180px] h-10 rounded-xl bg-muted border-border text-[10px] font-black uppercase text-foreground">
                   <SelectValue placeholder="Category" />
                 </SelectTrigger>
-                <SelectContent className="bg-card border-border text-foreground font-faruma">
-                  {['ALL', 'DRINKS', 'FOOD', 'HARDWARE', 'COSMETICS', 'OTHER'].map((cat) => (
+                <SelectContent className="bg-card border-border text-foreground font-faruma max-h-64">
+                  {availableCategories.map((cat) => (
                     <SelectItem key={cat} value={cat} className="text-[10px] font-black uppercase hover:bg-primary/20">
                       {cat}
                     </SelectItem>
@@ -1080,7 +1095,7 @@ const POS = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              onClick={() => { setShowFavoritesOnly(!showFavoritesOnly); setVisibleCatalogueCount(60); }}
               className={cn(
                 "h-10 w-10 rounded-xl border border-border transition-all",
                 showFavoritesOnly ? "bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30" : "bg-muted hover:bg-muted/80 text-muted-foreground"
@@ -1097,7 +1112,7 @@ const POS = () => {
                 ref={searchInputRef}
                 placeholder="...Search by name, code or barcode (Enter to add)"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => { setSearchTerm(e.target.value); setVisibleCatalogueCount(60); }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -1113,6 +1128,7 @@ const POS = () => {
                     type="button"
                     onClick={() => {
                       setSearchTerm('');
+                      setVisibleCatalogueCount(60);
                       searchInputRef.current?.focus();
                     }}
                     className="text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted-foreground/10 transition-colors"
@@ -1218,6 +1234,24 @@ const POS = () => {
               );
             })}
           </div>
+
+          {visibleCatalogueCount < filteredCatalogueProducts.length && (
+            <div className="py-6 flex flex-col items-center justify-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setVisibleCatalogueCount(prev => prev + 60)}
+                className="bg-card hover:bg-muted border border-border text-foreground font-black px-8 py-3 rounded-xl text-xs tracking-wider shadow-md hover:border-primary/50 transition-all gap-2"
+              >
+                <span>Load More Products</span>
+                <Badge variant="secondary" className="font-mono text-[11px]">
+                  {filteredCatalogueProducts.length - visibleCatalogueCount} remaining
+                </Badge>
+              </Button>
+              <p className="text-[11px] text-muted-foreground font-bold">
+                Showing {displayProducts.length} of {filteredCatalogueProducts.length} products
+              </p>
+            </div>
+          )}
         </ScrollArea>
       </div>
 

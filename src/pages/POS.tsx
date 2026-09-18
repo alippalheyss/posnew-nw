@@ -40,6 +40,105 @@ interface Cart {
   items: CartItem[];
 }
 
+// Decimal-friendly Quantity Stepper for Kilos and Fractional Items
+const CartQtyStepper = ({
+  item,
+  onUpdate,
+  onSet,
+  isLast,
+  lastQtyInputRef,
+  onFocus,
+  focusSearchBar
+}: {
+  item: CartItem;
+  onUpdate: (id: string, delta: number, unit?: string) => void;
+  onSet: (id: string, qty: number, unit?: string) => void;
+  isLast?: boolean;
+  lastQtyInputRef?: React.RefObject<HTMLInputElement | null>;
+  onFocus?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  focusSearchBar: () => void;
+}) => {
+  const [localVal, setLocalVal] = useState<string>(() => (item.qty !== undefined && item.qty !== null) ? String(item.qty) : '1');
+  const [isFocused, setIsFocused] = useState(false);
+
+  // Sync from item.qty when not actively editing
+  useEffect(() => {
+    if (!isFocused) {
+      setLocalVal((item.qty !== undefined && item.qty !== null) ? String(item.qty) : '1');
+    }
+  }, [item.qty, isFocused]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const text = e.target.value;
+    // Allow numbers, decimal point e.g. "0", "0.", "0.2", ".2", "1.5"
+    if (text === '' || text === '.' || text === '0.' || /^\d*\.?\d*$/.test(text)) {
+      setLocalVal(text);
+      if (text !== '' && text !== '.') {
+        const parsed = parseFloat(text);
+        if (!isNaN(parsed) && parsed >= 0) {
+          onSet(item.id, parsed, item.selected_unit);
+        }
+      }
+    }
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    const parsed = parseFloat(localVal);
+    if (isNaN(parsed) || parsed <= 0) {
+      setLocalVal('1');
+      onSet(item.id, 1, item.selected_unit);
+    } else {
+      setLocalVal(String(parsed));
+      onSet(item.id, parsed, item.selected_unit);
+    }
+  };
+
+  return (
+    <div className="flex items-center bg-background/90 dark:bg-black/40 rounded-full px-1 py-0.5 border border-border h-6 shadow-xs shrink-0">
+      <Button
+        variant="ghost"
+        size="icon"
+        type="button"
+        className="h-5 w-5 text-muted-foreground hover:text-foreground rounded-full p-0 shrink-0"
+        onClick={() => onUpdate(item.id, -1, item.selected_unit)}
+      >
+        <Minus className="h-3 w-3" />
+      </Button>
+      <input
+        type="text"
+        inputMode="decimal"
+        ref={isLast ? (lastQtyInputRef as any) : undefined}
+        value={localVal}
+        placeholder="1"
+        onChange={handleChange}
+        onFocus={(e) => {
+          setIsFocused(true);
+          e.target.select();
+          if (onFocus) onFocus(e);
+        }}
+        onBlur={handleBlur}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            focusSearchBar();
+          }
+        }}
+        className="cart-qty-input min-w-[36px] max-w-[56px] w-auto text-center text-xs font-black text-foreground bg-transparent border-none h-5 px-1 focus:bg-background focus:ring-1 focus:ring-primary rounded-md font-mono outline-none"
+      />
+      <Button
+        variant="ghost"
+        size="icon"
+        type="button"
+        className="h-5 w-5 text-muted-foreground hover:text-foreground rounded-full p-0 shrink-0"
+        onClick={() => onUpdate(item.id, 1, item.selected_unit)}
+      >
+        <Plus className="h-3 w-3" />
+      </Button>
+    </div>
+  );
+};
+
 const POS = () => {
   const { t } = useTranslation();
   const {
@@ -545,7 +644,7 @@ const POS = () => {
       ...prevCart,
       items: prevCart.items.map((item) =>
         item.id === id && (item.selected_unit || 'Piece') === unitName
-          ? { ...item, qty: Math.max(0, item.qty + delta) }
+          ? { ...item, qty: Math.max(0, parseFloat((item.qty + delta).toFixed(4))) }
           : item
       ).filter(item => item.qty > 0),
     }));
@@ -1520,55 +1619,16 @@ const POS = () => {
                       );
                     })()}
 
-                    {/* Stepper Capsule: [- 2 +] */}
-                    <div className="flex items-center bg-background/90 dark:bg-black/40 rounded-full px-1 py-0.5 border border-border h-6 shadow-xs">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-5 w-5 text-muted-foreground hover:text-foreground rounded-full p-0"
-                        onClick={() => updateCartItemQty(item.id, -1, item.selected_unit)}
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <Input
-                        type="number"
-                        step="any"
-                        min="0.001"
-                        ref={idx === activeCart.items.length - 1 ? lastQtyInputRef : undefined}
-                        value={item.qty === 0 ? '' : item.qty}
-                        placeholder="0"
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val === '' || val === '.') {
-                            setCartItemQty(item.id, 0, item.selected_unit);
-                          } else {
-                            const num = parseFloat(val);
-                            setCartItemQty(item.id, isNaN(num) ? 0 : num, item.selected_unit);
-                          }
-                        }}
-                        onBlur={() => {
-                          if (!item.qty || item.qty <= 0) {
-                            setCartItemQty(item.id, 1, item.selected_unit);
-                          }
-                        }}
-                        onFocus={handleFocus}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            focusSearchBar();
-                          }
-                        }}
-                        className="cart-qty-input w-8 text-center text-xs font-black text-foreground bg-transparent border-none h-5 p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:bg-background focus:ring-1 focus:ring-primary rounded-full font-mono"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-5 w-5 text-muted-foreground hover:text-foreground rounded-full p-0"
-                        onClick={() => updateCartItemQty(item.id, 1, item.selected_unit)}
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                    </div>
+                    {/* Stepper Capsule: [- 0.2 +] */}
+                    <CartQtyStepper
+                      item={item}
+                      onUpdate={updateCartItemQty}
+                      onSet={setCartItemQty}
+                      isLast={idx === activeCart.items.length - 1}
+                      lastQtyInputRef={lastQtyInputRef}
+                      onFocus={handleFocus}
+                      focusSearchBar={focusSearchBar}
+                    />
                   </div>
 
                   {/* Right Side: Product Names (Dhivehi Name on top, English Name below) */}

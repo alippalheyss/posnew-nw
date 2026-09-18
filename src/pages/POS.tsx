@@ -183,15 +183,17 @@ const POS = () => {
       if (lastQtyInputRef.current) {
         lastQtyInputRef.current.focus();
         lastQtyInputRef.current.select();
+        lastQtyInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       } else {
         const qtyInputs = document.querySelectorAll<HTMLInputElement>('.cart-qty-input');
         if (qtyInputs.length > 0) {
           const lastInput = qtyInputs[qtyInputs.length - 1];
           lastInput.focus();
           lastInput.select();
+          lastInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
       }
-    }, 60);
+    }, 40);
   };
 
   const openCashDialog = () => {
@@ -1425,28 +1427,49 @@ const POS = () => {
           )}
         </div>
 
-        <ScrollArea className="flex-1 px-6 custom-scrollbar">
+        <ScrollArea className="flex-1 px-4 custom-scrollbar">
           {(!activeCart || activeCart.items.length === 0) ? (
             <div className="flex flex-col items-center justify-center h-[400px] opacity-20">
               <ShoppingCart className="h-20 w-20 mb-4" />
               <p className="text-lg font-black uppercase tracking-widest">{renderBoth('cart_empty')}</p>
             </div>
           ) : (
-            <div className="space-y-2 pb-6">
+            <div className="space-y-1.5 pb-4">
               {activeCart.items.map((item, idx) => (
-                <div key={`${item.id}-${item.selected_unit || 'Piece'}`} className="group relative bg-muted hover:bg-muted/80 border border-border rounded-xl p-3 transition-all">
-                  <div className="flex gap-4 items-start">
-                    <div className="flex flex-col gap-2 items-start">
-                      <div className="text-[16px] font-black text-primary whitespace-nowrap">
-                        {settings.shop.currency} {item.price.toFixed(2)}
-                      </div>
-                      <div className="flex items-center gap-1 bg-black/40 rounded-lg p-0.5 border border-border h-10 relative">
+                <div
+                  key={`${item.id}-${item.selected_unit || 'Piece'}`}
+                  className="group relative bg-card/60 hover:bg-card border border-border/80 hover:border-border rounded-xl p-2 sm:p-2.5 transition-all shadow-sm space-y-1.5"
+                >
+                  {/* Top Row: Delete button & Product Names */}
+                  <div className="flex items-start justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => removeFromCart(item.id, item.selected_unit)}
+                      className="text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors p-1 rounded-lg shrink-0 -ml-1"
+                      title={t('remove_item') || 'Remove Item'}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+
+                    <div className="flex-1 text-right min-w-0">
+                      <p className="text-xs sm:text-sm font-black text-foreground leading-tight truncate">{item.name_dv}</p>
+                      <p className="text-[10px] font-bold text-muted-foreground leading-tight uppercase truncate font-mono mt-0.5">{item.name_en}</p>
+                    </div>
+                  </div>
+
+                  {/* Bottom Row: Stepper + Total Price + Unit Switcher */}
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40">
+                    {/* Left: Stepper and Line Price */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center bg-background/90 dark:bg-black/40 rounded-lg p-0.5 border border-border h-7">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          className="h-6 w-6 text-muted-foreground hover:text-foreground rounded"
                           onClick={() => updateCartItemQty(item.id, -1, item.selected_unit)}
-                        ><Minus className="h-4 w-4" /></Button>
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
                         <Input
                           type="number"
                           step="any"
@@ -1475,89 +1498,82 @@ const POS = () => {
                               focusSearchBar();
                             }
                           }}
-                          className="cart-qty-input w-16 text-center text-[14px] font-black text-foreground bg-transparent border-none h-8 p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:bg-background/80 focus:ring-1 focus:ring-primary rounded font-mono"
+                          className="cart-qty-input w-12 text-center text-xs font-black text-foreground bg-transparent border-none h-6 p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:bg-background focus:ring-1 focus:ring-primary rounded font-mono"
                         />
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          className="h-6 w-6 text-muted-foreground hover:text-foreground rounded"
                           onClick={() => updateCartItemQty(item.id, 1, item.selected_unit)}
-                        ><Plus className="h-4 w-4" /></Button>
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+
+                      <div className="text-xs font-black text-primary font-mono whitespace-nowrap">
+                        {settings.shop.currency} {(item.price * (item.qty || 1)).toFixed(2)}
                       </div>
                     </div>
 
-                    <div className="flex-1 text-right min-w-0">
-                      <div className="flex justify-between items-start mb-1">
-                        <button
-                          onClick={() => removeFromCart(item.id, item.selected_unit)}
-                          className="text-muted-foreground/50 hover:text-red-500 transition-colors p-1"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[18px] font-black text-foreground leading-tight mb-1">{item.name_dv}</p>
-                          <p className="text-[14px] font-bold text-muted-foreground leading-tight uppercase mb-1">{item.name_en}</p>
-                          {(() => {
-                            const prod = products.find(p => p.id === item.id);
-                            const hasUnits = prod?.units && prod.units.length > 0;
-                            const currentUnit = item.selected_unit || 'Piece';
+                    {/* Right: Unit badge / Unit dropdown */}
+                    <div className="flex items-center justify-end">
+                      {(() => {
+                        const prod = products.find(p => p.id === item.id);
+                        const hasUnits = prod?.units && prod.units.length > 0;
+                        const currentUnit = item.selected_unit || 'Piece';
 
-                            if (!hasUnits) {
-                              return item.selected_unit && item.selected_unit !== 'Piece' ? (
-                                <Badge variant="outline" className="text-[9px] border-primary/30 text-primary uppercase font-black px-1.5 py-0.5 h-auto leading-none">
-                                  {item.selected_unit}
-                                </Badge>
-                              ) : null;
-                            }
+                        if (!hasUnits) {
+                          return item.selected_unit && item.selected_unit !== 'Piece' ? (
+                            <Badge variant="outline" className="text-[9px] border-primary/30 text-primary uppercase font-black px-1.5 py-0.5 h-auto leading-none">
+                              {item.selected_unit}
+                            </Badge>
+                          ) : null;
+                        }
 
-                            return (
-                              <div className="flex items-center justify-end gap-1.5 mt-1.5">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <button
-                                      type="button"
-                                      className="flex items-center gap-1.5 text-[11px] font-black bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow-sm active:scale-95"
-                                      title={t('switch_unit') || 'Switch Unit'}
-                                    >
-                                      <Boxes className="h-3.5 w-3.5 text-primary" />
-                                      <span>{currentUnit}</span>
-                                      <ChevronDown className="h-3 w-3 opacity-70" />
-                                    </button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="bg-card border-border text-foreground font-faruma text-right min-w-[220px] z-[120] shadow-2xl rounded-2xl p-1">
-                                    <div className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-muted-foreground border-b border-border text-right">
-                                      {t('switch_unit') || 'Switch Unit (ޔުނިޓް ބަދަލުކުރޭ)'}
-                                    </div>
-                                    <DropdownMenuItem
-                                      onClick={() => switchCartItemUnit(item, 'Piece')}
-                                      className={cn(
-                                        "flex items-center justify-between text-xs py-2 px-3 rounded-xl cursor-pointer hover:bg-muted transition-colors",
-                                        currentUnit === 'Piece' && "font-black text-primary bg-primary/10"
-                                      )}
-                                    >
-                                      <span className="font-mono font-bold text-primary">{settings?.shop?.currency || 'MVR'} {Number(prod.price || 0).toFixed(2)}</span>
-                                      <span className="font-bold">Piece (1 pc)</span>
-                                    </DropdownMenuItem>
-                                    {prod.units!.map((u, idx) => (
-                                      <DropdownMenuItem
-                                        key={idx}
-                                        onClick={() => switchCartItemUnit(item, u.name)}
-                                        className={cn(
-                                          "flex items-center justify-between text-xs py-2 px-3 rounded-xl cursor-pointer hover:bg-muted transition-colors",
-                                          currentUnit === u.name && "font-black text-primary bg-primary/10"
-                                        )}
-                                      >
-                                        <span className="font-mono font-bold text-primary">{settings?.shop?.currency || 'MVR'} {Number(u.price || 0).toFixed(2)}</span>
-                                        <span className="font-bold">{u.name} ({u.conversion_factor} pcs)</span>
-                                      </DropdownMenuItem>
-                                    ))}
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                        return (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className="flex items-center gap-1 text-[10px] font-black bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 h-6 rounded-md transition-all cursor-pointer shadow-sm active:scale-95"
+                                title={t('switch_unit') || 'Switch Unit'}
+                              >
+                                <Boxes className="h-3 w-3 text-primary" />
+                                <span>{currentUnit}</span>
+                                <ChevronDown className="h-2.5 w-2.5 opacity-70" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-card border-border text-foreground font-faruma text-right min-w-[200px] z-[120] shadow-2xl rounded-xl p-1">
+                              <div className="px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-muted-foreground border-b border-border text-right">
+                                {t('switch_unit') || 'Switch Unit (ޔުނިޓް ބަދަލުކުރޭ)'}
                               </div>
-                            );
-                          })()}
-                        </div>
-                      </div>
+                              <DropdownMenuItem
+                                onClick={() => switchCartItemUnit(item, 'Piece')}
+                                className={cn(
+                                  "flex items-center justify-between text-xs py-1.5 px-2.5 rounded-lg cursor-pointer hover:bg-muted transition-colors",
+                                  currentUnit === 'Piece' && "font-black text-primary bg-primary/10"
+                                )}
+                              >
+                                <span className="font-mono font-bold text-primary">{settings?.shop?.currency || 'MVR'} {Number(prod.price || 0).toFixed(2)}</span>
+                                <span className="font-bold">Piece (1 pc)</span>
+                              </DropdownMenuItem>
+                              {prod.units!.map((u, idx) => (
+                                <DropdownMenuItem
+                                  key={idx}
+                                  onClick={() => switchCartItemUnit(item, u.name)}
+                                  className={cn(
+                                    "flex items-center justify-between text-xs py-1.5 px-2.5 rounded-lg cursor-pointer hover:bg-muted transition-colors",
+                                    currentUnit === u.name && "font-black text-primary bg-primary/10"
+                                  )}
+                                >
+                                  <span className="font-mono font-bold text-primary">{settings?.shop?.currency || 'MVR'} {Number(u.price || 0).toFixed(2)}</span>
+                                  <span className="font-bold">{u.name} ({u.conversion_factor} pcs)</span>
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>

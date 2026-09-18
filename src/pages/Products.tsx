@@ -280,6 +280,16 @@ const Products = () => {
     setIsDialogOpen(true);
   };
 
+  const handleSaveProduct = (savedProduct: Product) => {
+    if (editingProduct) {
+      updateProduct(savedProduct);
+    } else {
+      addProduct(savedProduct);
+    }
+    setIsDialogOpen(false);
+    setEditingProduct(null);
+  };
+
   const handleDeleteProduct = (productId: string) => {
     if (window.confirm(t('confirm_delete_product') || 'Are you sure you want to delete this product?')) {
       deleteProduct(productId);
@@ -861,7 +871,6 @@ const Products = () => {
       <ExcelImportDialog
         isOpen={isImportDialogOpen}
         onClose={() => setIsImportDialogOpen(false)}
-        onImport={handleBulkImport}
       />
     </div>
   );

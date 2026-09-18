@@ -25,7 +25,10 @@ import {
   Boxes,
   Loader2,
   CheckCircle2,
-  Flashlight
+  ShieldCheck,
+  Clock,
+  Layers,
+  Users as UsersIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,6 +62,9 @@ export interface ProductAuditState {
   totalShopCounted: number;
   totalGodownCounted: number;
   totalCounted: number;
+  isApproved?: boolean;
+  approvedBy?: string;
+  approvedAt?: string;
   lastUpdated: string;
 }
 
@@ -70,7 +76,7 @@ export interface ActiveAuditSession {
   items: Record<string, ProductAuditState>;
 }
 
-// Crisp beep synthesizer
+// Crisp audio feedback
 const playBeep = (freq = 880, type: OscillatorType = 'sine', duration = 0.12) => {
   try {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -89,48 +95,98 @@ const playBeep = (freq = 880, type: OscillatorType = 'sine', duration = 0.12) =>
   } catch (e) {}
 };
 
-// Memoized Individual Product Card (Light Mode)
+// Individual Product Card Component
 interface ProductAuditCardProps {
   product: Product;
   auditItem?: ProductAuditState;
   isExpanded: boolean;
+  isAdmin: boolean;
+  currentCounterName: string;
   onToggleExpand: (productId: string) => void;
   onQuickAdd: (product: Product, qty: number, location: 'shop' | 'godown') => void;
   onOpenCustomCount: (product: Product) => void;
   onDeleteEntry: (productId: string, entryId: string) => void;
+  onApproveSingle: (product: Product) => void;
+  onUnapproveSingle?: (product: Product) => void;
 }
 
 const ProductAuditCard = React.memo<ProductAuditCardProps>(({
   product,
   auditItem,
   isExpanded,
+  isAdmin,
+  currentCounterName,
   onToggleExpand,
   onQuickAdd,
   onOpenCustomCount,
-  onDeleteEntry
+  onDeleteEntry,
+  onApproveSingle,
+  onUnapproveSingle
 }) => {
   const isCounted = !!auditItem && auditItem.totalCounted > 0;
+  const isApproved = !!auditItem?.isApproved;
   const systemShop = product.stock_shop || 0;
   const systemGodown = product.stock_godown || 0;
   const totalSystem = systemShop + systemGodown;
   const countedTotal = isCounted ? auditItem.totalCounted : 0;
   const variance = isCounted ? (countedTotal - totalSystem) : 0;
 
+  // Breakdown of user counts
+  const userBreakdown = useMemo(() => {
+    if (!auditItem || !auditItem.entries.length) return [];
+    const map: Record<string, { total: number; shop: number; godown: number; count: number }> = {};
+    auditItem.entries.forEach(e => {
+      const name = e.counterName || 'Staff';
+      if (!map[name]) map[name] = { total: 0, shop: 0, godown: 0, count: 0 };
+      map[name].total += e.quantity;
+      if (e.location === 'shop') map[name].shop += e.quantity;
+      if (e.location === 'godown') map[name].godown += e.quantity;
+      map[name].count += 1;
+    });
+    return Object.entries(map).map(([name, data]) => ({ name, ...data }));
+  }, [auditItem?.entries]);
+
+  // My contribution
+  const myTotal = useMemo(() => {
+    if (!auditItem || !auditItem.entries.length) return 0;
+    const cleanCurrent = currentCounterName.trim().toLowerCase();
+    return auditItem.entries
+      .filter(e => (e.counterName || '').trim().toLowerCase() === cleanCurrent)
+      .reduce((sum, e) => sum + e.quantity, 0);
+  }, [auditItem?.entries, currentCounterName]);
+
   return (
     <Card 
       className={cn(
-        "bg-white border transition-colors duration-150 overflow-hidden shadow-sm rounded-2xl",
-        isCounted 
-          ? (variance === 0 ? "border-emerald-300 bg-emerald-50/40" : "border-amber-300 bg-amber-50/40")
-          : "border-slate-200 hover:border-slate-300"
+        "bg-white border transition-all duration-150 overflow-hidden shadow-sm rounded-2xl",
+        isApproved
+          ? "border-emerald-400 bg-emerald-50/30"
+          : (isCounted 
+              ? (variance === 0 ? "border-emerald-300 bg-emerald-50/20" : "border-amber-300 bg-amber-50/20")
+              : "border-slate-200 hover:border-slate-300")
       )}
     >
       <CardContent className="p-3.5 space-y-2.5">
-        {/* Header: Dhivehi + English Name & Status Badge */}
+        {/* Header: Dhivehi + English Name & Status Badges */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 text-right">
-            <div className="flex items-center justify-end gap-2 flex-wrap">
+            <div className="flex items-center justify-end gap-1.5 flex-wrap">
               <h3 className="text-base font-black text-slate-900 leading-tight">{product.name_dv}</h3>
+              
+              {/* Approval status badge */}
+              {isApproved ? (
+                <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-none">
+                  <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                  <span>Approved by {auditItem?.approvedBy || 'Admin'}</span>
+                </Badge>
+              ) : (isCounted ? (
+                <Badge className="bg-amber-100 text-amber-900 border-amber-300 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-none">
+                  <Clock className="h-3 w-3 text-amber-700" />
+                  <span>Pending Admin Review</span>
+                </Badge>
+              ) : null)}
+
+              {/* Variance badge */}
               {isCounted && (
                 <Badge 
                   className={cn(
@@ -144,7 +200,9 @@ const ProductAuditCard = React.memo<ProductAuditCardProps>(({
                 </Badge>
               )}
             </div>
+
             <p className="text-xs font-bold text-slate-600 font-sans mt-0.5">{product.name_en}</p>
+            
             <div className="flex items-center justify-end gap-3 text-[11px] text-slate-500 font-sans mt-1">
               {product.barcode && <span>Barcode: <strong className="text-slate-800 font-mono">{product.barcode}</strong></span>}
               {product.item_code && <span>Code: <strong className="text-slate-800 font-mono">{product.item_code}</strong></span>}
@@ -152,6 +210,41 @@ const ProductAuditCard = React.memo<ProductAuditCardProps>(({
             </div>
           </div>
         </div>
+
+        {/* Multi-User Count Breakdown Summary Banner */}
+        {isCounted && userBreakdown.length > 0 && (
+          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 font-sans text-xs space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black text-slate-500 uppercase flex items-center gap-1">
+                <UsersIcon className="h-3.5 w-3.5 text-primary" />
+                <span>Counted by ({userBreakdown.length} user{userBreakdown.length > 1 ? 's' : ''}):</span>
+              </span>
+              {myTotal > 0 && (
+                <Badge variant="outline" className="bg-primary/10 border-primary/30 text-primary text-[10px] font-bold px-1.5 py-0">
+                  You: +{myTotal} pcs
+                </Badge>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {userBreakdown.map((u) => (
+                <span 
+                  key={u.name}
+                  className={cn(
+                    "px-2 py-0.5 rounded-lg text-[11px] font-bold border flex items-center gap-1",
+                    u.name.toLowerCase() === currentCounterName.toLowerCase()
+                      ? "bg-primary/15 border-primary/30 text-primary font-black"
+                      : "bg-white border-slate-200 text-slate-800"
+                  )}
+                >
+                  <strong>{u.name}:</strong>
+                  <span>+{u.total} pcs</span>
+                  <span className="text-[9px] text-slate-400">({u.shop}s / {u.godown}g)</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Stock Comparison Grid (Light Theme) */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200 font-sans text-xs">
@@ -164,7 +257,7 @@ const ProductAuditCard = React.memo<ProductAuditCardProps>(({
             <p className="font-black text-slate-800">{systemGodown} pcs</p>
           </div>
           <div className="border-t sm:border-t-0 sm:border-r border-slate-200 pt-1 sm:pt-0 sm:pr-2">
-            <span className="text-[10px] text-slate-500 font-bold uppercase">Total Counted</span>
+            <span className="text-[10px] text-slate-500 font-bold uppercase">Combined Count</span>
             <p className={cn("font-black text-sm", isCounted ? "text-emerald-700" : "text-slate-400")}>
               {isCounted ? `${countedTotal} pcs` : 'Not counted'}
             </p>
@@ -177,7 +270,40 @@ const ProductAuditCard = React.memo<ProductAuditCardProps>(({
           </div>
         </div>
 
-        {/* Quick Add Buttons & Custom Count */}
+        {/* Admin Single Product Approval Button */}
+        {isAdmin && isCounted && (
+          <div className="pt-1 flex items-center justify-between gap-2 border-t border-slate-100">
+            {isApproved ? (
+              <div className="flex items-center justify-between w-full">
+                <span className="text-xs text-emerald-700 font-bold flex items-center gap-1">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  <span>Inventory updated ({countedTotal} pcs)</span>
+                </span>
+                {onUnapproveSingle && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => onUnapproveSingle(product)}
+                    className="h-7 px-2 text-[10px] font-bold text-slate-500 hover:text-slate-800 rounded-lg"
+                  >
+                    Re-open Count
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => onApproveSingle(product)}
+                className="w-full h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black gap-1.5 shadow-sm"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Accept & Update Stock ({countedTotal} pcs)</span>
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Quick Add Buttons & Custom Count Controls */}
         <div className="flex flex-wrap items-center justify-between gap-1.5 pt-0.5">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[11px] text-slate-500 font-bold font-sans">Quick:</span>
@@ -221,32 +347,48 @@ const ProductAuditCard = React.memo<ProductAuditCardProps>(({
         {/* Expanded Count Log */}
         {isExpanded && auditItem && auditItem.entries.length > 0 && (
           <div className="mt-2 pt-2 border-t border-slate-200 space-y-1.5 font-sans text-xs">
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Entries ({auditItem.entries.length}):</p>
-            <div className="space-y-1 max-h-36 overflow-y-auto custom-scrollbar">
-              {auditItem.entries.map((entry) => (
-                <div 
-                  key={entry.id}
-                  className="flex items-center justify-between p-2 rounded-xl bg-slate-100 border border-slate-200 text-xs"
-                >
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => onDeleteEntry(product.id, entry.id)}
-                      className="h-6 w-6 text-red-500 hover:bg-red-100 rounded-lg"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                    <span className="font-bold text-emerald-700">+{entry.quantity} pcs</span>
-                    <Badge variant="outline" className="text-[9px] h-4 py-0 uppercase bg-white border-slate-300 text-slate-700">
-                      {entry.location}
-                    </Badge>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Entries Log ({auditItem.entries.length}):</p>
+            <div className="space-y-1 max-h-40 overflow-y-auto custom-scrollbar">
+              {auditItem.entries.map((entry) => {
+                const isMyEntry = (entry.counterName || '').trim().toLowerCase() === currentCounterName.trim().toLowerCase();
+                const canDelete = isAdmin || isMyEntry;
+
+                return (
+                  <div 
+                    key={entry.id}
+                    className={cn(
+                      "flex items-center justify-between p-2 rounded-xl border text-xs",
+                      isMyEntry ? "bg-primary/5 border-primary/20" : "bg-slate-100 border-slate-200"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      {canDelete && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => onDeleteEntry(product.id, entry.id)}
+                          className="h-6 w-6 text-red-500 hover:bg-red-100 rounded-lg"
+                          title="Remove this entry"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      <span className="font-bold text-emerald-700">+{entry.quantity} pcs</span>
+                      <Badge variant="outline" className="text-[9px] h-4 py-0 uppercase bg-white border-slate-300 text-slate-700">
+                        {entry.location}
+                      </Badge>
+                      {entry.unitName && entry.unitMultiplier && entry.unitMultiplier > 1 && (
+                        <span className="text-[10px] text-slate-500">({entry.unitName})</span>
+                      )}
+                    </div>
+                    <div className="text-right text-[11px] text-slate-600">
+                      <strong className={cn("text-slate-800", isMyEntry && "text-primary")}>
+                        {entry.counterName} {isMyEntry && '(You)'}
+                      </strong> • {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
                   </div>
-                  <div className="text-right text-[11px] text-slate-600">
-                    <strong className="text-slate-800">{entry.counterName}</strong> • {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -259,7 +401,9 @@ const StockAudit: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { products, updateProduct } = useAppContext();
-  const { currentUser } = useAuth();
+  const { currentUser, isAdmin } = useAuth();
+
+  const isAdminUser = isAdmin() || currentUser?.role === 'admin';
 
   // Counter identification
   const [counterName, setCounterName] = useState<string>(() => {
@@ -267,6 +411,15 @@ const StockAudit: React.FC = () => {
   });
   const [isCounterNameDialogOpen, setIsCounterNameDialogOpen] = useState(false);
   const [tempCounterName, setTempCounterName] = useState(counterName);
+
+  // Keep counterName synced with logged-in user
+  useEffect(() => {
+    if (currentUser?.name_en || currentUser?.username) {
+      const activeName = currentUser.name_en || currentUser.username;
+      setCounterName(activeName);
+      localStorage.setItem('stock_audit_counter_name', activeName);
+    }
+  }, [currentUser]);
 
   // Audit state
   const [auditSession, setAuditSession] = useState<ActiveAuditSession>({
@@ -279,7 +432,7 @@ const StockAudit: React.FC = () => {
 
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterMode, setFilterMode] = useState<'all' | 'counted' | 'uncounted' | 'discrepancy'>('all');
+  const [filterMode, setFilterMode] = useState<'all' | 'my_counts' | 'counted' | 'pending' | 'approved' | 'discrepancy'>('all');
 
   // Virtual pagination limit (renders in 30 item chunks)
   const [visibleLimit, setVisibleLimit] = useState<number>(30);
@@ -299,16 +452,16 @@ const StockAudit: React.FC = () => {
 
   // Modals
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [isCommitModalOpen, setIsCommitModalOpen] = useState(false);
+  const [isBatchApproveModalOpen, setIsBatchApproveModalOpen] = useState(false);
   const [isCommitting, setIsCommitting] = useState(false);
-  const [commitOnlyCounted, setCommitOnlyCounted] = useState(true);
+  const [batchScope, setBatchScope] = useState<'pending' | 'all'>('pending');
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [expandedProductIds, setExpandedProductIds] = useState<Record<string, boolean>>({});
 
   // Sync debounce ref
   const syncTimeoutRef = useRef<any>(null);
 
-  // 1. Load active audit session
+  // 1. Load active audit session from Supabase Cloud Settings
   useEffect(() => {
     let isMounted = true;
 
@@ -323,7 +476,7 @@ const StockAudit: React.FC = () => {
 
           if (!error && data?.settings && isMounted) {
             const session = (data.settings as any)?.session || data.settings;
-            if (session) {
+            if (session && session.items) {
               setAuditSession(session as ActiveAuditSession);
               localStorage.setItem('cached_stock_audit', JSON.stringify(session));
               return;
@@ -363,6 +516,14 @@ const StockAudit: React.FC = () => {
           playBeep(1200, 'sine', 0.08);
         }
       })
+      .on('broadcast', { event: 'audit_approved' }, ({ payload }) => {
+        if (payload?.session) {
+          setAuditSession(payload.session);
+          localStorage.setItem('cached_stock_audit', JSON.stringify(payload.session));
+          showSuccess(`Admin approved stock update: ${payload.productName || 'products'}`);
+          playBeep(1400, 'sine', 0.12);
+        }
+      })
       .subscribe((status) => {
         setIsRealtimeActive(status === 'SUBSCRIBED');
       });
@@ -373,7 +534,7 @@ const StockAudit: React.FC = () => {
   }, []);
 
   // 3. Debounced cloud save & broadcast
-  const saveAuditSessionDebounced = useCallback((newSession: ActiveAuditSession, sender = counterName) => {
+  const saveAuditSessionDebounced = useCallback((newSession: ActiveAuditSession, sender = counterName, eventType = 'audit_update', extraPayload: any = {}) => {
     setAuditSession(newSession);
     localStorage.setItem('cached_stock_audit', JSON.stringify(newSession));
 
@@ -402,8 +563,8 @@ const StockAudit: React.FC = () => {
           const channel = supabase.channel('stock_audit_room');
           channel.send({
             type: 'broadcast',
-            event: 'audit_update',
-            payload: { session: newSession, sender }
+            event: eventType,
+            payload: { session: newSession, sender, ...extraPayload }
           });
         } catch (err) {
           console.warn('Note saving stock audit to cloud:', err);
@@ -412,7 +573,7 @@ const StockAudit: React.FC = () => {
     }, 300);
   }, [counterName]);
 
-  // 4. Additive count handler
+  // 4. Additive count handler (for any user)
   const handleAddCount = useCallback((
     product: Product, 
     qty: number, 
@@ -440,6 +601,7 @@ const StockAudit: React.FC = () => {
         totalShopCounted: 0,
         totalGodownCounted: 0,
         totalCounted: 0,
+        isApproved: false,
         lastUpdated: new Date().toISOString()
       };
 
@@ -462,17 +624,18 @@ const StockAudit: React.FC = () => {
             totalShopCounted,
             totalGodownCounted,
             totalCounted,
+            isApproved: false, // New count resets approval status for admin review
             lastUpdated: new Date().toISOString()
           }
         }
       };
 
-      saveAuditSessionDebounced(updatedSession);
+      saveAuditSessionDebounced(updatedSession, counterName, 'audit_update');
       return updatedSession;
     });
 
     playBeep(980, 'sine', 0.08);
-    showSuccess(`+${effectiveQty} added to ${product.name_en}`);
+    showSuccess(`+${effectiveQty} submitted by ${counterName} for ${product.name_en}`);
   }, [counterName, saveAuditSessionDebounced]);
 
   // Delete individual entry
@@ -500,17 +663,145 @@ const StockAudit: React.FC = () => {
           totalShopCounted,
           totalGodownCounted,
           totalCounted,
+          isApproved: false,
           lastUpdated: new Date().toISOString()
         };
       }
 
       const updatedSession = { ...prev, items: newItems };
-      saveAuditSessionDebounced(updatedSession);
+      saveAuditSessionDebounced(updatedSession, counterName, 'audit_update');
       return updatedSession;
     });
 
     showSuccess('Count entry removed');
-  }, [saveAuditSessionDebounced]);
+  }, [counterName, saveAuditSessionDebounced]);
+
+  // Admin Single Product Approval Handler
+  const handleApproveSingleProduct = useCallback(async (product: Product) => {
+    if (!isAdminUser) {
+      showError('Only administrators can approve and commit stock counts');
+      return;
+    }
+
+    const item = auditSession.items[product.id];
+    if (!item || item.totalCounted === 0) {
+      showError('No counts available to approve for this item');
+      return;
+    }
+
+    try {
+      const newShopStock = item.totalShopCounted > 0 || item.totalGodownCounted > 0 ? item.totalShopCounted : item.totalCounted;
+      const newGodownStock = item.totalGodownCounted;
+
+      // Update actual product in live store
+      await updateProduct({
+        ...product,
+        stock_shop: Math.max(0, Math.round(newShopStock)),
+        stock_godown: Math.max(0, Math.round(newGodownStock))
+      });
+
+      const updatedItem: ProductAuditState = {
+        ...item,
+        isApproved: true,
+        approvedBy: counterName,
+        approvedAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
+      };
+
+      const updatedSession: ActiveAuditSession = {
+        ...auditSession,
+        items: {
+          ...auditSession.items,
+          [product.id]: updatedItem
+        }
+      };
+
+      saveAuditSessionDebounced(updatedSession, counterName, 'audit_approved', { productName: product.name_en });
+      playBeep(1200, 'sine', 0.15);
+      showSuccess(`✓ Accepted & updated ${product.name_en} to ${item.totalCounted} pcs!`);
+    } catch (err: any) {
+      showError(err?.message || 'Failed to update stock');
+    }
+  }, [isAdminUser, auditSession, counterName, updateProduct, saveAuditSessionDebounced]);
+
+  // Admin Single Product Un-approve / Reopen
+  const handleUnapproveSingleProduct = useCallback((product: Product) => {
+    if (!isAdminUser) return;
+    const item = auditSession.items[product.id];
+    if (!item) return;
+
+    const updatedItem: ProductAuditState = {
+      ...item,
+      isApproved: false,
+      approvedBy: undefined,
+      approvedAt: undefined,
+      lastUpdated: new Date().toISOString()
+    };
+
+    const updatedSession: ActiveAuditSession = {
+      ...auditSession,
+      items: {
+        ...auditSession.items,
+        [product.id]: updatedItem
+      }
+    };
+
+    saveAuditSessionDebounced(updatedSession, counterName, 'audit_update');
+    showInfo(`Reopened count for ${product.name_en}`);
+  }, [isAdminUser, auditSession, counterName, saveAuditSessionDebounced]);
+
+  // Admin Batch Approval & Stock Commit
+  const handleBatchApprove = async () => {
+    if (!isAdminUser) {
+      showError('Only administrators can approve and commit stock counts');
+      return;
+    }
+
+    setIsCommitting(true);
+    try {
+      let updatedCount = 0;
+      const updatedItems = { ...auditSession.items };
+
+      for (const product of products) {
+        const item = auditSession.items[product.id];
+        if (!item || item.totalCounted === 0) continue;
+        if (batchScope === 'pending' && item.isApproved) continue;
+
+        const newShopStock = item.totalShopCounted > 0 || item.totalGodownCounted > 0 ? item.totalShopCounted : item.totalCounted;
+        const newGodownStock = item.totalGodownCounted;
+
+        await updateProduct({
+          ...product,
+          stock_shop: Math.max(0, Math.round(newShopStock)),
+          stock_godown: Math.max(0, Math.round(newGodownStock))
+        });
+
+        updatedItems[product.id] = {
+          ...item,
+          isApproved: true,
+          approvedBy: counterName,
+          approvedAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString()
+        };
+
+        updatedCount++;
+      }
+
+      const completedSession: ActiveAuditSession = {
+        ...auditSession,
+        items: updatedItems
+      };
+
+      saveAuditSessionDebounced(completedSession, counterName, 'audit_approved', { productName: `${updatedCount} items` });
+      playBeep(1300, 'sine', 0.2);
+      showSuccess(`✓ Batch Approved! ${updatedCount} products updated in live inventory.`);
+      setIsBatchApproveModalOpen(false);
+    } catch (err: any) {
+      showError(err?.message || 'Failed to commit audit');
+    } finally {
+      setIsCommitting(false);
+    }
+  };
 
   // Toggle card expansion
   const handleToggleExpand = useCallback((productId: string) => {
@@ -681,9 +972,10 @@ const StockAudit: React.FC = () => {
     }
   };
 
-  // Filtered Products (Fast indexing)
+  // Filtered Products
   const filteredProducts = useMemo(() => {
     const search = searchTerm.toLowerCase().trim();
+    const cleanCounter = counterName.trim().toLowerCase();
 
     return products.filter(product => {
       if (search) {
@@ -698,18 +990,23 @@ const StockAudit: React.FC = () => {
       if (filterMode !== 'all') {
         const auditItem = auditSession.items[product.id];
         const isCounted = !!auditItem && auditItem.totalCounted > 0;
+        const isApproved = !!auditItem?.isApproved;
         const totalSystemStock = (product.stock_shop || 0) + (product.stock_godown || 0);
         const variance = isCounted ? (auditItem.totalCounted - totalSystemStock) : 0;
         const hasDiscrepancy = isCounted && variance !== 0;
 
+        if (filterMode === 'my_counts') {
+          return !!auditItem?.entries.some(e => (e.counterName || '').trim().toLowerCase() === cleanCounter);
+        }
         if (filterMode === 'counted') return isCounted;
-        if (filterMode === 'uncounted') return !isCounted;
+        if (filterMode === 'pending') return isCounted && !isApproved;
+        if (filterMode === 'approved') return isApproved;
         if (filterMode === 'discrepancy') return hasDiscrepancy;
       }
 
       return true;
     });
-  }, [products, searchTerm, filterMode, auditSession.items]);
+  }, [products, searchTerm, filterMode, auditSession.items, counterName]);
 
   // Sliced products for ultra-fast DOM rendering
   const visibleProducts = useMemo(() => {
@@ -724,18 +1021,36 @@ const StockAudit: React.FC = () => {
   const stats = useMemo(() => {
     const totalProducts = products.length;
     let countedCount = 0;
+    let pendingApprovalCount = 0;
+    let approvedCount = 0;
     let discrepancyCount = 0;
     let totalVarianceValue = 0;
+    let myCountedCount = 0;
+    let myTotalPcs = 0;
+
+    const cleanCounter = counterName.trim().toLowerCase();
 
     products.forEach(p => {
       const item = auditSession.items[p.id];
       const systemStock = (p.stock_shop || 0) + (p.stock_godown || 0);
       if (item && item.totalCounted > 0) {
         countedCount++;
+        if (item.isApproved) {
+          approvedCount++;
+        } else {
+          pendingApprovalCount++;
+        }
+
         const diff = item.totalCounted - systemStock;
         if (diff !== 0) {
           discrepancyCount++;
           totalVarianceValue += diff * (p.cost_price || p.price || 0);
+        }
+
+        const myEntries = item.entries.filter(e => (e.counterName || '').trim().toLowerCase() === cleanCounter);
+        if (myEntries.length > 0) {
+          myCountedCount++;
+          myTotalPcs += myEntries.reduce((sum, e) => sum + e.quantity, 0);
         }
       }
     });
@@ -746,65 +1061,24 @@ const StockAudit: React.FC = () => {
     return {
       totalProducts,
       countedCount,
+      pendingApprovalCount,
+      approvedCount,
       uncountedCount,
       discrepancyCount,
       totalVarianceValue,
-      progressPercent
+      progressPercent,
+      myCountedCount,
+      myTotalPcs
     };
-  }, [products, auditSession.items]);
+  }, [products, auditSession.items, counterName]);
 
-  // Commit audit to inventory
-  const handleCommitAudit = async () => {
-    setIsCommitting(true);
-    try {
-      let updatedCount = 0;
-      const productsToUpdate = products.filter(p => {
-        const item = auditSession.items[p.id];
-        return commitOnlyCounted ? (item && item.totalCounted > 0) : true;
-      });
-
-      for (const product of productsToUpdate) {
-        const item = auditSession.items[product.id];
-        let newShopStock = product.stock_shop || 0;
-        let newGodownStock = product.stock_godown || 0;
-
-        if (item) {
-          if (item.totalShopCounted > 0 || item.totalGodownCounted > 0) {
-            newShopStock = item.totalShopCounted;
-            newGodownStock = item.totalGodownCounted;
-          } else {
-            newShopStock = item.totalCounted;
-          }
-        } else if (!commitOnlyCounted) {
-          newShopStock = 0;
-          newGodownStock = 0;
-        }
-
-        await updateProduct({
-          ...product,
-          stock_shop: Math.max(0, Math.round(newShopStock)),
-          stock_godown: Math.max(0, Math.round(newGodownStock))
-        });
-        updatedCount++;
-      }
-
-      const completedSession: ActiveAuditSession = {
-        ...auditSession,
-        status: 'completed'
-      };
-      saveAuditSessionDebounced(completedSession);
-
-      showSuccess(`Audit committed! ${updatedCount} products updated in live stock.`);
-      setIsCommitModalOpen(false);
-    } catch (err: any) {
-      showError(err?.message || 'Failed to commit audit');
-    } finally {
-      setIsCommitting(false);
-    }
-  };
-
-  // Reset session
+  // Reset session (Admin Only)
   const handleResetAudit = () => {
+    if (!isAdminUser) {
+      showError('Only administrators can reset the audit session');
+      return;
+    }
+
     const newSession: ActiveAuditSession = {
       id: `audit-${Date.now()}`,
       title: `Stock Audit ${new Date().toLocaleDateString()}`,
@@ -812,12 +1086,12 @@ const StockAudit: React.FC = () => {
       status: 'active',
       items: {}
     };
-    saveAuditSessionDebounced(newSession);
+    saveAuditSessionDebounced(newSession, counterName, 'audit_update');
     setIsResetModalOpen(false);
     showSuccess('Audit session reset. Fresh count started.');
   };
 
-  // Export Excel
+  // Export Excel Report
   const handleExportExcel = () => {
     try {
       const rows = products.map(product => {
@@ -831,6 +1105,7 @@ const StockAudit: React.FC = () => {
         const isCounted = !!item && totalCounted > 0;
         const diff = isCounted ? (totalCounted - totalSystem) : 0;
         const cost = product.cost_price || product.price || 0;
+        const contributors = item?.entries?.map(e => `${e.counterName}(+${e.quantity})`).join(', ') || '-';
 
         return {
           'Item Code': product.item_code || '-',
@@ -846,7 +1121,9 @@ const StockAudit: React.FC = () => {
           'Total Counted': isCounted ? totalCounted : 'Not Counted',
           'Variance (Units)': isCounted ? diff : '-',
           'Cost Price (MVR)': cost,
-          'Variance Value (MVR)': isCounted ? (diff * cost).toFixed(2) : '-'
+          'Variance Value (MVR)': isCounted ? (diff * cost).toFixed(2) : '-',
+          'Contributors': contributors,
+          'Status': item?.isApproved ? `Approved by ${item.approvedBy}` : (isCounted ? 'Pending Review' : 'Uncounted')
         };
       });
 
@@ -863,8 +1140,8 @@ const StockAudit: React.FC = () => {
   const auditShareUrl = window.location.origin + '/stock-audit';
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 font-faruma flex flex-col pb-24 selection:bg-primary/20" dir="rtl">
-      {/* Top Header Bar (Light Mode) */}
+    <div className="min-h-screen bg-slate-100 text-slate-900 font-faruma flex flex-col pb-28 selection:bg-primary/20" dir="rtl">
+      {/* Top Header Bar */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3.5 py-2.5 shadow-sm">
         <div className="flex items-center justify-between gap-2 max-w-7xl mx-auto">
           <div className="flex items-center gap-2">
@@ -879,8 +1156,11 @@ const StockAudit: React.FC = () => {
             <div>
               <div className="flex items-center gap-1.5">
                 <h1 className="text-base font-black text-slate-900 leading-tight">ސްޓޮކް އޮޑިޓް</h1>
-                <Badge className="bg-primary/15 text-primary border-primary/30 text-[9px] font-bold py-0 h-4 shadow-none">
-                  Mobile
+                <Badge className={cn(
+                  "text-[9px] font-bold py-0 h-4 shadow-none",
+                  isAdminUser ? "bg-amber-100 text-amber-900 border-amber-300" : "bg-primary/15 text-primary border-primary/30"
+                )}>
+                  {isAdminUser ? '👑 Admin Review' : 'Mobile Counter'}
                 </Badge>
               </div>
               <p className="text-[10px] text-slate-500 font-sans">Multi-Device Live Audit</p>
@@ -898,7 +1178,7 @@ const StockAudit: React.FC = () => {
               )}
             >
               <span className={cn("h-1.5 w-1.5 rounded-full", isRealtimeActive ? "bg-emerald-600 animate-pulse" : "bg-amber-500")} />
-              <span className="font-sans">{isRealtimeActive ? 'Live' : 'Local'}</span>
+              <span className="font-sans">{isRealtimeActive ? 'Live Sync' : 'Local'}</span>
             </div>
 
             {/* Counter Name Pill */}
@@ -912,7 +1192,7 @@ const StockAudit: React.FC = () => {
               className="h-8 px-2.5 rounded-xl bg-slate-50 border-slate-300 hover:bg-slate-100 text-[11px] font-bold gap-1 text-slate-800"
             >
               <UserIcon className="h-3.5 w-3.5 text-primary" />
-              <span className="max-w-[70px] truncate">{counterName}</span>
+              <span className="max-w-[80px] truncate">{counterName}</span>
             </Button>
 
             {/* Share QR */}
@@ -921,6 +1201,7 @@ const StockAudit: React.FC = () => {
               size="icon"
               onClick={() => setIsShareModalOpen(true)}
               className="h-8 w-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700"
+              title="Share Audit Link"
             >
               <QrCode className="h-4 w-4" />
             </Button>
@@ -930,7 +1211,40 @@ const StockAudit: React.FC = () => {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 space-y-3">
-        {/* Progress Dashboard (Light Mode) */}
+        {/* Role & Instruction Notice */}
+        <div className={cn(
+          "p-3 rounded-2xl border text-xs font-sans flex items-center justify-between gap-2 shadow-sm",
+          isAdminUser 
+            ? "bg-amber-50 border-amber-200 text-amber-900" 
+            : "bg-blue-50 border-blue-200 text-blue-900"
+        )}>
+          <div className="flex items-center gap-2">
+            {isAdminUser ? (
+              <ShieldCheck className="h-5 w-5 text-amber-600 shrink-0" />
+            ) : (
+              <Store className="h-5 w-5 text-blue-600 shrink-0" />
+            )}
+            <div>
+              <p className="font-black text-xs">
+                {isAdminUser 
+                  ? `👑 Administrator Mode: You have full authority to inspect user counts, accept individual items, or batch confirm into store inventory.`
+                  : `📱 Counter Mode (${counterName}): Count items on shelves or godown. Submissions will be aggregated live and reviewed by Admin.`}
+              </p>
+            </div>
+          </div>
+          {isAdminUser && stats.pendingApprovalCount > 0 && (
+            <Button
+              size="sm"
+              onClick={() => setIsBatchApproveModalOpen(true)}
+              className="h-8 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs shrink-0 shadow-sm gap-1"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              <span>Review ({stats.pendingApprovalCount})</span>
+            </Button>
+          )}
+        </div>
+
+        {/* Progress Dashboard */}
         <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-2.5">
           <div className="flex items-center justify-between gap-2">
             <div>
@@ -952,15 +1266,17 @@ const StockAudit: React.FC = () => {
                 <span>Export</span>
               </Button>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsResetModalOpen(true)}
-                className="h-8 px-2.5 rounded-xl bg-slate-50 border-slate-300 hover:bg-red-50 text-xs font-bold gap-1 text-red-600"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                <span>Reset</span>
-              </Button>
+              {isAdminUser && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsResetModalOpen(true)}
+                  className="h-8 px-2.5 rounded-xl bg-slate-50 border-slate-300 hover:bg-red-50 text-xs font-bold gap-1 text-red-600"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span>Reset</span>
+                </Button>
+              )}
             </div>
           </div>
 
@@ -971,14 +1287,18 @@ const StockAudit: React.FC = () => {
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-2 pt-0.5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-0.5">
             <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 text-center">
-              <p className="text-[9px] text-slate-500 font-bold uppercase">Counted</p>
+              <p className="text-[9px] text-slate-500 font-bold uppercase">Counted Items</p>
               <p className="text-sm font-black text-emerald-700">{stats.countedCount}</p>
             </div>
             <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 text-center">
-              <p className="text-[9px] text-slate-500 font-bold uppercase">Uncounted</p>
-              <p className="text-sm font-black text-amber-700">{stats.uncountedCount}</p>
+              <p className="text-[9px] text-slate-500 font-bold uppercase">Pending Review</p>
+              <p className="text-sm font-black text-amber-700">{stats.pendingApprovalCount}</p>
+            </div>
+            <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 text-center">
+              <p className="text-[9px] text-slate-500 font-bold uppercase">Approved</p>
+              <p className="text-sm font-black text-emerald-600">{stats.approvedCount}</p>
             </div>
             <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 text-center">
               <p className="text-[9px] text-slate-500 font-bold uppercase">Discrepancy</p>
@@ -1017,40 +1337,62 @@ const StockAudit: React.FC = () => {
           </Button>
         </div>
 
-        {/* Filter Chips (Light Mode) */}
+        {/* Filter Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar text-xs font-bold">
           <button
             onClick={() => setFilterMode('all')}
             className={cn(
               "px-3.5 py-2 rounded-xl border transition-colors whitespace-nowrap text-xs shadow-sm",
               filterMode === 'all'
-                ? "bg-primary text-white border-primary font-black"
+                ? "bg-slate-900 text-white border-slate-900 font-black"
                 : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
             )}
           >
             All ({products.length})
           </button>
           <button
+            onClick={() => setFilterMode('my_counts')}
+            className={cn(
+              "px-3.5 py-2 rounded-xl border transition-colors whitespace-nowrap text-xs shadow-sm",
+              filterMode === 'my_counts'
+                ? "bg-primary text-white border-primary font-black"
+                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+            )}
+          >
+            🏷️ My Counts ({stats.myCountedCount})
+          </button>
+          <button
             onClick={() => setFilterMode('counted')}
             className={cn(
               "px-3.5 py-2 rounded-xl border transition-colors whitespace-nowrap text-xs shadow-sm",
               filterMode === 'counted'
-                ? "bg-emerald-600 text-white border-emerald-600 font-black"
+                ? "bg-emerald-700 text-white border-emerald-700 font-black"
                 : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
             )}
           >
-            Counted ({stats.countedCount})
+            All Counted ({stats.countedCount})
           </button>
           <button
-            onClick={() => setFilterMode('uncounted')}
+            onClick={() => setFilterMode('pending')}
             className={cn(
               "px-3.5 py-2 rounded-xl border transition-colors whitespace-nowrap text-xs shadow-sm",
-              filterMode === 'uncounted'
+              filterMode === 'pending'
                 ? "bg-amber-600 text-white border-amber-600 font-black"
                 : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
             )}
           >
-            Uncounted ({stats.uncountedCount})
+            ⏳ Pending Review ({stats.pendingApprovalCount})
+          </button>
+          <button
+            onClick={() => setFilterMode('approved')}
+            className={cn(
+              "px-3.5 py-2 rounded-xl border transition-colors whitespace-nowrap text-xs shadow-sm",
+              filterMode === 'approved'
+                ? "bg-emerald-600 text-white border-emerald-600 font-black"
+                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+            )}
+          >
+            ✓ Approved ({stats.approvedCount})
           </button>
           <button
             onClick={() => setFilterMode('discrepancy')}
@@ -1079,10 +1421,14 @@ const StockAudit: React.FC = () => {
                 product={product}
                 auditItem={auditSession.items[product.id]}
                 isExpanded={!!expandedProductIds[product.id]}
+                isAdmin={isAdminUser}
+                currentCounterName={counterName}
                 onToggleExpand={handleToggleExpand}
                 onQuickAdd={handleAddCount}
                 onOpenCustomCount={handleOpenCustomCount}
                 onDeleteEntry={handleDeleteEntry}
+                onApproveSingle={handleApproveSingleProduct}
+                onUnapproveSingle={handleUnapproveSingleProduct}
               />
             ))
           )}
@@ -1102,29 +1448,39 @@ const StockAudit: React.FC = () => {
         </div>
       </main>
 
-      {/* Floating Bottom Apply Bar (Light Mode) */}
+      {/* Floating Bottom Action Bar */}
       <footer className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 shadow-lg">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
           <Button
             onClick={startCameraScanner}
-            className="h-12 px-5 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 font-bold gap-2 text-xs shadow-sm"
+            className="h-12 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 font-bold gap-2 text-xs shadow-sm"
           >
             <Camera className="h-4 w-4 text-primary" />
             <span>Scan Barcode</span>
           </Button>
 
-          <Button
-            onClick={() => setIsCommitModalOpen(true)}
-            disabled={stats.countedCount === 0}
-            className="h-12 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black gap-2 text-xs shadow-md shadow-emerald-600/20"
-          >
-            <Save className="h-4 w-4" />
-            <span>Apply Audit ({stats.countedCount})</span>
-          </Button>
+          {isAdminUser ? (
+            <Button
+              onClick={() => setIsBatchApproveModalOpen(true)}
+              disabled={stats.countedCount === 0}
+              className="h-12 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black gap-2 text-xs shadow-md shadow-emerald-600/20"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              <span>Batch Review & Accept ({stats.pendingApprovalCount || stats.countedCount})</span>
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2 bg-slate-100 border border-slate-200 px-4 py-2 rounded-2xl font-sans text-xs">
+              <Clock className="h-4 w-4 text-amber-600" />
+              <div className="text-right">
+                <p className="font-bold text-slate-800">You counted: {stats.myCountedCount} items ({stats.myTotalPcs} pcs)</p>
+                <p className="text-[10px] text-slate-500">Awaiting Admin Confirmation</p>
+              </div>
+            </div>
+          )}
         </div>
       </footer>
 
-      {/* 1. Custom Count Dialog (Light Mode) */}
+      {/* 1. Custom Count Dialog */}
       <Dialog open={!!activeCountingProduct} onOpenChange={(open) => !open && setActiveCountingProduct(null)}>
         <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-sm p-5 rounded-3xl font-faruma shadow-2xl" dir="rtl">
           {activeCountingProduct && (
@@ -1136,7 +1492,7 @@ const StockAudit: React.FC = () => {
 
               {/* Location Switcher */}
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-600 font-sans">Location:</label>
+                <label className="text-[11px] font-bold text-slate-600 font-sans">Count Location:</label>
                 <div className="grid grid-cols-2 gap-2 font-sans">
                   <button
                     type="button"
@@ -1162,7 +1518,7 @@ const StockAudit: React.FC = () => {
                     )}
                   >
                     <Warehouse className="h-4 w-4" />
-                    <span>Godown</span>
+                    <span>Godown / Store</span>
                   </button>
                 </div>
               </div>
@@ -1170,7 +1526,7 @@ const StockAudit: React.FC = () => {
               {/* Unit multiplier if available */}
               {activeCountingProduct.units && Array.isArray(activeCountingProduct.units) && activeCountingProduct.units.length > 0 && (
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-600 font-sans">Unit Size:</label>
+                  <label className="text-[11px] font-bold text-slate-600 font-sans">Package Unit:</label>
                   <div className="flex flex-wrap gap-1 font-sans">
                     <Button
                       type="button"
@@ -1215,7 +1571,9 @@ const StockAudit: React.FC = () => {
 
               {/* Quantity Stepper */}
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-600 font-sans">Quantity to Add:</label>
+                <label className="text-[11px] font-bold text-slate-600 font-sans">
+                  Quantity to Add ({selectedUnitName}):
+                </label>
                 <div className="flex items-center gap-2">
                   <Button
                     type="button"
@@ -1230,7 +1588,7 @@ const StockAudit: React.FC = () => {
                     min="1"
                     value={countInput}
                     onChange={(e) => setCountInput(e.target.value)}
-                    className="h-12 text-center text-xl font-black rounded-2xl bg-slate-50 border-slate-300 text-slate-900 font-sans"
+                    className="h-12 text-center text-xl font-black bg-slate-50 border-slate-300 text-slate-900 rounded-2xl font-sans"
                     autoFocus
                   />
                   <Button
@@ -1264,7 +1622,7 @@ const StockAudit: React.FC = () => {
                   }}
                   className="flex-1 h-11 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-xs shadow-md"
                 >
-                  Add Count
+                  Submit Count
                 </Button>
               </DialogFooter>
             </div>
@@ -1418,28 +1776,33 @@ const StockAudit: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 5. Commit Confirmation */}
-      <Dialog open={isCommitModalOpen} onOpenChange={setIsCommitModalOpen}>
-        <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-sm p-5 rounded-3xl font-faruma shadow-2xl" dir="rtl">
+      {/* 5. Admin Batch Review & Approval Modal */}
+      <Dialog open={isBatchApproveModalOpen} onOpenChange={setIsBatchApproveModalOpen}>
+        <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-lg p-5 rounded-3xl font-faruma shadow-2xl" dir="rtl">
           <DialogHeader className="text-right space-y-0.5">
             <DialogTitle className="text-base font-black text-slate-900 flex items-center justify-end gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
-              <span>Apply to Store Inventory</span>
+              <ShieldCheck className="h-5 w-5 text-emerald-600" />
+              <span>Admin Batch Audit Approval</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500 font-sans">
-              Updates store stock to match counted numbers.
+              Review all user counts and commit to live inventory.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-2 space-y-2.5 font-sans text-xs">
+          <div className="py-2 space-y-3 font-sans text-xs">
+            {/* Stats card */}
             <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-1.5">
               <div className="flex justify-between">
-                <span className="text-slate-500">Products Counted:</span>
+                <span className="text-slate-500">Total Counted Products:</span>
                 <strong className="text-slate-900 font-black">{stats.countedCount} items</strong>
               </div>
               <div className="flex justify-between">
+                <span className="text-slate-500">Pending Review:</span>
+                <strong className="text-amber-700 font-black">{stats.pendingApprovalCount} items</strong>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-slate-500">Discrepancies:</span>
-                <strong className="text-amber-700 font-black">{stats.discrepancyCount} items</strong>
+                <strong className="text-rose-600 font-black">{stats.discrepancyCount} items</strong>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Variance Value:</span>
@@ -1449,17 +1812,66 @@ const StockAudit: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center space-x-2 rtl:space-x-reverse text-xs text-slate-700">
-              <input 
-                type="checkbox"
-                id="commitOnlyCounted"
-                checked={commitOnlyCounted}
-                onChange={(e) => setCommitOnlyCounted(e.target.checked)}
-                className="rounded border-slate-300 text-primary"
-              />
-              <label htmlFor="commitOnlyCounted" className="cursor-pointer">
-                Only update <strong>counted products</strong> (leave uncounted as is)
-              </label>
+            {/* Scope selection */}
+            <div className="space-y-1.5">
+              <label className="text-slate-700 font-bold block">Approval Scope:</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setBatchScope('pending')}
+                  className={cn(
+                    "p-2.5 rounded-xl border text-xs font-bold text-center transition-all",
+                    batchScope === 'pending'
+                      ? "bg-amber-100 border-amber-400 text-amber-900 font-black"
+                      : "bg-slate-50 border-slate-200 text-slate-700"
+                  )}
+                >
+                  Only Pending ({stats.pendingApprovalCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBatchScope('all')}
+                  className={cn(
+                    "p-2.5 rounded-xl border text-xs font-bold text-center transition-all",
+                    batchScope === 'all'
+                      ? "bg-emerald-100 border-emerald-400 text-emerald-900 font-black"
+                      : "bg-slate-50 border-slate-200 text-slate-700"
+                  )}
+                >
+                  All Counted ({stats.countedCount})
+                </button>
+              </div>
+            </div>
+
+            {/* Counted products preview */}
+            <div className="max-h-48 overflow-y-auto space-y-1 border border-slate-200 rounded-2xl p-2 bg-slate-50 custom-scrollbar">
+              {products
+                .filter(p => {
+                  const item = auditSession.items[p.id];
+                  if (!item || item.totalCounted === 0) return false;
+                  return batchScope === 'pending' ? !item.isApproved : true;
+                })
+                .map(p => {
+                  const item = auditSession.items[p.id]!;
+                  const totalSys = (p.stock_shop || 0) + (p.stock_godown || 0);
+                  const diff = item.totalCounted - totalSys;
+                  const contributors = item.entries.map(e => `${e.counterName} (+${e.quantity})`).join(', ');
+
+                  return (
+                    <div key={p.id} className="p-2 bg-white rounded-xl border border-slate-200 flex items-center justify-between text-[11px]">
+                      <div>
+                        <p className="font-bold text-slate-900">{p.name_en}</p>
+                        <p className="text-[10px] text-slate-500">By: {contributors}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-black text-emerald-700">{item.totalCounted} pcs</span>
+                        <span className={cn("block text-[10px] font-bold", diff === 0 ? "text-slate-400" : (diff > 0 ? "text-cyan-700" : "text-rose-600"))}>
+                          {diff > 0 ? `+${diff}` : diff}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           </div>
 
@@ -1467,18 +1879,18 @@ const StockAudit: React.FC = () => {
             <Button 
               type="button" 
               variant="outline" 
-              onClick={() => setIsCommitModalOpen(false)}
+              onClick={() => setIsBatchApproveModalOpen(false)}
               className="flex-1 h-11 rounded-2xl bg-slate-100 border-slate-300 text-slate-700 text-xs font-bold"
             >
               Cancel
             </Button>
             <Button 
               type="button" 
-              onClick={handleCommitAudit}
-              disabled={isCommitting}
+              onClick={handleBatchApprove}
+              disabled={isCommitting || stats.countedCount === 0}
               className="flex-1 h-11 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-md"
             >
-              {isCommitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm & Apply'}
+              {isCommitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm & Update Stock'}
             </Button>
           </DialogFooter>
         </DialogContent>

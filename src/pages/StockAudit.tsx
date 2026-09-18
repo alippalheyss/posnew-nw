@@ -529,24 +529,36 @@ const StockAudit: React.FC = () => {
   };
 
   const stopCameraScanner = async () => {
-    if (html5QrCodeRef.current && isScannerRunning) {
-      try {
-        await html5QrCodeRef.current.stop();
-        html5QrCodeRef.current.clear();
-      } catch (err) {}
-      setIsScannerRunning(false);
-    }
+    try {
+      if (html5QrCodeRef.current) {
+        if (isScannerRunning) {
+          await html5QrCodeRef.current.stop().catch(() => {});
+        }
+        try {
+          html5QrCodeRef.current.clear();
+        } catch (e) {}
+        html5QrCodeRef.current = null;
+      }
+    } catch (err) {}
+    setIsScannerRunning(false);
     setIsScannerOpen(false);
+
+    // Guarantee document body pointer-events and scroll restore
+    setTimeout(() => {
+      document.body.style.pointerEvents = 'auto';
+      document.body.style.overflow = 'auto';
+    }, 50);
   };
 
   useEffect(() => {
     let html5QrCode: Html5Qrcode | null = null;
+    let isMounted = true;
 
     if (isScannerOpen) {
       const timer = setTimeout(async () => {
         try {
           const container = document.getElementById('stock-audit-qr-reader');
-          if (!container) return;
+          if (!container || !isMounted) return;
 
           html5QrCode = new Html5Qrcode('stock-audit-qr-reader', {
             formatsToSupport: [
@@ -574,32 +586,39 @@ const StockAudit: React.FC = () => {
             { facingMode: 'environment' },
             config,
             (decodedText) => {
-              if (decodedText) {
+              if (decodedText && isMounted) {
                 handleScannedCode(decodedText);
               }
             },
             () => {}
           );
-          setIsScannerRunning(true);
+          if (isMounted) setIsScannerRunning(true);
         } catch (err: any) {
           console.error('Html5Qrcode start error:', err);
-          setScannerError(err?.message || 'Could not access camera. Please allow camera permissions.');
+          if (isMounted) setScannerError(err?.message || 'Could not access camera. Please allow camera permissions.');
         }
       }, 250);
 
       return () => {
+        isMounted = false;
         clearTimeout(timer);
         if (html5QrCode) {
           html5QrCode.stop().catch(() => {}).finally(() => {
-            html5QrCode?.clear();
+            try {
+              html5QrCode?.clear();
+            } catch (e) {}
           });
         }
+        setTimeout(() => {
+          document.body.style.pointerEvents = 'auto';
+          document.body.style.overflow = 'auto';
+        }, 50);
       };
     }
   }, [isScannerOpen]);
 
-  const handleScannedCode = (code: string) => {
-    stopCameraScanner();
+  const handleScannedCode = async (code: string) => {
+    await stopCameraScanner();
     playBeep(1050, 'sine', 0.15);
     try {
       if (navigator.vibrate) navigator.vibrate(100);
@@ -612,8 +631,10 @@ const StockAudit: React.FC = () => {
     );
 
     if (matchedProduct) {
-      handleOpenCustomCount(matchedProduct);
-      showSuccess(`Scanned: ${matchedProduct.name_en}`);
+      setTimeout(() => {
+        handleOpenCustomCount(matchedProduct);
+        showSuccess(`Scanned: ${matchedProduct.name_en}`);
+      }, 100);
     } else {
       setSearchTerm(cleanCode);
       showError(`No product found with barcode "${code}". Filtered in search.`);

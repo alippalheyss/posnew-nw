@@ -458,54 +458,83 @@ const StockAudit: React.FC = () => {
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [expandedProductIds, setExpandedProductIds] = useState<Record<string, boolean>>({});
 
-  // Sync debounce ref
+  // Sync refs
   const syncTimeoutRef = useRef<any>(null);
+  const auditSessionRef = useRef<ActiveAuditSession>(auditSession);
+  auditSessionRef.current = auditSession;
+  const channelRef = useRef<any>(null);
 
-  // 1. Load active audit session from Supabase Cloud Settings
+  // 1. Cloud Pull and Sync Engine
+  const fetchCloudAuditSession = useCallback(async () => {
+    if (!supabase) return;
+    try {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('id, category, settings')
+        .eq('category', 'active_stock_audit')
+        .maybeSingle();
+
+      if (!error && data?.settings) {
+        const cloudSession = (data.settings as any)?.session || data.settings;
+        if (cloudSession && cloudSession.items) {
+          setAuditSession(prev => {
+            const prevKeys = Object.keys(prev.items || {});
+            const cloudKeys = Object.keys(cloudSession.items || {});
+            
+            // If cloud has data and differs, update
+            const prevStr = JSON.stringify(prev.items);
+            const cloudStr = JSON.stringify(cloudSession.items);
+            if (prevStr !== cloudStr || (cloudKeys.length > 0 && prevKeys.length === 0)) {
+              localStorage.setItem('cached_stock_audit', JSON.stringify(cloudSession));
+              return cloudSession as ActiveAuditSession;
+            }
+            return prev;
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('Note pulling cloud audit session:', err);
+    }
+  }, []);
+
+  // 1. Load active audit session on mount + regular 3s cloud pull interval
   useEffect(() => {
     let isMounted = true;
 
-    const loadAuditSession = async () => {
-      try {
-        if (supabase) {
-          const { data, error } = await supabase
-            .from('settings')
-            .select('id, category, settings')
-            .eq('category', 'active_stock_audit')
-            .maybeSingle();
-
-          if (!error && data?.settings && isMounted) {
-            const session = (data.settings as any)?.session || data.settings;
-            if (session && session.items) {
-              setAuditSession(session as ActiveAuditSession);
-              localStorage.setItem('cached_stock_audit', JSON.stringify(session));
-              return;
-            }
-          }
+    // Load from local storage cache first for instant render
+    try {
+      const cached = localStorage.getItem('cached_stock_audit');
+      if (cached && isMounted) {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.items) {
+          setAuditSession(parsed);
         }
-      } catch (err) {
-        console.warn('Note loading audit session:', err);
       }
+    } catch (e) {}
 
-      try {
-        const cached = localStorage.getItem('cached_stock_audit');
-        if (cached && isMounted) {
-          setAuditSession(JSON.parse(cached));
-        }
-      } catch (e) {}
+    // Pull fresh data from Supabase immediately
+    fetchCloudAuditSession();
+
+    // Regular interval to pull updates in background
+    const interval = setInterval(() => {
+      if (isMounted) fetchCloudAuditSession();
+    }, 3000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
     };
+  }, [fetchCloudAuditSession]);
 
-    loadAuditSession();
-    return () => { isMounted = false; };
-  }, []);
-
-  // 2. Realtime Channel setup
+  // 2. Realtime Channel setup with Peer Sync
   useEffect(() => {
     if (!supabase) return;
 
     const channel = supabase.channel('stock_audit_room', {
       config: { broadcast: { self: false } }
     });
+
+    channelRef.current = channel;
 
     channel
       .on('broadcast', { event: 'audit_update' }, ({ payload }) => {
@@ -524,19 +553,65 @@ const StockAudit: React.FC = () => {
           playBeep(1400, 'sine', 0.12);
         }
       })
+      .on('broadcast', { event: 'audit_sync_request' }, ({ payload }) => {
+        // When a new device/window joins, send our session to them
+        const currentItems = auditSessionRef.current?.items || {};
+        if (Object.keys(currentItems).length > 0) {
+          channel.send({
+            type: 'broadcast',
+            event: 'audit_sync_response',
+            payload: { session: auditSessionRef.current, sender: counterName }
+          });
+        }
+      })
+      .on('broadcast', { event: 'audit_sync_response' }, ({ payload }) => {
+        // Receive session from peer
+        if (payload?.session && payload.session.items) {
+          setAuditSession(prev => {
+            const prevKeys = Object.keys(prev.items || {});
+            const newKeys = Object.keys(payload.session.items || {});
+            if (newKeys.length >= prevKeys.length) {
+              localStorage.setItem('cached_stock_audit', JSON.stringify(payload.session));
+              return payload.session;
+            }
+            return prev;
+          });
+        }
+      })
       .subscribe((status) => {
         setIsRealtimeActive(status === 'SUBSCRIBED');
+        if (status === 'SUBSCRIBED') {
+          // Send request for peers to sync their state
+          channel.send({
+            type: 'broadcast',
+            event: 'audit_sync_request',
+            payload: { requester: counterName }
+          });
+        }
       });
 
     return () => {
+      channelRef.current = null;
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [counterName]);
 
   // 3. Debounced cloud save & broadcast
   const saveAuditSessionDebounced = useCallback((newSession: ActiveAuditSession, sender = counterName, eventType = 'audit_update', extraPayload: any = {}) => {
     setAuditSession(newSession);
+    auditSessionRef.current = newSession;
     localStorage.setItem('cached_stock_audit', JSON.stringify(newSession));
+
+    // Send realtime broadcast immediately via subscribed channel
+    if (channelRef.current) {
+      try {
+        channelRef.current.send({
+          type: 'broadcast',
+          event: eventType,
+          payload: { session: newSession, sender, ...extraPayload }
+        });
+      } catch (e) {}
+    }
 
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     syncTimeoutRef.current = setTimeout(async () => {
@@ -559,18 +634,11 @@ const StockAudit: React.FC = () => {
           } else {
             await supabase.from('settings').insert({ ...payload, id: crypto.randomUUID() });
           }
-
-          const channel = supabase.channel('stock_audit_room');
-          channel.send({
-            type: 'broadcast',
-            event: eventType,
-            payload: { session: newSession, sender, ...extraPayload }
-          });
         } catch (err) {
           console.warn('Note saving stock audit to cloud:', err);
         }
       }
-    }, 300);
+    }, 200);
   }, [counterName]);
 
   // 4. Additive count handler (for any user)

@@ -176,13 +176,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     useEffect(() => {
         const initAuth = async () => {
             try {
-                // Check for existing session
+                // 1. Check for stored active user session
+                try {
+                    const storedUser = localStorage.getItem('pos_active_user');
+                    if (storedUser) {
+                        const parsedUser: User = JSON.parse(storedUser);
+                        if (parsedUser && parsedUser.isActive) {
+                            setCurrentUser(parsedUser);
+                        }
+                    }
+                } catch (e) {}
+
+                // 2. Check for Supabase session
                 const { data: { session } } = await supabase.auth.getSession();
 
                 if (session?.user) {
                     const userData = await fetchUserData(session.user.id);
                     if (userData && userData.isActive) {
                         setCurrentUser(userData);
+                        localStorage.setItem('pos_active_user', JSON.stringify(userData));
                     }
                 }
 
@@ -194,6 +206,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                                 const userData = await fetchUserData(session.user.id);
                                 if (userData && userData.isActive) {
                                     setCurrentUser(userData);
+                                    localStorage.setItem('pos_active_user', JSON.stringify(userData));
                                 }
                             } catch (err) {
                                 console.error('Error handling SIGNED_IN auth state change:', err);
@@ -201,6 +214,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         }, 0);
                     } else if (event === 'SIGNED_OUT') {
                         setCurrentUser(null);
+                        localStorage.removeItem('pos_active_user');
                     }
                 });
 
@@ -282,49 +296,80 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const userMap = new Map<string, User>();
             [...dbUsers, ...settingsUsers, ...localUsers].forEach(u => {
                 if (u && u.id && !deletedIds.includes(u.id)) {
-                    userMap.set(u.id, { ...u });
+                    const existing = userMap.get(u.id);
+                    userMap.set(u.id, {
+                        ...u,
+                        password: u.password || existing?.password || ''
+                    });
                 }
             });
 
             const mergedUsers = Array.from(userMap.values());
             setUsers(mergedUsers);
             localStorage.setItem('pos_system_users', JSON.stringify(mergedUsers));
+            return mergedUsers;
         } catch (error) {
             console.error('Error in fetchAllUsers:', error);
+            return [];
         }
     };
 
     const login = async (username: string, password: string): Promise<boolean> => {
         try {
             const cleanUsername = username.trim();
+            const cleanPassword = password.trim();
             const email = cleanUsername.includes('@') ? cleanUsername : `${cleanUsername.toLowerCase()}@pos.local`;
 
             // 1. Try Supabase Auth first
-            let isAuthOk = false;
             try {
                 const { data, error } = await supabase.auth.signInWithPassword({
                     email,
-                    password: password,
+                    password: cleanPassword,
                 });
                 if (!error && data.user) {
                     const userData = await fetchUserData(data.user.id);
                     if (userData && userData.isActive) {
                         setCurrentUser(userData);
+                        localStorage.setItem('pos_active_user', JSON.stringify(userData));
                         await fetchAllUsers();
                         return true;
                     }
                 }
             } catch (authErr) {
-                console.warn('Supabase auth login fallback check:', authErr);
+                console.warn('Supabase auth login note:', authErr);
             }
 
-            // 2. Fallback check from system users list
-            const matchedUser = users.find(u => 
+            // 2. Fetch latest user list if empty
+            let currentUsersList = users;
+            if (currentUsersList.length === 0) {
+                try {
+                    const stored = localStorage.getItem('pos_system_users');
+                    if (stored) currentUsersList = JSON.parse(stored);
+                } catch (e) {}
+            }
+            if (currentUsersList.length === 0) {
+                currentUsersList = await fetchAllUsers();
+            }
+
+            // 3. Fallback match in system users
+            const matchedUser = currentUsersList.find(u => 
                 u.username.toLowerCase() === cleanUsername.toLowerCase() && u.isActive
             );
 
             if (matchedUser) {
-                setCurrentUser(matchedUser);
+                // If user has stored password, check it
+                if (matchedUser.password && matchedUser.password !== cleanPassword) {
+                    console.warn('Password mismatch for user:', cleanUsername);
+                    return false;
+                }
+
+                const activeUser: User = {
+                    ...matchedUser,
+                    lastLogin: new Date().toISOString()
+                };
+
+                setCurrentUser(activeUser);
+                localStorage.setItem('pos_active_user', JSON.stringify(activeUser));
                 return true;
             }
 
@@ -339,6 +384,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             await supabase.auth.signOut();
             setCurrentUser(null);
+            localStorage.removeItem('pos_active_user');
         } catch (error) {
             console.error('Logout error:', error);
         }
@@ -362,6 +408,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const newUser: User = {
                 id: authUserId,
                 username: cleanUsername,
+                password: userData.password,
                 name_en: userData.name_en || '',
                 name_dv: userData.name_dv || '',
                 role: userData.role,

@@ -23,7 +23,9 @@ import {
   ChevronDown,
   ChevronUp,
   Boxes,
-  Loader2
+  Loader2,
+  CheckCircle2,
+  Flashlight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +33,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { QRCodeSVG } from 'qrcode.react';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import * as XLSX from 'xlsx';
 import { useAppContext, Product } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
@@ -67,7 +70,7 @@ export interface ActiveAuditSession {
   items: Record<string, ProductAuditState>;
 }
 
-// Audio beep synthesizer
+// Crisp beep synthesizer
 const playBeep = (freq = 880, type: OscillatorType = 'sine', duration = 0.12) => {
   try {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -83,12 +86,10 @@ const playBeep = (freq = 880, type: OscillatorType = 'sine', duration = 0.12) =>
     gain.connect(ctx.destination);
     osc.start();
     osc.stop(ctx.currentTime + duration);
-  } catch (e) {
-    // ignore
-  }
+  } catch (e) {}
 };
 
-// Memoized Individual Product Card for 60fps performance
+// Memoized Individual Product Card (Light Mode)
 interface ProductAuditCardProps {
   product: Product;
   auditItem?: ProductAuditState;
@@ -118,59 +119,59 @@ const ProductAuditCard = React.memo<ProductAuditCardProps>(({
   return (
     <Card 
       className={cn(
-        "bg-slate-900/90 border transition-colors duration-150 overflow-hidden shadow-sm",
+        "bg-white border transition-colors duration-150 overflow-hidden shadow-sm rounded-2xl",
         isCounted 
-          ? (variance === 0 ? "border-emerald-500/40 bg-emerald-950/15" : "border-amber-500/40 bg-amber-950/15")
-          : "border-slate-800/80 hover:border-slate-700"
+          ? (variance === 0 ? "border-emerald-300 bg-emerald-50/40" : "border-amber-300 bg-amber-50/40")
+          : "border-slate-200 hover:border-slate-300"
       )}
     >
-      <CardContent className="p-3 space-y-2.5">
+      <CardContent className="p-3.5 space-y-2.5">
         {/* Header: Dhivehi + English Name & Status Badge */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 text-right">
-            <div className="flex items-center justify-end gap-2">
-              <h3 className="text-base font-black text-white leading-tight">{product.name_dv}</h3>
+            <div className="flex items-center justify-end gap-2 flex-wrap">
+              <h3 className="text-base font-black text-slate-900 leading-tight">{product.name_dv}</h3>
               {isCounted && (
                 <Badge 
                   className={cn(
-                    "text-[10px] font-black px-2 py-0.5 rounded-full",
+                    "text-[10px] font-black px-2 py-0.5 rounded-full border shadow-none",
                     variance === 0 
-                      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
-                      : (variance > 0 ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" : "bg-rose-500/20 text-rose-400 border-rose-500/30")
+                      ? "bg-emerald-100 text-emerald-800 border-emerald-300" 
+                      : (variance > 0 ? "bg-cyan-100 text-cyan-800 border-cyan-300" : "bg-rose-100 text-rose-800 border-rose-300")
                   )}
                 >
                   {variance === 0 ? "✓ Matched" : (variance > 0 ? `+${variance} Over` : `${variance} Short`)}
                 </Badge>
               )}
             </div>
-            <p className="text-xs font-bold text-slate-300 font-sans mt-0.5">{product.name_en}</p>
-            <div className="flex items-center justify-end gap-3 text-[11px] text-slate-400 font-sans mt-0.5">
-              {product.barcode && <span>Barcode: <strong className="text-slate-200">{product.barcode}</strong></span>}
-              {product.item_code && <span>Code: <strong className="text-slate-200">{product.item_code}</strong></span>}
-              <span>Price: <strong className="text-primary">{formatCurrency(product.price)}</strong></span>
+            <p className="text-xs font-bold text-slate-600 font-sans mt-0.5">{product.name_en}</p>
+            <div className="flex items-center justify-end gap-3 text-[11px] text-slate-500 font-sans mt-1">
+              {product.barcode && <span>Barcode: <strong className="text-slate-800 font-mono">{product.barcode}</strong></span>}
+              {product.item_code && <span>Code: <strong className="text-slate-800 font-mono">{product.item_code}</strong></span>}
+              <span>Price: <strong className="text-primary font-black">{formatCurrency(product.price)}</strong></span>
             </div>
           </div>
         </div>
 
-        {/* Stock Comparison Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 bg-slate-950/70 p-2 rounded-xl border border-slate-800/80 font-sans text-xs">
+        {/* Stock Comparison Grid (Light Theme) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200 font-sans text-xs">
           <div>
-            <span className="text-[10px] text-slate-400 font-bold uppercase">System Shop</span>
-            <p className="font-black text-slate-200">{systemShop} pcs</p>
+            <span className="text-[10px] text-slate-500 font-bold uppercase">System Shop</span>
+            <p className="font-black text-slate-800">{systemShop} pcs</p>
           </div>
           <div>
-            <span className="text-[10px] text-slate-400 font-bold uppercase">System Godown</span>
-            <p className="font-black text-slate-200">{systemGodown} pcs</p>
+            <span className="text-[10px] text-slate-500 font-bold uppercase">System Godown</span>
+            <p className="font-black text-slate-800">{systemGodown} pcs</p>
           </div>
-          <div className="border-t sm:border-t-0 sm:border-r border-slate-800 pt-1 sm:pt-0 sm:pr-2">
-            <span className="text-[10px] text-slate-400 font-bold uppercase">Total Counted</span>
-            <p className={cn("font-black text-sm", isCounted ? "text-emerald-400" : "text-slate-500")}>
+          <div className="border-t sm:border-t-0 sm:border-r border-slate-200 pt-1 sm:pt-0 sm:pr-2">
+            <span className="text-[10px] text-slate-500 font-bold uppercase">Total Counted</span>
+            <p className={cn("font-black text-sm", isCounted ? "text-emerald-700" : "text-slate-400")}>
               {isCounted ? `${countedTotal} pcs` : 'Not counted'}
             </p>
           </div>
-          <div className="border-t sm:border-t-0 sm:border-r border-slate-800 pt-1 sm:pt-0 sm:pr-2">
-            <span className="text-[10px] text-slate-400 font-bold uppercase">Variance</span>
-            <p className={cn("font-black text-sm", variance === 0 ? "text-slate-400" : (variance > 0 ? "text-cyan-400" : "text-rose-400"))}>
+          <div className="border-t sm:border-t-0 sm:border-r border-slate-200 pt-1 sm:pt-0 sm:pr-2">
+            <span className="text-[10px] text-slate-500 font-bold uppercase">Variance</span>
+            <p className={cn("font-black text-sm", variance === 0 ? "text-slate-500" : (variance > 0 ? "text-cyan-700" : "text-rose-600"))}>
               {isCounted ? `${variance > 0 ? '+' : ''}${variance} pcs` : '-'}
             </p>
           </div>
@@ -178,28 +179,28 @@ const ProductAuditCard = React.memo<ProductAuditCardProps>(({
 
         {/* Quick Add Buttons & Custom Count */}
         <div className="flex flex-wrap items-center justify-between gap-1.5 pt-0.5">
-          <div className="flex items-center gap-1 flex-wrap">
-            <span className="text-[10px] text-slate-400 font-bold font-sans">Quick:</span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[11px] text-slate-500 font-bold font-sans">Quick:</span>
             {[1, 5, 10, 12, 24].map((q) => (
               <Button
                 key={q}
                 size="sm"
                 variant="outline"
                 onClick={() => onQuickAdd(product, q, 'shop')}
-                className="h-7 px-2 rounded-lg bg-slate-800/90 border-slate-700 hover:bg-primary hover:text-slate-950 text-xs font-black transition-colors"
+                className="h-8 px-2.5 rounded-xl bg-slate-100 hover:bg-primary hover:text-white text-slate-800 border-slate-300 text-xs font-black transition-colors"
               >
                 +{q}
               </Button>
             ))}
           </div>
 
-          <div className="flex items-center gap-1 mr-auto">
+          <div className="flex items-center gap-1.5 mr-auto">
             <Button
               size="sm"
               onClick={() => onOpenCustomCount(product)}
-              className="h-7 px-2.5 rounded-lg bg-primary hover:bg-primary/90 text-slate-950 text-xs font-black gap-1"
+              className="h-8 px-3 rounded-xl bg-primary hover:bg-primary/90 text-white text-xs font-black gap-1 shadow-sm"
             >
-              <Plus className="h-3 w-3" />
+              <Plus className="h-3.5 w-3.5" />
               <span>Custom</span>
             </Button>
 
@@ -208,10 +209,10 @@ const ProductAuditCard = React.memo<ProductAuditCardProps>(({
                 size="sm"
                 variant="ghost"
                 onClick={() => onToggleExpand(product.id)}
-                className="h-7 w-7 p-0 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700"
+                className="h-8 w-8 p-0 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200"
                 title="View Count History"
               >
-                {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
             )}
           </div>
@@ -219,30 +220,30 @@ const ProductAuditCard = React.memo<ProductAuditCardProps>(({
 
         {/* Expanded Count Log */}
         {isExpanded && auditItem && auditItem.entries.length > 0 && (
-          <div className="mt-1.5 pt-1.5 border-t border-slate-800 space-y-1 font-sans text-xs">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Entries ({auditItem.entries.length}):</p>
+          <div className="mt-2 pt-2 border-t border-slate-200 space-y-1.5 font-sans text-xs">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Entries ({auditItem.entries.length}):</p>
             <div className="space-y-1 max-h-36 overflow-y-auto custom-scrollbar">
               {auditItem.entries.map((entry) => (
                 <div 
                   key={entry.id}
-                  className="flex items-center justify-between p-1.5 rounded-lg bg-slate-950/80 border border-slate-800/80 text-xs"
+                  className="flex items-center justify-between p-2 rounded-xl bg-slate-100 border border-slate-200 text-xs"
                 >
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
                     <Button
                       size="icon"
                       variant="ghost"
                       onClick={() => onDeleteEntry(product.id, entry.id)}
-                      className="h-5 w-5 text-red-400 hover:bg-red-500/10 rounded"
+                      className="h-6 w-6 text-red-500 hover:bg-red-100 rounded-lg"
                     >
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
-                    <span className="font-bold text-emerald-400">+{entry.quantity} pcs</span>
-                    <Badge variant="outline" className="text-[9px] h-3.5 py-0 uppercase border-slate-700">
+                    <span className="font-bold text-emerald-700">+{entry.quantity} pcs</span>
+                    <Badge variant="outline" className="text-[9px] h-4 py-0 uppercase bg-white border-slate-300 text-slate-700">
                       {entry.location}
                     </Badge>
                   </div>
-                  <div className="text-right text-[11px] text-slate-400">
-                    <strong className="text-slate-200">{entry.counterName}</strong> • {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  <div className="text-right text-[11px] text-slate-600">
+                    <strong className="text-slate-800">{entry.counterName}</strong> • {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
               ))}
@@ -280,14 +281,14 @@ const StockAudit: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'counted' | 'uncounted' | 'discrepancy'>('all');
 
-  // Virtual pagination limit (renders in fast chunks)
+  // Virtual pagination limit (renders in 30 item chunks)
   const [visibleLimit, setVisibleLimit] = useState<number>(30);
 
-  // Scanner modal state
+  // Html5Qrcode Scanner modal state
   const [isScannerOpen, setIsScannerOpen] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
+  const [isScannerRunning, setIsScannerRunning] = useState(false);
   const [scannerError, setScannerError] = useState<string | null>(null);
-  const scannerStreamRef = useRef<MediaStream | null>(null);
 
   // Quick Count Modal
   const [activeCountingProduct, setActiveCountingProduct] = useState<Product | null>(null);
@@ -296,24 +297,18 @@ const StockAudit: React.FC = () => {
   const [selectedUnitMultiplier, setSelectedUnitMultiplier] = useState<number>(1);
   const [selectedUnitName, setSelectedUnitName] = useState<string>('Piece (NOS)');
 
-  // QR share modal
+  // Modals
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-
-  // Commit modal
   const [isCommitModalOpen, setIsCommitModalOpen] = useState(false);
   const [isCommitting, setIsCommitting] = useState(false);
   const [commitOnlyCounted, setCommitOnlyCounted] = useState(true);
-
-  // Reset modal
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
-
-  // Expanded cards
   const [expandedProductIds, setExpandedProductIds] = useState<Record<string, boolean>>({});
 
   // Sync debounce ref
   const syncTimeoutRef = useRef<any>(null);
 
-  // 1. Load active audit on mount
+  // 1. Load active audit session
   useEffect(() => {
     let isMounted = true;
 
@@ -332,9 +327,7 @@ const StockAudit: React.FC = () => {
             return;
           }
         }
-      } catch (err) {
-        console.warn('Supabase audit fetch:', err);
-      }
+      } catch (err) {}
 
       try {
         const cached = localStorage.getItem('cached_stock_audit');
@@ -374,13 +367,11 @@ const StockAudit: React.FC = () => {
     };
   }, []);
 
-  // 3. Debounced cloud save & broadcast helper
+  // 3. Debounced cloud save & broadcast
   const saveAuditSessionDebounced = useCallback((newSession: ActiveAuditSession, sender = counterName) => {
-    // 1. Update state immediately (0ms UI latency)
     setAuditSession(newSession);
     localStorage.setItem('cached_stock_audit', JSON.stringify(newSession));
 
-    // 2. Debounce cloud persist
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     syncTimeoutRef.current = setTimeout(async () => {
       if (supabase) {
@@ -409,9 +400,7 @@ const StockAudit: React.FC = () => {
             event: 'audit_update',
             payload: { session: newSession, sender }
           });
-        } catch (err) {
-          console.warn('Sync note:', err);
-        }
+        } catch (err) {}
       }
     }, 300);
   }, [counterName]);
@@ -479,7 +468,7 @@ const StockAudit: React.FC = () => {
     showSuccess(`+${effectiveQty} added to ${product.name_en}`);
   }, [counterName, saveAuditSessionDebounced]);
 
-  // Delete individual count entry
+  // Delete individual entry
   const handleDeleteEntry = useCallback((productId: string, entryId: string) => {
     setAuditSession(prev => {
       const item = prev.items[productId];
@@ -530,57 +519,88 @@ const StockAudit: React.FC = () => {
     setSelectedUnitName('Piece (NOS)');
   }, []);
 
-  // 5. Camera Barcode Scanner
-  const startCameraScanner = async () => {
+  // 5. Html5Qrcode Barcode Scanner setup
+  const startCameraScanner = () => {
     setIsScannerOpen(true);
     setScannerError(null);
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' } }
-      });
-      scannerStreamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
-
-      if ('BarcodeDetector' in window) {
-        const barcodeDetector = new (window as any).BarcodeDetector({
-          formats: ['qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'itf']
-        });
-
-        const scanInterval = setInterval(async () => {
-          if (!videoRef.current || !isScannerOpen) {
-            clearInterval(scanInterval);
-            return;
-          }
-          try {
-            const barcodes = await barcodeDetector.detect(videoRef.current);
-            if (barcodes && barcodes.length > 0) {
-              const code = barcodes[0].rawValue;
-              clearInterval(scanInterval);
-              handleScannedCode(code);
-            }
-          } catch (e) {}
-        }, 200);
-      }
-    } catch (err) {
-      setScannerError('Could not open camera. Please grant camera permission.');
-    }
   };
 
-  const stopCameraScanner = () => {
-    if (scannerStreamRef.current) {
-      scannerStreamRef.current.getTracks().forEach(t => t.stop());
-      scannerStreamRef.current = null;
+  const stopCameraScanner = async () => {
+    if (html5QrCodeRef.current && isScannerRunning) {
+      try {
+        await html5QrCodeRef.current.stop();
+        html5QrCodeRef.current.clear();
+      } catch (err) {}
+      setIsScannerRunning(false);
     }
     setIsScannerOpen(false);
   };
 
+  useEffect(() => {
+    let html5QrCode: Html5Qrcode | null = null;
+
+    if (isScannerOpen) {
+      const timer = setTimeout(async () => {
+        try {
+          const container = document.getElementById('stock-audit-qr-reader');
+          if (!container) return;
+
+          html5QrCode = new Html5Qrcode('stock-audit-qr-reader', {
+            formatsToSupport: [
+              Html5QrcodeSupportedFormats.EAN_13,
+              Html5QrcodeSupportedFormats.EAN_8,
+              Html5QrcodeSupportedFormats.CODE_128,
+              Html5QrcodeSupportedFormats.CODE_39,
+              Html5QrcodeSupportedFormats.UPC_A,
+              Html5QrcodeSupportedFormats.UPC_E,
+              Html5QrcodeSupportedFormats.UPC_EAN_EXTENSION,
+              Html5QrcodeSupportedFormats.ITF,
+              Html5QrcodeSupportedFormats.QR_CODE
+            ],
+            verbose: false
+          });
+          html5QrCodeRef.current = html5QrCode;
+
+          const config = {
+            fps: 15,
+            qrbox: { width: 250, height: 160 },
+            aspectRatio: 1.3333
+          };
+
+          await html5QrCode.start(
+            { facingMode: 'environment' },
+            config,
+            (decodedText) => {
+              if (decodedText) {
+                handleScannedCode(decodedText);
+              }
+            },
+            () => {}
+          );
+          setIsScannerRunning(true);
+        } catch (err: any) {
+          console.error('Html5Qrcode start error:', err);
+          setScannerError(err?.message || 'Could not access camera. Please allow camera permissions.');
+        }
+      }, 250);
+
+      return () => {
+        clearTimeout(timer);
+        if (html5QrCode) {
+          html5QrCode.stop().catch(() => {}).finally(() => {
+            html5QrCode?.clear();
+          });
+        }
+      };
+    }
+  }, [isScannerOpen]);
+
   const handleScannedCode = (code: string) => {
     stopCameraScanner();
     playBeep(1050, 'sine', 0.15);
+    try {
+      if (navigator.vibrate) navigator.vibrate(100);
+    } catch (e) {}
 
     const cleanCode = code.trim().toLowerCase();
     const matchedProduct = products.find(p => 
@@ -593,7 +613,7 @@ const StockAudit: React.FC = () => {
       showSuccess(`Scanned: ${matchedProduct.name_en}`);
     } else {
       setSearchTerm(cleanCode);
-      showError(`No product found with barcode "${code}".`);
+      showError(`No product found with barcode "${code}". Filtered in search.`);
     }
   };
 
@@ -632,12 +652,11 @@ const StockAudit: React.FC = () => {
     return filteredProducts.slice(0, visibleLimit);
   }, [filteredProducts, visibleLimit]);
 
-  // Reset pagination limit on search/filter change
   useEffect(() => {
     setVisibleLimit(30);
   }, [searchTerm, filterMode]);
 
-  // Summary statistics
+  // Statistics
   const stats = useMemo(() => {
     const totalProducts = products.length;
     let countedCount = 0;
@@ -670,7 +689,7 @@ const StockAudit: React.FC = () => {
     };
   }, [products, auditSession.items]);
 
-  // Commit to inventory
+  // Commit audit to inventory
   const handleCommitAudit = async () => {
     setIsCommitting(true);
     try {
@@ -780,27 +799,27 @@ const StockAudit: React.FC = () => {
   const auditShareUrl = window.location.origin + '/stock-audit';
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-faruma flex flex-col pb-24 selection:bg-primary/30" dir="rtl">
-      {/* Top Bar */}
-      <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800/80 px-3.5 py-2.5 shadow-md">
+    <div className="min-h-screen bg-slate-100 text-slate-900 font-faruma flex flex-col pb-24 selection:bg-primary/20" dir="rtl">
+      {/* Top Header Bar (Light Mode) */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3.5 py-2.5 shadow-sm">
         <div className="flex items-center justify-between gap-2 max-w-7xl mx-auto">
           <div className="flex items-center gap-2">
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={() => navigate('/stock')}
-              className="h-9 w-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300"
+              className="h-9 w-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
               <div className="flex items-center gap-1.5">
-                <h1 className="text-base font-black text-white leading-tight">ސްޓޮކް އޮޑިޓް</h1>
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[9px] font-bold py-0 h-4">
+                <h1 className="text-base font-black text-slate-900 leading-tight">ސްޓޮކް އޮޑިޓް</h1>
+                <Badge className="bg-primary/15 text-primary border-primary/30 text-[9px] font-bold py-0 h-4 shadow-none">
                   Mobile
                 </Badge>
               </div>
-              <p className="text-[10px] text-slate-400 font-sans">Multi-Device Live Audit</p>
+              <p className="text-[10px] text-slate-500 font-sans">Multi-Device Live Audit</p>
             </div>
           </div>
 
@@ -808,13 +827,13 @@ const StockAudit: React.FC = () => {
             {/* Live Indicator */}
             <div 
               className={cn(
-                "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border",
+                "flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border",
                 isRealtimeActive 
-                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" 
-                  : "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-300" 
+                  : "bg-amber-50 text-amber-700 border-amber-300"
               )}
             >
-              <span className={cn("h-1.5 w-1.5 rounded-full", isRealtimeActive ? "bg-emerald-500 animate-pulse" : "bg-amber-500")} />
+              <span className={cn("h-1.5 w-1.5 rounded-full", isRealtimeActive ? "bg-emerald-600 animate-pulse" : "bg-amber-500")} />
               <span className="font-sans">{isRealtimeActive ? 'Live' : 'Local'}</span>
             </div>
 
@@ -826,9 +845,9 @@ const StockAudit: React.FC = () => {
                 setTempCounterName(counterName);
                 setIsCounterNameDialogOpen(true);
               }}
-              className="h-8 px-2.5 rounded-xl bg-slate-800 border-slate-700 hover:bg-slate-700 text-[11px] font-bold gap-1 text-slate-200"
+              className="h-8 px-2.5 rounded-xl bg-slate-50 border-slate-300 hover:bg-slate-100 text-[11px] font-bold gap-1 text-slate-800"
             >
-              <UserIcon className="h-3 w-3 text-primary" />
+              <UserIcon className="h-3.5 w-3.5 text-primary" />
               <span className="max-w-[70px] truncate">{counterName}</span>
             </Button>
 
@@ -837,9 +856,9 @@ const StockAudit: React.FC = () => {
               variant="ghost"
               size="icon"
               onClick={() => setIsShareModalOpen(true)}
-              className="h-8 w-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300"
+              className="h-8 w-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700"
             >
-              <QrCode className="h-3.5 w-3.5" />
+              <QrCode className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -847,14 +866,14 @@ const StockAudit: React.FC = () => {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 space-y-3">
-        {/* Compact Progress Dashboard */}
-        <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 shadow-lg space-y-2.5">
+        {/* Progress Dashboard (Light Mode) */}
+        <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-2.5">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <span className="text-[10px] text-slate-400 font-bold uppercase">Audit Progress</span>
+              <span className="text-[10px] text-slate-500 font-bold uppercase">Audit Progress</span>
               <div className="flex items-baseline gap-1.5">
-                <span className="text-xl font-black text-white">{stats.countedCount}</span>
-                <span className="text-xs text-slate-400">/ {stats.totalProducts} items ({stats.progressPercent}%)</span>
+                <span className="text-xl font-black text-slate-900">{stats.countedCount}</span>
+                <span className="text-xs text-slate-500">/ {stats.totalProducts} items ({stats.progressPercent}%)</span>
               </div>
             </div>
 
@@ -863,9 +882,9 @@ const StockAudit: React.FC = () => {
                 variant="outline"
                 size="sm"
                 onClick={handleExportExcel}
-                className="h-7 px-2.5 rounded-lg bg-slate-800 border-slate-700 hover:bg-slate-700 text-xs font-bold gap-1 text-emerald-400"
+                className="h-8 px-2.5 rounded-xl bg-slate-50 border-slate-300 hover:bg-slate-100 text-xs font-bold gap-1 text-emerald-700"
               >
-                <FileSpreadsheet className="h-3 w-3" />
+                <FileSpreadsheet className="h-3.5 w-3.5" />
                 <span>Export</span>
               </Button>
 
@@ -873,33 +892,33 @@ const StockAudit: React.FC = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsResetModalOpen(true)}
-                className="h-7 px-2.5 rounded-lg bg-slate-800 border-slate-700 hover:bg-red-500/20 text-xs font-bold gap-1 text-red-400"
+                className="h-8 px-2.5 rounded-xl bg-slate-50 border-slate-300 hover:bg-red-50 text-xs font-bold gap-1 text-red-600"
               >
-                <RotateCcw className="h-3 w-3" />
+                <RotateCcw className="h-3.5 w-3.5" />
                 <span>Reset</span>
               </Button>
             </div>
           </div>
 
-          <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+          <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
             <div 
               className="bg-gradient-to-r from-amber-500 via-primary to-emerald-500 h-full rounded-full transition-all duration-300"
               style={{ width: `${stats.progressPercent}%` }}
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-1.5 pt-0.5">
-            <div className="bg-slate-950/70 p-2 rounded-xl border border-slate-800/80 text-center">
-              <p className="text-[9px] text-slate-400 font-bold uppercase">Counted</p>
-              <p className="text-sm font-black text-emerald-400">{stats.countedCount}</p>
+          <div className="grid grid-cols-3 gap-2 pt-0.5">
+            <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 text-center">
+              <p className="text-[9px] text-slate-500 font-bold uppercase">Counted</p>
+              <p className="text-sm font-black text-emerald-700">{stats.countedCount}</p>
             </div>
-            <div className="bg-slate-950/70 p-2 rounded-xl border border-slate-800/80 text-center">
-              <p className="text-[9px] text-slate-400 font-bold uppercase">Uncounted</p>
-              <p className="text-sm font-black text-amber-400">{stats.uncountedCount}</p>
+            <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 text-center">
+              <p className="text-[9px] text-slate-500 font-bold uppercase">Uncounted</p>
+              <p className="text-sm font-black text-amber-700">{stats.uncountedCount}</p>
             </div>
-            <div className="bg-slate-950/70 p-2 rounded-xl border border-slate-800/80 text-center">
-              <p className="text-[9px] text-slate-400 font-bold uppercase">Discrepancy</p>
-              <p className="text-sm font-black text-rose-400">{stats.discrepancyCount}</p>
+            <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 text-center">
+              <p className="text-[9px] text-slate-500 font-bold uppercase">Discrepancy</p>
+              <p className="text-sm font-black text-rose-600">{stats.discrepancyCount}</p>
             </div>
           </div>
         </div>
@@ -907,41 +926,42 @@ const StockAudit: React.FC = () => {
         {/* Search Bar + Barcode Scanner Trigger */}
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search product name, barcode, code..."
-              className="h-11 pr-9 pl-8 rounded-xl bg-slate-900 border-slate-800 text-white placeholder:text-slate-500 font-bold text-xs"
+              className="h-12 pr-10 pl-9 rounded-2xl bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 font-bold text-sm shadow-sm"
             />
             {searchTerm && (
               <button 
                 onClick={() => setSearchTerm('')}
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white"
+                className="absolute left-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800"
               >
-                <X className="h-3 w-3" />
+                <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
 
           <Button
             onClick={startCameraScanner}
-            className="h-11 px-3.5 rounded-xl bg-primary hover:bg-primary/90 text-slate-950 font-black gap-1.5 shadow-md shrink-0 text-xs"
+            className="h-12 px-4 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black gap-1.5 shadow-md shrink-0 text-xs"
           >
-            <Camera className="h-4 w-4" />
-            <span>Scan</span>
+            <Camera className="h-5 w-5" />
+            <span className="hidden sm:inline">Scan Barcode</span>
+            <span className="sm:hidden">Scan</span>
           </Button>
         </div>
 
-        {/* Filter Chips */}
+        {/* Filter Chips (Light Mode) */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar text-xs font-bold">
           <button
             onClick={() => setFilterMode('all')}
             className={cn(
-              "px-3 py-1.5 rounded-lg border transition-colors whitespace-nowrap text-xs",
+              "px-3.5 py-2 rounded-xl border transition-colors whitespace-nowrap text-xs shadow-sm",
               filterMode === 'all'
-                ? "bg-primary text-slate-950 border-primary font-black"
-                : "bg-slate-900 text-slate-300 border-slate-800"
+                ? "bg-primary text-white border-primary font-black"
+                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
             )}
           >
             All ({products.length})
@@ -949,10 +969,10 @@ const StockAudit: React.FC = () => {
           <button
             onClick={() => setFilterMode('counted')}
             className={cn(
-              "px-3 py-1.5 rounded-lg border transition-colors whitespace-nowrap text-xs",
+              "px-3.5 py-2 rounded-xl border transition-colors whitespace-nowrap text-xs shadow-sm",
               filterMode === 'counted'
-                ? "bg-emerald-500 text-slate-950 border-emerald-500 font-black"
-                : "bg-slate-900 text-slate-300 border-slate-800"
+                ? "bg-emerald-600 text-white border-emerald-600 font-black"
+                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
             )}
           >
             Counted ({stats.countedCount})
@@ -960,10 +980,10 @@ const StockAudit: React.FC = () => {
           <button
             onClick={() => setFilterMode('uncounted')}
             className={cn(
-              "px-3 py-1.5 rounded-lg border transition-colors whitespace-nowrap text-xs",
+              "px-3.5 py-2 rounded-xl border transition-colors whitespace-nowrap text-xs shadow-sm",
               filterMode === 'uncounted'
-                ? "bg-amber-500 text-slate-950 border-amber-500 font-black"
-                : "bg-slate-900 text-slate-300 border-slate-800"
+                ? "bg-amber-600 text-white border-amber-600 font-black"
+                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
             )}
           >
             Uncounted ({stats.uncountedCount})
@@ -971,22 +991,22 @@ const StockAudit: React.FC = () => {
           <button
             onClick={() => setFilterMode('discrepancy')}
             className={cn(
-              "px-3 py-1.5 rounded-lg border transition-colors whitespace-nowrap text-xs",
+              "px-3.5 py-2 rounded-xl border transition-colors whitespace-nowrap text-xs shadow-sm",
               filterMode === 'discrepancy'
-                ? "bg-rose-500 text-slate-950 border-rose-500 font-black"
-                : "bg-slate-900 text-slate-300 border-slate-800"
+                ? "bg-rose-600 text-white border-rose-600 font-black"
+                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
             )}
           >
             Discrepancies ({stats.discrepancyCount})
           </button>
         </div>
 
-        {/* Virtualized / Chunked Product List */}
+        {/* Product List */}
         <div className="space-y-2.5">
           {visibleProducts.length === 0 ? (
-            <div className="p-8 text-center rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
-              <Boxes className="h-8 w-8 text-slate-600 mx-auto" />
-              <p className="text-slate-400 font-bold text-xs">No products matched</p>
+            <div className="p-10 text-center rounded-2xl bg-white border border-slate-200 space-y-2 shadow-sm">
+              <Boxes className="h-8 w-8 text-slate-400 mx-auto" />
+              <p className="text-slate-600 font-bold text-sm">No products matched your search or filter</p>
             </div>
           ) : (
             visibleProducts.map((product) => (
@@ -1009,7 +1029,7 @@ const StockAudit: React.FC = () => {
               <Button
                 variant="outline"
                 onClick={() => setVisibleLimit(prev => Math.min(filteredProducts.length, prev + 30))}
-                className="w-full h-10 rounded-xl bg-slate-900 border-slate-800 text-xs font-bold text-slate-200 hover:bg-slate-800"
+                className="w-full h-11 rounded-2xl bg-white border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-sm"
               >
                 Load More ({filteredProducts.length - visibleProducts.length} remaining)
               </Button>
@@ -1018,21 +1038,21 @@ const StockAudit: React.FC = () => {
         </div>
       </main>
 
-      {/* Floating Bottom Apply Bar */}
-      <footer className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 p-2.5 shadow-2xl">
+      {/* Floating Bottom Apply Bar (Light Mode) */}
+      <footer className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 shadow-lg">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
           <Button
             onClick={startCameraScanner}
-            className="h-11 px-4 rounded-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 text-white font-bold gap-1.5 text-xs"
+            className="h-12 px-5 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 font-bold gap-2 text-xs shadow-sm"
           >
             <Camera className="h-4 w-4 text-primary" />
-            <span>Scan</span>
+            <span>Scan Barcode</span>
           </Button>
 
           <Button
             onClick={() => setIsCommitModalOpen(true)}
             disabled={stats.countedCount === 0}
-            className="h-11 px-5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black gap-1.5 text-xs shadow-lg shadow-emerald-500/20"
+            className="h-12 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black gap-2 text-xs shadow-md shadow-emerald-600/20"
           >
             <Save className="h-4 w-4" />
             <span>Apply Audit ({stats.countedCount})</span>
@@ -1040,44 +1060,44 @@ const StockAudit: React.FC = () => {
         </div>
       </footer>
 
-      {/* 1. Custom Count Dialog */}
+      {/* 1. Custom Count Dialog (Light Mode) */}
       <Dialog open={!!activeCountingProduct} onOpenChange={(open) => !open && setActiveCountingProduct(null)}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-sm p-4 rounded-2xl font-faruma" dir="rtl">
+        <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-sm p-5 rounded-3xl font-faruma shadow-2xl" dir="rtl">
           {activeCountingProduct && (
-            <div className="space-y-3">
+            <div className="space-y-3.5">
               <DialogHeader className="text-right space-y-0.5">
-                <DialogTitle className="text-base font-black text-white">{activeCountingProduct.name_dv}</DialogTitle>
-                <DialogDescription className="text-xs text-slate-400 font-sans">{activeCountingProduct.name_en}</DialogDescription>
+                <DialogTitle className="text-base font-black text-slate-900">{activeCountingProduct.name_dv}</DialogTitle>
+                <DialogDescription className="text-xs text-slate-500 font-sans">{activeCountingProduct.name_en}</DialogDescription>
               </DialogHeader>
 
               {/* Location Switcher */}
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-300 font-sans">Location:</label>
-                <div className="grid grid-cols-2 gap-1.5 font-sans">
+                <label className="text-[11px] font-bold text-slate-600 font-sans">Location:</label>
+                <div className="grid grid-cols-2 gap-2 font-sans">
                   <button
                     type="button"
                     onClick={() => setCountLocation('shop')}
                     className={cn(
-                      "p-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all",
+                      "p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all",
                       countLocation === 'shop'
-                        ? "bg-primary text-slate-950 border-primary font-black"
-                        : "bg-slate-950 border-slate-800 text-slate-300"
+                        ? "bg-primary text-white border-primary font-black shadow-sm"
+                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
                     )}
                   >
-                    <Store className="h-3.5 w-3.5" />
+                    <Store className="h-4 w-4" />
                     <span>Shop Shelf</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setCountLocation('godown')}
                     className={cn(
-                      "p-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all",
+                      "p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all",
                       countLocation === 'godown'
-                        ? "bg-primary text-slate-950 border-primary font-black"
-                        : "bg-slate-950 border-slate-800 text-slate-300"
+                        ? "bg-primary text-white border-primary font-black shadow-sm"
+                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
                     )}
                   >
-                    <Warehouse className="h-3.5 w-3.5" />
+                    <Warehouse className="h-4 w-4" />
                     <span>Godown</span>
                   </button>
                 </div>
@@ -1086,7 +1106,7 @@ const StockAudit: React.FC = () => {
               {/* Unit multiplier if available */}
               {activeCountingProduct.units && Array.isArray(activeCountingProduct.units) && activeCountingProduct.units.length > 0 && (
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-300 font-sans">Unit Size:</label>
+                  <label className="text-[11px] font-bold text-slate-600 font-sans">Unit Size:</label>
                   <div className="flex flex-wrap gap-1 font-sans">
                     <Button
                       type="button"
@@ -1097,8 +1117,8 @@ const StockAudit: React.FC = () => {
                         setSelectedUnitName('Piece (NOS)');
                       }}
                       className={cn(
-                        "h-7 text-xs font-bold rounded-lg",
-                        selectedUnitMultiplier === 1 ? "bg-primary text-slate-950" : "bg-slate-950 border-slate-800 text-slate-300"
+                        "h-8 text-xs font-bold rounded-xl",
+                        selectedUnitMultiplier === 1 ? "bg-primary text-white" : "bg-slate-50 border-slate-200 text-slate-700"
                       )}
                     >
                       Piece (1 pc)
@@ -1117,8 +1137,8 @@ const StockAudit: React.FC = () => {
                             setSelectedUnitName(uName);
                           }}
                           className={cn(
-                            "h-7 text-xs font-bold rounded-lg",
-                            selectedUnitMultiplier === mult ? "bg-primary text-slate-950" : "bg-slate-950 border-slate-800 text-slate-300"
+                            "h-8 text-xs font-bold rounded-xl",
+                            selectedUnitMultiplier === mult ? "bg-primary text-white" : "bg-slate-50 border-slate-200 text-slate-700"
                           )}
                         >
                           {uName} ({mult} pcs)
@@ -1131,41 +1151,41 @@ const StockAudit: React.FC = () => {
 
               {/* Quantity Stepper */}
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-300 font-sans">Quantity:</label>
-                <div className="flex items-center gap-1.5">
+                <label className="text-[11px] font-bold text-slate-600 font-sans">Quantity to Add:</label>
+                <div className="flex items-center gap-2">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setCountInput(prev => String(Math.max(1, (parseInt(prev) || 1) - 1)))}
-                    className="h-10 w-10 rounded-xl bg-slate-800 border-slate-700 text-white"
+                    className="h-12 w-12 rounded-2xl bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200"
                   >
-                    <Minus className="h-4 w-4" />
+                    <Minus className="h-5 w-5" />
                   </Button>
                   <Input
                     type="number"
                     min="1"
                     value={countInput}
                     onChange={(e) => setCountInput(e.target.value)}
-                    className="h-10 text-center text-lg font-black rounded-xl bg-slate-950 border-slate-800 text-white font-sans"
+                    className="h-12 text-center text-xl font-black rounded-2xl bg-slate-50 border-slate-300 text-slate-900 font-sans"
                     autoFocus
                   />
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setCountInput(prev => String((parseInt(prev) || 0) + 1))}
-                    className="h-10 w-10 rounded-xl bg-slate-800 border-slate-700 text-white"
+                    className="h-12 w-12 rounded-2xl bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-5 w-5" />
                   </Button>
                 </div>
               </div>
 
-              <DialogFooter className="flex-row gap-2 pt-1">
+              <DialogFooter className="flex-row gap-2 pt-2">
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={() => setActiveCountingProduct(null)}
-                  className="flex-1 h-10 rounded-xl bg-slate-800 border-slate-700 text-slate-300 text-xs"
+                  className="flex-1 h-11 rounded-2xl bg-slate-100 border-slate-300 text-slate-700 text-xs font-bold"
                 >
                   Cancel
                 </Button>
@@ -1178,7 +1198,7 @@ const StockAudit: React.FC = () => {
                       setActiveCountingProduct(null);
                     }
                   }}
-                  className="flex-1 h-10 rounded-xl bg-primary hover:bg-primary/90 text-slate-950 font-black text-xs"
+                  className="flex-1 h-11 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-xs shadow-md"
                 >
                   Add Count
                 </Button>
@@ -1188,42 +1208,42 @@ const StockAudit: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 2. Camera Barcode Scanner */}
+      {/* 2. Html5Qrcode Camera Scanner Modal */}
       <Dialog open={isScannerOpen} onOpenChange={(open) => !open && stopCameraScanner()}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-sm p-4 rounded-2xl font-faruma" dir="rtl">
+        <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-sm p-5 rounded-3xl font-faruma shadow-2xl" dir="rtl">
           <DialogHeader className="text-right space-y-0.5">
-            <DialogTitle className="text-base font-black text-white">Camera Scanner</DialogTitle>
-            <DialogDescription className="text-xs text-slate-400 font-sans">
-              Point camera at any barcode
+            <DialogTitle className="text-base font-black text-slate-900 flex items-center justify-end gap-2">
+              <Camera className="h-5 w-5 text-primary" />
+              <span>Camera Barcode Scanner</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 font-sans">
+              Aim camera at any product barcode or QR code
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-2">
-            <div className="relative aspect-video rounded-xl bg-black overflow-hidden border border-slate-800 flex items-center justify-center">
-              <video 
-                ref={videoRef} 
-                playsInline 
-                muted 
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                <div className="w-44 h-24 border-2 border-primary/80 rounded-lg shadow-[0_0_15px_rgba(249,115,22,0.4)] animate-pulse" />
-              </div>
-            </div>
+          <div className="space-y-3 py-1">
+            {/* Dedicated HTML5-QRCode Render Container */}
+            <div 
+              id="stock-audit-qr-reader" 
+              className="w-full rounded-2xl overflow-hidden bg-black aspect-[4/3] flex items-center justify-center border border-slate-200"
+            />
 
             {scannerError && (
-              <p className="text-xs text-rose-400 font-bold text-center font-sans">{scannerError}</p>
+              <p className="text-xs text-rose-600 font-bold text-center font-sans bg-rose-50 p-2 rounded-xl border border-rose-200">
+                {scannerError}
+              </p>
             )}
 
             <div className="space-y-1 font-sans">
+              <label className="text-[11px] font-bold text-slate-500">Or type barcode manually:</label>
               <Input
-                placeholder="Or type barcode..."
+                placeholder="Enter barcode..."
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && e.currentTarget.value) {
                     handleScannedCode(e.currentTarget.value);
                   }
                 }}
-                className="h-9 rounded-xl bg-slate-950 border-slate-800 text-white text-xs"
+                className="h-10 rounded-xl bg-slate-50 border-slate-300 text-slate-900 text-xs"
               />
             </div>
           </div>
@@ -1233,9 +1253,9 @@ const StockAudit: React.FC = () => {
               type="button" 
               variant="outline" 
               onClick={stopCameraScanner}
-              className="w-full h-9 rounded-xl bg-slate-800 border-slate-700 text-slate-300 font-bold text-xs"
+              className="w-full h-10 rounded-2xl bg-slate-100 border-slate-300 text-slate-700 font-bold text-xs"
             >
-              Close
+              Close Camera
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1243,16 +1263,16 @@ const StockAudit: React.FC = () => {
 
       {/* 3. QR Share Dialog */}
       <Dialog open={isShareModalOpen} onOpenChange={setIsShareModalOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-xs p-5 rounded-2xl font-faruma text-center" dir="rtl">
+        <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-xs p-5 rounded-3xl font-faruma text-center shadow-2xl" dir="rtl">
           <DialogHeader className="space-y-0.5">
-            <DialogTitle className="text-base font-black text-white">Join Stock Audit</DialogTitle>
-            <DialogDescription className="text-xs text-slate-400 font-sans">
-              Scan with mobile camera to start counting
+            <DialogTitle className="text-base font-black text-slate-900">Join Stock Audit</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 font-sans">
+              Scan with phone camera to start counting together
             </DialogDescription>
           </DialogHeader>
 
           <div className="py-3 flex flex-col items-center justify-center space-y-3">
-            <div className="p-3 bg-white rounded-2xl shadow-xl">
+            <div className="p-3 bg-white border border-slate-200 rounded-2xl shadow-md">
               <QRCodeSVG value={auditShareUrl} size={160} />
             </div>
 
@@ -1262,10 +1282,10 @@ const StockAudit: React.FC = () => {
                   navigator.clipboard.writeText(auditShareUrl);
                   showSuccess('Audit link copied!');
                 }}
-                className="w-full h-9 rounded-xl bg-primary hover:bg-primary/90 text-slate-950 font-bold text-xs gap-1"
+                className="w-full h-10 rounded-2xl bg-primary hover:bg-primary/90 text-white font-bold text-xs gap-1.5 shadow-sm"
               >
-                <Share2 className="h-3.5 w-3.5" />
-                <span>Copy Link</span>
+                <Share2 className="h-4 w-4" />
+                <span>Copy Audit Link</span>
               </Button>
             </div>
           </div>
@@ -1275,7 +1295,7 @@ const StockAudit: React.FC = () => {
               type="button" 
               variant="outline" 
               onClick={() => setIsShareModalOpen(false)}
-              className="w-full h-9 rounded-xl bg-slate-800 border-slate-700 text-slate-300 text-xs"
+              className="w-full h-10 rounded-2xl bg-slate-100 border-slate-300 text-slate-700 text-xs font-bold"
             >
               Close
             </Button>
@@ -1285,11 +1305,11 @@ const StockAudit: React.FC = () => {
 
       {/* 4. Counter Name Dialog */}
       <Dialog open={isCounterNameDialogOpen} onOpenChange={setIsCounterNameDialogOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-xs p-4 rounded-2xl font-faruma" dir="rtl">
+        <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-xs p-5 rounded-3xl font-faruma shadow-2xl" dir="rtl">
           <DialogHeader className="text-right space-y-0.5">
-            <DialogTitle className="text-base font-black text-white">Counter Name</DialogTitle>
-            <DialogDescription className="text-xs text-slate-400 font-sans">
-              Your name for count timestamps
+            <DialogTitle className="text-base font-black text-slate-900">Counter Profile Name</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 font-sans">
+              This name is stamped on all counts you add
             </DialogDescription>
           </DialogHeader>
 
@@ -1298,7 +1318,7 @@ const StockAudit: React.FC = () => {
               value={tempCounterName}
               onChange={(e) => setTempCounterName(e.target.value)}
               placeholder="e.g. Ahmed or Counter 1"
-              className="h-10 rounded-xl bg-slate-950 border-slate-800 text-white font-bold text-xs"
+              className="h-11 rounded-2xl bg-slate-50 border-slate-300 text-slate-900 font-bold text-sm"
               autoFocus
             />
           </div>
@@ -1308,7 +1328,7 @@ const StockAudit: React.FC = () => {
               type="button" 
               variant="outline" 
               onClick={() => setIsCounterNameDialogOpen(false)}
-              className="flex-1 h-9 rounded-xl bg-slate-800 border-slate-700 text-slate-300 text-xs"
+              className="flex-1 h-10 rounded-2xl bg-slate-100 border-slate-300 text-slate-700 text-xs font-bold"
             >
               Cancel
             </Button>
@@ -1322,9 +1342,9 @@ const StockAudit: React.FC = () => {
                   showSuccess(`Counter set to ${tempCounterName.trim()}`);
                 }
               }}
-              className="flex-1 h-9 rounded-xl bg-primary hover:bg-primary/90 text-slate-950 font-black text-xs"
+              className="flex-1 h-10 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-xs shadow-md"
             >
-              Save
+              Save Name
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1332,45 +1352,45 @@ const StockAudit: React.FC = () => {
 
       {/* 5. Commit Confirmation */}
       <Dialog open={isCommitModalOpen} onOpenChange={setIsCommitModalOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-sm p-4 rounded-2xl font-faruma" dir="rtl">
+        <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-sm p-5 rounded-3xl font-faruma shadow-2xl" dir="rtl">
           <DialogHeader className="text-right space-y-0.5">
-            <DialogTitle className="text-base font-black text-white flex items-center justify-end gap-1.5">
-              <AlertTriangle className="h-4 w-4 text-amber-400" />
-              <span>Apply to Inventory</span>
+            <DialogTitle className="text-base font-black text-slate-900 flex items-center justify-end gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              <span>Apply to Store Inventory</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-400 font-sans">
+            <DialogDescription className="text-xs text-slate-500 font-sans">
               Updates store stock to match counted numbers.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-2 space-y-2 font-sans text-xs">
-            <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 space-y-1.5">
+          <div className="py-2 space-y-2.5 font-sans text-xs">
+            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-1.5">
               <div className="flex justify-between">
-                <span className="text-slate-400">Products Counted:</span>
-                <strong className="text-white">{stats.countedCount} items</strong>
+                <span className="text-slate-500">Products Counted:</span>
+                <strong className="text-slate-900 font-black">{stats.countedCount} items</strong>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Discrepancies:</span>
-                <strong className="text-amber-400">{stats.discrepancyCount} items</strong>
+                <span className="text-slate-500">Discrepancies:</span>
+                <strong className="text-amber-700 font-black">{stats.discrepancyCount} items</strong>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Variance Value:</span>
-                <strong className={stats.totalVarianceValue >= 0 ? "text-emerald-400" : "text-rose-400"}>
+                <span className="text-slate-500">Variance Value:</span>
+                <strong className={stats.totalVarianceValue >= 0 ? "text-emerald-700" : "text-rose-600"}>
                   {stats.totalVarianceValue >= 0 ? '+' : ''}{formatCurrency(stats.totalVarianceValue)}
                 </strong>
               </div>
             </div>
 
-            <div className="flex items-center space-x-2 rtl:space-x-reverse text-xs text-slate-300">
+            <div className="flex items-center space-x-2 rtl:space-x-reverse text-xs text-slate-700">
               <input 
                 type="checkbox"
                 id="commitOnlyCounted"
                 checked={commitOnlyCounted}
                 onChange={(e) => setCommitOnlyCounted(e.target.checked)}
-                className="rounded border-slate-700 bg-slate-950 text-primary"
+                className="rounded border-slate-300 text-primary"
               />
               <label htmlFor="commitOnlyCounted" className="cursor-pointer">
-                Only update <strong>counted products</strong>
+                Only update <strong>counted products</strong> (leave uncounted as is)
               </label>
             </div>
           </div>
@@ -1380,7 +1400,7 @@ const StockAudit: React.FC = () => {
               type="button" 
               variant="outline" 
               onClick={() => setIsCommitModalOpen(false)}
-              className="flex-1 h-10 rounded-xl bg-slate-800 border-slate-700 text-slate-300 text-xs font-bold"
+              className="flex-1 h-11 rounded-2xl bg-slate-100 border-slate-300 text-slate-700 text-xs font-bold"
             >
               Cancel
             </Button>
@@ -1388,7 +1408,7 @@ const StockAudit: React.FC = () => {
               type="button" 
               onClick={handleCommitAudit}
               disabled={isCommitting}
-              className="flex-1 h-10 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-xs"
+              className="flex-1 h-11 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-md"
             >
               {isCommitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm & Apply'}
             </Button>
@@ -1398,13 +1418,13 @@ const StockAudit: React.FC = () => {
 
       {/* 6. Reset Confirmation */}
       <Dialog open={isResetModalOpen} onOpenChange={setIsResetModalOpen}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-xs p-4 rounded-2xl font-faruma" dir="rtl">
+        <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-xs p-5 rounded-3xl font-faruma shadow-2xl" dir="rtl">
           <DialogHeader className="text-right space-y-0.5">
-            <DialogTitle className="text-base font-black text-rose-400 flex items-center justify-end gap-1.5">
-              <AlertTriangle className="h-4 w-4" />
+            <DialogTitle className="text-base font-black text-rose-600 flex items-center justify-end gap-1.5">
+              <AlertTriangle className="h-5 w-5" />
               <span>Reset Audit Session?</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-400 font-sans">
+            <DialogDescription className="text-xs text-slate-500 font-sans">
               Resets all counted quantities to start fresh.
             </DialogDescription>
           </DialogHeader>
@@ -1414,14 +1434,14 @@ const StockAudit: React.FC = () => {
               type="button" 
               variant="outline" 
               onClick={() => setIsResetModalOpen(false)}
-              className="flex-1 h-9 rounded-xl bg-slate-800 border-slate-700 text-slate-300 text-xs"
+              className="flex-1 h-10 rounded-2xl bg-slate-100 border-slate-300 text-slate-700 text-xs font-bold"
             >
               Cancel
             </Button>
             <Button 
               type="button" 
               onClick={handleResetAudit}
-              className="flex-1 h-9 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs"
+              className="flex-1 h-10 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-md"
             >
               Reset
             </Button>

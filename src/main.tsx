@@ -6,16 +6,36 @@ import { AppProviderWithPriceDialog } from "./context/AppProviderWithPriceDialog
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { registerSW } from "virtual:pwa-register";
 
-// Auto-update service worker
-registerSW({ immediate: true });
+// Auto-recover from stale dynamic module/chunk errors during new deployments
+window.addEventListener("vite:preloadError", () => {
+  const lastReload = sessionStorage.getItem("vite_preload_error_reload");
+  const now = Date.now();
+  if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
+    sessionStorage.setItem("vite_preload_error_reload", now.toString());
+    window.location.reload();
+  }
+});
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
-  });
+// Auto-update service worker via VitePWA
+const updateSW = registerSW({
+  onNeedRefresh() {
+    updateSW(true);
+  },
+  onOfflineReady() {
+    console.log("App ready to work offline");
+  },
+});
+
+// Clear legacy manual caches if any
+if ("caches" in window) {
+  caches.keys().then((names) => {
+    names.forEach((name) => {
+      if (name === "mvpos-cache-v1") {
+        caches.delete(name);
+      }
+    });
+  }).catch(() => {});
 }
-
-
 
 createRoot(document.getElementById("root")!).render(
   <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">

@@ -17,7 +17,7 @@ export default defineConfig(() => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "pwa-192x192.png", "pwa-512x512.png"],
       devOptions: {
-        enabled: true,
+        enabled: false,
       },
       manifest: {
         id: "/",
@@ -52,6 +52,9 @@ export default defineConfig(() => ({
         ],
       },
       workbox: {
+        cleanupOutdatedCaches: true,
+        navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/^\/assets\//, /^\/fonts\//, /^\/api\//, /\.[a-zA-Z0-9]+$/],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff,woff2,ttf}"],
         runtimeCaching: [

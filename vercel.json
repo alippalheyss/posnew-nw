@@ -4,8 +4,8 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!assets/|fonts/|.*\\.[a-zA-Z0-9]+$|api/).*)",
       "destination": "/index.html"
     }
   ]
-}
+}

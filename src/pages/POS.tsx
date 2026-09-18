@@ -1438,26 +1438,48 @@ const POS = () => {
               {activeCart.items.map((item, idx) => (
                 <div
                   key={`${item.id}-${item.selected_unit || 'Piece'}`}
-                  className="group relative bg-card/60 hover:bg-card border border-border/80 hover:border-border rounded-xl p-2 sm:p-2.5 transition-all shadow-sm space-y-1.5"
+                  className="group relative bg-card/70 hover:bg-card border border-border/80 hover:border-border rounded-xl p-2.5 transition-all shadow-sm space-y-1.5"
                 >
-                  {/* Top Row: Delete button & Product Names */}
-                  <div className="flex items-start justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => removeFromCart(item.id, item.selected_unit)}
-                      className="text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors p-1 rounded-lg shrink-0 -ml-1"
-                      title={t('remove_item') || 'Remove Item'}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                  {/* Top Row: [Trash] [Price (Red box)] [Quantity (Green box)] ---------- [Dhivehi Name (Black box)] */}
+                  <div className="flex items-center justify-between gap-2">
+                    {/* Left: Delete + Price + Quantity */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => removeFromCart(item.id, item.selected_unit)}
+                        className="text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors p-1 rounded-lg shrink-0 -ml-1"
+                        title={t('remove_item') || 'Remove Item'}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
 
+                      {/* Red Box: Unit Price */}
+                      <span className="text-[11px] font-mono font-black text-foreground bg-muted/90 px-1.5 py-0.5 rounded border border-border/70 whitespace-nowrap shadow-xs">
+                        {settings.shop.currency} {item.price.toFixed(2)}
+                      </span>
+
+                      {/* Green Box: Quantity Indicator */}
+                      <span className="text-[11px] font-mono font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20 whitespace-nowrap shadow-xs">
+                        {item.qty} {item.selected_unit || 'Pc'}
+                      </span>
+                    </div>
+
+                    {/* Right (Black box): Dhivehi Name */}
                     <div className="flex-1 text-right min-w-0">
-                      <p className="text-xs sm:text-sm font-black text-foreground leading-tight truncate">{item.name_dv}</p>
-                      <p className="text-[10px] font-bold text-muted-foreground leading-tight uppercase truncate font-mono mt-0.5">{item.name_en}</p>
+                      <p className="text-sm sm:text-base font-black text-foreground leading-tight truncate">
+                        {item.name_dv}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Bottom Row: Stepper + Total Price + Unit Switcher */}
+                  {/* Middle Row (Pink box): English Name (Bigger and prominent across card) */}
+                  <div className="text-right">
+                    <p className="text-xs sm:text-[13px] font-bold text-foreground/80 leading-snug uppercase tracking-wide truncate font-mono">
+                      {item.name_en}
+                    </p>
+                  </div>
+
+                  {/* Bottom Row: Stepper + Subtotal + Unit Switcher */}
                   <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40">
                     {/* Left: Stepper and Line Price */}
                     <div className="flex items-center gap-2">
@@ -1510,7 +1532,7 @@ const POS = () => {
                         </Button>
                       </div>
 
-                      <div className="text-xs font-black text-primary font-mono whitespace-nowrap">
+                      <div className="text-xs sm:text-sm font-black text-primary font-mono whitespace-nowrap">
                         {settings.shop.currency} {(item.price * (item.qty || 1)).toFixed(2)}
                       </div>
                     </div>

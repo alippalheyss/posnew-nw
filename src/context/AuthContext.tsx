@@ -314,17 +314,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
+    const getAuthEmail = (username: string) => {
+        const clean = username.trim();
+        if (clean.includes('@')) return clean;
+        const normalized = clean.toLowerCase().replace(/[^a-z0-9]/g, '') || 'user';
+        return `${normalized}@posmv.com`;
+    };
+
+    const getSecurePassword = (password: string) => {
+        const clean = password.trim();
+        return clean.length >= 6 ? clean : (clean + '000000').slice(0, 6);
+    };
+
     const login = async (username: string, password: string): Promise<boolean> => {
         try {
             const cleanUsername = username.trim();
             const cleanPassword = password.trim();
-            const email = cleanUsername.includes('@') ? cleanUsername : `${cleanUsername.toLowerCase()}@pos.local`;
+            const email = getAuthEmail(cleanUsername);
+            const securePass = getSecurePassword(cleanPassword);
 
             // 1. Try Supabase Auth first
             try {
                 const { data, error } = await supabase.auth.signInWithPassword({
                     email,
-                    password: cleanPassword,
+                    password: securePass,
                 });
                 if (!error && data.user) {
                     const userData = await fetchUserData(data.user.id);
@@ -339,26 +352,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 console.warn('Supabase auth login note:', authErr);
             }
 
-            // 2. Fetch latest user list if empty
-            let currentUsersList = users;
-            if (currentUsersList.length === 0) {
-                try {
-                    const stored = localStorage.getItem('pos_system_users');
-                    if (stored) currentUsersList = JSON.parse(stored);
-                } catch (e) {}
-            }
-            if (currentUsersList.length === 0) {
-                currentUsersList = await fetchAllUsers();
-            }
+            // 2. Fetch latest user list from Supabase cloud (settings / users)
+            const currentUsersList = await fetchAllUsers();
 
-            // 3. Fallback match in system users
+            // 3. Match user from cloud sync
             const matchedUser = currentUsersList.find(u => 
                 u.username.toLowerCase() === cleanUsername.toLowerCase() && u.isActive
             );
 
             if (matchedUser) {
-                // If user has stored password, check it
-                if (matchedUser.password && matchedUser.password !== cleanPassword) {
+                // If user has stored password, check it (or accept if matching secure password)
+                if (matchedUser.password && matchedUser.password !== cleanPassword && matchedUser.password !== securePass) {
                     console.warn('Password mismatch for user:', cleanUsername);
                     return false;
                 }
@@ -404,11 +408,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             const authUserId = crypto.randomUUID();
             const cleanUsername = userData.username.trim();
+            const cleanPassword = userData.password.trim();
+            const authEmail = getAuthEmail(cleanUsername);
+            const securePass = getSecurePassword(cleanPassword);
 
             const newUser: User = {
                 id: authUserId,
                 username: cleanUsername,
-                password: userData.password,
+                password: cleanPassword,
                 name_en: userData.name_en || '',
                 name_dv: userData.name_dv || '',
                 role: userData.role,
@@ -422,7 +429,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setUsers(updatedUsers);
             localStorage.setItem('pos_system_users', JSON.stringify(updatedUsers));
 
-            // 2. Save into Supabase settings table (works with anon key)
+            // 2. Save into Supabase settings table (Cloud-synchronized for all mobiles)
             try {
                 const { data: existing } = await supabase
                     .from('settings')
@@ -442,11 +449,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     await supabase.from('settings').insert({ ...payload, id: crypto.randomUUID() });
                 }
             } catch (settingsErr) {
-                console.warn('Note saving users to settings table:', settingsErr);
+                console.warn('Note saving users to Supabase settings:', settingsErr);
             }
 
-            // 3. Try creating user in Supabase Auth (safe fallback if 400 or disabled)
-            if (supabaseUrl && supabaseAnonKey && userData.password) {
+            // 3. Register user in Supabase Auth backend
+            if (supabaseUrl && supabaseAnonKey && cleanPassword) {
                 try {
                     const tempClient = createClient(supabaseUrl, supabaseAnonKey, {
                         auth: {
@@ -456,10 +463,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         }
                     });
 
-                    const email = cleanUsername.includes('@') ? cleanUsername : `${cleanUsername.toLowerCase()}@pos.local`;
                     await tempClient.auth.signUp({
-                        email,
-                        password: userData.password,
+                        email: authEmail,
+                        password: securePass,
                         options: {
                             data: {
                                 name_en: userData.name_en,

@@ -521,6 +521,9 @@ const StockAudit: React.FC = () => {
 
   // 5. Html5Qrcode Barcode Scanner setup
   const startCameraScanner = () => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
     setIsScannerOpen(true);
     setScannerError(null);
   };
@@ -1210,18 +1213,22 @@ const StockAudit: React.FC = () => {
 
       {/* 2. Html5Qrcode Camera Scanner Modal */}
       <Dialog open={isScannerOpen} onOpenChange={(open) => !open && stopCameraScanner()}>
-        <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-sm p-5 rounded-3xl font-faruma shadow-2xl" dir="rtl">
+        <DialogContent 
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className="bg-white border-slate-200 text-slate-900 max-w-sm p-4 rounded-3xl font-faruma shadow-2xl" 
+          dir="rtl"
+        >
           <DialogHeader className="text-right space-y-0.5">
             <DialogTitle className="text-base font-black text-slate-900 flex items-center justify-end gap-2">
               <Camera className="h-5 w-5 text-primary" />
               <span>Camera Barcode Scanner</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500 font-sans">
-              Aim camera at any product barcode or QR code
+              Aim camera at any barcode (EAN, UPC, Code 128, QR)
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 py-1">
+          <div className="space-y-2.5 py-1">
             {/* Dedicated HTML5-QRCode Render Container */}
             <div 
               id="stock-audit-qr-reader" 
@@ -1233,19 +1240,6 @@ const StockAudit: React.FC = () => {
                 {scannerError}
               </p>
             )}
-
-            <div className="space-y-1 font-sans">
-              <label className="text-[11px] font-bold text-slate-500">Or type barcode manually:</label>
-              <Input
-                placeholder="Enter barcode..."
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && e.currentTarget.value) {
-                    handleScannedCode(e.currentTarget.value);
-                  }
-                }}
-                className="h-10 rounded-xl bg-slate-50 border-slate-300 text-slate-900 text-xs"
-              />
-            </div>
           </div>
 
           <DialogFooter className="pt-1">
@@ -1253,7 +1247,7 @@ const StockAudit: React.FC = () => {
               type="button" 
               variant="outline" 
               onClick={stopCameraScanner}
-              className="w-full h-10 rounded-2xl bg-slate-100 border-slate-300 text-slate-700 font-bold text-xs"
+              className="w-full h-11 rounded-2xl bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800 font-bold text-xs"
             >
               Close Camera
             </Button>

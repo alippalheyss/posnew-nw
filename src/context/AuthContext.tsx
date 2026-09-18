@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase, supabaseUrl, supabaseAnonKey } from '@/lib/supabase';
+import { supabase, supabaseUrl, supabaseAnonKey, DEFAULT_SETTINGS_USER_ID } from '@/lib/supabase';
 import { createClient, type User as SupabaseUser } from '@supabase/supabase-js';
 
 // User Permissions Interface
@@ -518,7 +518,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 if (existing?.id) {
                     await supabase.from('settings').update(payload).eq('id', existing.id);
                 } else {
-                    await supabase.from('settings').insert({ ...payload, id: crypto.randomUUID() });
+                    await supabase.from('settings').insert({ ...payload, id: crypto.randomUUID(), user_id: DEFAULT_SETTINGS_USER_ID });
                 }
             } catch (settingsErr) {
                 console.warn('Note saving users to Supabase settings:', settingsErr);
@@ -580,7 +580,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 if (existing?.id) {
                     await supabase.from('settings').update(payload).eq('id', existing.id);
                 } else {
-                    await supabase.from('settings').insert({ ...payload, id: crypto.randomUUID() });
+                    await supabase.from('settings').insert({ ...payload, id: crypto.randomUUID(), user_id: DEFAULT_SETTINGS_USER_ID });
                 }
             } catch (settingsErr) {
                 console.warn('Note updating settings app_users:', settingsErr);
@@ -653,7 +653,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 if (existing?.id) {
                     await supabase.from('settings').update(payload).eq('id', existing.id);
                 } else {
-                    await supabase.from('settings').insert({ ...payload, id: crypto.randomUUID() });
+                    await supabase.from('settings').insert({ ...payload, id: crypto.randomUUID(), user_id: DEFAULT_SETTINGS_USER_ID });
                 }
             } catch (settingsErr) {
                 console.warn('Note updating settings on delete:', settingsErr);

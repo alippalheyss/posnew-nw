@@ -7,6 +7,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
     console.error('Missing Supabase environment variables. Please check your environment settings.');
 }
 
+export const DEFAULT_SETTINGS_USER_ID = '320e8d7f-9329-41ec-9f65-9a9130bb28d3';
+
 export const supabase = (supabaseUrl && supabaseAnonKey) 
     ? createClient(supabaseUrl, supabaseAnonKey, {
         auth: {

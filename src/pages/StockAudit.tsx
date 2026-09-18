@@ -27,7 +27,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { useAppContext, Product } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { supabase, DEFAULT_SETTINGS_USER_ID } from '@/lib/supabase';
 import { showSuccess, showError, showInfo } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 
@@ -232,7 +232,6 @@ export default function StockAudit() {
   const [isConnected, setIsConnected] = useState(false);
   const [isCommitting, setIsCommitting] = useState(false);
 
-  const DEFAULT_SETTINGS_USER_ID = '320e8d7f-9329-41ec-9f65-9a9130bb28d3';
 
   // Live stock sync state from Main App
   const [isSyncingProducts, setIsSyncingProducts] = useState(false);

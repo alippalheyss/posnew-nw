@@ -2,7 +2,7 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback, useRef } from 'react';
 import { showError, showSuccess } from '@/utils/toast';
-import { supabase } from '@/lib/supabase';
+import { supabase, DEFAULT_SETTINGS_USER_ID } from '@/lib/supabase';
 import { useTheme } from '@/components/ThemeProvider';
 
 import { toISODate, toISODatetime, extractDateOnly } from '@/utils/formatters';
@@ -361,6 +361,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
+  const [isInitialDataLoaded, setIsInitialDataLoaded] = useState(false);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>(() => {
@@ -720,6 +721,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     } catch (error) {
       console.error('Error fetching data from Supabase:', error);
       // Don't show error toast on background refresh
+    } finally {
+      setIsInitialDataLoaded(true);
     }
   };
 
@@ -1405,6 +1408,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   useEffect(() => {
     const runScheduledAutomations = async () => {
+      // 0. Wait until initial data has finished loading so we NEVER compute on empty uninitialized state
+      if (!isInitialDataLoaded) return;
+
       const now = new Date();
       const todayIso = toISODate(now);
       const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -1421,43 +1427,141 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         const briefingKey = `telegram_briefing_sent_${todayIso}`;
         const briefingSendingKey = `telegram_briefing_sending_${todayIso}`;
 
-        // A. Send today's briefing if it's evening/night and hasn't been sent yet
+        // Fast local check: if this client already sent or recorded today's briefing, skip
         if (
-          isEveningOrNight && 
-          settings.telegram?.lastNightlyBriefingDate !== todayIso &&
           !localStorage.getItem(briefingKey) &&
+          settings.telegram?.lastNightlyBriefingDate !== todayIso &&
+          isEveningOrNight &&
           !isBriefingSendingRef.current
         ) {
-          // Atomic lock: set lock immediately before async operation
-          isBriefingSendingRef.current = true;
-          localStorage.setItem(briefingSendingKey, Date.now().toString());
+          // Centralized Cloud Lock: Always check Supabase settings table before dispatching!
+          if (supabase) {
+            try {
+              const { data: cloudRow, error: cloudErr } = await supabase
+                .from('settings')
+                .select('id, settings')
+                .eq('category', 'telegram')
+                .maybeSingle();
 
-          try {
-            const allSettlements = customers.flatMap(c => c.settlement_history || []);
-            const res = await sendNightlyExecutiveBriefing({
-              chatId: groupChat,
-              sales,
-              settlements: allSettlements,
-              shopSettings: settings.shop,
-              token: settings.telegram?.botToken,
-            });
-            if (res?.ok) {
-              localStorage.setItem(briefingKey, Date.now().toString());
-              setSettings(prev => ({
-                ...prev,
-                telegram: { ...prev.telegram, lastNightlyBriefingDate: todayIso },
-              }));
-              updateSettings('telegram', { lastNightlyBriefingDate: todayIso });
-              console.log('Nightly Store Close Briefing automatically sent to Telegram group!');
-            } else {
-              // Clear sending lock if failed so it can retry later
+              if (!cloudErr) {
+                const cloudTelegram = cloudRow?.settings || {};
+
+                // A. Check if ANY device already completed today's briefing in the cloud
+                if (cloudTelegram.lastNightlyBriefingDate === todayIso) {
+                  localStorage.setItem(briefingKey, Date.now().toString());
+                  setSettings(prev => ({
+                    ...prev,
+                    telegram: { ...prev.telegram, lastNightlyBriefingDate: todayIso },
+                  }));
+                  return;
+                }
+
+                // B. Distributed Lock: Check if another device is currently sending (90s window)
+                const claimTime = Number(cloudTelegram.briefingClaimTime || 0);
+                if (cloudTelegram.briefingClaimDate === todayIso && (Date.now() - claimTime) < 90000) {
+                  console.log('Another device is currently sending the nightly briefing (cloud lock active).');
+                  return;
+                }
+
+                // C. Acquire distributed claim lock in Supabase BEFORE contacting Telegram
+                isBriefingSendingRef.current = true;
+                localStorage.setItem(briefingSendingKey, Date.now().toString());
+
+                const claimPayload = {
+                  category: 'telegram',
+                  settings: {
+                    ...cloudTelegram,
+                    briefingClaimDate: todayIso,
+                    briefingClaimTime: Date.now()
+                  },
+                  updated_at: new Date().toISOString()
+                };
+
+                if (cloudRow?.id) {
+                  await supabase.from('settings').update(claimPayload).eq('id', cloudRow.id);
+                } else {
+                  await supabase.from('settings').insert({
+                    ...claimPayload,
+                    id: crypto.randomUUID(),
+                    user_id: DEFAULT_SETTINGS_USER_ID
+                  });
+                }
+
+                // D. Zero-Sales Guard: Ensure we have accurate sales data
+                let activeSales = sales;
+                const hasTodaySalesLocally = (activeSales || []).some(s => extractDateOnly(s.date) === todayIso);
+
+                if (!hasTodaySalesLocally) {
+                  // Double check with Supabase sales table to avoid sending empty 0-sales briefing
+                  const { data: freshSales } = await supabase
+                    .from('sales')
+                    .select('*')
+                    .order('date', { ascending: false })
+                    .limit(1000);
+
+                  if (freshSales && freshSales.length > 0) {
+                    const linkedFresh = freshSales.map(s => {
+                      let items = s.items;
+                      if (typeof items === 'string') {
+                        try { items = JSON.parse(items); } catch (e) { items = []; }
+                      }
+                      let splitDetails = s.split_details;
+                      if (typeof splitDetails === 'string') {
+                        try { splitDetails = JSON.parse(splitDetails); } catch (e) { splitDetails = null; }
+                      }
+                      return {
+                        id: s.id,
+                        date: s.date,
+                        customer_id: s.customer_id,
+                        items: Array.isArray(items) ? items : [],
+                        grandTotal: Number(s.grand_total || 0),
+                        paymentMethod: s.payment_method || 'cash',
+                        paidAmount: s.paid_amount !== undefined ? Number(s.paid_amount) : null,
+                        balance: s.balance !== undefined ? Number(s.balance) : null,
+                        invoiceNumber: s.invoice_number,
+                        splitDetails: splitDetails
+                      };
+                    });
+
+                    const todayMatches = linkedFresh.filter(s => extractDateOnly(s.date) === todayIso);
+                    if (todayMatches.length > 0) {
+                      activeSales = linkedFresh;
+                      setSales(linkedFresh);
+                    }
+                  }
+                }
+
+                // E. Send Briefing via Telegram
+                const allSettlements = customers.flatMap(c => c.settlement_history || []);
+                const res = await sendNightlyExecutiveBriefing({
+                  chatId: groupChat,
+                  sales: activeSales,
+                  settlements: allSettlements,
+                  shopSettings: settings.shop,
+                  token: settings.telegram?.botToken,
+                });
+
+                if (res?.ok) {
+                  localStorage.setItem(briefingKey, Date.now().toString());
+                  setSettings(prev => ({
+                    ...prev,
+                    telegram: { ...prev.telegram, lastNightlyBriefingDate: todayIso },
+                  }));
+                  await updateSettings('telegram', {
+                    lastNightlyBriefingDate: todayIso,
+                    briefingSentAt: new Date().toISOString()
+                  });
+                  console.log('Nightly Store Close Briefing automatically sent to Telegram group!');
+                } else {
+                  localStorage.removeItem(briefingSendingKey);
+                }
+              }
+            } catch (e) {
               localStorage.removeItem(briefingSendingKey);
+              console.warn('Auto briefing error:', e);
+            } finally {
+              isBriefingSendingRef.current = false;
             }
-          } catch (e) {
-            localStorage.removeItem(briefingSendingKey);
-            console.warn('Auto briefing error:', e);
-          } finally {
-            isBriefingSendingRef.current = false;
           }
         }
 
@@ -1469,11 +1573,25 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         if (
           !isEveningOrNight &&
           settings.telegram?.lastNightlyBriefingDate !== yesterdayIso &&
-          settings.telegram?.lastNightlyBriefingDate !== todayIso
+          settings.telegram?.lastNightlyBriefingDate !== todayIso &&
+          !localStorage.getItem(`telegram_briefing_sent_${yesterdayIso}`) &&
+          !isBriefingSendingRef.current
         ) {
           const yesterdaySales = (sales || []).filter(s => extractDateOnly(s.date) === yesterdayIso);
           if (yesterdaySales.length > 0) {
             try {
+              if (supabase) {
+                const { data: cloudRow } = await supabase
+                  .from('settings')
+                  .select('settings')
+                  .eq('category', 'telegram')
+                  .maybeSingle();
+
+                if (cloudRow?.settings?.lastNightlyBriefingDate === yesterdayIso || cloudRow?.settings?.lastNightlyBriefingDate === todayIso) {
+                  return;
+                }
+              }
+
               const allSettlements = customers.flatMap(c => c.settlement_history || []);
               const res = await sendNightlyExecutiveBriefing({
                 chatId: groupChat,
@@ -1484,11 +1602,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
                 token: settings.telegram?.botToken,
               });
               if (res?.ok) {
+                localStorage.setItem(`telegram_briefing_sent_${yesterdayIso}`, Date.now().toString());
                 setSettings(prev => ({
                   ...prev,
                   telegram: { ...prev.telegram, lastNightlyBriefingDate: yesterdayIso },
                 }));
-                updateSettings('telegram', { lastNightlyBriefingDate: yesterdayIso });
+                await updateSettings('telegram', { lastNightlyBriefingDate: yesterdayIso });
                 console.log("Yesterday's missed Store Close Briefing automatically caught up and sent to Telegram group!");
               }
             } catch (e) {
@@ -1539,7 +1658,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       clearTimeout(initialT);
       clearInterval(intervalT);
     };
-  }, [sales, customers, settings.telegram, settings.shop]);
+  }, [isInitialDataLoaded, sales, customers, settings.telegram, settings.shop]);
 
   const addPendingTransfer = (transfer: any) => {
     setPendingTransfers(prev => [...prev, { ...transfer, id: `transfer-${Date.now()}` }]);
@@ -1962,19 +2081,23 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       [category]: { ...prev[category], ...newSettings }
     }));
     try {
-      const { data: existing } = await supabase.from('settings').select('id').eq('category', category).maybeSingle();
+      const { data: existing } = await supabase.from('settings').select('id, settings').eq('category', category).maybeSingle();
       
-      // Merge with existing settings state to avoid losing unupdated fields
+      const existingDbSettings = (existing?.settings && typeof existing.settings === 'object') ? existing.settings : {};
       const payload = {
         category,
-        settings: { ...settings[category], ...newSettings },
+        settings: { ...existingDbSettings, ...settings[category], ...newSettings },
         updated_at: new Date().toISOString()
       };
       
-      if (existing) {
+      if (existing?.id) {
         await supabase.from('settings').update(payload).eq('id', existing.id);
       } else {
-        await supabase.from('settings').insert({ ...payload, id: crypto.randomUUID() });
+        await supabase.from('settings').insert({
+          ...payload,
+          id: crypto.randomUUID(),
+          user_id: DEFAULT_SETTINGS_USER_ID
+        });
       }
     } catch (error) {
       console.error('Error saving settings to cloud:', error);

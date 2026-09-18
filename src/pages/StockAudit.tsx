@@ -315,19 +315,24 @@ const StockAudit: React.FC = () => {
     const loadAuditSession = async () => {
       try {
         if (supabase) {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('settings')
-            .select('data')
+            .select('id, category, settings')
             .eq('category', 'active_stock_audit')
             .maybeSingle();
 
-          if (data?.data && isMounted) {
-            setAuditSession(data.data as ActiveAuditSession);
-            localStorage.setItem('cached_stock_audit', JSON.stringify(data.data));
-            return;
+          if (!error && data?.settings && isMounted) {
+            const session = (data.settings as any)?.session || data.settings;
+            if (session) {
+              setAuditSession(session as ActiveAuditSession);
+              localStorage.setItem('cached_stock_audit', JSON.stringify(session));
+              return;
+            }
           }
         }
-      } catch (err) {}
+      } catch (err) {
+        console.warn('Note loading audit session:', err);
+      }
 
       try {
         const cached = localStorage.getItem('cached_stock_audit');
@@ -384,7 +389,7 @@ const StockAudit: React.FC = () => {
 
           const payload = {
             category: 'active_stock_audit',
-            data: newSession,
+            settings: { session: newSession },
             updated_at: new Date().toISOString()
           };
 
@@ -400,7 +405,9 @@ const StockAudit: React.FC = () => {
             event: 'audit_update',
             payload: { session: newSession, sender }
           });
-        } catch (err) {}
+        } catch (err) {
+          console.warn('Note saving stock audit to cloud:', err);
+        }
       }
     }, 300);
   }, [counterName]);
@@ -524,31 +531,50 @@ const StockAudit: React.FC = () => {
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
-    setIsScannerOpen(true);
     setScannerError(null);
+    setIsScannerOpen(true);
   };
 
-  const stopCameraScanner = async () => {
+  const stopCameraScanner = useCallback(async () => {
+    // 1. Immediately kill media tracks on active video elements to release hardware
     try {
-      if (html5QrCodeRef.current) {
-        if (isScannerRunning) {
-          await html5QrCodeRef.current.stop().catch(() => {});
+      const videoElements = document.querySelectorAll('#stock-audit-qr-reader video');
+      videoElements.forEach(v => {
+        const video = v as HTMLVideoElement;
+        if (video.srcObject) {
+          const stream = video.srcObject as MediaStream;
+          stream.getTracks().forEach(track => {
+            try { track.stop(); } catch (e) {}
+          });
+          video.srcObject = null;
         }
-        try {
-          html5QrCodeRef.current.clear();
-        } catch (e) {}
-        html5QrCodeRef.current = null;
-      }
-    } catch (err) {}
+      });
+    } catch (e) {}
+
+    // 2. Stop and clear Html5Qrcode instance safely
+    const qrInstance = html5QrCodeRef.current;
+    html5QrCodeRef.current = null;
+    if (qrInstance) {
+      try {
+        if (qrInstance.isScanning) {
+          await qrInstance.stop().catch(() => {});
+        }
+      } catch (e) {}
+      try {
+        qrInstance.clear();
+      } catch (e) {}
+    }
+
     setIsScannerRunning(false);
     setIsScannerOpen(false);
+    setScannerError(null);
 
     // Guarantee document body pointer-events and scroll restore
     setTimeout(() => {
       document.body.style.pointerEvents = 'auto';
       document.body.style.overflow = 'auto';
     }, 50);
-  };
+  }, []);
 
   useEffect(() => {
     let html5QrCode: Html5Qrcode | null = null;
@@ -602,6 +628,20 @@ const StockAudit: React.FC = () => {
       return () => {
         isMounted = false;
         clearTimeout(timer);
+        try {
+          const videoElements = document.querySelectorAll('#stock-audit-qr-reader video');
+          videoElements.forEach(v => {
+            const video = v as HTMLVideoElement;
+            if (video.srcObject) {
+              const stream = video.srcObject as MediaStream;
+              stream.getTracks().forEach(track => {
+                try { track.stop(); } catch (e) {}
+              });
+              video.srcObject = null;
+            }
+          });
+        } catch (e) {}
+
         if (html5QrCode) {
           html5QrCode.stop().catch(() => {}).finally(() => {
             try {
@@ -1232,49 +1272,62 @@ const StockAudit: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 2. Html5Qrcode Camera Scanner Modal */}
-      <Dialog open={isScannerOpen} onOpenChange={(open) => !open && stopCameraScanner()}>
-        <DialogContent 
-          onOpenAutoFocus={(e) => e.preventDefault()}
-          className="bg-white border-slate-200 text-slate-900 max-w-sm p-4 rounded-3xl font-faruma shadow-2xl" 
+      {/* 2. Html5Qrcode Camera Scanner Modal (Safe Overlay Modal) */}
+      {isScannerOpen && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 font-faruma"
           dir="rtl"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) stopCameraScanner();
+          }}
         >
-          <DialogHeader className="text-right space-y-0.5">
-            <DialogTitle className="text-base font-black text-slate-900 flex items-center justify-end gap-2">
-              <Camera className="h-5 w-5 text-primary" />
-              <span>Camera Barcode Scanner</span>
-            </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500 font-sans">
-              Aim camera at any barcode (EAN, UPC, Code 128, QR)
-            </DialogDescription>
-          </DialogHeader>
+          <div 
+            className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl space-y-3 text-slate-900 animate-in fade-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                  <Camera className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">Barcode Scanner</h3>
+                  <p className="text-[10px] text-slate-500 font-sans">Aim at product barcode (EAN, UPC, Code 128)</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={stopCameraScanner}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
-          <div className="space-y-2.5 py-1">
-            {/* Dedicated HTML5-QRCode Render Container */}
-            <div 
-              id="stock-audit-qr-reader" 
-              className="w-full rounded-2xl overflow-hidden bg-black aspect-[4/3] flex items-center justify-center border border-slate-200"
-            />
+            <div className="space-y-2 py-1">
+              <div 
+                id="stock-audit-qr-reader" 
+                className="w-full rounded-2xl overflow-hidden bg-black aspect-[4/3] flex items-center justify-center border border-slate-200 relative shadow-inner"
+              />
 
-            {scannerError && (
-              <p className="text-xs text-rose-600 font-bold text-center font-sans bg-rose-50 p-2 rounded-xl border border-rose-200">
-                {scannerError}
-              </p>
-            )}
-          </div>
+              {scannerError && (
+                <p className="text-xs text-rose-600 font-bold text-center font-sans bg-rose-50 p-2.5 rounded-xl border border-rose-200">
+                  {scannerError}
+                </p>
+              )}
+            </div>
 
-          <DialogFooter className="pt-1">
             <Button 
               type="button" 
               variant="outline" 
               onClick={stopCameraScanner}
-              className="w-full h-11 rounded-2xl bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800 font-bold text-xs"
+              className="w-full h-11 rounded-2xl bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800 font-bold text-xs shadow-sm"
             >
               Close Camera
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+      )}
 
       {/* 3. QR Share Dialog */}
       <Dialog open={isShareModalOpen} onOpenChange={setIsShareModalOpen}>
@@ -1467,4 +1520,55 @@ const StockAudit: React.FC = () => {
   );
 };
 
-export default StockAudit;
+// Error Boundary to prevent any camera/render issue from causing a white screen
+class StockAuditErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: any }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error('StockAudit caught runtime error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-6 text-center font-faruma text-slate-800">
+          <div className="max-w-md w-full bg-white rounded-3xl p-6 shadow-xl border border-slate-200 space-y-4">
+            <div className="w-16 h-16 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+              <AlertTriangle className="h-8 w-8" />
+            </div>
+            <h2 className="text-lg font-black text-slate-900">Stock Audit Recovery</h2>
+            <p className="text-xs text-slate-500 font-sans">
+              Camera or display encountered a temporary issue. Click below to reload.
+            </p>
+            <Button
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                window.location.reload();
+              }}
+              className="w-full h-11 rounded-2xl bg-primary text-white font-bold text-sm shadow-md"
+            >
+              Reload Stock Audit
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+const StockAuditPage = () => (
+  <StockAuditErrorBoundary>
+    <StockAudit />
+  </StockAuditErrorBoundary>
+);
+
+export default StockAuditPage;

@@ -236,7 +236,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     // Fetch all users from database & settings
-    const fetchAllUsers = async () => {
+    const fetchAllUsers = async (): Promise<User[]> => {
         try {
             // 1. Load deleted user IDs from localStorage
             let deletedIds: string[] = [];
@@ -245,7 +245,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 if (storedDeleted) deletedIds = JSON.parse(storedDeleted);
             } catch (e) {}
 
-            // 2. Fetch from public.users table if accessible
+            // 2. Fetch from settings table (app_users) - Cloud sync for all devices
+            let settingsUsers: User[] = [];
+            try {
+                const { data: settingsRow, error } = await supabase
+                    .from('settings')
+                    .select('id, category, settings')
+                    .eq('category', 'app_users')
+                    .maybeSingle();
+
+                if (!error && settingsRow?.settings) {
+                    const raw = settingsRow.settings as any;
+                    if (Array.isArray(raw)) {
+                        settingsUsers = raw;
+                    } else if (raw.users && Array.isArray(raw.users)) {
+                        settingsUsers = raw.users;
+                    }
+                }
+            } catch (err) {
+                console.warn('Note on settings app_users fetch:', err);
+            }
+
+            // 3. Fetch from public.users table if accessible
             let dbUsers: User[] = [];
             try {
                 const { data, error } = await supabase
@@ -261,29 +282,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         name_dv: user.name_dv || '',
                         role: user.role,
                         permissions: user.permissions,
-                        isActive: user.is_active,
+                        isActive: user.is_active !== undefined ? user.is_active : true,
                         createdAt: user.created_at,
                         lastLogin: user.last_login,
                     }));
                 }
             } catch (err) {
                 console.warn('Note on public.users fetch:', err);
-            }
-
-            // 3. Fetch from settings table (app_users)
-            let settingsUsers: User[] = [];
-            try {
-                const { data: settingsData } = await supabase
-                    .from('settings')
-                    .select('data')
-                    .eq('category', 'app_users')
-                    .maybeSingle();
-
-                if (settingsData?.data && Array.isArray(settingsData.data)) {
-                    settingsUsers = settingsData.data;
-                }
-            } catch (err) {
-                console.warn('Note on settings app_users fetch:', err);
             }
 
             // 4. Fetch from localStorage backup
@@ -293,7 +298,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 if (stored) localUsers = JSON.parse(stored);
             } catch (e) {}
 
-            // 5. Merge all sources, deduplicate by ID, and filter out deleted IDs
+            // 5. Merge all sources, deduplicate by ID/username, and filter out deleted IDs
             const userMap = new Map<string, User>();
             [...dbUsers, ...settingsUsers, ...localUsers].forEach(u => {
                 if (u && u.id && !deletedIds.includes(u.id)) {
@@ -334,7 +339,44 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const email = getAuthEmail(cleanUsername);
             const securePass = getSecurePassword(cleanPassword);
 
-            // 1. Try Supabase Auth first
+            // 1. Fetch latest user list from Supabase cloud (settings / users)
+            const currentUsersList = await fetchAllUsers();
+
+            // 2. Match user from cloud sync
+            const matchedUser = currentUsersList.find(u => 
+                u.username.toLowerCase() === cleanUsername.toLowerCase() && (u.isActive !== false)
+            );
+
+            if (matchedUser) {
+                // If user has stored password, check it
+                if (matchedUser.password) {
+                    const storedPass = matchedUser.password.trim();
+                    if (storedPass !== cleanPassword && storedPass !== securePass) {
+                        console.warn('Password mismatch for user:', cleanUsername);
+                        return false;
+                    }
+                }
+
+                const activeUser: User = {
+                    ...matchedUser,
+                    lastLogin: new Date().toISOString()
+                };
+
+                setCurrentUser(activeUser);
+                localStorage.setItem('pos_active_user', JSON.stringify(activeUser));
+
+                // Background Supabase Auth sign in attempt (fire-and-forget)
+                try {
+                    supabase.auth.signInWithPassword({
+                        email,
+                        password: securePass,
+                    }).catch(() => {});
+                } catch (e) {}
+
+                return true;
+            }
+
+            // 3. Fallback: Try Supabase Auth direct login
             try {
                 const { data, error } = await supabase.auth.signInWithPassword({
                     email,
@@ -353,28 +395,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 console.warn('Supabase auth login note:', authErr);
             }
 
-            // 2. Fetch latest user list from Supabase cloud (settings / users)
-            const currentUsersList = await fetchAllUsers();
-
-            // 3. Match user from cloud sync
-            const matchedUser = currentUsersList.find(u => 
-                u.username.toLowerCase() === cleanUsername.toLowerCase() && u.isActive
-            );
-
-            if (matchedUser) {
-                // If user has stored password, check it (or accept if matching secure password)
-                if (matchedUser.password && matchedUser.password !== cleanPassword && matchedUser.password !== securePass) {
-                    console.warn('Password mismatch for user:', cleanUsername);
-                    return false;
-                }
-
-                const activeUser: User = {
-                    ...matchedUser,
+            // 4. Default admin fallback
+            if (cleanUsername.toLowerCase() === 'admin' && (cleanPassword === 'admin' || cleanPassword === 'admin123')) {
+                const defaultAdmin: User = {
+                    id: 'admin-default',
+                    username: 'admin',
+                    name_en: 'Administrator',
+                    name_dv: 'އެޑްމިނިސްޓްރޭޓަރ',
+                    role: 'admin',
+                    permissions: adminPermissions,
+                    isActive: true,
+                    createdAt: new Date().toISOString(),
                     lastLogin: new Date().toISOString()
                 };
-
-                setCurrentUser(activeUser);
-                localStorage.setItem('pos_active_user', JSON.stringify(activeUser));
+                setCurrentUser(defaultAdmin);
+                localStorage.setItem('pos_active_user', JSON.stringify(defaultAdmin));
                 return true;
             }
 
@@ -387,7 +422,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const logout = async () => {
         try {
-            await supabase.auth.signOut();
+            await supabase.auth.signOut().catch(() => {});
             setCurrentUser(null);
             localStorage.removeItem('pos_active_user');
         } catch (error) {
@@ -426,7 +461,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             };
 
             // 1. Update local state immediately
-            const updatedUsers = [newUser, ...users.filter(u => u.id !== authUserId && u.username !== cleanUsername)];
+            const updatedUsers = [newUser, ...users.filter(u => u.id !== authUserId && u.username.toLowerCase() !== cleanUsername.toLowerCase())];
             setUsers(updatedUsers);
             localStorage.setItem('pos_system_users', JSON.stringify(updatedUsers));
 
@@ -440,7 +475,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
                 const payload = {
                     category: 'app_users',
-                    data: updatedUsers,
+                    settings: { users: updatedUsers },
                     updated_at: new Date().toISOString()
                 };
 
@@ -530,7 +565,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
                 const payload = {
                     category: 'app_users',
-                    data: updatedUsers,
+                    settings: { users: updatedUsers },
                     updated_at: new Date().toISOString()
                 };
 
@@ -565,6 +600,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 const updatedUser = updatedUsers.find(u => u.id === id);
                 if (updatedUser) {
                     setCurrentUser(updatedUser);
+                    localStorage.setItem('pos_active_user', JSON.stringify(updatedUser));
                 }
             }
         } catch (error) {
@@ -602,7 +638,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
                 const payload = {
                     category: 'app_users',
-                    data: updatedUsers,
+                    settings: { users: updatedUsers },
                     updated_at: new Date().toISOString()
                 };
 

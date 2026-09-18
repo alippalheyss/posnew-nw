@@ -1313,17 +1313,16 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
       const groupChat = settings.shop?.telegramGroupChatId || settings.telegram?.groupChatId || settings.telegram?.ownerChatId;
 
-      // 1. Midnight Store Close Executive Briefing to B BACK Group
+      // 1. Midnight / Evening Store Close Executive Briefing to B BACK Group
       if (
         settings.telegram?.autoExecutiveBriefing !== false &&
-        groupChat &&
-        settings.telegram?.lastNightlyBriefingDate !== todayIso
+        groupChat
       ) {
         const hours = now.getHours();
-        const minutes = now.getMinutes();
-        // Fire around midnight window (23:45 to 00:30)
-        const isNearMidnight = (hours === 23 && minutes >= 45) || (hours === 0 && minutes <= 30);
-        if (isNearMidnight) {
+        const isEveningOrNight = hours >= 22 || hours <= 3; // From 10:00 PM onwards through midnight
+
+        // A. Send today's briefing if it's evening/night and hasn't been sent yet
+        if (isEveningOrNight && settings.telegram?.lastNightlyBriefingDate !== todayIso) {
           try {
             const allSettlements = customers.flatMap(c => c.settlement_history || []);
             const res = await sendNightlyExecutiveBriefing({
@@ -1338,10 +1337,47 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
                 ...prev,
                 telegram: { ...prev.telegram, lastNightlyBriefingDate: todayIso },
               }));
-              console.log('Nightly Store Close Briefing automatically sent to B BACK Telegram group!');
+              updateSettings('telegram', { lastNightlyBriefingDate: todayIso });
+              console.log('Nightly Store Close Briefing automatically sent to Telegram group!');
             }
           } catch (e) {
             console.warn('Auto briefing error:', e);
+          }
+        }
+
+        // B. Missed Yesterday Briefing Catch-Up (e.g. PC was shut down early before 10 PM and opened next morning)
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        const yesterdayIso = toISODate(yesterday);
+
+        if (
+          !isEveningOrNight &&
+          settings.telegram?.lastNightlyBriefingDate !== yesterdayIso &&
+          settings.telegram?.lastNightlyBriefingDate !== todayIso
+        ) {
+          const yesterdaySales = (sales || []).filter(s => extractDateOnly(s.date) === yesterdayIso);
+          if (yesterdaySales.length > 0) {
+            try {
+              const allSettlements = customers.flatMap(c => c.settlement_history || []);
+              const res = await sendNightlyExecutiveBriefing({
+                chatId: groupChat,
+                sales,
+                settlements: allSettlements,
+                shopSettings: settings.shop,
+                date: yesterday,
+                token: settings.telegram?.botToken,
+              });
+              if (res?.ok) {
+                setSettings(prev => ({
+                  ...prev,
+                  telegram: { ...prev.telegram, lastNightlyBriefingDate: yesterdayIso },
+                }));
+                updateSettings('telegram', { lastNightlyBriefingDate: yesterdayIso });
+                console.log("Yesterday's missed Store Close Briefing automatically caught up and sent to Telegram group!");
+              }
+            } catch (e) {
+              console.warn('Missed yesterday briefing auto-catchup error:', e);
+            }
           }
         }
       }

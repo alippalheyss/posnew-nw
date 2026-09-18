@@ -30,6 +30,7 @@ const DailySales = () => {
   const [isEditSaleDialogOpen, setIsEditSaleDialogOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [isBriefingDialogOpen, setIsBriefingDialogOpen] = useState(false);
+  const [briefingDateMode, setBriefingDateMode] = useState<'today' | 'yesterday'>('today');
   const [isSendingBriefing, setIsSendingBriefing] = useState(false);
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'last30' | 'custom'>('today');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
@@ -757,8 +758,11 @@ const DailySales = () => {
           </DialogHeader>
 
           {(() => {
+            const targetDate = briefingDateMode === 'yesterday'
+              ? new Date(Date.now() - 24 * 60 * 60 * 1000)
+              : new Date();
             const allSettlements = customers.flatMap(c => c.settlement_history || []);
-            const data = calculateExecutiveBriefingData({ sales, settlements: allSettlements });
+            const data = calculateExecutiveBriefingData({ sales, settlements: allSettlements, targetDate });
             const groupChat = settings.shop?.telegramGroupChatId || settings.telegram?.groupChatId || settings.telegram?.ownerChatId;
             const groupTitle = settings.shop?.telegramGroupTitle || 'B BACK';
             const currency = settings.shop.currency;
@@ -775,10 +779,11 @@ const DailySales = () => {
                   sales,
                   settlements: allSettlements,
                   shopSettings: settings.shop,
+                  date: targetDate,
                   token: settings.telegram?.botToken,
                 });
                 if (res?.ok) {
-                  showSuccess(`Daily Briefing sent to "${groupTitle}" Telegram group! 📊`);
+                  showSuccess(`${briefingDateMode === 'yesterday' ? "Yesterday's" : "Today's"} Daily Briefing sent to "${groupTitle}" Telegram group! 📊`);
                   setIsBriefingDialogOpen(false);
                 } else {
                   showError(res?.description || 'Failed to send briefing');
@@ -792,6 +797,30 @@ const DailySales = () => {
 
             return (
               <div className="flex-1 overflow-y-auto py-4 space-y-4 text-right custom-scrollbar">
+                {/* Date Mode Selector */}
+                <div className="flex items-center justify-center gap-2 bg-muted/60 p-1 rounded-2xl border border-border">
+                  <button
+                    type="button"
+                    onClick={() => setBriefingDateMode('today')}
+                    className={cn(
+                      "flex-1 py-2 px-3 rounded-xl text-xs transition-all",
+                      briefingDateMode === 'today' ? "bg-primary text-white shadow-sm font-black" : "text-muted-foreground hover:text-foreground font-bold"
+                    )}
+                  >
+                    Today's Report (މިއަދުގެ ރިޕޯޓް)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBriefingDateMode('yesterday')}
+                    className={cn(
+                      "flex-1 py-2 px-3 rounded-xl text-xs transition-all",
+                      briefingDateMode === 'yesterday' ? "bg-primary text-white shadow-sm font-black" : "text-muted-foreground hover:text-foreground font-bold"
+                    )}
+                  >
+                    Yesterday's Report (އިއްޔެގެ ރިޕޯޓް)
+                  </button>
+                </div>
+
                 {/* Header overview card */}
                 <div className="p-4 rounded-2xl bg-muted/40 border border-border flex items-center justify-between">
                   <div className="text-left">
@@ -799,7 +828,7 @@ const DailySales = () => {
                     <p className="text-lg font-black text-foreground">{data.totalTransactions} transactions</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-black text-foreground">{data.dateStr} | {data.timeStr}</p>
+                    <p className="text-xs font-black text-foreground">{data.dateStr} {briefingDateMode === 'today' ? `| ${data.timeStr}` : ''}</p>
                     <p className="text-[10px] text-muted-foreground font-bold">{settings.shop.shopName || 'B BACK'}</p>
                   </div>
                 </div>

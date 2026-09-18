@@ -5,6 +5,12 @@ export const extractDateOnly = (date: string | Date | undefined | null): string 
   
   // If it's already a string, try to parse it
   if (typeof date === 'string') {
+    // Check if it's ISO timestamp (e.g. 2026-09-18T15:22:26)
+    if (date.includes('T')) {
+      const datePart = date.split('T')[0];
+      if (datePart.split('-')[0].length === 4) return datePart;
+    }
+    
     // Check if it's YYYY-MM-DD HH:mm:ss
     if (date.includes('-') && date.includes(':') && date.includes(' ')) {
       const parts = date.split(' ')[0].split('-');
@@ -14,8 +20,8 @@ export const extractDateOnly = (date: string | Date | undefined | null): string 
     // Check if it's YYYY-MM-DD
     if (date.includes('-')) {
       const parts = date.split('-');
-      if (parts[0].length === 4) return date; // YYYY-MM-DD
-      if (parts[2].length === 4) return `${parts[2]}-${parts[1]}-${parts[0]}`; // DD-MM-YYYY -> YYYY-MM-DD
+      if (parts[0].length === 4) return parts.slice(0, 3).join('-'); // YYYY-MM-DD
+      if (parts[2]?.length === 4) return `${parts[2]}-${parts[1]}-${parts[0]}`; // DD-MM-YYYY -> YYYY-MM-DD
     }
   }
 

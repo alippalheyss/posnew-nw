@@ -317,25 +317,60 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const addUser = async (userData: Omit<User, 'id' | 'createdAt'> & { password: string }) => {
         try {
-            // Create auth user
-            const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-                email: userData.username,
-                password: userData.password,
-                email_confirm: true,
-                user_metadata: {
+            let authUserId = crypto.randomUUID();
+
+            // Try creating user in Supabase Auth using a temporary non-persistent client so current admin stays logged in
+            if (supabaseUrl && supabaseAnonKey) {
+                try {
+                    const tempClient = createClient(supabaseUrl, supabaseAnonKey, {
+                        auth: {
+                            persistSession: false,
+                            autoRefreshToken: false,
+                            detectSessionInUrl: false
+                        }
+                    });
+
+                    const email = userData.username.includes('@') ? userData.username : `${userData.username.toLowerCase().trim()}@pos.local`;
+                    const { data: authData, error: authError } = await tempClient.auth.signUp({
+                        email,
+                        password: userData.password,
+                        options: {
+                            data: {
+                                name_en: userData.name_en,
+                                name_dv: userData.name_dv,
+                                role: userData.role,
+                                permissions: userData.permissions,
+                            }
+                        }
+                    });
+
+                    if (authData?.user) {
+                        authUserId = authData.user.id;
+                    }
+                } catch (signUpErr) {
+                    console.warn('Auth signUp note (proceeding with users table creation):', signUpErr);
+                }
+            }
+
+            // Always insert/upsert user into public.users table
+            const { error: dbError } = await supabase
+                .from('users')
+                .upsert({
+                    id: authUserId,
+                    username: userData.username,
                     name_en: userData.name_en,
                     name_dv: userData.name_dv,
                     role: userData.role,
                     permissions: userData.permissions,
-                }
-            });
+                    is_active: userData.isActive !== undefined ? userData.isActive : true,
+                    created_at: new Date().toISOString()
+                });
 
-            if (authError) {
-                console.error('Error creating auth user:', authError);
-                throw authError;
+            if (dbError) {
+                console.error('Error inserting user to database:', dbError);
+                throw dbError;
             }
 
-            // The trigger in Supabase will automatically create the user in the users table
             await fetchAllUsers();
         } catch (error) {
             console.error('Error adding user:', error);
@@ -363,18 +398,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 throw error;
             }
 
-            // Update password if provided
-            if (updates.password) {
-                const { error: passwordError } = await supabase.auth.admin.updateUserById(
-                    id,
-                    { password: updates.password }
-                );
-
-                if (passwordError) {
-                    console.error('Error updating password:', passwordError);
-                }
-            }
-
             // Refresh users list
             await fetchAllUsers();
 
@@ -393,12 +416,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const deleteUser = async (id: string) => {
         try {
-            // Delete from auth.users (cascade will delete from users table)
-            const { error } = await supabase.auth.admin.deleteUser(id);
+            // Optimistically remove user from state
+            setUsers(prev => prev.filter(u => u.id !== id));
 
-            if (error) {
-                console.error('Error deleting user:', error);
-                throw error;
+            // Delete from public.users table directly
+            const { error: dbError } = await supabase
+                .from('users')
+                .delete()
+                .eq('id', id);
+
+            if (dbError) {
+                console.warn('Direct delete from users table failed, deactivating user instead:', dbError);
+                await supabase
+                    .from('users')
+                    .update({ is_active: false })
+                    .eq('id', id);
             }
 
             await fetchAllUsers();

@@ -1438,147 +1438,145 @@ const POS = () => {
               {activeCart.items.map((item, idx) => (
                 <div
                   key={`${item.id}-${item.selected_unit || 'Piece'}`}
-                  className="group relative bg-card/70 hover:bg-card border border-border/80 hover:border-border rounded-xl p-2 sm:p-2.5 transition-all shadow-sm space-y-1"
+                  className="group relative bg-card/70 hover:bg-card border border-border/80 hover:border-border rounded-xl p-2 sm:p-2.5 transition-all shadow-sm flex items-center justify-between gap-2.5"
                 >
-                  {/* First Row: [Trash] [Price] [Quantity Stepper] [Unit Dropdown] ---------- [Dhivehi Name] */}
-                  <div className="flex items-center justify-between gap-2">
-                    {/* Left side: Controls */}
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => removeFromCart(item.id, item.selected_unit)}
-                        className="text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors p-1 rounded-lg shrink-0 -ml-1"
-                        title={t('remove_item') || 'Remove Item'}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                  {/* Left Side: [Trash] [Total MVR] [Unit Price MVR] [Unit Pill] [- Qty +] */}
+                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                    {/* Trash Button */}
+                    <button
+                      type="button"
+                      onClick={() => removeFromCart(item.id, item.selected_unit)}
+                      className="text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors p-1 rounded-lg shrink-0 -ml-1"
+                      title={t('remove_item') || 'Remove Item'}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
 
-                      {/* Price Badge */}
-                      <span className="text-[11px] sm:text-xs font-mono font-black text-foreground bg-muted/90 px-1.5 py-0.5 rounded border border-border/70 whitespace-nowrap shadow-xs">
-                        {settings.shop.currency} {(item.price * (item.qty || 1)).toFixed(2)}
-                      </span>
-
-                      {/* Quantity Stepper directly in first row */}
-                      <div className="flex items-center bg-background/90 dark:bg-black/40 rounded-lg p-0.5 border border-border h-7">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-muted-foreground hover:text-foreground rounded p-0"
-                          onClick={() => updateCartItemQty(item.id, -1, item.selected_unit)}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <Input
-                          type="number"
-                          step="any"
-                          min="0.001"
-                          ref={idx === activeCart.items.length - 1 ? lastQtyInputRef : undefined}
-                          value={item.qty === 0 ? '' : item.qty}
-                          placeholder="0"
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (val === '' || val === '.') {
-                              setCartItemQty(item.id, 0, item.selected_unit);
-                            } else {
-                              const num = parseFloat(val);
-                              setCartItemQty(item.id, isNaN(num) ? 0 : num, item.selected_unit);
-                            }
-                          }}
-                          onBlur={() => {
-                            if (!item.qty || item.qty <= 0) {
-                              setCartItemQty(item.id, 1, item.selected_unit);
-                            }
-                          }}
-                          onFocus={handleFocus}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              focusSearchBar();
-                            }
-                          }}
-                          className="cart-qty-input w-10 text-center text-xs font-black text-foreground bg-transparent border-none h-6 p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:bg-background focus:ring-1 focus:ring-primary rounded font-mono"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-muted-foreground hover:text-foreground rounded p-0"
-                          onClick={() => updateCartItemQty(item.id, 1, item.selected_unit)}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-
-                      {/* Unit switcher in first row */}
-                      {(() => {
-                        const prod = products.find(p => p.id === item.id);
-                        const hasUnits = prod?.units && prod.units.length > 0;
-                        const currentUnit = item.selected_unit || 'Piece';
-
-                        if (!hasUnits) {
-                          return item.selected_unit && item.selected_unit !== 'Piece' ? (
-                            <Badge variant="outline" className="text-[9px] border-primary/30 text-primary uppercase font-black px-1.5 py-0.5 h-6 leading-none flex items-center">
-                              {item.selected_unit}
-                            </Badge>
-                          ) : null;
-                        }
-
-                        return (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button
-                                type="button"
-                                className="flex items-center gap-1 text-[10px] font-black bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 h-7 rounded-lg transition-all cursor-pointer shadow-xs active:scale-95"
-                                title={t('switch_unit') || 'Switch Unit'}
-                              >
-                                <Boxes className="h-3 w-3 text-primary" />
-                                <span>{currentUnit}</span>
-                                <ChevronDown className="h-2.5 w-2.5 opacity-70" />
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="bg-card border-border text-foreground font-faruma text-right min-w-[200px] z-[120] shadow-2xl rounded-xl p-1">
-                              <div className="px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-muted-foreground border-b border-border text-right">
-                                {t('switch_unit') || 'Switch Unit (ޔުނިޓް ބަދަލުކުރޭ)'}
-                              </div>
-                              <DropdownMenuItem
-                                onClick={() => switchCartItemUnit(item, 'Piece')}
-                                className={cn(
-                                  "flex items-center justify-between text-xs py-1.5 px-2.5 rounded-lg cursor-pointer hover:bg-muted transition-colors",
-                                  currentUnit === 'Piece' && "font-black text-primary bg-primary/10"
-                                )}
-                              >
-                                <span className="font-mono font-bold text-primary">{settings?.shop?.currency || 'MVR'} {Number(prod.price || 0).toFixed(2)}</span>
-                                <span className="font-bold">Piece (1 pc)</span>
-                              </DropdownMenuItem>
-                              {prod.units!.map((u, uIdx) => (
-                                <DropdownMenuItem
-                                  key={uIdx}
-                                  onClick={() => switchCartItemUnit(item, u.name)}
-                                  className={cn(
-                                    "flex items-center justify-between text-xs py-1.5 px-2.5 rounded-lg cursor-pointer hover:bg-muted transition-colors",
-                                    currentUnit === u.name && "font-black text-primary bg-primary/10"
-                                  )}
-                                >
-                                  <span className="font-mono font-bold text-primary">{settings?.shop?.currency || 'MVR'} {Number(u.price || 0).toFixed(2)}</span>
-                                  <span className="font-bold">{u.name} ({u.conversion_factor} pcs)</span>
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        );
-                      })()}
+                    {/* Total Price: e.g. 14 MVR */}
+                    <div className="text-xs sm:text-sm font-black text-primary font-mono whitespace-nowrap">
+                      {(item.price * (item.qty || 1)).toFixed(2)} <span className="text-[10px] font-bold opacity-80">{settings.shop.currency}</span>
                     </div>
 
-                    {/* Right side: Dhivehi Name */}
-                    <div className="flex-1 text-right min-w-0">
-                      <p className="text-sm sm:text-base font-black text-foreground leading-tight truncate">
-                        {item.name_dv}
-                      </p>
+                    {/* Unit Price: e.g. 7 MVR */}
+                    <div className="text-[10px] sm:text-[11px] font-bold text-muted-foreground font-mono whitespace-nowrap">
+                      {item.price.toFixed(2)} <span className="text-[9px]">{settings.shop.currency}</span>
+                    </div>
+
+                    {/* Unit Pill / Dropdown: e.g. NOS */}
+                    {(() => {
+                      const prod = products.find(p => p.id === item.id);
+                      const hasUnits = prod?.units && prod.units.length > 0;
+                      const currentUnit = item.selected_unit || 'Piece';
+
+                      if (!hasUnits) {
+                        return (
+                          <span className="text-[9px] sm:text-[10px] font-mono font-bold uppercase bg-primary/10 text-primary border border-primary/25 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                            {currentUnit}
+                          </span>
+                        );
+                      }
+
+                      return (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className="flex items-center gap-0.5 text-[9px] sm:text-[10px] font-mono font-bold uppercase bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 px-1.5 py-0.5 rounded-full transition-all cursor-pointer shadow-xs active:scale-95"
+                              title={t('switch_unit') || 'Switch Unit'}
+                            >
+                              <span>{currentUnit}</span>
+                              <ChevronDown className="h-2.5 w-2.5 opacity-70" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="bg-card border-border text-foreground font-faruma text-right min-w-[190px] z-[120] shadow-2xl rounded-xl p-1">
+                            <div className="px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-muted-foreground border-b border-border text-right">
+                              {t('switch_unit') || 'Switch Unit (ޔުނިޓް ބަދަލުކުރޭ)'}
+                            </div>
+                            <DropdownMenuItem
+                              onClick={() => switchCartItemUnit(item, 'Piece')}
+                              className={cn(
+                                "flex items-center justify-between text-xs py-1.5 px-2.5 rounded-lg cursor-pointer hover:bg-muted transition-colors",
+                                currentUnit === 'Piece' && "font-black text-primary bg-primary/10"
+                              )}
+                            >
+                              <span className="font-mono font-bold text-primary">{settings?.shop?.currency || 'MVR'} {Number(prod.price || 0).toFixed(2)}</span>
+                              <span className="font-bold">Piece (1 pc)</span>
+                            </DropdownMenuItem>
+                            {prod.units!.map((u, uIdx) => (
+                              <DropdownMenuItem
+                                key={uIdx}
+                                onClick={() => switchCartItemUnit(item, u.name)}
+                                className={cn(
+                                  "flex items-center justify-between text-xs py-1.5 px-2.5 rounded-lg cursor-pointer hover:bg-muted transition-colors",
+                                  currentUnit === u.name && "font-black text-primary bg-primary/10"
+                                )}
+                              >
+                                <span className="font-mono font-bold text-primary">{settings?.shop?.currency || 'MVR'} {Number(u.price || 0).toFixed(2)}</span>
+                                <span className="font-bold">{u.name} ({u.conversion_factor} pcs)</span>
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      );
+                    })()}
+
+                    {/* Stepper Capsule: [- 2 +] */}
+                    <div className="flex items-center bg-background/90 dark:bg-black/40 rounded-full px-1 py-0.5 border border-border h-6 shadow-xs">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5 text-muted-foreground hover:text-foreground rounded-full p-0"
+                        onClick={() => updateCartItemQty(item.id, -1, item.selected_unit)}
+                      >
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      <Input
+                        type="number"
+                        step="any"
+                        min="0.001"
+                        ref={idx === activeCart.items.length - 1 ? lastQtyInputRef : undefined}
+                        value={item.qty === 0 ? '' : item.qty}
+                        placeholder="0"
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || val === '.') {
+                            setCartItemQty(item.id, 0, item.selected_unit);
+                          } else {
+                            const num = parseFloat(val);
+                            setCartItemQty(item.id, isNaN(num) ? 0 : num, item.selected_unit);
+                          }
+                        }}
+                        onBlur={() => {
+                          if (!item.qty || item.qty <= 0) {
+                            setCartItemQty(item.id, 1, item.selected_unit);
+                          }
+                        }}
+                        onFocus={handleFocus}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            focusSearchBar();
+                          }
+                        }}
+                        className="cart-qty-input w-8 text-center text-xs font-black text-foreground bg-transparent border-none h-5 p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:bg-background focus:ring-1 focus:ring-primary rounded-full font-mono"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5 text-muted-foreground hover:text-foreground rounded-full p-0"
+                        onClick={() => updateCartItemQty(item.id, 1, item.selected_unit)}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
                     </div>
                   </div>
 
-                  {/* Second Row: Large & Bold English Name across the available space */}
-                  <div className="text-right">
-                    <p className="text-sm sm:text-[15px] font-black text-foreground/90 leading-tight uppercase tracking-wide truncate font-mono">
+                  {/* Right Side: Product Names (Dhivehi Name on top, English Name below) */}
+                  <div className="flex-1 text-right min-w-0 pl-2">
+                    <p className="text-xs sm:text-sm font-black text-foreground leading-tight truncate">
+                      {item.name_dv}
+                    </p>
+                    <p className="text-[11px] sm:text-xs font-bold text-muted-foreground leading-tight uppercase truncate font-mono mt-0.5">
                       {item.name_en}
                     </p>
                   </div>

@@ -183,6 +183,19 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
                 const taxExemptValue = String(getVal(['Is Tax Exempt', 'is_zero_tax', 'Tax Exempt', 'Zero Tax'])).toLowerCase().trim();
                 const isTaxExempt = taxExemptValue === 'yes' || taxExemptValue === '1' || taxExemptValue === 'true';
 
+                const parseSafeInt = (val: any): number => {
+                    if (val === null || val === undefined || val === '') return 0;
+                    const num = Number(val);
+                    if (isNaN(num)) return 0;
+                    return Math.round(num);
+                };
+
+                const parseSafeFloat = (val: any): number => {
+                    if (val === null || val === undefined || val === '') return 0;
+                    const num = Number(val);
+                    return isNaN(num) ? 0 : num;
+                };
+
                 // PRESERVE EXACT ITEM CODE AND BARCODE AS IN EXCEL
                 const finalItemCode = rawItemCode ? rawItemCode : (rawBarcode ? rawBarcode : String(index + 1));
                 const finalBarcode = rawBarcode ? rawBarcode : (rawItemCode ? rawItemCode : '');
@@ -194,10 +207,10 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
                     item_code: finalItemCode,
                     barcode: finalBarcode,
                     category: category.toUpperCase() || 'OTHER',
-                    price: Number(rawPrice) || 0,
-                    cost_price: Number(rawCost) > 0 ? Number(rawCost) : null,
-                    stock_shop: Number(rawStockShop) || 0,
-                    stock_godown: Number(rawStockGodown) || 0,
+                    price: parseSafeFloat(rawPrice),
+                    cost_price: rawCost !== '' && rawCost !== undefined && Number(rawCost) > 0 ? parseSafeFloat(rawCost) : null,
+                    stock_shop: parseSafeInt(rawStockShop),
+                    stock_godown: parseSafeInt(rawStockGodown),
                     is_zero_tax: isTaxExempt,
                     image: generatePlaceholderImage(nameEn || nameDv || 'Product', finalItemCode)
                 };

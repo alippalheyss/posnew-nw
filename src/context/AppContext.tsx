@@ -847,15 +847,16 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const updateStock = async (productId: string, newStock: number) => {
     try {
+      const intStock = Math.round(Number(newStock)) || 0;
       const { error } = await supabase
         .from('products')
-        .update({ stock_shop: newStock })
+        .update({ stock_shop: intStock })
         .eq('id', productId);
 
       if (error) throw error;
 
       setProducts(prev => prev.map(p =>
-        p.id === productId ? { ...p, stock_shop: newStock } : p
+        p.id === productId ? { ...p, stock_shop: intStock } : p
       ));
     } catch (error) {
       console.error('Error updating stock:', error);
@@ -872,8 +873,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       if (sourceStock < amount) return;
 
       const updateData = {
-        stock_shop: from === 'shop' ? product.stock_shop - amount : product.stock_shop + amount,
-        stock_godown: from === 'godown' ? product.stock_godown - amount : product.stock_godown + amount
+        stock_shop: Math.round(from === 'shop' ? product.stock_shop - amount : product.stock_shop + amount),
+        stock_godown: Math.round(from === 'godown' ? product.stock_godown - amount : product.stock_godown + amount)
       };
 
       const { error } = await supabase
@@ -1871,9 +1872,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       const cleanData = {
         name_dv: updatedProduct.name_dv,
         name_en: updatedProduct.name_en,
-        price: Number(updatedProduct.price),
-        stock_shop: Number(updatedProduct.stock_shop),
-        stock_godown: Number(updatedProduct.stock_godown),
+        price: Number(updatedProduct.price) || 0,
+        stock_shop: Math.round(Number(updatedProduct.stock_shop)) || 0,
+        stock_godown: Math.round(Number(updatedProduct.stock_godown)) || 0,
         barcode: barcode,
         item_code: itemCode,
         category: updatedProduct.category,
@@ -1943,9 +1944,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         id: productToStore.id,
         name_dv: productToStore.name_dv,
         name_en: productToStore.name_en,
-        price: Number(productToStore.price),
-        stock_shop: Number(productToStore.stock_shop),
-        stock_godown: Number(productToStore.stock_godown),
+        price: Number(productToStore.price) || 0,
+        stock_shop: Math.round(Number(productToStore.stock_shop)) || 0,
+        stock_godown: Math.round(Number(productToStore.stock_godown)) || 0,
         barcode: barcode,
         item_code: itemCode,
         category: productToStore.category,
@@ -2044,6 +2045,19 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       const total = importedProducts.length;
       let insertedCount = 0;
 
+      const parseSafeInt = (val: any): number => {
+        if (val === null || val === undefined || val === '') return 0;
+        const num = Number(val);
+        if (isNaN(num)) return 0;
+        return Math.round(num);
+      };
+
+      const parseSafeFloat = (val: any): number => {
+        if (val === null || val === undefined || val === '') return 0;
+        const num = Number(val);
+        return isNaN(num) ? 0 : num;
+      };
+
       // Clean products to match database schema while preserving EXACT code and barcode as in Excel
       const cleanProducts = importedProducts.map((p, index) => {
         const itemCode = p.item_code !== undefined && p.item_code !== null && String(p.item_code).trim() !== ''
@@ -2057,16 +2071,16 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           id: p.id || crypto.randomUUID(),
           name_dv: p.name_dv || p.name_en || 'Product',
           name_en: p.name_en || p.name_dv || 'Product',
-          price: Number(p.price) || 0,
-          stock_shop: Number(p.stock_shop) || 0,
-          stock_godown: Number(p.stock_godown) || 0,
+          price: parseSafeFloat(p.price),
+          stock_shop: parseSafeInt(p.stock_shop),
+          stock_godown: parseSafeInt(p.stock_godown),
           barcode: barcode,
           item_code: itemCode,
           category: p.category || 'OTHER',
           is_zero_tax: !!p.is_zero_tax,
           expiry_date: p.expiry_date || null,
           image: p.image || '',
-          cost_price: p.cost_price ? Number(p.cost_price) : null,
+          cost_price: p.cost_price !== undefined && p.cost_price !== null && p.cost_price !== '' ? parseSafeFloat(p.cost_price) : null,
           last_purchase_date: p.last_purchase_date || null,
           units: p.units || null
         };
@@ -2081,11 +2095,21 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
             .upsert(chunk, { onConflict: 'id' });
 
           if (error) {
-            console.error('Supabase batch insert error on chunk:', i, error);
-            throw error;
+            console.warn(`Supabase batch insert error on chunk starting at ${i}, falling back to single items:`, error);
+            for (const item of chunk) {
+              const { error: singleErr } = await supabase
+                .from('products')
+                .upsert([item], { onConflict: 'id' });
+              if (singleErr) {
+                console.error(`Failed to upsert product ${item.item_code} (${item.name_en || item.name_dv}):`, singleErr);
+              } else {
+                insertedCount++;
+              }
+            }
+          } else {
+            insertedCount += chunk.length;
           }
 
-          insertedCount += chunk.length;
           if (onProgress) {
             const pct = Math.round((insertedCount / total) * 100);
             onProgress(pct, insertedCount);
@@ -2103,7 +2127,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         return Array.from(map.values());
       });
 
-      showSuccess(`Successfully imported ${total.toLocaleString()} products into database! 🚀`);
+      showSuccess(`Successfully imported ${insertedCount.toLocaleString()} products into database! 🚀`);
     } catch (error: any) {
       console.error('Error in bulkImportProducts:', error);
       showError(error.message || 'Failed to import products to database');
@@ -2135,7 +2159,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           const currentShopStock = product ? (Number(product.stock_shop) || 0) : 0;
           const addedQty = Number(item.quantity) || 0;
           // Handles minus/negative stock automatically: -3 + 10 = 7
-          const newShopStock = currentShopStock + addedQty;
+          const newShopStock = Math.round(currentShopStock + addedQty);
           const newCostPrice = Number(item.unit_price) > 0 ? Number(item.unit_price) : (product?.cost_price || null);
 
           try {

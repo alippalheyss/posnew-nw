@@ -18,7 +18,8 @@ import {
   RotateCcw,
   AlertTriangle,
   ArrowRight,
-  RefreshCw
+  RefreshCw,
+  Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -188,6 +189,7 @@ export default function StockAudit() {
 
   // Search input
   const [searchQuery, setSearchQuery] = useState('');
+  const [countedSearchQuery, setCountedSearchQuery] = useState('');
 
   // Count Dialog state (for adding count)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -503,13 +505,21 @@ export default function StockAudit() {
   // 5. Edit Existing Count Handler
   const handleSaveEditEntry = useCallback(() => {
     if (!editingEntry) return;
+
+    const { productId, entry, product } = editingEntry;
+    const currentItem = auditSessionRef.current?.items?.[productId];
+
+    if (currentItem?.isApproved && !isAdminUser) {
+      showError('Approved products cannot be edited. Please submit a new count to add more.');
+      setEditingEntry(null);
+      return;
+    }
+
     const newQty = parseInt(editQtyInput);
     if (isNaN(newQty) || newQty <= 0) {
       showError('Please enter a valid count greater than 0');
       return;
     }
-
-    const { productId, entry, product } = editingEntry;
 
     setAuditSession(prev => {
       const item = prev.items[productId];
@@ -562,6 +572,13 @@ export default function StockAudit() {
 
   // 6. Delete Count Entry
   const handleDeleteEntry = useCallback((productId: string, entryId: string) => {
+    const currentItem = auditSessionRef.current?.items?.[productId];
+
+    if (currentItem?.isApproved && !isAdminUser) {
+      showError('Approved products cannot be deleted. Please submit a new count to adjust.');
+      return;
+    }
+
     setAuditSession(prev => {
       const item = prev.items[productId];
       if (!item) return prev;
@@ -969,7 +986,7 @@ export default function StockAudit() {
   }, [products, searchQuery]);
 
   // List of counted products
-  const countedProductsList = useMemo(() => {
+  const allCountedList = useMemo(() => {
     return products
       .filter(p => {
         const item = auditSession.items[p.id];
@@ -981,8 +998,25 @@ export default function StockAudit() {
       }));
   }, [products, auditSession.items]);
 
-  const totalCountedItems = countedProductsList.length;
-  const pendingApprovalCount = countedProductsList.filter(item => !item.auditState.isApproved).length;
+  const countedProductsList = useMemo(() => {
+    if (!countedSearchQuery.trim()) {
+      return allCountedList;
+    }
+    const q = countedSearchQuery.trim().toLowerCase();
+    return allCountedList.filter(({ product, auditState }) => {
+      const matchNameEn = product.name_en?.toLowerCase().includes(q);
+      const matchNameDv = product.name_dv?.toLowerCase().includes(q);
+      const matchBarcode = product.barcode?.toLowerCase().includes(q);
+      const matchCode = product.item_code?.toLowerCase().includes(q);
+      const matchCounter = auditState.entries.some(e => e.counterName?.toLowerCase().includes(q));
+      return matchNameEn || matchNameDv || matchBarcode || matchCode || matchCounter;
+    });
+  }, [allCountedList, countedSearchQuery]);
+
+  const totalCountedItems = allCountedList.length;
+  const pendingApprovalCount = useMemo(() => {
+    return allCountedList.filter(item => !item.auditState.isApproved).length;
+  }, [allCountedList]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-24 font-faruma selection:bg-primary selection:text-white" dir="rtl">
@@ -1201,11 +1235,10 @@ export default function StockAudit() {
           </div>
         )}
 
-        {/* ================= TAB 2: COUNTED PRODUCTS LIST ================= */}
+        {/* ================= TAB 2: COUNTED PRODUCTS ================= */}
         {activeTab === 'counted' && (
           <div className="space-y-3">
-            
-            {/* Admin Batch Approval Banner */}
+            {/* Admin Notice / Batch Approve Card */}
             {isAdminUser && pendingApprovalCount > 0 && (
               <div className="bg-amber-50 border border-amber-200 p-3 rounded-2xl flex items-center justify-between gap-2 shadow-xs font-sans">
                 <div>
@@ -1224,14 +1257,42 @@ export default function StockAudit() {
               </div>
             )}
 
+            {/* Search Input in Counted Items */}
+            {totalCountedItems > 0 && (
+              <div className="relative flex items-center gap-1.5">
+                <div className="relative flex-1">
+                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                  <Input
+                    type="text"
+                    placeholder="ގުނާފައިވާ ތަކެތިން ހޯދާ / Search counted items..."
+                    value={countedSearchQuery}
+                    onChange={(e) => setCountedSearchQuery(e.target.value)}
+                    className="pr-9 pl-8 h-10 rounded-2xl bg-white border-slate-200 text-xs sm:text-sm font-sans focus-visible:ring-primary shadow-xs"
+                  />
+                  {countedSearchQuery && (
+                    <button
+                      onClick={() => setCountedSearchQuery('')}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                      title="Clear Search"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center justify-between px-1 text-xs font-sans text-slate-600">
-              <span className="font-bold">Counted Items ({countedProductsList.length})</span>
+              <span className="font-bold">
+                Counted Items ({totalCountedItems})
+                {countedSearchQuery && ` — Matching (${countedProductsList.length})`}
+              </span>
               <span className="text-[11px] text-slate-400">
                 {pendingApprovalCount > 0 ? `${pendingApprovalCount} pending review` : 'All approved'}
               </span>
             </div>
 
-            {countedProductsList.length === 0 ? (
+            {totalCountedItems === 0 ? (
               <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-2 font-sans text-xs">
                 <p className="font-bold text-slate-700">No items counted yet</p>
                 <p className="text-slate-400 text-[11px]">Go to the Search & Count tab to search products or scan barcodes.</p>
@@ -1240,6 +1301,19 @@ export default function StockAudit() {
                   className="h-8 px-4 rounded-xl bg-primary text-white text-xs font-bold mt-2"
                 >
                   Start Counting
+                </Button>
+              </div>
+            ) : countedProductsList.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center space-y-2 font-sans text-xs">
+                <p className="font-bold text-slate-700">No matching counted items</p>
+                <p className="text-slate-400 text-[11px]">No counted items match "{countedSearchQuery}".</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setCountedSearchQuery('')}
+                  className="h-8 px-3 rounded-xl border-slate-200 text-xs font-bold"
+                >
+                  Clear Search
                 </Button>
               </div>
             ) : (
@@ -1280,16 +1354,22 @@ export default function StockAudit() {
                       {/* Add more count button */}
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant={auditState.isApproved ? "default" : "outline"}
                         onClick={() => {
                           setSelectedProduct(product);
                           setCountQuantity('1');
                           setCountLocation('shop');
                         }}
-                        className="h-7 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 text-[10px] font-bold shrink-0 gap-1"
+                        className={cn(
+                          "h-7 px-2.5 rounded-xl text-[10px] font-bold shrink-0 gap-1 shadow-none",
+                          auditState.isApproved
+                            ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                            : "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300"
+                        )}
+                        title={auditState.isApproved ? "Submit a new count for this approved product" : "Add count"}
                       >
                         <Plus className="h-3 w-3" />
-                        <span>Add</span>
+                        <span>{auditState.isApproved ? '+ Add More' : 'Add'}</span>
                       </Button>
                     </div>
 
@@ -1336,33 +1416,41 @@ export default function StockAudit() {
                               <span className="text-[10px] text-slate-400">by {entry.counterName}</span>
                             </div>
 
-                            <div className="flex items-center gap-1">
-                              {/* Edit Entry Action */}
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                  setEditingEntry({ productId: product.id, product, entry });
-                                  setEditQtyInput(String(entry.quantity));
-                                  setEditLocation(entry.location);
-                                }}
-                                className="h-6 w-6 p-0 rounded-lg text-slate-600 hover:text-primary hover:bg-primary/10"
-                                title="Edit Count"
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </Button>
+                            {/* If approved, regular users cannot edit or delete. They must submit a new count */}
+                            {auditState.isApproved && !isAdminUser ? (
+                              <span className="text-[10px] text-emerald-700 font-bold flex items-center gap-1 bg-emerald-100/70 px-2 py-0.5 rounded-lg border border-emerald-200">
+                                <Lock className="h-2.5 w-2.5 text-emerald-600" />
+                                <span>Approved</span>
+                              </span>
+                            ) : (
+                              <div className="flex items-center gap-1">
+                                {/* Edit Entry Action */}
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setEditingEntry({ productId: product.id, product, entry });
+                                    setEditQtyInput(String(entry.quantity));
+                                    setEditLocation(entry.location);
+                                  }}
+                                  className="h-6 w-6 p-0 rounded-lg text-slate-600 hover:text-primary hover:bg-primary/10"
+                                  title="Edit Count"
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
 
-                              {/* Delete Entry Action */}
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleDeleteEntry(product.id, entry.id)}
-                                className="h-6 w-6 p-0 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-                                title="Delete Entry"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
+                                {/* Delete Entry Action */}
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleDeleteEntry(product.id, entry.id)}
+                                  className="h-6 w-6 p-0 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                                  title="Delete Entry"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -1380,12 +1468,16 @@ export default function StockAudit() {
                       </Button>
                     )}
 
-                    {/* If Already Approved, show confirmation */}
+                    {/* If Already Approved, show notice and user guidance */}
                     {auditState.isApproved && (
                       <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-2.5 py-1.5 flex items-center justify-between text-[11px] font-sans text-emerald-800 font-bold">
-                        <span className="flex items-center gap-1">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                          <span>Stock Synced with Main App ({auditState.totalCounted} pcs)</span>
+                        <span className="flex items-center gap-1.5">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                          <span>
+                            {isAdminUser
+                              ? `Stock Synced with Main App (${auditState.totalCounted} pcs)`
+                              : `Approved & locked. To add more count, tap "+ Add More" above.`}
+                          </span>
                         </span>
                         {isAdminUser && (
                           <button
@@ -1423,7 +1515,7 @@ export default function StockAudit() {
                               await saveAuditSessionToCloudDirectly(updated);
                               showInfo('Reopened count for approval');
                             }}
-                            className="text-[10px] text-slate-500 hover:text-slate-800 underline"
+                            className="text-[10px] text-slate-500 hover:text-slate-800 underline shrink-0 mr-1"
                           >
                             Reopen
                           </button>

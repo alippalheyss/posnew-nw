@@ -633,14 +633,15 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       }
       if (vendorsData) setVendors(vendorsData);
       if (purchasesData) {
-        const mappedPurchases = purchasesData.map(p => ({
+        const mappedPurchases: Purchase[] = purchasesData.map(p => ({
           id: p.id,
           date: p.date,
-          vendorId: p.vendor_id,
-          vendorName: p.vendor || p.vendor_name,
-          billNumber: p.bill_number,
+          vendor: p.vendor || p.vendor_name || '',
+          vendorId: p.vendor_id || undefined,
+          billNumber: p.bill_number || '',
           amount: Number(p.amount || 0),
           gstAmount: Number(p.gst_amount || 0),
+          description: p.description || '',
           items: p.items || []
         }));
         setPurchases(mappedPurchases);
@@ -2143,7 +2144,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           is_zero_tax: !!p.is_zero_tax,
           expiry_date: p.expiry_date || null,
           image: p.image || '',
-          cost_price: p.cost_price !== undefined && p.cost_price !== null && p.cost_price !== '' ? parseSafeFloat(p.cost_price) : null,
+          cost_price: p.cost_price !== undefined && p.cost_price !== null && (p.cost_price as any) !== '' ? parseSafeFloat(p.cost_price) : null,
           last_purchase_date: p.last_purchase_date || null,
           units: p.units || null
         };

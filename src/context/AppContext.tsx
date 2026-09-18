@@ -339,6 +339,7 @@ interface AppContextType {
   isPurchaseWindowMinimized: boolean;
   setIsPurchaseWindowMinimized: React.Dispatch<React.SetStateAction<boolean>>;
   refreshCustomers: () => Promise<void>;
+  refreshProducts: (showToast?: boolean) => Promise<Product[] | undefined>;
   expenses: Expense[];
   setExpenses: React.Dispatch<React.SetStateAction<Expense[]>>;
   addExpense: (expense: Expense) => Promise<void>;
@@ -500,6 +501,36 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     } catch (error: any) {
       console.error('Error refreshing customers:', error);
       showError('Failed to refresh customers: ' + (error.message || 'Unknown error'));
+    }
+  };
+
+  const refreshProducts = async (showToast = false) => {
+    try {
+      const productsData = await fetchAllFromTable('products');
+      if (productsData && productsData.length > 0) {
+        const sanitizedProducts = productsData.map(p => {
+          let units = p.units;
+          if (typeof units === 'string') {
+            try { units = JSON.parse(units); } catch (e) { units = []; }
+          }
+          return {
+            ...p,
+            item_code: p.item_code !== undefined && p.item_code !== null ? String(p.item_code).trim() : '',
+            barcode: p.barcode !== undefined && p.barcode !== null ? String(p.barcode).trim() : '',
+            units: Array.isArray(units) ? units : []
+          };
+        });
+        setProducts(sanitizedProducts);
+        if (showToast) {
+          showSuccess('Products synchronized with database');
+        }
+        return sanitizedProducts;
+      }
+    } catch (error: any) {
+      console.error('Error refreshing products:', error);
+      if (showToast) {
+        showError('Failed to refresh products: ' + (error.message || 'Unknown error'));
+      }
     }
   };
 
@@ -912,9 +943,10 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   const updateStock = async (productId: string, newStock: number) => {
     try {
       const intStock = Math.round(Number(newStock)) || 0;
+      const nowIso = new Date().toISOString();
       const { error } = await supabase
         .from('products')
-        .update({ stock_shop: intStock })
+        .update({ stock_shop: intStock, updated_at: nowIso })
         .eq('id', productId);
 
       if (error) throw error;
@@ -922,6 +954,17 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       setProducts(prev => prev.map(p =>
         p.id === productId ? { ...p, stock_shop: intStock } : p
       ));
+
+      // Broadcast stock update so mobile audit app syncs immediately
+      if (supabase) {
+        try {
+          supabase.channel('stock_audit_realtime_channel').send({
+            type: 'broadcast',
+            event: 'audit_stock_committed',
+            payload: { productId, stock_shop: intStock }
+          });
+        } catch (e) {}
+      }
     } catch (error) {
       console.error('Error updating stock:', error);
       showError('Failed to update stock in database');
@@ -936,9 +979,11 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       const sourceStock = from === 'shop' ? product.stock_shop : product.stock_godown;
       if (sourceStock < amount) return;
 
+      const nowIso = new Date().toISOString();
       const updateData = {
         stock_shop: Math.round(from === 'shop' ? product.stock_shop - amount : product.stock_shop + amount),
-        stock_godown: Math.round(from === 'godown' ? product.stock_godown - amount : product.stock_godown + amount)
+        stock_godown: Math.round(from === 'godown' ? product.stock_godown - amount : product.stock_godown + amount),
+        updated_at: nowIso
       };
 
       const { error } = await supabase
@@ -952,6 +997,17 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         if (p.id !== productId) return p;
         return { ...p, ...updateData };
       }));
+
+      // Broadcast stock transfer so mobile audit app syncs immediately
+      if (supabase) {
+        try {
+          supabase.channel('stock_audit_realtime_channel').send({
+            type: 'broadcast',
+            event: 'audit_stock_committed',
+            payload: { productId, stock_shop: updateData.stock_shop, stock_godown: updateData.stock_godown }
+          });
+        } catch (e) {}
+      }
     } catch (error) {
       console.error('Error transferring stock:', error);
       showError('Failed to transfer stock in database');
@@ -2619,6 +2675,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       isPurchaseWindowMinimized,
       setIsPurchaseWindowMinimized,
       refreshCustomers,
+      refreshProducts,
       expenses,
       setExpenses,
       addExpense,

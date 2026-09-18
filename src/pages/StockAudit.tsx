@@ -17,7 +17,8 @@ import {
   ShieldCheck,
   RotateCcw,
   AlertTriangle,
-  ArrowRight
+  ArrowRight,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -166,7 +167,7 @@ const playBeep = (freq = 880, type: OscillatorType = 'sine', duration = 0.12) =>
 
 export default function StockAudit() {
   const navigate = useNavigate();
-  const { products, setProducts, updateProduct } = useAppContext();
+  const { products, setProducts, updateProduct, refreshProducts } = useAppContext();
   const { currentUser, isAdmin } = useAuth();
 
   // Check if current user is admin
@@ -232,6 +233,62 @@ export default function StockAudit() {
   const [isCommitting, setIsCommitting] = useState(false);
 
   const DEFAULT_SETTINGS_USER_ID = '320e8d7f-9329-41ec-9f65-9a9130bb28d3';
+
+  // Live stock sync state from Main App
+  const [isSyncingProducts, setIsSyncingProducts] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string>('Just now');
+  const lastStockSyncRef = useRef<string>(new Date(Date.now() - 30000).toISOString());
+
+  // Function to sync fresh stock from Main App (Supabase products table)
+  const syncFreshStockFromDb = useCallback(async (isFullRefresh = false) => {
+    if (!supabase) return;
+    try {
+      if (isFullRefresh) {
+        setIsSyncingProducts(true);
+        if (typeof refreshProducts === 'function') {
+          await refreshProducts(false);
+        }
+        setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+        setIsSyncingProducts(false);
+        return;
+      }
+
+      // Fast incremental sync: check if any products were updated in Main App
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, stock_shop, stock_godown, updated_at')
+        .gt('updated_at', lastStockSyncRef.current);
+
+      if (!error && data && data.length > 0) {
+        lastStockSyncRef.current = new Date().toISOString();
+        setProducts(prev => prev.map(p => {
+          const fresh = data.find((d: any) => d.id === p.id);
+          if (fresh) {
+            return {
+              ...p,
+              stock_shop: fresh.stock_shop,
+              stock_godown: fresh.stock_godown
+            };
+          }
+          return p;
+        }));
+        setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      }
+    } catch (err) {
+      console.warn('Note syncing fresh stock from main app:', err);
+    } finally {
+      setIsSyncingProducts(false);
+    }
+  }, [refreshProducts, setProducts]);
+
+  // Initial fresh stock sync and continuous background polling from Main App
+  useEffect(() => {
+    syncFreshStockFromDb(true);
+    const stockInterval = setInterval(() => {
+      syncFreshStockFromDb(false);
+    }, 3500);
+    return () => clearInterval(stockInterval);
+  }, [syncFreshStockFromDb]);
 
   // 1. Load active audit session from Supabase cloud with automatic multi-device merge
   const fetchCloudSession = useCallback(async () => {
@@ -557,8 +614,19 @@ export default function StockAudit() {
     }
 
     try {
-      const newShopStock = item.totalShopCounted > 0 || item.totalGodownCounted > 0 ? item.totalShopCounted : item.totalCounted;
-      const newGodownStock = item.totalGodownCounted;
+      const hasShopEntries = item.entries.some(e => e.location === 'shop');
+      const hasGodownEntries = item.entries.some(e => e.location === 'godown');
+
+      // Preserve un-audited location instead of wiping to 0
+      const newShopStock = hasShopEntries 
+        ? item.totalShopCounted 
+        : (product.stock_shop || 0);
+
+      const newGodownStock = hasGodownEntries 
+        ? item.totalGodownCounted 
+        : (product.stock_godown || 0);
+
+      const nowIso = new Date().toISOString();
 
       // 1. Direct Supabase update specifically on stock columns
       if (supabase) {
@@ -566,7 +634,8 @@ export default function StockAudit() {
           .from('products')
           .update({
             stock_shop: Math.max(0, Math.round(newShopStock)),
-            stock_godown: Math.max(0, Math.round(newGodownStock))
+            stock_godown: Math.max(0, Math.round(newGodownStock)),
+            updated_at: nowIso
           })
           .eq('id', product.id);
 
@@ -603,7 +672,6 @@ export default function StockAudit() {
       }
 
       // 4. Mark approved in audit session
-      const nowIso = new Date().toISOString();
       const updatedItem: ProductAuditState = {
         ...item,
         isApproved: true,
@@ -678,15 +746,24 @@ export default function StockAudit() {
         const item = currentSession.items[id];
         if (!product || !item) continue;
 
-        const newShopStock = item.totalShopCounted > 0 || item.totalGodownCounted > 0 ? item.totalShopCounted : item.totalCounted;
-        const newGodownStock = item.totalGodownCounted;
+        const hasShopEntries = item.entries.some(e => e.location === 'shop');
+        const hasGodownEntries = item.entries.some(e => e.location === 'godown');
+
+        const newShopStock = hasShopEntries 
+          ? item.totalShopCounted 
+          : (product.stock_shop || 0);
+
+        const newGodownStock = hasGodownEntries 
+          ? item.totalGodownCounted 
+          : (product.stock_godown || 0);
 
         if (supabase) {
           await supabase
             .from('products')
             .update({
               stock_shop: Math.max(0, Math.round(newShopStock)),
-              stock_godown: Math.max(0, Math.round(newGodownStock))
+              stock_godown: Math.max(0, Math.round(newGodownStock)),
+              updated_at: nowIso
             })
             .eq('id', product.id);
         }
@@ -930,6 +1007,23 @@ export default function StockAudit() {
           </div>
 
           <div className="flex items-center gap-1.5 font-sans">
+            {/* Manual Sync from Main App Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                await syncFreshStockFromDb(true);
+                await fetchCloudSession();
+                showSuccess('Synced latest stock from Main App');
+              }}
+              disabled={isSyncingProducts}
+              className="h-9 px-2 sm:px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700 text-[11px] font-bold gap-1 shadow-none"
+              title="Sync stock from Main App"
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5 text-primary", isSyncingProducts && "animate-spin")} />
+              <span className="hidden sm:inline">Sync Stock</span>
+            </Button>
+
             <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-bold">
               <span className={cn("w-2 h-2 rounded-full", isConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-400")} />
               <span>{counterName}</span>
@@ -1061,10 +1155,11 @@ export default function StockAudit() {
                             )}
                           </div>
                           <p className="text-[11px] text-slate-600 font-sans font-bold truncate mt-0.5">{product.name_en}</p>
-                          <div className="flex items-center justify-end gap-2 text-[10px] text-slate-400 font-sans mt-0.5">
+                          <div className="flex items-center justify-end gap-2 text-[10px] text-slate-400 font-sans mt-0.5 flex-wrap">
                             {product.barcode && <span>Barcode: <strong className="text-slate-600 font-mono">{product.barcode}</strong></span>}
-                            <span>Main Shop: <strong className="text-slate-700">{product.stock_shop || 0}</strong></span>
-                            <span>Main Godown: <strong className="text-slate-700">{product.stock_godown || 0}</strong></span>
+                            <span>Shop: <strong className="text-emerald-700 font-bold">{product.stock_shop || 0}</strong></span>
+                            <span>Godown: <strong className="text-slate-700 font-bold">{product.stock_godown || 0}</strong></span>
+                            <span>Total: <strong className="text-primary font-black">{(product.stock_shop || 0) + (product.stock_godown || 0)}</strong></span>
                           </div>
                         </div>
 
@@ -1203,19 +1298,23 @@ export default function StockAudit() {
                     <div className="grid grid-cols-4 gap-1 bg-slate-50 p-1.5 rounded-xl border border-slate-200 font-sans text-center text-xs">
                       <div>
                         <span className="text-[9px] text-slate-400 font-bold uppercase block">Main App</span>
-                        <span className="font-black text-slate-800 text-xs">{totalSystem}</span>
+                        <span className="font-black text-slate-800 text-[11px] block">{product.stock_shop || 0}s / {product.stock_godown || 0}g</span>
+                        <span className="text-[9px] text-slate-500 font-bold block">Tot: {totalSystem}</span>
                       </div>
                       <div>
                         <span className="text-[9px] text-slate-400 font-bold uppercase block">Audit Total</span>
-                        <span className="font-black text-emerald-700 text-xs">{auditState.totalCounted}</span>
+                        <span className="font-black text-emerald-700 text-xs block">{auditState.totalCounted}</span>
+                        <span className="text-[9px] text-slate-500 font-bold block">{auditState.totalShopCounted}s / {auditState.totalGodownCounted}g</span>
                       </div>
                       <div className="border-r border-slate-200">
-                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Shop/Godown</span>
-                        <span className="font-black text-slate-700 text-[11px]">{auditState.totalShopCounted}s / {auditState.totalGodownCounted}g</span>
+                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Shop Diff</span>
+                        <span className={cn("font-black text-xs block", (auditState.totalShopCounted - (product.stock_shop || 0)) === 0 ? "text-slate-500" : ((auditState.totalShopCounted - (product.stock_shop || 0)) > 0 ? "text-cyan-700" : "text-rose-600"))}>
+                          {auditState.totalShopCounted - (product.stock_shop || 0) > 0 ? `+${auditState.totalShopCounted - (product.stock_shop || 0)}` : (auditState.totalShopCounted - (product.stock_shop || 0))}
+                        </span>
                       </div>
                       <div className="border-r border-slate-200">
-                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Diff</span>
-                        <span className={cn("font-black text-xs", variance === 0 ? "text-slate-500" : (variance > 0 ? "text-cyan-700" : "text-rose-600"))}>
+                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Total Diff</span>
+                        <span className={cn("font-black text-xs block", variance === 0 ? "text-slate-500" : (variance > 0 ? "text-cyan-700" : "text-rose-600"))}>
                           {variance > 0 ? `+${variance}` : variance}
                         </span>
                       </div>

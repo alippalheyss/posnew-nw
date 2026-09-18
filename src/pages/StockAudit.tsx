@@ -12,8 +12,8 @@ import {
   Plus, 
   Minus, 
   Trash2, 
+  Pencil,
   Share2, 
-  Save, 
   FileSpreadsheet, 
   RotateCcw, 
   Store, 
@@ -27,7 +27,6 @@ import {
   CheckCircle2,
   ShieldCheck,
   Clock,
-  Layers,
   Users as UsersIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -76,7 +75,7 @@ export interface ActiveAuditSession {
   items: Record<string, ProductAuditState>;
 }
 
-// Crisp audio feedback
+// Audio synthesizer
 const playBeep = (freq = 880, type: OscillatorType = 'sine', duration = 0.12) => {
   try {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -95,7 +94,7 @@ const playBeep = (freq = 880, type: OscillatorType = 'sine', duration = 0.12) =>
   } catch (e) {}
 };
 
-// Individual Product Card Component
+// Memoized Individual Product Card (Mobile Optimized Light Mode)
 interface ProductAuditCardProps {
   product: Product;
   auditItem?: ProductAuditState;
@@ -106,6 +105,7 @@ interface ProductAuditCardProps {
   onQuickAdd: (product: Product, qty: number, location: 'shop' | 'godown') => void;
   onOpenCustomCount: (product: Product) => void;
   onDeleteEntry: (productId: string, entryId: string) => void;
+  onEditEntry: (product: Product, entry: AuditEntry) => void;
   onApproveSingle: (product: Product) => void;
   onUnapproveSingle?: (product: Product) => void;
 }
@@ -120,6 +120,7 @@ const ProductAuditCard = React.memo<ProductAuditCardProps>(({
   onQuickAdd,
   onOpenCustomCount,
   onDeleteEntry,
+  onEditEntry,
   onApproveSingle,
   onUnapproveSingle
 }) => {
@@ -158,31 +159,31 @@ const ProductAuditCard = React.memo<ProductAuditCardProps>(({
   return (
     <Card 
       className={cn(
-        "bg-white border transition-all duration-150 overflow-hidden shadow-sm rounded-2xl",
+        "bg-white border transition-all duration-150 overflow-hidden shadow-xs rounded-2xl",
         isApproved
-          ? "border-emerald-400 bg-emerald-50/30"
+          ? "border-emerald-400 bg-emerald-50/25"
           : (isCounted 
-              ? (variance === 0 ? "border-emerald-300 bg-emerald-50/20" : "border-amber-300 bg-amber-50/20")
+              ? (variance === 0 ? "border-emerald-300 bg-emerald-50/15" : "border-amber-300 bg-amber-50/15")
               : "border-slate-200 hover:border-slate-300")
       )}
     >
-      <CardContent className="p-3.5 space-y-2.5">
+      <CardContent className="p-3 space-y-2">
         {/* Header: Dhivehi + English Name & Status Badges */}
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start justify-between gap-1.5">
           <div className="flex-1 text-right">
             <div className="flex items-center justify-end gap-1.5 flex-wrap">
-              <h3 className="text-base font-black text-slate-900 leading-tight">{product.name_dv}</h3>
+              <h3 className="text-sm sm:text-base font-black text-slate-900 leading-snug">{product.name_dv}</h3>
               
               {/* Approval status badge */}
               {isApproved ? (
-                <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-none">
+                <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[9px] sm:text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-none">
                   <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                  <span>Approved by {auditItem?.approvedBy || 'Admin'}</span>
+                  <span>Approved ({auditItem?.approvedBy || 'Admin'})</span>
                 </Badge>
               ) : (isCounted ? (
-                <Badge className="bg-amber-100 text-amber-900 border-amber-300 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-none">
+                <Badge className="bg-amber-100 text-amber-900 border-amber-300 text-[9px] sm:text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-none">
                   <Clock className="h-3 w-3 text-amber-700" />
-                  <span>Pending Admin Review</span>
+                  <span>Pending Review</span>
                 </Badge>
               ) : null)}
 
@@ -190,7 +191,7 @@ const ProductAuditCard = React.memo<ProductAuditCardProps>(({
               {isCounted && (
                 <Badge 
                   className={cn(
-                    "text-[10px] font-black px-2 py-0.5 rounded-full border shadow-none",
+                    "text-[9px] sm:text-[10px] font-black px-2 py-0.5 rounded-full border shadow-none",
                     variance === 0 
                       ? "bg-emerald-100 text-emerald-800 border-emerald-300" 
                       : (variance > 0 ? "bg-cyan-100 text-cyan-800 border-cyan-300" : "bg-rose-100 text-rose-800 border-rose-300")
@@ -201,9 +202,9 @@ const ProductAuditCard = React.memo<ProductAuditCardProps>(({
               )}
             </div>
 
-            <p className="text-xs font-bold text-slate-600 font-sans mt-0.5">{product.name_en}</p>
+            <p className="text-xs font-bold text-slate-600 font-sans mt-0.5 truncate">{product.name_en}</p>
             
-            <div className="flex items-center justify-end gap-3 text-[11px] text-slate-500 font-sans mt-1">
+            <div className="flex items-center justify-end gap-2 text-[10px] sm:text-[11px] text-slate-500 font-sans mt-0.5 flex-wrap">
               {product.barcode && <span>Barcode: <strong className="text-slate-800 font-mono">{product.barcode}</strong></span>}
               {product.item_code && <span>Code: <strong className="text-slate-800 font-mono">{product.item_code}</strong></span>}
               <span>Price: <strong className="text-primary font-black">{formatCurrency(product.price)}</strong></span>
@@ -213,80 +214,80 @@ const ProductAuditCard = React.memo<ProductAuditCardProps>(({
 
         {/* Multi-User Count Breakdown Summary Banner */}
         {isCounted && userBreakdown.length > 0 && (
-          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 font-sans text-xs space-y-1.5">
+          <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 font-sans text-xs space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black text-slate-500 uppercase flex items-center gap-1">
-                <UsersIcon className="h-3.5 w-3.5 text-primary" />
-                <span>Counted by ({userBreakdown.length} user{userBreakdown.length > 1 ? 's' : ''}):</span>
+                <UsersIcon className="h-3 w-3 text-primary" />
+                <span>Counts Breakdown:</span>
               </span>
               {myTotal > 0 && (
-                <Badge variant="outline" className="bg-primary/10 border-primary/30 text-primary text-[10px] font-bold px-1.5 py-0">
+                <Badge variant="outline" className="bg-primary/10 border-primary/30 text-primary text-[9px] font-bold px-1.5 py-0">
                   You: +{myTotal} pcs
                 </Badge>
               )}
             </div>
 
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-1 flex-wrap">
               {userBreakdown.map((u) => (
                 <span 
                   key={u.name}
                   className={cn(
-                    "px-2 py-0.5 rounded-lg text-[11px] font-bold border flex items-center gap-1",
+                    "px-1.5 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-bold border flex items-center gap-1",
                     u.name.toLowerCase() === currentCounterName.toLowerCase()
                       ? "bg-primary/15 border-primary/30 text-primary font-black"
                       : "bg-white border-slate-200 text-slate-800"
                   )}
                 >
                   <strong>{u.name}:</strong>
-                  <span>+{u.total} pcs</span>
-                  <span className="text-[9px] text-slate-400">({u.shop}s / {u.godown}g)</span>
+                  <span>+{u.total}</span>
+                  <span className="text-[9px] text-slate-400">({u.shop}s/{u.godown}g)</span>
                 </span>
               ))}
             </div>
           </div>
         )}
 
-        {/* Stock Comparison Grid (Light Theme) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200 font-sans text-xs">
-          <div>
-            <span className="text-[10px] text-slate-500 font-bold uppercase">System Shop</span>
-            <p className="font-black text-slate-800">{systemShop} pcs</p>
+        {/* Stock Comparison Grid (Optimized Light Theme) */}
+        <div className="grid grid-cols-4 gap-1 sm:gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200 font-sans text-center text-xs">
+          <div className="p-1">
+            <span className="text-[9px] text-slate-500 font-bold uppercase block">Shop</span>
+            <p className="font-black text-slate-800 text-xs sm:text-sm">{systemShop}</p>
           </div>
-          <div>
-            <span className="text-[10px] text-slate-500 font-bold uppercase">System Godown</span>
-            <p className="font-black text-slate-800">{systemGodown} pcs</p>
+          <div className="p-1">
+            <span className="text-[9px] text-slate-500 font-bold uppercase block">Godown</span>
+            <p className="font-black text-slate-800 text-xs sm:text-sm">{systemGodown}</p>
           </div>
-          <div className="border-t sm:border-t-0 sm:border-r border-slate-200 pt-1 sm:pt-0 sm:pr-2">
-            <span className="text-[10px] text-slate-500 font-bold uppercase">Combined Count</span>
-            <p className={cn("font-black text-sm", isCounted ? "text-emerald-700" : "text-slate-400")}>
-              {isCounted ? `${countedTotal} pcs` : 'Not counted'}
+          <div className="p-1 border-r border-slate-200">
+            <span className="text-[9px] text-slate-500 font-bold uppercase block">Counted</span>
+            <p className={cn("font-black text-xs sm:text-sm", isCounted ? "text-emerald-700" : "text-slate-400")}>
+              {isCounted ? `${countedTotal}` : '-'}
             </p>
           </div>
-          <div className="border-t sm:border-t-0 sm:border-r border-slate-200 pt-1 sm:pt-0 sm:pr-2">
-            <span className="text-[10px] text-slate-500 font-bold uppercase">Variance</span>
-            <p className={cn("font-black text-sm", variance === 0 ? "text-slate-500" : (variance > 0 ? "text-cyan-700" : "text-rose-600"))}>
-              {isCounted ? `${variance > 0 ? '+' : ''}${variance} pcs` : '-'}
+          <div className="p-1 border-r border-slate-200">
+            <span className="text-[9px] text-slate-500 font-bold uppercase block">Diff</span>
+            <p className={cn("font-black text-xs sm:text-sm", variance === 0 ? "text-slate-500" : (variance > 0 ? "text-cyan-700" : "text-rose-600"))}>
+              {isCounted ? `${variance > 0 ? '+' : ''}${variance}` : '-'}
             </p>
           </div>
         </div>
 
         {/* Admin Single Product Approval Button */}
         {isAdmin && isCounted && (
-          <div className="pt-1 flex items-center justify-between gap-2 border-t border-slate-100">
+          <div className="pt-0.5 flex items-center justify-between gap-1.5">
             {isApproved ? (
-              <div className="flex items-center justify-between w-full">
-                <span className="text-xs text-emerald-700 font-bold flex items-center gap-1">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                  <span>Inventory updated ({countedTotal} pcs)</span>
+              <div className="flex items-center justify-between w-full bg-emerald-50 border border-emerald-200 rounded-xl px-2.5 py-1">
+                <span className="text-[11px] text-emerald-800 font-bold flex items-center gap-1 font-sans">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>Stock Updated ({countedTotal} pcs)</span>
                 </span>
                 {onUnapproveSingle && (
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={() => onUnapproveSingle(product)}
-                    className="h-7 px-2 text-[10px] font-bold text-slate-500 hover:text-slate-800 rounded-lg"
+                    className="h-6 px-1.5 text-[9px] font-bold text-slate-500 hover:text-slate-800 rounded-lg"
                   >
-                    Re-open Count
+                    Reopen
                   </Button>
                 )}
               </div>
@@ -294,9 +295,9 @@ const ProductAuditCard = React.memo<ProductAuditCardProps>(({
               <Button
                 size="sm"
                 onClick={() => onApproveSingle(product)}
-                className="w-full h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black gap-1.5 shadow-sm"
+                className="w-full h-8 sm:h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black gap-1.5 shadow-xs"
               >
-                <CheckCircle2 className="h-4 w-4" />
+                <CheckCircle2 className="h-3.5 w-3.5" />
                 <span>Accept & Update Stock ({countedTotal} pcs)</span>
               </Button>
             )}
@@ -304,29 +305,28 @@ const ProductAuditCard = React.memo<ProductAuditCardProps>(({
         )}
 
         {/* Quick Add Buttons & Custom Count Controls */}
-        <div className="flex flex-wrap items-center justify-between gap-1.5 pt-0.5">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[11px] text-slate-500 font-bold font-sans">Quick:</span>
-            {[1, 5, 10, 12, 24].map((q) => (
+        <div className="flex items-center justify-between gap-1 pt-0.5">
+          <div className="flex items-center gap-1 flex-wrap">
+            {[1, 5, 10, 12].map((q) => (
               <Button
                 key={q}
                 size="sm"
                 variant="outline"
                 onClick={() => onQuickAdd(product, q, 'shop')}
-                className="h-8 px-2.5 rounded-xl bg-slate-100 hover:bg-primary hover:text-white text-slate-800 border-slate-300 text-xs font-black transition-colors"
+                className="h-7 sm:h-8 px-2 rounded-xl bg-slate-100 hover:bg-primary hover:text-white text-slate-800 border-slate-300 text-[11px] font-black transition-colors"
               >
                 +{q}
               </Button>
             ))}
           </div>
 
-          <div className="flex items-center gap-1.5 mr-auto">
+          <div className="flex items-center gap-1 mr-auto">
             <Button
               size="sm"
               onClick={() => onOpenCustomCount(product)}
-              className="h-8 px-3 rounded-xl bg-primary hover:bg-primary/90 text-white text-xs font-black gap-1 shadow-sm"
+              className="h-7 sm:h-8 px-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white text-[11px] font-black gap-1 shadow-xs"
             >
-              <Plus className="h-3.5 w-3.5" />
+              <Plus className="h-3 w-3" />
               <span>Custom</span>
             </Button>
 
@@ -335,53 +335,61 @@ const ProductAuditCard = React.memo<ProductAuditCardProps>(({
                 size="sm"
                 variant="ghost"
                 onClick={() => onToggleExpand(product.id)}
-                className="h-8 w-8 p-0 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200"
+                className="h-7 sm:h-8 w-7 sm:w-8 p-0 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200"
                 title="View Count History"
               >
-                {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
               </Button>
             )}
           </div>
         </div>
 
-        {/* Expanded Count Log */}
+        {/* Expanded Count Log with Edit & Delete */}
         {isExpanded && auditItem && auditItem.entries.length > 0 && (
-          <div className="mt-2 pt-2 border-t border-slate-200 space-y-1.5 font-sans text-xs">
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Entries Log ({auditItem.entries.length}):</p>
+          <div className="mt-1.5 pt-1.5 border-t border-slate-200 space-y-1 font-sans text-xs">
+            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Entries Log ({auditItem.entries.length}):</p>
             <div className="space-y-1 max-h-40 overflow-y-auto custom-scrollbar">
               {auditItem.entries.map((entry) => {
                 const isMyEntry = (entry.counterName || '').trim().toLowerCase() === currentCounterName.trim().toLowerCase();
-                const canDelete = isAdmin || isMyEntry;
+                const canModify = isAdmin || isMyEntry;
 
                 return (
                   <div 
                     key={entry.id}
                     className={cn(
-                      "flex items-center justify-between p-2 rounded-xl border text-xs",
+                      "flex items-center justify-between p-1.5 sm:p-2 rounded-xl border text-xs",
                       isMyEntry ? "bg-primary/5 border-primary/20" : "bg-slate-100 border-slate-200"
                     )}
                   >
-                    <div className="flex items-center gap-2">
-                      {canDelete && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => onDeleteEntry(product.id, entry.id)}
-                          className="h-6 w-6 text-red-500 hover:bg-red-100 rounded-lg"
-                          title="Remove this entry"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      {canModify && (
+                        <div className="flex items-center gap-0.5">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => onEditEntry(product, entry)}
+                            className="h-6 w-6 text-primary hover:bg-primary/10 rounded-lg"
+                            title="Edit this count"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => onDeleteEntry(product.id, entry.id)}
+                            className="h-6 w-6 text-rose-500 hover:bg-rose-100 rounded-lg"
+                            title="Remove this count"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       )}
-                      <span className="font-bold text-emerald-700">+{entry.quantity} pcs</span>
-                      <Badge variant="outline" className="text-[9px] h-4 py-0 uppercase bg-white border-slate-300 text-slate-700">
+                      <span className="font-bold text-emerald-700 text-xs">+{entry.quantity} pcs</span>
+                      <Badge variant="outline" className="text-[8px] sm:text-[9px] h-4 py-0 uppercase bg-white border-slate-300 text-slate-700">
                         {entry.location}
                       </Badge>
-                      {entry.unitName && entry.unitMultiplier && entry.unitMultiplier > 1 && (
-                        <span className="text-[10px] text-slate-500">({entry.unitName})</span>
-                      )}
                     </div>
-                    <div className="text-right text-[11px] text-slate-600">
+                    <div className="text-right text-[10px] sm:text-[11px] text-slate-600">
                       <strong className={cn("text-slate-800", isMyEntry && "text-primary")}>
                         {entry.counterName} {isMyEntry && '(You)'}
                       </strong> • {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -449,6 +457,15 @@ const StockAudit: React.FC = () => {
   const [countLocation, setCountLocation] = useState<'shop' | 'godown'>('shop');
   const [selectedUnitMultiplier, setSelectedUnitMultiplier] = useState<number>(1);
   const [selectedUnitName, setSelectedUnitName] = useState<string>('Piece (NOS)');
+
+  // Edit Count Entry Modal
+  const [editingEntry, setEditingEntry] = useState<{
+    productId: string;
+    product: Product;
+    entry: AuditEntry;
+  } | null>(null);
+  const [editQtyInput, setEditQtyInput] = useState<string>('1');
+  const [editLocation, setEditLocation] = useState<'shop' | 'godown'>('shop');
 
   // Modals
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -705,6 +722,73 @@ const StockAudit: React.FC = () => {
     playBeep(980, 'sine', 0.08);
     showSuccess(`+${effectiveQty} submitted by ${counterName} for ${product.name_en}`);
   }, [counterName, saveAuditSessionDebounced]);
+
+  // Open Edit Dialog for an entry
+  const handleOpenEditEntry = useCallback((product: Product, entry: AuditEntry) => {
+    setEditingEntry({ productId: product.id, product, entry });
+    setEditQtyInput(String(entry.quantity));
+    setEditLocation(entry.location);
+  }, []);
+
+  // Save modified count entry
+  const handleSaveEditEntry = useCallback(() => {
+    if (!editingEntry) return;
+    const newQty = parseInt(editQtyInput);
+    if (isNaN(newQty) || newQty <= 0) {
+      showError('Please enter a valid count greater than 0');
+      return;
+    }
+
+    const { productId, entry, product } = editingEntry;
+
+    setAuditSession(prev => {
+      const item = prev.items[productId];
+      if (!item) return prev;
+
+      const updatedEntries = item.entries.map(e => {
+        if (e.id === entry.id) {
+          return {
+            ...e,
+            quantity: newQty,
+            location: editLocation,
+            timestamp: new Date().toISOString()
+          };
+        }
+        return e;
+      });
+
+      const totalShopCounted = updatedEntries
+        .filter(e => e.location === 'shop')
+        .reduce((sum, e) => sum + e.quantity, 0);
+      const totalGodownCounted = updatedEntries
+        .filter(e => e.location === 'godown')
+        .reduce((sum, e) => sum + e.quantity, 0);
+      const totalCounted = totalShopCounted + totalGodownCounted;
+
+      const updatedSession: ActiveAuditSession = {
+        ...prev,
+        items: {
+          ...prev.items,
+          [productId]: {
+            ...item,
+            entries: updatedEntries,
+            totalShopCounted,
+            totalGodownCounted,
+            totalCounted,
+            isApproved: false, // Modified count resets approval status for admin review
+            lastUpdated: new Date().toISOString()
+          }
+        }
+      };
+
+      saveAuditSessionDebounced(updatedSession, counterName, 'audit_update');
+      return updatedSession;
+    });
+
+    setEditingEntry(null);
+    playBeep(980, 'sine', 0.08);
+    showSuccess(`Updated ${product.name_en} count to ${newQty} pcs`);
+  }, [editingEntry, editQtyInput, editLocation, counterName, saveAuditSessionDebounced]);
 
   // Delete individual entry
   const handleDeleteEntry = useCallback((productId: string, entryId: string) => {
@@ -1208,45 +1292,44 @@ const StockAudit: React.FC = () => {
   const auditShareUrl = window.location.origin + '/stock-audit';
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 font-faruma flex flex-col pb-28 selection:bg-primary/20" dir="rtl">
-      {/* Top Header Bar */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3.5 py-2.5 shadow-sm">
-        <div className="flex items-center justify-between gap-2 max-w-7xl mx-auto">
-          <div className="flex items-center gap-2">
+    <div className="min-h-screen bg-slate-100 text-slate-900 font-faruma flex flex-col pb-24 sm:pb-28 selection:bg-primary/20" dir="rtl">
+      {/* Top Header Bar (Compact Mobile First) */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3 py-2 shadow-xs">
+        <div className="flex items-center justify-between gap-2 max-w-5xl mx-auto">
+          <div className="flex items-center gap-1.5">
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={() => navigate('/stock')}
-              className="h-9 w-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700"
+              className="h-8 w-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <div className="flex items-center gap-1.5">
-                <h1 className="text-base font-black text-slate-900 leading-tight">ސްޓޮކް އޮޑިޓް</h1>
+              <div className="flex items-center gap-1">
+                <h1 className="text-sm sm:text-base font-black text-slate-900 leading-tight">ސްޓޮކް އޮޑިޓް</h1>
                 <Badge className={cn(
-                  "text-[9px] font-bold py-0 h-4 shadow-none",
+                  "text-[8px] sm:text-[9px] font-bold py-0 h-4 shadow-none",
                   isAdminUser ? "bg-amber-100 text-amber-900 border-amber-300" : "bg-primary/15 text-primary border-primary/30"
                 )}>
-                  {isAdminUser ? '👑 Admin Review' : 'Mobile Counter'}
+                  {isAdminUser ? '👑 Admin' : 'Counter'}
                 </Badge>
               </div>
-              <p className="text-[10px] text-slate-500 font-sans">Multi-Device Live Audit</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
             {/* Live Indicator */}
             <div 
               className={cn(
-                "flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border",
+                "flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold border",
                 isRealtimeActive 
                   ? "bg-emerald-50 text-emerald-700 border-emerald-300" 
                   : "bg-amber-50 text-amber-700 border-amber-300"
               )}
             >
               <span className={cn("h-1.5 w-1.5 rounded-full", isRealtimeActive ? "bg-emerald-600 animate-pulse" : "bg-amber-500")} />
-              <span className="font-sans">{isRealtimeActive ? 'Live Sync' : 'Local'}</span>
+              <span className="font-sans">{isRealtimeActive ? 'Live' : 'Local'}</span>
             </div>
 
             {/* Counter Name Pill */}
@@ -1257,10 +1340,10 @@ const StockAudit: React.FC = () => {
                 setTempCounterName(counterName);
                 setIsCounterNameDialogOpen(true);
               }}
-              className="h-8 px-2.5 rounded-xl bg-slate-50 border-slate-300 hover:bg-slate-100 text-[11px] font-bold gap-1 text-slate-800"
+              className="h-7 sm:h-8 px-2 rounded-xl bg-slate-50 border-slate-300 hover:bg-slate-100 text-[10px] sm:text-[11px] font-bold gap-1 text-slate-800"
             >
-              <UserIcon className="h-3.5 w-3.5 text-primary" />
-              <span className="max-w-[80px] truncate">{counterName}</span>
+              <UserIcon className="h-3 w-3 text-primary" />
+              <span className="max-w-[70px] truncate">{counterName}</span>
             </Button>
 
             {/* Share QR */}
@@ -1268,69 +1351,67 @@ const StockAudit: React.FC = () => {
               variant="ghost"
               size="icon"
               onClick={() => setIsShareModalOpen(true)}
-              className="h-8 w-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700"
+              className="h-7 sm:h-8 w-7 sm:w-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700"
               title="Share Audit Link"
             >
-              <QrCode className="h-4 w-4" />
+              <QrCode className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 space-y-3">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-3 py-2.5 sm:p-4 space-y-2.5">
         {/* Role & Instruction Notice */}
         <div className={cn(
-          "p-3 rounded-2xl border text-xs font-sans flex items-center justify-between gap-2 shadow-sm",
+          "p-2.5 rounded-2xl border text-xs font-sans flex items-center justify-between gap-2 shadow-xs",
           isAdminUser 
-            ? "bg-amber-50 border-amber-200 text-amber-900" 
-            : "bg-blue-50 border-blue-200 text-blue-900"
+            ? "bg-amber-50/80 border-amber-200 text-amber-900" 
+            : "bg-blue-50/80 border-blue-200 text-blue-900"
         )}>
           <div className="flex items-center gap-2">
             {isAdminUser ? (
-              <ShieldCheck className="h-5 w-5 text-amber-600 shrink-0" />
+              <ShieldCheck className="h-4 w-4 text-amber-600 shrink-0" />
             ) : (
-              <Store className="h-5 w-5 text-blue-600 shrink-0" />
+              <Store className="h-4 w-4 text-blue-600 shrink-0" />
             )}
-            <div>
-              <p className="font-black text-xs">
-                {isAdminUser 
-                  ? `👑 Administrator Mode: You have full authority to inspect user counts, accept individual items, or batch confirm into store inventory.`
-                  : `📱 Counter Mode (${counterName}): Count items on shelves or godown. Submissions will be aggregated live and reviewed by Admin.`}
-              </p>
-            </div>
+            <p className="font-bold text-[11px] sm:text-xs">
+              {isAdminUser 
+                ? `👑 Admin Mode: Inspect user counts & accept items into live stock.`
+                : `📱 Logged as ${counterName}: Counts are submitted live for Admin review.`}
+            </p>
           </div>
           {isAdminUser && stats.pendingApprovalCount > 0 && (
             <Button
               size="sm"
               onClick={() => setIsBatchApproveModalOpen(true)}
-              className="h-8 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs shrink-0 shadow-sm gap-1"
+              className="h-7 px-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-[11px] shrink-0 shadow-xs gap-1"
             >
-              <CheckCircle2 className="h-3.5 w-3.5" />
+              <CheckCircle2 className="h-3 w-3" />
               <span>Review ({stats.pendingApprovalCount})</span>
             </Button>
           )}
         </div>
 
         {/* Progress Dashboard */}
-        <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-2.5">
+        <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-2">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <span className="text-[10px] text-slate-500 font-bold uppercase">Audit Progress</span>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-xl font-black text-slate-900">{stats.countedCount}</span>
-                <span className="text-xs text-slate-500">/ {stats.totalProducts} items ({stats.progressPercent}%)</span>
+              <span className="text-[9px] text-slate-500 font-bold uppercase">Audit Progress</span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-lg sm:text-xl font-black text-slate-900">{stats.countedCount}</span>
+                <span className="text-[11px] text-slate-500">/ {stats.totalProducts} ({stats.progressPercent}%)</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleExportExcel}
-                className="h-8 px-2.5 rounded-xl bg-slate-50 border-slate-300 hover:bg-slate-100 text-xs font-bold gap-1 text-emerald-700"
+                className="h-7 px-2 rounded-xl bg-slate-50 border-slate-300 hover:bg-slate-100 text-[11px] font-bold gap-1 text-emerald-700"
               >
-                <FileSpreadsheet className="h-3.5 w-3.5" />
+                <FileSpreadsheet className="h-3 w-3" />
                 <span>Export</span>
               </Button>
 
@@ -1339,78 +1420,77 @@ const StockAudit: React.FC = () => {
                   variant="outline"
                   size="sm"
                   onClick={() => setIsResetModalOpen(true)}
-                  className="h-8 px-2.5 rounded-xl bg-slate-50 border-slate-300 hover:bg-red-50 text-xs font-bold gap-1 text-red-600"
+                  className="h-7 px-2 rounded-xl bg-slate-50 border-slate-300 hover:bg-red-50 text-[11px] font-bold gap-1 text-red-600"
                 >
-                  <RotateCcw className="h-3.5 w-3.5" />
+                  <RotateCcw className="h-3 w-3" />
                   <span>Reset</span>
                 </Button>
               )}
             </div>
           </div>
 
-          <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+          <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
             <div 
               className="bg-gradient-to-r from-amber-500 via-primary to-emerald-500 h-full rounded-full transition-all duration-300"
               style={{ width: `${stats.progressPercent}%` }}
             />
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-0.5">
-            <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 text-center">
-              <p className="text-[9px] text-slate-500 font-bold uppercase">Counted Items</p>
-              <p className="text-sm font-black text-emerald-700">{stats.countedCount}</p>
+          <div className="grid grid-cols-4 gap-1 pt-0.5 font-sans">
+            <div className="bg-slate-50 p-1.5 rounded-xl border border-slate-200 text-center">
+              <p className="text-[8px] text-slate-500 font-bold uppercase">Counted</p>
+              <p className="text-xs sm:text-sm font-black text-emerald-700">{stats.countedCount}</p>
             </div>
-            <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 text-center">
-              <p className="text-[9px] text-slate-500 font-bold uppercase">Pending Review</p>
-              <p className="text-sm font-black text-amber-700">{stats.pendingApprovalCount}</p>
+            <div className="bg-slate-50 p-1.5 rounded-xl border border-slate-200 text-center">
+              <p className="text-[8px] text-slate-500 font-bold uppercase">Pending</p>
+              <p className="text-xs sm:text-sm font-black text-amber-700">{stats.pendingApprovalCount}</p>
             </div>
-            <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 text-center">
-              <p className="text-[9px] text-slate-500 font-bold uppercase">Approved</p>
-              <p className="text-sm font-black text-emerald-600">{stats.approvedCount}</p>
+            <div className="bg-slate-50 p-1.5 rounded-xl border border-slate-200 text-center">
+              <p className="text-[8px] text-slate-500 font-bold uppercase">Approved</p>
+              <p className="text-xs sm:text-sm font-black text-emerald-600">{stats.approvedCount}</p>
             </div>
-            <div className="bg-slate-50 p-2 rounded-xl border border-slate-200 text-center">
-              <p className="text-[9px] text-slate-500 font-bold uppercase">Discrepancy</p>
-              <p className="text-sm font-black text-rose-600">{stats.discrepancyCount}</p>
+            <div className="bg-slate-50 p-1.5 rounded-xl border border-slate-200 text-center">
+              <p className="text-[8px] text-slate-500 font-bold uppercase">Diff</p>
+              <p className="text-xs sm:text-sm font-black text-rose-600">{stats.discrepancyCount}</p>
             </div>
           </div>
         </div>
 
         {/* Search Bar + Barcode Scanner Trigger */}
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           <div className="relative flex-1">
-            <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search product name, barcode, code..."
-              className="h-12 pr-10 pl-9 rounded-2xl bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 font-bold text-sm shadow-sm"
+              className="h-11 pr-9 pl-8 rounded-2xl bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 font-bold text-xs sm:text-sm shadow-xs"
             />
             {searchTerm && (
               <button 
                 onClick={() => setSearchTerm('')}
-                className="absolute left-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800"
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800"
               >
-                <X className="h-3.5 w-3.5" />
+                <X className="h-3 w-3" />
               </button>
             )}
           </div>
 
           <Button
             onClick={startCameraScanner}
-            className="h-12 px-4 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black gap-1.5 shadow-md shrink-0 text-xs"
+            className="h-11 px-3.5 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black gap-1.5 shadow-xs shrink-0 text-xs"
           >
-            <Camera className="h-5 w-5" />
-            <span className="hidden sm:inline">Scan Barcode</span>
-            <span className="sm:hidden">Scan</span>
+            <Camera className="h-4 w-4" />
+            <span>Scan</span>
           </Button>
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar text-xs font-bold">
+        <div className="flex items-center gap-1 overflow-x-auto pb-1 custom-scrollbar text-xs font-bold">
           <button
             onClick={() => setFilterMode('all')}
             className={cn(
-              "px-3.5 py-2 rounded-xl border transition-colors whitespace-nowrap text-xs shadow-sm",
+              "px-3 py-1.5 rounded-xl border transition-colors whitespace-nowrap text-[11px] shadow-xs",
               filterMode === 'all'
                 ? "bg-slate-900 text-white border-slate-900 font-black"
                 : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
@@ -1421,7 +1501,7 @@ const StockAudit: React.FC = () => {
           <button
             onClick={() => setFilterMode('my_counts')}
             className={cn(
-              "px-3.5 py-2 rounded-xl border transition-colors whitespace-nowrap text-xs shadow-sm",
+              "px-3 py-1.5 rounded-xl border transition-colors whitespace-nowrap text-[11px] shadow-xs",
               filterMode === 'my_counts'
                 ? "bg-primary text-white border-primary font-black"
                 : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
@@ -1432,29 +1512,29 @@ const StockAudit: React.FC = () => {
           <button
             onClick={() => setFilterMode('counted')}
             className={cn(
-              "px-3.5 py-2 rounded-xl border transition-colors whitespace-nowrap text-xs shadow-sm",
+              "px-3 py-1.5 rounded-xl border transition-colors whitespace-nowrap text-[11px] shadow-xs",
               filterMode === 'counted'
                 ? "bg-emerald-700 text-white border-emerald-700 font-black"
                 : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
             )}
           >
-            All Counted ({stats.countedCount})
+            Counted ({stats.countedCount})
           </button>
           <button
             onClick={() => setFilterMode('pending')}
             className={cn(
-              "px-3.5 py-2 rounded-xl border transition-colors whitespace-nowrap text-xs shadow-sm",
+              "px-3 py-1.5 rounded-xl border transition-colors whitespace-nowrap text-[11px] shadow-xs",
               filterMode === 'pending'
                 ? "bg-amber-600 text-white border-amber-600 font-black"
                 : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
             )}
           >
-            ⏳ Pending Review ({stats.pendingApprovalCount})
+            ⏳ Pending ({stats.pendingApprovalCount})
           </button>
           <button
             onClick={() => setFilterMode('approved')}
             className={cn(
-              "px-3.5 py-2 rounded-xl border transition-colors whitespace-nowrap text-xs shadow-sm",
+              "px-3 py-1.5 rounded-xl border transition-colors whitespace-nowrap text-[11px] shadow-xs",
               filterMode === 'approved'
                 ? "bg-emerald-600 text-white border-emerald-600 font-black"
                 : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
@@ -1465,22 +1545,22 @@ const StockAudit: React.FC = () => {
           <button
             onClick={() => setFilterMode('discrepancy')}
             className={cn(
-              "px-3.5 py-2 rounded-xl border transition-colors whitespace-nowrap text-xs shadow-sm",
+              "px-3 py-1.5 rounded-xl border transition-colors whitespace-nowrap text-[11px] shadow-xs",
               filterMode === 'discrepancy'
                 ? "bg-rose-600 text-white border-rose-600 font-black"
                 : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
             )}
           >
-            Discrepancies ({stats.discrepancyCount})
+            Diff ({stats.discrepancyCount})
           </button>
         </div>
 
         {/* Product List */}
-        <div className="space-y-2.5">
+        <div className="space-y-2">
           {visibleProducts.length === 0 ? (
-            <div className="p-10 text-center rounded-2xl bg-white border border-slate-200 space-y-2 shadow-sm">
-              <Boxes className="h-8 w-8 text-slate-400 mx-auto" />
-              <p className="text-slate-600 font-bold text-sm">No products matched your search or filter</p>
+            <div className="p-8 text-center rounded-2xl bg-white border border-slate-200 space-y-2 shadow-xs">
+              <Boxes className="h-7 w-7 text-slate-400 mx-auto" />
+              <p className="text-slate-600 font-bold text-xs">No products matched your search or filter</p>
             </div>
           ) : (
             visibleProducts.map((product) => (
@@ -1495,6 +1575,7 @@ const StockAudit: React.FC = () => {
                 onQuickAdd={handleAddCount}
                 onOpenCustomCount={handleOpenCustomCount}
                 onDeleteEntry={handleDeleteEntry}
+                onEditEntry={handleOpenEditEntry}
                 onApproveSingle={handleApproveSingleProduct}
                 onUnapproveSingle={handleUnapproveSingleProduct}
               />
@@ -1503,11 +1584,11 @@ const StockAudit: React.FC = () => {
 
           {/* Load More Button */}
           {visibleProducts.length < filteredProducts.length && (
-            <div className="pt-2 text-center">
+            <div className="pt-1 text-center">
               <Button
                 variant="outline"
                 onClick={() => setVisibleLimit(prev => Math.min(filteredProducts.length, prev + 30))}
-                className="w-full h-11 rounded-2xl bg-white border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-sm"
+                className="w-full h-10 rounded-2xl bg-white border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-xs"
               >
                 Load More ({filteredProducts.length - visibleProducts.length} remaining)
               </Button>
@@ -1517,31 +1598,31 @@ const StockAudit: React.FC = () => {
       </main>
 
       {/* Floating Bottom Action Bar */}
-      <footer className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 shadow-lg">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+      <footer className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 py-2 shadow-md">
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-2">
           <Button
             onClick={startCameraScanner}
-            className="h-12 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 font-bold gap-2 text-xs shadow-sm"
+            className="h-11 px-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 font-bold gap-1.5 text-xs shadow-xs"
           >
             <Camera className="h-4 w-4 text-primary" />
-            <span>Scan Barcode</span>
+            <span>Scan</span>
           </Button>
 
           {isAdminUser ? (
             <Button
               onClick={() => setIsBatchApproveModalOpen(true)}
               disabled={stats.countedCount === 0}
-              className="h-12 px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black gap-2 text-xs shadow-md shadow-emerald-600/20"
+              className="h-11 px-4 sm:px-6 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black gap-1.5 text-xs shadow-sm"
             >
               <CheckCircle2 className="h-4 w-4" />
-              <span>Batch Review & Accept ({stats.pendingApprovalCount || stats.countedCount})</span>
+              <span>Batch Accept ({stats.pendingApprovalCount || stats.countedCount})</span>
             </Button>
           ) : (
-            <div className="flex items-center gap-2 bg-slate-100 border border-slate-200 px-4 py-2 rounded-2xl font-sans text-xs">
-              <Clock className="h-4 w-4 text-amber-600" />
+            <div className="flex items-center gap-1.5 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-2xl font-sans text-xs">
+              <Clock className="h-3.5 w-3.5 text-amber-600" />
               <div className="text-right">
-                <p className="font-bold text-slate-800">You counted: {stats.myCountedCount} items ({stats.myTotalPcs} pcs)</p>
-                <p className="text-[10px] text-slate-500">Awaiting Admin Confirmation</p>
+                <p className="font-bold text-slate-800 text-[11px]">Your Counts: {stats.myCountedCount} items ({stats.myTotalPcs} pcs)</p>
+                <p className="text-[9px] text-slate-500">Submitted for Admin Review</p>
               </div>
             </div>
           )}
@@ -1550,42 +1631,42 @@ const StockAudit: React.FC = () => {
 
       {/* 1. Custom Count Dialog */}
       <Dialog open={!!activeCountingProduct} onOpenChange={(open) => !open && setActiveCountingProduct(null)}>
-        <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-sm p-5 rounded-3xl font-faruma shadow-2xl" dir="rtl">
+        <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-sm p-4 rounded-3xl font-faruma shadow-2xl" dir="rtl">
           {activeCountingProduct && (
-            <div className="space-y-3.5">
+            <div className="space-y-3">
               <DialogHeader className="text-right space-y-0.5">
-                <DialogTitle className="text-base font-black text-slate-900">{activeCountingProduct.name_dv}</DialogTitle>
-                <DialogDescription className="text-xs text-slate-500 font-sans">{activeCountingProduct.name_en}</DialogDescription>
+                <DialogTitle className="text-sm sm:text-base font-black text-slate-900">{activeCountingProduct.name_dv}</DialogTitle>
+                <DialogDescription className="text-xs text-slate-500 font-sans truncate">{activeCountingProduct.name_en}</DialogDescription>
               </DialogHeader>
 
               {/* Location Switcher */}
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-600 font-sans">Count Location:</label>
-                <div className="grid grid-cols-2 gap-2 font-sans">
+                <label className="text-[10px] font-bold text-slate-600 font-sans">Count Location:</label>
+                <div className="grid grid-cols-2 gap-1.5 font-sans">
                   <button
                     type="button"
                     onClick={() => setCountLocation('shop')}
                     className={cn(
-                      "p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all",
+                      "p-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all",
                       countLocation === 'shop'
-                        ? "bg-primary text-white border-primary font-black shadow-sm"
+                        ? "bg-primary text-white border-primary font-black shadow-xs"
                         : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
                     )}
                   >
-                    <Store className="h-4 w-4" />
+                    <Store className="h-3.5 w-3.5" />
                     <span>Shop Shelf</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setCountLocation('godown')}
                     className={cn(
-                      "p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all",
+                      "p-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all",
                       countLocation === 'godown'
-                        ? "bg-primary text-white border-primary font-black shadow-sm"
+                        ? "bg-primary text-white border-primary font-black shadow-xs"
                         : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
                     )}
                   >
-                    <Warehouse className="h-4 w-4" />
+                    <Warehouse className="h-3.5 w-3.5" />
                     <span>Godown / Store</span>
                   </button>
                 </div>
@@ -1594,7 +1675,7 @@ const StockAudit: React.FC = () => {
               {/* Unit multiplier if available */}
               {activeCountingProduct.units && Array.isArray(activeCountingProduct.units) && activeCountingProduct.units.length > 0 && (
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-600 font-sans">Package Unit:</label>
+                  <label className="text-[10px] font-bold text-slate-600 font-sans">Package Unit:</label>
                   <div className="flex flex-wrap gap-1 font-sans">
                     <Button
                       type="button"
@@ -1605,7 +1686,7 @@ const StockAudit: React.FC = () => {
                         setSelectedUnitName('Piece (NOS)');
                       }}
                       className={cn(
-                        "h-8 text-xs font-bold rounded-xl",
+                        "h-7 text-xs font-bold rounded-xl",
                         selectedUnitMultiplier === 1 ? "bg-primary text-white" : "bg-slate-50 border-slate-200 text-slate-700"
                       )}
                     >
@@ -1625,7 +1706,7 @@ const StockAudit: React.FC = () => {
                             setSelectedUnitName(uName);
                           }}
                           className={cn(
-                            "h-8 text-xs font-bold rounded-xl",
+                            "h-7 text-xs font-bold rounded-xl",
                             selectedUnitMultiplier === mult ? "bg-primary text-white" : "bg-slate-50 border-slate-200 text-slate-700"
                           )}
                         >
@@ -1639,43 +1720,43 @@ const StockAudit: React.FC = () => {
 
               {/* Quantity Stepper */}
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-600 font-sans">
-                  Quantity to Add ({selectedUnitName}):
+                <label className="text-[10px] font-bold text-slate-600 font-sans">
+                  Quantity ({selectedUnitName}):
                 </label>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setCountInput(prev => String(Math.max(1, (parseInt(prev) || 1) - 1)))}
-                    className="h-12 w-12 rounded-2xl bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200"
+                    className="h-11 w-11 rounded-2xl bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200"
                   >
-                    <Minus className="h-5 w-5" />
+                    <Minus className="h-4 w-4" />
                   </Button>
                   <Input
                     type="number"
                     min="1"
                     value={countInput}
                     onChange={(e) => setCountInput(e.target.value)}
-                    className="h-12 text-center text-xl font-black bg-slate-50 border-slate-300 text-slate-900 rounded-2xl font-sans"
+                    className="h-11 text-center text-lg font-black bg-slate-50 border-slate-300 text-slate-900 rounded-2xl font-sans"
                     autoFocus
                   />
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setCountInput(prev => String((parseInt(prev) || 0) + 1))}
-                    className="h-12 w-12 rounded-2xl bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200"
+                    className="h-11 w-11 rounded-2xl bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200"
                   >
-                    <Plus className="h-5 w-5" />
+                    <Plus className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
 
-              <DialogFooter className="flex-row gap-2 pt-2">
+              <DialogFooter className="flex-row gap-2 pt-1">
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={() => setActiveCountingProduct(null)}
-                  className="flex-1 h-11 rounded-2xl bg-slate-100 border-slate-300 text-slate-700 text-xs font-bold"
+                  className="flex-1 h-10 rounded-2xl bg-slate-100 border-slate-300 text-slate-700 text-xs font-bold"
                 >
                   Cancel
                 </Button>
@@ -1688,7 +1769,7 @@ const StockAudit: React.FC = () => {
                       setActiveCountingProduct(null);
                     }
                   }}
-                  className="flex-1 h-11 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-xs shadow-md"
+                  className="flex-1 h-10 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-xs shadow-xs"
                 >
                   Submit Count
                 </Button>
@@ -1698,7 +1779,110 @@ const StockAudit: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 2. Html5Qrcode Camera Scanner Modal (Safe Overlay Modal) */}
+      {/* 2. Edit Entry Dialog */}
+      <Dialog open={!!editingEntry} onOpenChange={(open) => !open && setEditingEntry(null)}>
+        <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-sm p-4 rounded-3xl font-faruma shadow-2xl" dir="rtl">
+          {editingEntry && (
+            <div className="space-y-3">
+              <DialogHeader className="text-right space-y-0.5">
+                <DialogTitle className="text-sm sm:text-base font-black text-slate-900 flex items-center justify-end gap-1.5">
+                  <Pencil className="h-4 w-4 text-primary" />
+                  <span>Edit Count ({editingEntry.product.name_dv})</span>
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500 font-sans truncate">
+                  {editingEntry.product.name_en} • By {editingEntry.entry.counterName}
+                </DialogDescription>
+              </DialogHeader>
+
+              {/* Location Switcher */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-600 font-sans">Count Location:</label>
+                <div className="grid grid-cols-2 gap-1.5 font-sans">
+                  <button
+                    type="button"
+                    onClick={() => setEditLocation('shop')}
+                    className={cn(
+                      "p-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all",
+                      editLocation === 'shop'
+                        ? "bg-primary text-white border-primary font-black shadow-xs"
+                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                    )}
+                  >
+                    <Store className="h-3.5 w-3.5" />
+                    <span>Shop Shelf</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditLocation('godown')}
+                    className={cn(
+                      "p-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all",
+                      editLocation === 'godown'
+                        ? "bg-primary text-white border-primary font-black shadow-xs"
+                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                    )}
+                  >
+                    <Warehouse className="h-3.5 w-3.5" />
+                    <span>Godown / Store</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Quantity Stepper */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-600 font-sans">
+                  New Quantity (Pieces):
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setEditQtyInput(prev => String(Math.max(1, (parseInt(prev) || 1) - 1)))}
+                    className="h-11 w-11 rounded-2xl bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={editQtyInput}
+                    onChange={(e) => setEditQtyInput(e.target.value)}
+                    className="h-11 text-center text-lg font-black bg-slate-50 border-slate-300 text-slate-900 rounded-2xl font-sans"
+                    autoFocus
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setEditQtyInput(prev => String((parseInt(prev) || 0) + 1))}
+                    className="h-11 w-11 rounded-2xl bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <DialogFooter className="flex-row gap-2 pt-1">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setEditingEntry(null)}
+                  className="flex-1 h-10 rounded-2xl bg-slate-100 border-slate-300 text-slate-700 text-xs font-bold"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="button" 
+                  onClick={handleSaveEditEntry}
+                  className="flex-1 h-10 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-xs shadow-xs"
+                >
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* 3. Html5Qrcode Camera Scanner Modal (Safe Overlay Modal) */}
       {isScannerOpen && (
         <div 
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 font-faruma"
@@ -1708,36 +1892,36 @@ const StockAudit: React.FC = () => {
           }}
         >
           <div 
-            className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl space-y-3 text-slate-900 animate-in fade-in zoom-in-95 duration-150"
+            className="w-full max-w-sm bg-white rounded-3xl p-4 sm:p-5 shadow-2xl space-y-2.5 text-slate-900 animate-in fade-in zoom-in-95 duration-150"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-1 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                  <Camera className="h-4 w-4" />
+              <div className="flex items-center gap-1.5">
+                <div className="w-7 h-7 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                  <Camera className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-slate-900">Barcode Scanner</h3>
-                  <p className="text-[10px] text-slate-500 font-sans">Aim at product barcode (EAN, UPC, Code 128)</p>
+                  <h3 className="text-xs sm:text-sm font-black text-slate-900">Barcode Scanner</h3>
+                  <p className="text-[9px] text-slate-500 font-sans">Aim at product barcode</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={stopCameraScanner}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors"
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </div>
 
-            <div className="space-y-2 py-1">
+            <div className="space-y-2 py-0.5">
               <div 
                 id="stock-audit-qr-reader" 
                 className="w-full rounded-2xl overflow-hidden bg-black aspect-[4/3] flex items-center justify-center border border-slate-200 relative shadow-inner"
               />
 
               {scannerError && (
-                <p className="text-xs text-rose-600 font-bold text-center font-sans bg-rose-50 p-2.5 rounded-xl border border-rose-200">
+                <p className="text-xs text-rose-600 font-bold text-center font-sans bg-rose-50 p-2 rounded-xl border border-rose-200">
                   {scannerError}
                 </p>
               )}
@@ -1747,7 +1931,7 @@ const StockAudit: React.FC = () => {
               type="button" 
               variant="outline" 
               onClick={stopCameraScanner}
-              className="w-full h-11 rounded-2xl bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800 font-bold text-xs shadow-sm"
+              className="w-full h-10 rounded-2xl bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800 font-bold text-xs shadow-xs"
             >
               Close Camera
             </Button>
@@ -1755,19 +1939,19 @@ const StockAudit: React.FC = () => {
         </div>
       )}
 
-      {/* 3. QR Share Dialog */}
+      {/* 4. QR Share Dialog */}
       <Dialog open={isShareModalOpen} onOpenChange={setIsShareModalOpen}>
-        <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-xs p-5 rounded-3xl font-faruma text-center shadow-2xl" dir="rtl">
+        <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-xs p-4 rounded-3xl font-faruma text-center shadow-2xl" dir="rtl">
           <DialogHeader className="space-y-0.5">
-            <DialogTitle className="text-base font-black text-slate-900">Join Stock Audit</DialogTitle>
+            <DialogTitle className="text-sm sm:text-base font-black text-slate-900">Join Stock Audit</DialogTitle>
             <DialogDescription className="text-xs text-slate-500 font-sans">
               Scan with phone camera to start counting together
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-3 flex flex-col items-center justify-center space-y-3">
-            <div className="p-3 bg-white border border-slate-200 rounded-2xl shadow-md">
-              <QRCodeSVG value={auditShareUrl} size={160} />
+          <div className="py-2 flex flex-col items-center justify-center space-y-2.5">
+            <div className="p-3 bg-white border border-slate-200 rounded-2xl shadow-xs">
+              <QRCodeSVG value={auditShareUrl} size={150} />
             </div>
 
             <div className="w-full space-y-1 font-sans">
@@ -1776,9 +1960,9 @@ const StockAudit: React.FC = () => {
                   navigator.clipboard.writeText(auditShareUrl);
                   showSuccess('Audit link copied!');
                 }}
-                className="w-full h-10 rounded-2xl bg-primary hover:bg-primary/90 text-white font-bold text-xs gap-1.5 shadow-sm"
+                className="w-full h-9 rounded-2xl bg-primary hover:bg-primary/90 text-white font-bold text-xs gap-1.5 shadow-xs"
               >
-                <Share2 className="h-4 w-4" />
+                <Share2 className="h-3.5 w-3.5" />
                 <span>Copy Audit Link</span>
               </Button>
             </div>
@@ -1789,7 +1973,7 @@ const StockAudit: React.FC = () => {
               type="button" 
               variant="outline" 
               onClick={() => setIsShareModalOpen(false)}
-              className="w-full h-10 rounded-2xl bg-slate-100 border-slate-300 text-slate-700 text-xs font-bold"
+              className="w-full h-9 rounded-2xl bg-slate-100 border-slate-300 text-slate-700 text-xs font-bold"
             >
               Close
             </Button>
@@ -1797,22 +1981,22 @@ const StockAudit: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 4. Counter Name Dialog */}
+      {/* 5. Counter Name Dialog */}
       <Dialog open={isCounterNameDialogOpen} onOpenChange={setIsCounterNameDialogOpen}>
-        <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-xs p-5 rounded-3xl font-faruma shadow-2xl" dir="rtl">
+        <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-xs p-4 rounded-3xl font-faruma shadow-2xl" dir="rtl">
           <DialogHeader className="text-right space-y-0.5">
-            <DialogTitle className="text-base font-black text-slate-900">Counter Profile Name</DialogTitle>
+            <DialogTitle className="text-sm sm:text-base font-black text-slate-900">Counter Name</DialogTitle>
             <DialogDescription className="text-xs text-slate-500 font-sans">
-              This name is stamped on all counts you add
+              This name stamps all counts you add
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-2 font-sans">
+          <div className="py-1.5 font-sans">
             <Input
               value={tempCounterName}
               onChange={(e) => setTempCounterName(e.target.value)}
               placeholder="e.g. Ahmed or Counter 1"
-              className="h-11 rounded-2xl bg-slate-50 border-slate-300 text-slate-900 font-bold text-sm"
+              className="h-10 rounded-2xl bg-slate-50 border-slate-300 text-slate-900 font-bold text-xs sm:text-sm"
               autoFocus
             />
           </div>
@@ -1822,7 +2006,7 @@ const StockAudit: React.FC = () => {
               type="button" 
               variant="outline" 
               onClick={() => setIsCounterNameDialogOpen(false)}
-              className="flex-1 h-10 rounded-2xl bg-slate-100 border-slate-300 text-slate-700 text-xs font-bold"
+              className="flex-1 h-9 rounded-2xl bg-slate-100 border-slate-300 text-slate-700 text-xs font-bold"
             >
               Cancel
             </Button>
@@ -1836,20 +2020,20 @@ const StockAudit: React.FC = () => {
                   showSuccess(`Counter set to ${tempCounterName.trim()}`);
                 }
               }}
-              className="flex-1 h-10 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-xs shadow-md"
+              className="flex-1 h-9 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-xs shadow-xs"
             >
-              Save Name
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* 5. Admin Batch Review & Approval Modal */}
+      {/* 6. Admin Batch Review & Approval Modal */}
       <Dialog open={isBatchApproveModalOpen} onOpenChange={setIsBatchApproveModalOpen}>
-        <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-lg p-5 rounded-3xl font-faruma shadow-2xl" dir="rtl">
+        <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-lg p-4 sm:p-5 rounded-3xl font-faruma shadow-2xl" dir="rtl">
           <DialogHeader className="text-right space-y-0.5">
-            <DialogTitle className="text-base font-black text-slate-900 flex items-center justify-end gap-2">
-              <ShieldCheck className="h-5 w-5 text-emerald-600" />
+            <DialogTitle className="text-sm sm:text-base font-black text-slate-900 flex items-center justify-end gap-1.5">
+              <ShieldCheck className="h-4 w-4 text-emerald-600" />
               <span>Admin Batch Audit Approval</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500 font-sans">
@@ -1857,11 +2041,11 @@ const StockAudit: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-2 space-y-3 font-sans text-xs">
+          <div className="py-2 space-y-2.5 font-sans text-xs">
             {/* Stats card */}
-            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-1.5">
+            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-1">
               <div className="flex justify-between">
-                <span className="text-slate-500">Total Counted Products:</span>
+                <span className="text-slate-500">Total Counted:</span>
                 <strong className="text-slate-900 font-black">{stats.countedCount} items</strong>
               </div>
               <div className="flex justify-between">
@@ -1881,14 +2065,14 @@ const StockAudit: React.FC = () => {
             </div>
 
             {/* Scope selection */}
-            <div className="space-y-1.5">
-              <label className="text-slate-700 font-bold block">Approval Scope:</label>
-              <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <label className="text-slate-700 font-bold block text-[11px]">Approval Scope:</label>
+              <div className="grid grid-cols-2 gap-1.5">
                 <button
                   type="button"
                   onClick={() => setBatchScope('pending')}
                   className={cn(
-                    "p-2.5 rounded-xl border text-xs font-bold text-center transition-all",
+                    "p-2 rounded-xl border text-xs font-bold text-center transition-all",
                     batchScope === 'pending'
                       ? "bg-amber-100 border-amber-400 text-amber-900 font-black"
                       : "bg-slate-50 border-slate-200 text-slate-700"
@@ -1900,7 +2084,7 @@ const StockAudit: React.FC = () => {
                   type="button"
                   onClick={() => setBatchScope('all')}
                   className={cn(
-                    "p-2.5 rounded-xl border text-xs font-bold text-center transition-all",
+                    "p-2 rounded-xl border text-xs font-bold text-center transition-all",
                     batchScope === 'all'
                       ? "bg-emerald-100 border-emerald-400 text-emerald-900 font-black"
                       : "bg-slate-50 border-slate-200 text-slate-700"
@@ -1912,7 +2096,7 @@ const StockAudit: React.FC = () => {
             </div>
 
             {/* Counted products preview */}
-            <div className="max-h-48 overflow-y-auto space-y-1 border border-slate-200 rounded-2xl p-2 bg-slate-50 custom-scrollbar">
+            <div className="max-h-40 overflow-y-auto space-y-1 border border-slate-200 rounded-2xl p-1.5 bg-slate-50 custom-scrollbar">
               {products
                 .filter(p => {
                   const item = auditSession.items[p.id];
@@ -1926,14 +2110,14 @@ const StockAudit: React.FC = () => {
                   const contributors = item.entries.map(e => `${e.counterName} (+${e.quantity})`).join(', ');
 
                   return (
-                    <div key={p.id} className="p-2 bg-white rounded-xl border border-slate-200 flex items-center justify-between text-[11px]">
-                      <div>
-                        <p className="font-bold text-slate-900">{p.name_en}</p>
-                        <p className="text-[10px] text-slate-500">By: {contributors}</p>
+                    <div key={p.id} className="p-1.5 bg-white rounded-xl border border-slate-200 flex items-center justify-between text-[11px]">
+                      <div className="truncate pl-2">
+                        <p className="font-bold text-slate-900 truncate">{p.name_en}</p>
+                        <p className="text-[9px] text-slate-500 truncate">By: {contributors}</p>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right shrink-0">
                         <span className="font-black text-emerald-700">{item.totalCounted} pcs</span>
-                        <span className={cn("block text-[10px] font-bold", diff === 0 ? "text-slate-400" : (diff > 0 ? "text-cyan-700" : "text-rose-600"))}>
+                        <span className={cn("block text-[9px] font-bold", diff === 0 ? "text-slate-400" : (diff > 0 ? "text-cyan-700" : "text-rose-600"))}>
                           {diff > 0 ? `+${diff}` : diff}
                         </span>
                       </div>
@@ -1948,7 +2132,7 @@ const StockAudit: React.FC = () => {
               type="button" 
               variant="outline" 
               onClick={() => setIsBatchApproveModalOpen(false)}
-              className="flex-1 h-11 rounded-2xl bg-slate-100 border-slate-300 text-slate-700 text-xs font-bold"
+              className="flex-1 h-10 rounded-2xl bg-slate-100 border-slate-300 text-slate-700 text-xs font-bold"
             >
               Cancel
             </Button>
@@ -1956,7 +2140,7 @@ const StockAudit: React.FC = () => {
               type="button" 
               onClick={handleBatchApprove}
               disabled={isCommitting || stats.countedCount === 0}
-              className="flex-1 h-11 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-md"
+              className="flex-1 h-10 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-xs"
             >
               {isCommitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm & Update Stock'}
             </Button>
@@ -1964,12 +2148,12 @@ const StockAudit: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* 6. Reset Confirmation */}
+      {/* 7. Reset Confirmation */}
       <Dialog open={isResetModalOpen} onOpenChange={setIsResetModalOpen}>
-        <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-xs p-5 rounded-3xl font-faruma shadow-2xl" dir="rtl">
+        <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-xs p-4 rounded-3xl font-faruma shadow-2xl" dir="rtl">
           <DialogHeader className="text-right space-y-0.5">
-            <DialogTitle className="text-base font-black text-rose-600 flex items-center justify-end gap-1.5">
-              <AlertTriangle className="h-5 w-5" />
+            <DialogTitle className="text-sm sm:text-base font-black text-rose-600 flex items-center justify-end gap-1.5">
+              <AlertTriangle className="h-4 w-4" />
               <span>Reset Audit Session?</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500 font-sans">
@@ -1982,14 +2166,14 @@ const StockAudit: React.FC = () => {
               type="button" 
               variant="outline" 
               onClick={() => setIsResetModalOpen(false)}
-              className="flex-1 h-10 rounded-2xl bg-slate-100 border-slate-300 text-slate-700 text-xs font-bold"
+              className="flex-1 h-9 rounded-2xl bg-slate-100 border-slate-300 text-slate-700 text-xs font-bold"
             >
               Cancel
             </Button>
             <Button 
               type="button" 
               onClick={handleResetAudit}
-              className="flex-1 h-10 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-md"
+              className="flex-1 h-9 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-xs"
             >
               Reset
             </Button>

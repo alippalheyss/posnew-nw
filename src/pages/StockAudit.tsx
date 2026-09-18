@@ -589,79 +589,79 @@ export default function StockAudit() {
   const stopCameraScanner = useCallback(() => {
     setIsScannerOpen(false);
     setScannerError(null);
-
-    // Ensure DOM pointer-events and overflow are restored
     document.body.style.pointerEvents = 'auto';
     document.body.style.overflow = 'auto';
-
-    if (html5QrCodeRef.current) {
-      const qr = html5QrCodeRef.current;
-      html5QrCodeRef.current = null;
-      try {
-        qr.stop().catch(() => {}).finally(() => {
-          try { qr.clear(); } catch (e) {}
-        });
-      } catch (e) {}
-    }
-
-    try {
-      const videoElements = document.querySelectorAll('#stock-audit-camera-box video');
-      videoElements.forEach(v => {
-        const video = v as HTMLVideoElement;
-        if (video.srcObject) {
-          const stream = video.srcObject as MediaStream;
-          stream.getTracks().forEach(track => {
-            try { track.stop(); } catch (e) {}
-          });
-          video.srcObject = null;
-        }
-      });
-    } catch (e) {}
   }, []);
 
   // 10. Barcode Scanner Runner
   useEffect(() => {
     let html5QrCode: Html5Qrcode | null = null;
-    let isMounted = true;
+    let isStarting = false;
+    let isStopped = false;
 
     if (isScannerOpen) {
-      const timer = setTimeout(async () => {
-        try {
-          const container = document.getElementById('stock-audit-camera-box');
-          if (!container || !isMounted) return;
+      const container = document.getElementById('stock-audit-camera-box');
+      if (!container) return;
 
-          html5QrCode = new Html5Qrcode('stock-audit-camera-box', {
-            formatsToSupport: [
-              Html5QrcodeSupportedFormats.EAN_13,
-              Html5QrcodeSupportedFormats.EAN_8,
-              Html5QrcodeSupportedFormats.CODE_128,
-              Html5QrcodeSupportedFormats.CODE_39,
-              Html5QrcodeSupportedFormats.UPC_A,
-              Html5QrcodeSupportedFormats.UPC_E,
-              Html5QrcodeSupportedFormats.QR_CODE
-            ],
-            verbose: false
-          });
-          html5QrCodeRef.current = html5QrCode;
+      try {
+        html5QrCode = new Html5Qrcode('stock-audit-camera-box', {
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.QR_CODE
+          ],
+          verbose: false
+        });
 
-          await html5QrCode.start(
-            { facingMode: 'environment' },
-            { fps: 15, qrbox: { width: 250, height: 160 }, aspectRatio: 1.3333 },
-            (decodedText) => {
-              if (decodedText && isMounted) {
-                handleScannedBarcode(decodedText);
+        isStarting = true;
+        html5QrCode.start(
+          { facingMode: 'environment' },
+          { fps: 15, qrbox: { width: 250, height: 160 }, aspectRatio: 1.3333 },
+          (decodedText) => {
+            if (!isStopped) {
+              handleScannedBarcode(decodedText);
+            }
+          },
+          () => {}
+        ).then(() => {
+          isStarting = false;
+          if (isStopped && html5QrCode) {
+            try {
+              if (html5QrCode.isScanning) {
+                html5QrCode.stop().catch(() => {}).finally(() => {
+                  try { html5QrCode?.clear(); } catch (e) {}
+                });
               }
-            },
-            () => {}
-          );
-        } catch (err: any) {
-          if (isMounted) setScannerError(err?.message || 'Could not access camera. Please allow camera permissions.');
-        }
-      }, 200);
+            } catch (e) {}
+          }
+        }).catch((err) => {
+          isStarting = false;
+          if (!isStopped) {
+            setScannerError(err?.message || 'Could not access camera. Please allow camera permissions.');
+          }
+        });
+      } catch (err: any) {
+        setScannerError(err?.message || 'Camera error');
+      }
 
       return () => {
-        isMounted = false;
-        clearTimeout(timer);
+        isStopped = true;
+        if (html5QrCode && !isStarting) {
+          try {
+            if (html5QrCode.isScanning) {
+              html5QrCode.stop().catch(() => {}).finally(() => {
+                try { html5QrCode?.clear(); } catch (e) {}
+              });
+            } else {
+              try { html5QrCode.clear(); } catch (e) {}
+            }
+          } catch (e) {}
+        }
+
         try {
           const videoElements = document.querySelectorAll('#stock-audit-camera-box video');
           videoElements.forEach(v => {
@@ -676,11 +676,6 @@ export default function StockAudit() {
           });
         } catch (e) {}
 
-        if (html5QrCode) {
-          html5QrCode.stop().catch(() => {}).finally(() => {
-            try { html5QrCode?.clear(); } catch (e) {}
-          });
-        }
         document.body.style.pointerEvents = 'auto';
         document.body.style.overflow = 'auto';
       };
@@ -688,26 +683,28 @@ export default function StockAudit() {
   }, [isScannerOpen]);
 
   // Barcode scanned callback
-  const handleScannedBarcode = (code: string) => {
+  const handleScannedBarcode = useCallback((code: string) => {
     stopCameraScanner();
     playBeep(1050, 'sine', 0.15);
 
-    const cleanCode = code.trim().toLowerCase();
-    const matchedProduct = products.find(p => 
-      (p.barcode && p.barcode.trim().toLowerCase() === cleanCode) ||
-      (p.item_code && p.item_code.trim().toLowerCase() === cleanCode)
-    );
+    setTimeout(() => {
+      const cleanCode = code.trim().toLowerCase();
+      const matchedProduct = products.find(p => 
+        (p.barcode && p.barcode.trim().toLowerCase() === cleanCode) ||
+        (p.item_code && p.item_code.trim().toLowerCase() === cleanCode)
+      );
 
-    if (matchedProduct) {
-      setSelectedProduct(matchedProduct);
-      setCountQuantity('1');
-      setCountLocation('shop');
-      showSuccess(`Scanned: ${matchedProduct.name_en}`);
-    } else {
-      showError(`No product found matching barcode: ${code}`);
-      setSearchQuery(code);
-    }
-  };
+      if (matchedProduct) {
+        setSelectedProduct(matchedProduct);
+        setCountQuantity('1');
+        setCountLocation('shop');
+        showSuccess(`Scanned: ${matchedProduct.name_en}`);
+      } else {
+        showError(`No product found matching barcode: ${code}`);
+        setSearchQuery(code);
+      }
+    }, 100);
+  }, [stopCameraScanner, products]);
 
   // Filter products for Search Tab
   const searchResults = useMemo(() => {
@@ -1330,63 +1327,64 @@ export default function StockAudit() {
         </DialogContent>
       </Dialog>
 
-      {/* ================= DIALOG 3: BARCODE SCANNER MODAL ================= */}
-      {isScannerOpen && (
+      {/* ================= DIALOG 3: BARCODE SCANNER MODAL (KEPT IN DOM) ================= */}
+      <div 
+        className={cn(
+          "fixed inset-0 z-[100] items-center justify-center bg-black/85 backdrop-blur-sm p-4 font-faruma",
+          isScannerOpen ? "flex" : "hidden pointer-events-none"
+        )}
+        dir="rtl"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) stopCameraScanner();
+        }}
+      >
         <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 font-faruma"
-          dir="rtl"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) stopCameraScanner();
-          }}
+          className="w-full max-w-sm bg-white rounded-3xl p-4 sm:p-5 shadow-2xl space-y-3 text-slate-900 animate-in fade-in zoom-in-95 duration-150"
+          onClick={(e) => e.stopPropagation()}
         >
-          <div 
-            className="w-full max-w-sm bg-white rounded-3xl p-4 sm:p-5 shadow-2xl space-y-3 text-slate-900 animate-in fade-in zoom-in-95 duration-150"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-1 border-b border-slate-100">
-              <div className="flex items-center gap-1.5">
-                <div className="w-7 h-7 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                  <Camera className="h-3.5 w-3.5" />
-                </div>
-                <div>
-                  <h3 className="text-xs sm:text-sm font-black text-slate-900">Barcode Scanner</h3>
-                  <p className="text-[9px] text-slate-500 font-sans">Aim camera at product barcode</p>
-                </div>
+          <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+            <div className="flex items-center gap-1.5">
+              <div className="w-7 h-7 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                <Camera className="h-3.5 w-3.5" />
               </div>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={stopCameraScanner}
-                className="h-7 w-7 rounded-full text-slate-400 hover:text-slate-700"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              <div>
+                <h3 className="text-xs sm:text-sm font-black text-slate-900">Barcode Scanner</h3>
+                <p className="text-[9px] text-slate-500 font-sans">Aim camera at product barcode</p>
+              </div>
             </div>
-
-            {/* Video Box */}
-            <div className="relative overflow-hidden rounded-2xl bg-black aspect-4/3 flex items-center justify-center border border-slate-200">
-              <div id="stock-audit-camera-box" className="w-full h-full" />
-              {scannerError && (
-                <div className="absolute inset-0 bg-white/95 p-4 flex flex-col items-center justify-center text-center text-rose-600 text-xs font-sans space-y-2">
-                  <p className="font-bold">{scannerError}</p>
-                  <Button size="sm" onClick={stopCameraScanner} className="h-8 rounded-xl bg-slate-200 text-slate-800 text-xs">
-                    Close
-                  </Button>
-                </div>
-              )}
-            </div>
-
             <Button
-              type="button"
-              variant="outline"
+              size="icon"
+              variant="ghost"
               onClick={stopCameraScanner}
-              className="w-full h-9 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold"
+              className="h-7 w-7 rounded-full text-slate-400 hover:text-slate-700"
             >
-              Cancel & Close
+              <X className="h-4 w-4" />
             </Button>
           </div>
+
+          {/* Video Box - Always kept in DOM so html5-qrcode never fails on null element */}
+          <div className="relative overflow-hidden rounded-2xl bg-black aspect-4/3 flex items-center justify-center border border-slate-200">
+            <div id="stock-audit-camera-box" className="w-full h-full" />
+            {scannerError && (
+              <div className="absolute inset-0 bg-white/95 p-4 flex flex-col items-center justify-center text-center text-rose-600 text-xs font-sans space-y-2">
+                <p className="font-bold">{scannerError}</p>
+                <Button size="sm" onClick={stopCameraScanner} className="h-8 rounded-xl bg-slate-200 text-slate-800 text-xs">
+                  Close
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={stopCameraScanner}
+            className="w-full h-9 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold"
+          >
+            Cancel & Close
+          </Button>
         </div>
-      )}
+      </div>
 
     </div>
   );

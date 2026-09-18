@@ -442,11 +442,47 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const addUser = async (userData: Omit<User, 'id' | 'createdAt'> & { password: string }) => {
         try {
-            const authUserId = crypto.randomUUID();
+            let authUserId = crypto.randomUUID();
             const cleanUsername = userData.username.trim();
             const cleanPassword = userData.password.trim();
             const authEmail = getAuthEmail(cleanUsername);
             const securePass = getSecurePassword(cleanPassword);
+
+            // 1. Register user in Supabase Auth backend (auth.users)
+            if (supabaseUrl && supabaseAnonKey && cleanPassword) {
+                try {
+                    const tempClient = createClient(supabaseUrl, supabaseAnonKey, {
+                        auth: {
+                            persistSession: false,
+                            autoRefreshToken: false,
+                            detectSessionInUrl: false
+                        }
+                    });
+
+                    const { data: signUpData, error: signUpErr } = await tempClient.auth.signUp({
+                        email: authEmail,
+                        password: securePass,
+                        options: {
+                            data: {
+                                username: cleanUsername,
+                                name_en: userData.name_en || '',
+                                name_dv: userData.name_dv || '',
+                                role: userData.role,
+                                permissions: userData.permissions,
+                            }
+                        }
+                    });
+
+                    if (signUpErr) {
+                        console.error('Supabase Auth signUp error:', signUpErr.message);
+                    } else if (signUpData?.user?.id) {
+                        authUserId = signUpData.user.id;
+                        console.log('Successfully created user in Supabase auth.users with ID:', authUserId);
+                    }
+                } catch (signUpErr) {
+                    console.error('Supabase Auth signUp exception:', signUpErr);
+                }
+            }
 
             const newUser: User = {
                 id: authUserId,
@@ -460,12 +496,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 createdAt: new Date().toISOString()
             };
 
-            // 1. Update local state immediately
+            // 2. Update local state immediately
             const updatedUsers = [newUser, ...users.filter(u => u.id !== authUserId && u.username.toLowerCase() !== cleanUsername.toLowerCase())];
             setUsers(updatedUsers);
             localStorage.setItem('pos_system_users', JSON.stringify(updatedUsers));
 
-            // 2. Save into Supabase settings table (Cloud-synchronized for all mobiles)
+            // 3. Save into Supabase settings table (Cloud-synchronized for all mobiles)
             try {
                 const { data: existing } = await supabase
                     .from('settings')
@@ -488,43 +524,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 console.warn('Note saving users to Supabase settings:', settingsErr);
             }
 
-            // 3. Register user in Supabase Auth backend
-            if (supabaseUrl && supabaseAnonKey && cleanPassword) {
-                try {
-                    const tempClient = createClient(supabaseUrl, supabaseAnonKey, {
-                        auth: {
-                            persistSession: false,
-                            autoRefreshToken: false,
-                            detectSessionInUrl: false
-                        }
-                    });
-
-                    await tempClient.auth.signUp({
-                        email: authEmail,
-                        password: securePass,
-                        options: {
-                            data: {
-                                name_en: userData.name_en,
-                                name_dv: userData.name_dv,
-                                role: userData.role,
-                                permissions: userData.permissions,
-                            }
-                        }
-                    });
-                } catch (signUpErr) {
-                    console.warn('Supabase Auth signUp note:', signUpErr);
-                }
-            }
-
-            // 4. Try upserting into public.users table (catching RLS error gracefully)
+            // 4. Upsert into public.users table
             try {
                 await supabase
                     .from('users')
                     .upsert({
                         id: authUserId,
                         username: cleanUsername,
-                        name_en: userData.name_en,
-                        name_dv: userData.name_dv,
+                        name_en: userData.name_en || '',
+                        name_dv: userData.name_dv || '',
                         role: userData.role,
                         permissions: userData.permissions,
                         is_active: userData.isActive !== undefined ? userData.isActive : true,

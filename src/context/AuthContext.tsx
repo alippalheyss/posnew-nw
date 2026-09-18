@@ -1,8 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/lib/supabase';
-import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { supabase, supabaseUrl, supabaseAnonKey } from '@/lib/supabase';
+import { createClient, type User as SupabaseUser } from '@supabase/supabase-js';
 
 // User Permissions Interface
 export interface UserPermissions {
@@ -253,9 +253,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const login = async (username: string, password: string): Promise<boolean> => {
         try {
+            const email = username.includes('@') ? username.trim() : `${username.toLowerCase().trim()}@pos.local`;
             // Sign in with Supabase Auth using email (username) and password
             const { data, error } = await supabase.auth.signInWithPassword({
-                email: username,
+                email,
                 password: password,
             });
 

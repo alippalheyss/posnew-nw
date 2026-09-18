@@ -2,9 +2,10 @@
 
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, PackagePlus, Boxes, ArrowRightLeft, Store, Warehouse, Pencil, AlertTriangle, TrendingDown, TrendingUp, Info } from 'lucide-react';
+import { Search, PackagePlus, Boxes, ArrowRightLeft, Store, Warehouse, Pencil, AlertTriangle, TrendingDown, TrendingUp, Info, QrCode, Smartphone } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import StockUpdateDialog from '@/components/StockUpdateDialog';
@@ -17,6 +18,7 @@ import { cn } from '@/lib/utils';
 
 const Stock = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const {
     products,
     settings,
@@ -106,6 +108,12 @@ const Stock = () => {
         </div>
 
         <div className="flex gap-3">
+           <Button 
+             onClick={() => navigate('/stock-audit')}
+             className="gap-2 bg-emerald-600 hover:bg-emerald-500 text-white h-10 px-5 rounded-xl font-black shadow-lg shadow-emerald-600/20"
+           >
+               <Smartphone className="h-4 w-4" /> Stock Audit (Mobile)
+           </Button>
            <Button onClick={() => setIsQuickStockOpen(true)} className="gap-2 bg-primary hover:bg-primary/90 h-10 px-6 rounded-xl font-black shadow-[0_0_20px_rgba(0,132,255,0.3)]">
                <PackagePlus className="h-4 w-4" /> Quick Stock
            </Button>

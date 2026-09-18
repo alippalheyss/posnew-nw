@@ -25,6 +25,7 @@ import Expenses from "./pages/Expenses";
 import CustomerDisplay from "./pages/CustomerDisplay";
 import LocalPurchaseWindow from "./components/LocalPurchaseWindow";
 import MobilePurchase from "./pages/MobilePurchase";
+import StockAudit from "./pages/StockAudit";
 
 const queryClient = new QueryClient();
 
@@ -41,12 +42,28 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/customer-display" element={<CustomerDisplay />} />
 
-              {/* Standalone Mobile Purchase Route (No desktop Layout or Sidebar) */}
+              {/* Standalone Mobile Routes (Direct full-screen on phones without desktop layout) */}
               <Route
                 path="/mobile-purchase"
                 element={
                   <ProtectedRoute>
                     <MobilePurchase />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/stock-audit"
+                element={
+                  <ProtectedRoute>
+                    <StockAudit />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/audit"
+                element={
+                  <ProtectedRoute>
+                    <StockAudit />
                   </ProtectedRoute>
                 }
               />

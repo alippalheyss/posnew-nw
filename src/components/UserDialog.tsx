@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
 
 interface UserDialogProps {
     open: boolean;
@@ -74,39 +74,49 @@ const UserDialog: React.FC<UserDialogProps> = ({ open, onOpenChange, user, onSav
         }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsSaving(true);
 
-        if (user) {
-            // Update existing user
-            const updates: Partial<User> = {
-                name_en: formData.name_en,
-                name_dv: formData.name_dv,
-                role: formData.role,
-                isActive: formData.isActive,
-                permissions: formData.permissions,
-            };
-            if (formData.password) {
-                updates.password = formData.password;
+        try {
+            if (user) {
+                // Update existing user
+                const updates: Partial<User> = {
+                    name_en: formData.name_en,
+                    name_dv: formData.name_dv,
+                    role: formData.role,
+                    isActive: formData.isActive,
+                    permissions: formData.permissions,
+                };
+                if (formData.password) {
+                    updates.password = formData.password;
+                }
+                await updateUser(user.id, updates);
+                showSuccess(t('user_updated') || 'User updated successfully');
+            } else {
+                // Add new user
+                await addUser({
+                    username: formData.username,
+                    password: formData.password,
+                    name_en: formData.name_en,
+                    name_dv: formData.name_dv,
+                    role: formData.role,
+                    isActive: formData.isActive,
+                    permissions: formData.permissions,
+                });
+                showSuccess(t('user_created') || 'User created successfully');
             }
-            updateUser(user.id, updates);
-            showSuccess(t('user_updated'));
-        } else {
-            // Add new user
-            addUser({
-                username: formData.username,
-                password: formData.password,
-                name_en: formData.name_en,
-                name_dv: formData.name_dv,
-                role: formData.role,
-                isActive: formData.isActive,
-                permissions: formData.permissions,
-            });
-            showSuccess(t('user_created'));
-        }
 
-        onSave();
-        onOpenChange(false);
+            onSave();
+            onOpenChange(false);
+        } catch (err: any) {
+            console.error('Failed to save user:', err);
+            showError(err?.message || 'Failed to save user. Please check database permissions.');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const permissionGroups = [
@@ -261,8 +271,8 @@ const UserDialog: React.FC<UserDialogProps> = ({ open, onOpenChange, user, onSav
                         <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                             {t('cancel')}
                         </Button>
-                        <Button type="submit">
-                            {user ? t('update') : t('add')}
+                        <Button type="submit" disabled={isSaving}>
+                            {isSaving ? 'Saving...' : (user ? t('update') : t('add'))}
                         </Button>
                     </div>
                 </form>

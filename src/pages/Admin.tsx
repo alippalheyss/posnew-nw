@@ -804,7 +804,17 @@ const Admin = () => {
                                   variant="ghost" 
                                   size="icon" 
                                   className="h-9 w-9 rounded-xl hover:bg-red-500/10 text-red-400"
-                                  onClick={() => deleteUser(user.id)}
+                                  onClick={async () => {
+                                    const confirmMsg = `Are you sure you want to delete user "${user.username}" (${user.name_en || user.name_dv})?`;
+                                    if (window.confirm(confirmMsg)) {
+                                      try {
+                                        await deleteUser(user.id);
+                                        showSuccess('User deleted successfully');
+                                      } catch (err: any) {
+                                        showError(err?.message || 'Failed to delete user');
+                                      }
+                                    }
+                                  }}
                                 >
                                    <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -1364,7 +1374,18 @@ const Admin = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          navigator.clipboard.writeText("ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS telegram_chat_id BIGINT UNIQUE;\nCREATE INDEX IF NOT EXISTS idx_customers_telegram_chat_id ON public.customers(telegram_chat_id);\nALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;\nDROP POLICY IF EXISTS \"Allow all access to customers\" ON public.customers;\nCREATE POLICY \"Allow all access to customers\" ON public.customers FOR ALL USING (true) WITH CHECK (true);\nGRANT ALL ON TABLE public.customers TO anon, authenticated;");
+                          navigator.clipboard.writeText(`ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS telegram_chat_id BIGINT UNIQUE;
+CREATE INDEX IF NOT EXISTS idx_customers_telegram_chat_id ON public.customers(telegram_chat_id);
+ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all access to customers" ON public.customers;
+CREATE POLICY "Allow all access to customers" ON public.customers FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.customers TO anon, authenticated;
+
+-- Users table permissions
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all access to users" ON public.users;
+CREATE POLICY "Allow all access to users" ON public.users FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.users TO anon, authenticated;`);
                           showSuccess("SQL copied to clipboard!");
                         }}
                         className="h-8 text-xs font-bold gap-1.5"
@@ -1373,18 +1394,21 @@ const Admin = () => {
                         <span>Copy SQL</span>
                       </Button>
                       <h4 className="text-sm font-black text-foreground">
-                        Supabase SQL Migration Required (Once)
+                        Supabase SQL Migration Helper
                       </h4>
                     </div>
 
                     <div className="p-3 bg-muted rounded-xl font-mono text-xs text-foreground/80 overflow-x-auto text-left" dir="ltr">
                       <code>
+                        -- Customers &amp; Telegram<br/>
                         ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS telegram_chat_id BIGINT UNIQUE;<br/>
-                        CREATE INDEX IF NOT EXISTS idx_customers_telegram_chat_id ON public.customers(telegram_chat_id);<br/>
-                        ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;<br/>
-                        DROP POLICY IF EXISTS "Allow all access to customers" ON public.customers;<br/>
                         CREATE POLICY "Allow all access to customers" ON public.customers FOR ALL USING (true) WITH CHECK (true);<br/>
-                        GRANT ALL ON TABLE public.customers TO anon, authenticated;
+                        GRANT ALL ON TABLE public.customers TO anon, authenticated;<br/><br/>
+                        -- Users Management<br/>
+                        ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;<br/>
+                        DROP POLICY IF EXISTS "Allow all access to users" ON public.users;<br/>
+                        CREATE POLICY "Allow all access to users" ON public.users FOR ALL USING (true) WITH CHECK (true);<br/>
+                        GRANT ALL ON TABLE public.users TO anon, authenticated;
                       </code>
                     </div>
                   </div>

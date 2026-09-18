@@ -586,7 +586,24 @@ export default function StockAudit() {
   }, [isAdminUser, auditSession, products, counterName, setProducts, saveAuditSessionDebounced]);
 
   // 9. Camera Scanner Stop Function
-  const stopCameraScanner = useCallback(async () => {
+  const stopCameraScanner = useCallback(() => {
+    setIsScannerOpen(false);
+    setScannerError(null);
+
+    // Ensure DOM pointer-events and overflow are restored
+    document.body.style.pointerEvents = 'auto';
+    document.body.style.overflow = 'auto';
+
+    if (html5QrCodeRef.current) {
+      const qr = html5QrCodeRef.current;
+      html5QrCodeRef.current = null;
+      try {
+        qr.stop().catch(() => {}).finally(() => {
+          try { qr.clear(); } catch (e) {}
+        });
+      } catch (e) {}
+    }
+
     try {
       const videoElements = document.querySelectorAll('#stock-audit-camera-box video');
       videoElements.forEach(v => {
@@ -600,24 +617,6 @@ export default function StockAudit() {
         }
       });
     } catch (e) {}
-
-    if (html5QrCodeRef.current) {
-      try {
-        await html5QrCodeRef.current.stop();
-      } catch (e) {}
-      try {
-        html5QrCodeRef.current.clear();
-      } catch (e) {}
-      html5QrCodeRef.current = null;
-    }
-
-    setIsScannerOpen(false);
-    setScannerError(null);
-
-    setTimeout(() => {
-      document.body.style.pointerEvents = 'auto';
-      document.body.style.overflow = 'auto';
-    }, 50);
   }, []);
 
   // 10. Barcode Scanner Runner
@@ -682,17 +681,15 @@ export default function StockAudit() {
             try { html5QrCode?.clear(); } catch (e) {}
           });
         }
-        setTimeout(() => {
-          document.body.style.pointerEvents = 'auto';
-          document.body.style.overflow = 'auto';
-        }, 50);
+        document.body.style.pointerEvents = 'auto';
+        document.body.style.overflow = 'auto';
       };
     }
   }, [isScannerOpen]);
 
   // Barcode scanned callback
-  const handleScannedBarcode = async (code: string) => {
-    await stopCameraScanner();
+  const handleScannedBarcode = (code: string) => {
+    stopCameraScanner();
     playBeep(1050, 'sine', 0.15);
 
     const cleanCode = code.trim().toLowerCase();

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback, useRef } from 'react';
 import { showError, showSuccess } from '@/utils/toast';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/components/ThemeProvider';

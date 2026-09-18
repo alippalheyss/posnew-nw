@@ -15,10 +15,9 @@ import {
   CheckCircle2,
   Clock,
   ShieldCheck,
-  RefreshCw,
-  Users as UsersIcon,
-  Check,
-  RotateCcw
+  RotateCcw,
+  AlertTriangle,
+  ArrowRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,7 +28,6 @@ import { useAppContext, Product } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { showSuccess, showError, showInfo } from '@/utils/toast';
-import { formatCurrency } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
 
 export interface AuditEntry {
@@ -83,6 +81,14 @@ export default function StockAudit() {
   const navigate = useNavigate();
   const { products, setProducts, updateProduct } = useAppContext();
   const { currentUser, isAdmin } = useAuth();
+
+  // Check if current user is admin
+  const isAdminUser = useMemo(() => {
+    if (typeof isAdmin === 'function') {
+      return isAdmin();
+    }
+    return currentUser?.role === 'admin';
+  }, [currentUser, isAdmin]);
 
   // Active user name
   const counterName = useMemo(() => {
@@ -242,7 +248,7 @@ export default function StockAudit() {
     }, 250);
   }, [counterName]);
 
-  // 4. Add Count Submit Handler
+  // 4. Add Count Submit Handler (Staff or Admin enters count)
   const handleSubmitCount = useCallback(() => {
     if (!selectedProduct) return;
     const qty = parseInt(countQuantity);
@@ -289,7 +295,7 @@ export default function StockAudit() {
             totalShopCounted,
             totalGodownCounted,
             totalCounted,
-            isApproved: false, // reset approval on new count
+            isApproved: false, // reset approval on new count so Admin must approve
             lastUpdated: new Date().toISOString()
           }
         }
@@ -300,7 +306,7 @@ export default function StockAudit() {
     });
 
     playBeep(980, 'sine', 0.1);
-    showSuccess(`+${qty} (${countLocation}) submitted for ${selectedProduct.name_en}`);
+    showSuccess(`+${qty} (${countLocation}) submitted for ${selectedProduct.name_en}. Pending Admin Approval.`);
     setSelectedProduct(null);
     setCountQuantity('1');
   }, [selectedProduct, countQuantity, countLocation, counterName, saveAuditSessionDebounced]);
@@ -361,7 +367,7 @@ export default function StockAudit() {
     });
 
     playBeep(1000, 'sine', 0.1);
-    showSuccess(`Updated ${product.name_en} count to ${newQty} pcs`);
+    showSuccess(`Updated ${product.name_en} count to ${newQty} pcs. Pending Admin Approval.`);
     setEditingEntry(null);
   }, [editingEntry, editQtyInput, editLocation, counterName, saveAuditSessionDebounced]);
 
@@ -403,9 +409,9 @@ export default function StockAudit() {
     showSuccess('Count entry removed');
   }, [counterName, saveAuditSessionDebounced]);
 
-  // 7. Admin Single Product Stock Update & Approval
+  // 7. Admin Single Product Stock Approval & Direct Commit to Main App
   const handleApproveStock = useCallback(async (product: Product) => {
-    if (!isAdmin) {
+    if (!isAdminUser) {
       showError('Only administrators can approve and commit stock counts');
       return;
     }
@@ -431,7 +437,7 @@ export default function StockAudit() {
           .eq('id', product.id);
 
         if (error) {
-          console.warn('Direct stock update warning, attempting full update:', error);
+          console.warn('Direct stock update warning, attempting context update:', error);
           await updateProduct({
             ...product,
             stock_shop: Math.max(0, Math.round(newShopStock)),
@@ -447,7 +453,22 @@ export default function StockAudit() {
           : p
       ));
 
-      // 3. Mark approved in audit session
+      // 3. Broadcast real-time stock change event so all connected devices/POS PCs update instantly
+      if (channelRef.current) {
+        try {
+          channelRef.current.send({
+            type: 'broadcast',
+            event: 'audit_stock_committed',
+            payload: {
+              productId: product.id,
+              stock_shop: Math.max(0, Math.round(newShopStock)),
+              stock_godown: Math.max(0, Math.round(newGodownStock))
+            }
+          });
+        } catch (e) {}
+      }
+
+      // 4. Mark approved in audit session
       const updatedItem: ProductAuditState = {
         ...item,
         isApproved: true,
@@ -466,37 +487,38 @@ export default function StockAudit() {
 
       saveAuditSessionDebounced(updatedSession, counterName, 'audit_approved');
       playBeep(1200, 'sine', 0.15);
-      showSuccess(`✓ Stock updated for ${product.name_en} (${item.totalCounted} pcs)!`);
+      showSuccess(`✓ Approved! ${product.name_en} updated in Main App to ${item.totalCounted} pcs.`);
     } catch (err: any) {
       console.error('Failed to update stock:', err);
       showError(err?.message || 'Failed to update stock');
     }
-  }, [isAdmin, auditSession, counterName, updateProduct, setProducts, saveAuditSessionDebounced]);
+  }, [isAdminUser, auditSession, counterName, updateProduct, setProducts, saveAuditSessionDebounced]);
 
-  // 8. Admin Batch Approve All Counted Products
+  // 8. Admin Batch Approve All Counted Products to Main App
   const handleBatchApproveAll = useCallback(async () => {
-    if (!isAdmin) {
+    if (!isAdminUser) {
       showError('Only administrators can approve stock');
       return;
     }
 
-    const countedProductIds = Object.keys(auditSession.items).filter(id => {
+    const pendingProductIds = Object.keys(auditSession.items).filter(id => {
       const item = auditSession.items[id];
       return item && item.totalCounted > 0 && !item.isApproved;
     });
 
-    if (countedProductIds.length === 0) {
+    if (pendingProductIds.length === 0) {
       showInfo('No pending counts to approve');
       return;
     }
 
     setIsCommitting(true);
     let successCount = 0;
+    const stockUpdates: Array<{ productId: string; stock_shop: number; stock_godown: number }> = [];
 
     try {
       const updatedItems = { ...auditSession.items };
 
-      for (const id of countedProductIds) {
+      for (const id of pendingProductIds) {
         const product = products.find(p => p.id === id);
         const item = auditSession.items[id];
         if (!product || !item) continue;
@@ -520,6 +542,12 @@ export default function StockAudit() {
             : p
         ));
 
+        stockUpdates.push({
+          productId: product.id,
+          stock_shop: Math.max(0, Math.round(newShopStock)),
+          stock_godown: Math.max(0, Math.round(newGodownStock))
+        });
+
         updatedItems[id] = {
           ...item,
           isApproved: true,
@@ -531,6 +559,17 @@ export default function StockAudit() {
         successCount++;
       }
 
+      // Broadcast batch stock updates to all devices / PC POS
+      if (channelRef.current && stockUpdates.length > 0) {
+        try {
+          channelRef.current.send({
+            type: 'broadcast',
+            event: 'audit_stock_committed',
+            payload: { updates: stockUpdates }
+          });
+        } catch (e) {}
+      }
+
       const completedSession: ActiveAuditSession = {
         ...auditSession,
         items: updatedItems
@@ -538,13 +577,13 @@ export default function StockAudit() {
 
       saveAuditSessionDebounced(completedSession, counterName, 'audit_approved');
       playBeep(1300, 'sine', 0.2);
-      showSuccess(`✓ Batch Approved! ${successCount} products updated in live stock.`);
+      showSuccess(`✓ Batch Approved! ${successCount} products updated in Main App.`);
     } catch (err: any) {
       showError(err?.message || 'Failed to complete batch update');
     } finally {
       setIsCommitting(false);
     }
-  }, [isAdmin, auditSession, products, counterName, setProducts, saveAuditSessionDebounced]);
+  }, [isAdminUser, auditSession, products, counterName, setProducts, saveAuditSessionDebounced]);
 
   // 9. Camera Scanner Stop Function
   const stopCameraScanner = useCallback(async () => {
@@ -677,7 +716,6 @@ export default function StockAudit() {
   const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) {
-      // Return first 30 products if no search query
       return products.slice(0, 30);
     }
     return products.filter(p => 
@@ -702,6 +740,7 @@ export default function StockAudit() {
   }, [products, auditSession.items]);
 
   const totalCountedItems = countedProductsList.length;
+  const pendingApprovalCount = countedProductsList.filter(item => !item.auditState.isApproved).length;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-24 font-faruma selection:bg-primary selection:text-white" dir="rtl">
@@ -725,10 +764,14 @@ export default function StockAudit() {
           </div>
 
           <div className="flex items-center gap-1.5 font-sans">
-            <div className="flex items-center gap-1 px-2 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-bold">
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-bold">
               <span className={cn("w-2 h-2 rounded-full", isConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-400")} />
               <span>{counterName}</span>
-              {isAdmin && <ShieldCheck className="h-3 w-3 text-emerald-600 mr-0.5" />}
+              {isAdminUser && (
+                <Badge className="bg-emerald-600 text-white text-[9px] px-1 py-0 rounded-md font-bold mr-0.5">
+                  Admin
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -762,7 +805,7 @@ export default function StockAudit() {
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
             <span>Counted Items</span>
             {totalCountedItems > 0 && (
-              <Badge className="bg-emerald-600 text-white text-[9px] px-1.5 py-0 rounded-full font-black">
+              <Badge className={cn("text-[9px] px-1.5 py-0 rounded-full font-black", pendingApprovalCount > 0 ? "bg-amber-500 text-white" : "bg-emerald-600 text-white")}>
                 {totalCountedItems}
               </Badge>
             )}
@@ -823,44 +866,73 @@ export default function StockAudit() {
                 searchResults.map(product => {
                   const auditItem = auditSession.items[product.id];
                   const hasCount = auditItem && auditItem.totalCounted > 0;
+                  const isApproved = hasCount && auditItem.isApproved;
 
                   return (
                     <div
                       key={product.id}
-                      onClick={() => {
-                        setSelectedProduct(product);
-                        setCountQuantity('1');
-                        setCountLocation('shop');
-                      }}
                       className={cn(
-                        "p-3 rounded-2xl bg-white border transition-all cursor-pointer flex items-center justify-between gap-2 shadow-xs active:scale-[0.99]",
-                        hasCount ? "border-emerald-300 bg-emerald-50/20" : "border-slate-200 hover:border-slate-300"
+                        "p-3 rounded-2xl bg-white border transition-all space-y-2 shadow-xs",
+                        isApproved
+                          ? "border-emerald-400 bg-emerald-50/15"
+                          : (hasCount ? "border-amber-300 bg-amber-50/15" : "border-slate-200 hover:border-slate-300")
                       )}
                     >
-                      <div className="flex-1 text-right truncate">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <h3 className="text-xs sm:text-sm font-black text-slate-900 truncate">{product.name_dv}</h3>
-                          {hasCount && (
-                            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[9px] font-black px-1.5 py-0 rounded-md">
-                              {auditItem.totalCounted} pcs
-                            </Badge>
-                          )}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 text-right truncate">
+                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                            <h3 className="text-xs sm:text-sm font-black text-slate-900 truncate">{product.name_dv}</h3>
+                            {hasCount && (
+                              isApproved ? (
+                                <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[9px] font-black px-1.5 py-0 rounded-md">
+                                  ✓ Live Stock Updated
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-amber-100 text-amber-900 border-amber-300 text-[9px] font-black px-1.5 py-0 rounded-md">
+                                  Pending Approval ({auditItem.totalCounted} pcs)
+                                </Badge>
+                              )
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-600 font-sans font-bold truncate mt-0.5">{product.name_en}</p>
+                          <div className="flex items-center justify-end gap-2 text-[10px] text-slate-400 font-sans mt-0.5">
+                            {product.barcode && <span>Barcode: <strong className="text-slate-600 font-mono">{product.barcode}</strong></span>}
+                            <span>Main Shop: <strong className="text-slate-700">{product.stock_shop || 0}</strong></span>
+                            <span>Main Godown: <strong className="text-slate-700">{product.stock_godown || 0}</strong></span>
+                          </div>
                         </div>
-                        <p className="text-[11px] text-slate-600 font-sans font-bold truncate mt-0.5">{product.name_en}</p>
-                        <div className="flex items-center justify-end gap-2 text-[10px] text-slate-400 font-sans mt-0.5">
-                          {product.barcode && <span>Barcode: <strong className="text-slate-600 font-mono">{product.barcode}</strong></span>}
-                          <span>Shop: <strong className="text-slate-700">{product.stock_shop || 0}</strong></span>
-                          <span>Godown: <strong className="text-slate-700">{product.stock_godown || 0}</strong></span>
-                        </div>
+
+                        {/* Quick Count Button */}
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setSelectedProduct(product);
+                            setCountQuantity('1');
+                            setCountLocation('shop');
+                          }}
+                          className="h-8 px-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs shrink-0 gap-1 shadow-none"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          <span>Count</span>
+                        </Button>
                       </div>
 
-                      <Button
-                        size="sm"
-                        className="h-8 px-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs shrink-0 gap-1 shadow-none"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                        <span>Count</span>
-                      </Button>
+                      {/* Admin Quick Approval Row if Pending Count exists */}
+                      {isAdminUser && hasCount && !isApproved && (
+                        <div className="pt-1 border-t border-slate-100 flex items-center justify-between gap-2 font-sans text-xs">
+                          <span className="text-[10px] text-amber-700 font-bold">
+                            Counted: <strong>{auditItem.totalCounted} pcs</strong>
+                          </span>
+                          <Button
+                            size="sm"
+                            onClick={() => handleApproveStock(product)}
+                            className="h-7 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] gap-1 shadow-xs"
+                          >
+                            <CheckCircle2 className="h-3 w-3" />
+                            <span>Approve & Update Main App</span>
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   );
                 })
@@ -872,19 +944,31 @@ export default function StockAudit() {
         {/* ================= TAB 2: COUNTED PRODUCTS LIST ================= */}
         {activeTab === 'counted' && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between px-1 text-xs font-sans text-slate-600">
-              <span className="font-bold">Counted Items ({countedProductsList.length})</span>
-              {isAdmin && countedProductsList.some(item => !item.auditState.isApproved) && (
+            
+            {/* Admin Batch Approval Banner */}
+            {isAdminUser && pendingApprovalCount > 0 && (
+              <div className="bg-amber-50 border border-amber-200 p-3 rounded-2xl flex items-center justify-between gap-2 shadow-xs font-sans">
+                <div>
+                  <h4 className="text-xs font-black text-amber-900">Admin Approval Required</h4>
+                  <p className="text-[10px] text-amber-700">{pendingApprovalCount} product count(s) waiting to update main stock.</p>
+                </div>
                 <Button
                   size="sm"
                   onClick={handleBatchApproveAll}
                   disabled={isCommitting}
-                  className="h-7 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] gap-1 shadow-xs"
+                  className="h-8 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shrink-0 gap-1 shadow-xs"
                 >
-                  <CheckCircle2 className="h-3 w-3" />
-                  <span>Update All Stock</span>
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <span>Batch Update ({pendingApprovalCount})</span>
                 </Button>
-              )}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between px-1 text-xs font-sans text-slate-600">
+              <span className="font-bold">Counted Items ({countedProductsList.length})</span>
+              <span className="text-[11px] text-slate-400">
+                {pendingApprovalCount > 0 ? `${pendingApprovalCount} pending review` : 'All approved'}
+              </span>
             </div>
 
             {countedProductsList.length === 0 ? (
@@ -921,12 +1005,12 @@ export default function StockAudit() {
                           {auditState.isApproved ? (
                             <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[9px] font-black px-1.5 py-0 rounded-full flex items-center gap-1 shadow-none">
                               <CheckCircle2 className="h-2.5 w-2.5 text-emerald-600" />
-                              <span>Approved</span>
+                              <span>Approved ({auditState.approvedBy || 'Admin'})</span>
                             </Badge>
                           ) : (
                             <Badge className="bg-amber-100 text-amber-900 border-amber-300 text-[9px] font-black px-1.5 py-0 rounded-full flex items-center gap-1 shadow-none">
                               <Clock className="h-2.5 w-2.5 text-amber-700" />
-                              <span>Pending Review</span>
+                              <span>Pending Admin Approval</span>
                             </Badge>
                           )}
                         </div>
@@ -945,23 +1029,23 @@ export default function StockAudit() {
                         className="h-7 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 text-[10px] font-bold shrink-0 gap-1"
                       >
                         <Plus className="h-3 w-3" />
-                        <span>Add Count</span>
+                        <span>Add</span>
                       </Button>
                     </div>
 
                     {/* Stock & Counted Comparison Bar */}
                     <div className="grid grid-cols-4 gap-1 bg-slate-50 p-1.5 rounded-xl border border-slate-200 font-sans text-center text-xs">
                       <div>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Shop</span>
-                        <span className="font-black text-slate-800 text-xs">{auditState.totalShopCounted}</span>
+                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Main App</span>
+                        <span className="font-black text-slate-800 text-xs">{totalSystem}</span>
                       </div>
                       <div>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Godown</span>
-                        <span className="font-black text-slate-800 text-xs">{auditState.totalGodownCounted}</span>
+                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Audit Total</span>
+                        <span className="font-black text-emerald-700 text-xs">{auditState.totalCounted}</span>
                       </div>
                       <div className="border-r border-slate-200">
-                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Total</span>
-                        <span className="font-black text-emerald-700 text-xs">{auditState.totalCounted}</span>
+                        <span className="text-[9px] text-slate-400 font-bold uppercase block">Shop/Godown</span>
+                        <span className="font-black text-slate-700 text-[11px]">{auditState.totalShopCounted}s / {auditState.totalGodownCounted}g</span>
                       </div>
                       <div className="border-r border-slate-200">
                         <span className="text-[9px] text-slate-400 font-bold uppercase block">Diff</span>
@@ -1020,16 +1104,45 @@ export default function StockAudit() {
                       </div>
                     </div>
 
-                    {/* Admin Accept & Update Stock Button */}
-                    {isAdmin && !auditState.isApproved && (
+                    {/* Admin Accept & Update Main App Stock Button */}
+                    {isAdminUser && !auditState.isApproved && (
                       <Button
                         size="sm"
                         onClick={() => handleApproveStock(product)}
-                        className="w-full h-8 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs gap-1.5 shadow-xs"
+                        className="w-full h-8.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs gap-1.5 shadow-xs"
                       >
                         <CheckCircle2 className="h-3.5 w-3.5" />
-                        <span>Accept & Update Stock ({auditState.totalCounted} pcs)</span>
+                        <span>Approve & Update Main App Stock ({auditState.totalCounted} pcs)</span>
                       </Button>
+                    )}
+
+                    {/* If Already Approved, show confirmation */}
+                    {auditState.isApproved && (
+                      <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-2.5 py-1.5 flex items-center justify-between text-[11px] font-sans text-emerald-800 font-bold">
+                        <span className="flex items-center gap-1">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                          <span>Stock Synced with Main App ({auditState.totalCounted} pcs)</span>
+                        </span>
+                        {isAdminUser && (
+                          <button
+                            onClick={() => {
+                              setAuditSession(prev => {
+                                const newItems = {
+                                  ...prev.items,
+                                  [product.id]: { ...prev.items[product.id], isApproved: false }
+                                };
+                                const updated = { ...prev, items: newItems };
+                                saveAuditSessionDebounced(updated, counterName, 'audit_update');
+                                return updated;
+                              });
+                              showInfo('Reopened count for approval');
+                            }}
+                            className="text-[10px] text-slate-500 hover:text-slate-800 underline"
+                          >
+                            Reopen
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 );

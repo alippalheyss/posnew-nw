@@ -697,6 +697,42 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     fetchData();
   }, []);
 
+  // Realtime product stock synchronization from mobile audit across all devices & main app
+  useEffect(() => {
+    if (!supabase) return;
+    const channel = supabase.channel('stock_audit_realtime_channel', {
+      config: { broadcast: { self: false } }
+    });
+
+    channel
+      .on('broadcast', { event: 'audit_stock_committed' }, ({ payload }) => {
+        if (payload?.updates && Array.isArray(payload.updates)) {
+          setProducts(prev => prev.map(p => {
+            const matched = payload.updates.find((u: any) => u.productId === p.id);
+            if (matched) {
+              return {
+                ...p,
+                stock_shop: matched.stock_shop,
+                stock_godown: matched.stock_godown
+              };
+            }
+            return p;
+          }));
+        } else if (payload?.productId) {
+          setProducts(prev => prev.map(p => 
+            p.id === payload.productId
+              ? { ...p, stock_shop: payload.stock_shop, stock_godown: payload.stock_godown }
+              : p
+          ));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const [favoriteProductIds, setFavoriteProductIds] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('favorite_products');
@@ -1309,6 +1345,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   }, []);
 
   // Automated Midnight Store Close Executive Briefing & 1st of Month Overdue Reminders Scheduler
+  const isBriefingSendingRef = useRef(false);
+
   useEffect(() => {
     const runScheduledAutomations = async () => {
       const now = new Date();
@@ -1324,8 +1362,20 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         const hours = now.getHours();
         const isEveningOrNight = hours >= 22 || hours <= 3; // From 10:00 PM onwards through midnight
 
+        const briefingKey = `telegram_briefing_sent_${todayIso}`;
+        const briefingSendingKey = `telegram_briefing_sending_${todayIso}`;
+
         // A. Send today's briefing if it's evening/night and hasn't been sent yet
-        if (isEveningOrNight && settings.telegram?.lastNightlyBriefingDate !== todayIso) {
+        if (
+          isEveningOrNight && 
+          settings.telegram?.lastNightlyBriefingDate !== todayIso &&
+          !localStorage.getItem(briefingKey) &&
+          !isBriefingSendingRef.current
+        ) {
+          // Atomic lock: set lock immediately before async operation
+          isBriefingSendingRef.current = true;
+          localStorage.setItem(briefingSendingKey, Date.now().toString());
+
           try {
             const allSettlements = customers.flatMap(c => c.settlement_history || []);
             const res = await sendNightlyExecutiveBriefing({
@@ -1336,15 +1386,22 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
               token: settings.telegram?.botToken,
             });
             if (res?.ok) {
+              localStorage.setItem(briefingKey, Date.now().toString());
               setSettings(prev => ({
                 ...prev,
                 telegram: { ...prev.telegram, lastNightlyBriefingDate: todayIso },
               }));
               updateSettings('telegram', { lastNightlyBriefingDate: todayIso });
               console.log('Nightly Store Close Briefing automatically sent to Telegram group!');
+            } else {
+              // Clear sending lock if failed so it can retry later
+              localStorage.removeItem(briefingSendingKey);
             }
           } catch (e) {
+            localStorage.removeItem(briefingSendingKey);
             console.warn('Auto briefing error:', e);
+          } finally {
+            isBriefingSendingRef.current = false;
           }
         }
 

@@ -58,6 +58,93 @@ export interface ActiveAuditSession {
   items: Record<string, ProductAuditState>;
 }
 
+// Helper: Merge product state between local and cloud without losing entries or approval
+export function mergeProductItems(localItem?: ProductAuditState, cloudItem?: ProductAuditState): ProductAuditState {
+  if (!localItem) return cloudItem!;
+  if (!cloudItem) return localItem;
+
+  // Union entries by unique entry id
+  const entryMap = new Map<string, AuditEntry>();
+  for (const e of (localItem.entries || [])) {
+    entryMap.set(e.id, e);
+  }
+  for (const e of (cloudItem.entries || [])) {
+    entryMap.set(e.id, e);
+  }
+  const entries = Array.from(entryMap.values()).sort((a, b) => 
+    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+
+  const totalShopCounted = entries.filter(e => e.location === 'shop').reduce((sum, e) => sum + e.quantity, 0);
+  const totalGodownCounted = entries.filter(e => e.location === 'godown').reduce((sum, e) => sum + e.quantity, 0);
+  const totalCounted = totalShopCounted + totalGodownCounted;
+
+  const localTime = new Date(localItem.lastUpdated || 0).getTime();
+  const cloudTime = new Date(cloudItem.lastUpdated || 0).getTime();
+
+  let isApproved = false;
+  let approvedBy: string | undefined = undefined;
+  let approvedAt: string | undefined = undefined;
+
+  // Most recent approval decision takes precedence
+  if (cloudTime >= localTime) {
+    isApproved = Boolean(cloudItem.isApproved);
+    approvedBy = cloudItem.approvedBy;
+    approvedAt = cloudItem.approvedAt;
+  } else {
+    isApproved = Boolean(localItem.isApproved);
+    approvedBy = localItem.approvedBy;
+    approvedAt = localItem.approvedAt;
+  }
+
+  // If approved, but a subsequent count was logged after approvedAt, re-require admin approval
+  if (isApproved && approvedAt) {
+    const approvedAtTime = new Date(approvedAt).getTime();
+    const hasNewerEntry = entries.some(e => new Date(e.timestamp).getTime() > approvedAtTime + 1000);
+    if (hasNewerEntry) {
+      isApproved = false;
+    }
+  }
+
+  return {
+    productId: localItem.productId || cloudItem.productId,
+    entries,
+    totalShopCounted,
+    totalGodownCounted,
+    totalCounted,
+    isApproved,
+    approvedBy: isApproved ? approvedBy : undefined,
+    approvedAt: isApproved ? approvedAt : undefined,
+    lastUpdated: new Date(Math.max(localTime, cloudTime, Date.now())).toISOString()
+  };
+}
+
+// Helper: Merge complete audit sessions across devices
+export function mergeAuditSessions(localSession: ActiveAuditSession, cloudSession: ActiveAuditSession): ActiveAuditSession {
+  if (!cloudSession || !cloudSession.items) return localSession;
+  if (!localSession || !localSession.items) return cloudSession;
+
+  const mergedItems: Record<string, ProductAuditState> = {};
+  const allProductIds = new Set([
+    ...Object.keys(localSession.items || {}),
+    ...Object.keys(cloudSession.items || {})
+  ]);
+
+  for (const pid of allProductIds) {
+    const localItem = localSession.items?.[pid];
+    const cloudItem = cloudSession.items?.[pid];
+    mergedItems[pid] = mergeProductItems(localItem, cloudItem);
+  }
+
+  return {
+    id: cloudSession.id || localSession.id || 'default-session',
+    title: cloudSession.title || localSession.title || 'Store Audit',
+    startedAt: cloudSession.startedAt || localSession.startedAt || new Date().toISOString(),
+    status: cloudSession.status || localSession.status || 'active',
+    items: mergedItems
+  };
+}
+
 // Audio synthesizer for beep feedback
 const playBeep = (freq = 880, type: OscillatorType = 'sine', duration = 0.12) => {
   try {
@@ -144,7 +231,9 @@ export default function StockAudit() {
   const [isConnected, setIsConnected] = useState(false);
   const [isCommitting, setIsCommitting] = useState(false);
 
-  // 1. Load active audit session from Supabase cloud
+  const DEFAULT_SETTINGS_USER_ID = '320e8d7f-9329-41ec-9f65-9a9130bb28d3';
+
+  // 1. Load active audit session from Supabase cloud with automatic multi-device merge
   const fetchCloudSession = useCallback(async () => {
     if (!supabase) return;
     try {
@@ -156,9 +245,15 @@ export default function StockAudit() {
 
       if (!error && data?.settings?.session) {
         const cloudSession: ActiveAuditSession = data.settings.session;
-        setAuditSession(cloudSession);
-        auditSessionRef.current = cloudSession;
-        localStorage.setItem('cached_stock_audit', JSON.stringify(cloudSession));
+        setAuditSession(prev => {
+          const merged = mergeAuditSessions(prev, cloudSession);
+          const prevStr = JSON.stringify(prev);
+          const mergedStr = JSON.stringify(merged);
+          if (prevStr === mergedStr) return prev;
+          auditSessionRef.current = merged;
+          localStorage.setItem('cached_stock_audit', mergedStr);
+          return merged;
+        });
       }
     } catch (err) {
       console.warn('Note fetching cloud audit:', err);
@@ -167,11 +262,11 @@ export default function StockAudit() {
 
   useEffect(() => {
     fetchCloudSession();
-    const interval = setInterval(fetchCloudSession, 4000);
+    const interval = setInterval(fetchCloudSession, 2500);
     return () => clearInterval(interval);
   }, [fetchCloudSession]);
 
-  // 2. Realtime broadcast subscription
+  // 2. Realtime broadcast subscription for instant multi-device sync
   useEffect(() => {
     if (!supabase) return;
     const channel = supabase.channel('stock_audit_realtime_channel', {
@@ -182,16 +277,36 @@ export default function StockAudit() {
     channel
       .on('broadcast', { event: 'audit_update' }, ({ payload }) => {
         if (payload?.session) {
-          setAuditSession(payload.session);
-          auditSessionRef.current = payload.session;
-          localStorage.setItem('cached_stock_audit', JSON.stringify(payload.session));
+          setAuditSession(prev => {
+            const merged = mergeAuditSessions(prev, payload.session);
+            auditSessionRef.current = merged;
+            localStorage.setItem('cached_stock_audit', JSON.stringify(merged));
+            return merged;
+          });
         }
       })
       .on('broadcast', { event: 'audit_approved' }, ({ payload }) => {
         if (payload?.session) {
-          setAuditSession(payload.session);
-          auditSessionRef.current = payload.session;
-          localStorage.setItem('cached_stock_audit', JSON.stringify(payload.session));
+          setAuditSession(prev => {
+            const merged = mergeAuditSessions(prev, payload.session);
+            auditSessionRef.current = merged;
+            localStorage.setItem('cached_stock_audit', JSON.stringify(merged));
+            return merged;
+          });
+        }
+      })
+      .on('broadcast', { event: 'audit_stock_committed' }, ({ payload }) => {
+        if (payload?.updates && Array.isArray(payload.updates)) {
+          setProducts(prev => prev.map(p => {
+            const matched = payload.updates.find((u: any) => u.productId === p.id);
+            return matched ? { ...p, stock_shop: matched.stock_shop, stock_godown: matched.stock_godown } : p;
+          }));
+        } else if (payload?.productId) {
+          setProducts(prev => prev.map(p => 
+            p.id === payload.productId
+              ? { ...p, stock_shop: payload.stock_shop, stock_godown: payload.stock_godown }
+              : p
+          ));
         }
       })
       .subscribe((status) => {
@@ -202,6 +317,46 @@ export default function StockAudit() {
       channelRef.current = null;
       supabase.removeChannel(channel);
     };
+  }, [setProducts]);
+
+  // Save audit session to cloud directly with cloud merge to prevent clobbering
+  const saveAuditSessionToCloudDirectly = useCallback(async (session: ActiveAuditSession) => {
+    if (!supabase) return;
+    try {
+      const { data: existing } = await supabase
+        .from('settings')
+        .select('id, settings')
+        .eq('category', 'active_stock_audit')
+        .maybeSingle();
+
+      let sessionToSave = session;
+      if (existing?.settings?.session) {
+        sessionToSave = mergeAuditSessions(session, existing.settings.session);
+        auditSessionRef.current = sessionToSave;
+        localStorage.setItem('cached_stock_audit', JSON.stringify(sessionToSave));
+      }
+
+      const payload = {
+        category: 'active_stock_audit',
+        user_id: DEFAULT_SETTINGS_USER_ID,
+        settings: { session: sessionToSave },
+        updated_at: new Date().toISOString()
+      };
+
+      if (existing?.id) {
+        await supabase.from('settings').update({
+          settings: { session: sessionToSave },
+          updated_at: new Date().toISOString()
+        }).eq('id', existing.id);
+      } else {
+        await supabase.from('settings').insert({
+          ...payload,
+          id: '11111111-2222-3333-4444-555555555555'
+        });
+      }
+    } catch (err) {
+      console.warn('Error persisting stock audit to cloud:', err);
+    }
   }, []);
 
   // 3. Debounced cloud save & broadcast
@@ -221,32 +376,10 @@ export default function StockAudit() {
     }
 
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
-    syncTimeoutRef.current = setTimeout(async () => {
-      if (supabase) {
-        try {
-          const { data: existing } = await supabase
-            .from('settings')
-            .select('id')
-            .eq('category', 'active_stock_audit')
-            .maybeSingle();
-
-          const payload = {
-            category: 'active_stock_audit',
-            settings: { session: newSession },
-            updated_at: new Date().toISOString()
-          };
-
-          if (existing?.id) {
-            await supabase.from('settings').update(payload).eq('id', existing.id);
-          } else {
-            await supabase.from('settings').insert({ ...payload, id: crypto.randomUUID() });
-          }
-        } catch (err) {
-          console.warn('Note saving stock audit to cloud:', err);
-        }
-      }
+    syncTimeoutRef.current = setTimeout(() => {
+      saveAuditSessionToCloudDirectly(newSession);
     }, 250);
-  }, [counterName]);
+  }, [counterName, saveAuditSessionToCloudDirectly]);
 
   // 4. Add Count Submit Handler (Staff or Admin enters count)
   const handleSubmitCount = useCallback(() => {
@@ -416,7 +549,8 @@ export default function StockAudit() {
       return;
     }
 
-    const item = auditSession.items[product.id];
+    const currentSession = auditSessionRef.current;
+    const item = currentSession.items[product.id];
     if (!item || item.totalCounted === 0) {
       showError('No counts available to approve for this item');
       return;
@@ -469,30 +603,49 @@ export default function StockAudit() {
       }
 
       // 4. Mark approved in audit session
+      const nowIso = new Date().toISOString();
       const updatedItem: ProductAuditState = {
         ...item,
         isApproved: true,
         approvedBy: counterName,
-        approvedAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString()
+        approvedAt: nowIso,
+        lastUpdated: nowIso
       };
 
       const updatedSession: ActiveAuditSession = {
-        ...auditSession,
+        ...currentSession,
         items: {
-          ...auditSession.items,
+          ...currentSession.items,
           [product.id]: updatedItem
         }
       };
 
-      saveAuditSessionDebounced(updatedSession, counterName, 'audit_approved');
+      // 5. Update local state immediately
+      setAuditSession(updatedSession);
+      auditSessionRef.current = updatedSession;
+      localStorage.setItem('cached_stock_audit', JSON.stringify(updatedSession));
+
+      // 6. Broadcast approval event to all other open devices immediately
+      if (channelRef.current) {
+        try {
+          channelRef.current.send({
+            type: 'broadcast',
+            event: 'audit_approved',
+            payload: { session: updatedSession, sender: counterName }
+          });
+        } catch (e) {}
+      }
+
+      // 7. Persist immediately to Supabase cloud (no debouncing for approval)
+      await saveAuditSessionToCloudDirectly(updatedSession);
+
       playBeep(1200, 'sine', 0.15);
       showSuccess(`✓ Approved! ${product.name_en} updated in Main App to ${item.totalCounted} pcs.`);
     } catch (err: any) {
       console.error('Failed to update stock:', err);
       showError(err?.message || 'Failed to update stock');
     }
-  }, [isAdminUser, auditSession, counterName, updateProduct, setProducts, saveAuditSessionDebounced]);
+  }, [isAdminUser, counterName, updateProduct, setProducts, saveAuditSessionToCloudDirectly]);
 
   // 8. Admin Batch Approve All Counted Products to Main App
   const handleBatchApproveAll = useCallback(async () => {
@@ -501,8 +654,9 @@ export default function StockAudit() {
       return;
     }
 
-    const pendingProductIds = Object.keys(auditSession.items).filter(id => {
-      const item = auditSession.items[id];
+    const currentSession = auditSessionRef.current;
+    const pendingProductIds = Object.keys(currentSession.items).filter(id => {
+      const item = currentSession.items[id];
       return item && item.totalCounted > 0 && !item.isApproved;
     });
 
@@ -516,11 +670,12 @@ export default function StockAudit() {
     const stockUpdates: Array<{ productId: string; stock_shop: number; stock_godown: number }> = [];
 
     try {
-      const updatedItems = { ...auditSession.items };
+      const updatedItems = { ...currentSession.items };
+      const nowIso = new Date().toISOString();
 
       for (const id of pendingProductIds) {
         const product = products.find(p => p.id === id);
-        const item = auditSession.items[id];
+        const item = currentSession.items[id];
         if (!product || !item) continue;
 
         const newShopStock = item.totalShopCounted > 0 || item.totalGodownCounted > 0 ? item.totalShopCounted : item.totalCounted;
@@ -552,8 +707,8 @@ export default function StockAudit() {
           ...item,
           isApproved: true,
           approvedBy: counterName,
-          approvedAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString()
+          approvedAt: nowIso,
+          lastUpdated: nowIso
         };
 
         successCount++;
@@ -571,11 +726,28 @@ export default function StockAudit() {
       }
 
       const completedSession: ActiveAuditSession = {
-        ...auditSession,
+        ...currentSession,
         items: updatedItems
       };
 
-      saveAuditSessionDebounced(completedSession, counterName, 'audit_approved');
+      setAuditSession(completedSession);
+      auditSessionRef.current = completedSession;
+      localStorage.setItem('cached_stock_audit', JSON.stringify(completedSession));
+
+      // Broadcast immediately to all other connected devices
+      if (channelRef.current) {
+        try {
+          channelRef.current.send({
+            type: 'broadcast',
+            event: 'audit_approved',
+            payload: { session: completedSession, sender: counterName }
+          });
+        } catch (e) {}
+      }
+
+      // Save directly to cloud immediately
+      await saveAuditSessionToCloudDirectly(completedSession);
+
       playBeep(1300, 'sine', 0.2);
       showSuccess(`✓ Batch Approved! ${successCount} products updated in Main App.`);
     } catch (err: any) {
@@ -583,7 +755,7 @@ export default function StockAudit() {
     } finally {
       setIsCommitting(false);
     }
-  }, [isAdminUser, auditSession, products, counterName, setProducts, saveAuditSessionDebounced]);
+  }, [isAdminUser, products, counterName, setProducts, saveAuditSessionToCloudDirectly]);
 
   // 9. Camera Scanner Stop Function
   const stopCameraScanner = useCallback(() => {
@@ -1119,16 +1291,38 @@ export default function StockAudit() {
                         </span>
                         {isAdminUser && (
                           <button
-                            onClick={() => {
-                              setAuditSession(prev => {
-                                const newItems = {
-                                  ...prev.items,
-                                  [product.id]: { ...prev.items[product.id], isApproved: false }
-                                };
-                                const updated = { ...prev, items: newItems };
-                                saveAuditSessionDebounced(updated, counterName, 'audit_update');
-                                return updated;
-                              });
+                            onClick={async () => {
+                              const current = auditSessionRef.current;
+                              const currentItem = current.items[product.id];
+                              if (!currentItem) return;
+                              const nowIso = new Date().toISOString();
+                              const updatedItem: ProductAuditState = {
+                                ...currentItem,
+                                isApproved: false,
+                                approvedBy: undefined,
+                                approvedAt: undefined,
+                                lastUpdated: nowIso
+                              };
+                              const updated: ActiveAuditSession = {
+                                ...current,
+                                items: {
+                                  ...current.items,
+                                  [product.id]: updatedItem
+                                }
+                              };
+                              setAuditSession(updated);
+                              auditSessionRef.current = updated;
+                              localStorage.setItem('cached_stock_audit', JSON.stringify(updated));
+                              if (channelRef.current) {
+                                try {
+                                  channelRef.current.send({
+                                    type: 'broadcast',
+                                    event: 'audit_update',
+                                    payload: { session: updated, sender: counterName }
+                                  });
+                                } catch (e) {}
+                              }
+                              await saveAuditSessionToCloudDirectly(updated);
                               showInfo('Reopened count for approval');
                             }}
                             className="text-[10px] text-slate-500 hover:text-slate-800 underline"

@@ -1438,11 +1438,11 @@ const POS = () => {
               {activeCart.items.map((item, idx) => (
                 <div
                   key={`${item.id}-${item.selected_unit || 'Piece'}`}
-                  className="group relative bg-card/70 hover:bg-card border border-border/80 hover:border-border rounded-xl p-2.5 transition-all shadow-sm space-y-1.5"
+                  className="group relative bg-card/70 hover:bg-card border border-border/80 hover:border-border rounded-xl p-2 sm:p-2.5 transition-all shadow-sm space-y-1"
                 >
-                  {/* Top Row: [Trash] [Price (Red box)] [Quantity (Green box)] ---------- [Dhivehi Name (Black box)] */}
+                  {/* First Row: [Trash] [Price] [Quantity Stepper] [Unit Dropdown] ---------- [Dhivehi Name] */}
                   <div className="flex items-center justify-between gap-2">
-                    {/* Left: Delete + Price + Quantity */}
+                    {/* Left side: Controls */}
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         type="button"
@@ -1453,41 +1453,17 @@ const POS = () => {
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
 
-                      {/* Red Box: Unit Price */}
-                      <span className="text-[11px] font-mono font-black text-foreground bg-muted/90 px-1.5 py-0.5 rounded border border-border/70 whitespace-nowrap shadow-xs">
-                        {settings.shop.currency} {item.price.toFixed(2)}
+                      {/* Price Badge */}
+                      <span className="text-[11px] sm:text-xs font-mono font-black text-foreground bg-muted/90 px-1.5 py-0.5 rounded border border-border/70 whitespace-nowrap shadow-xs">
+                        {settings.shop.currency} {(item.price * (item.qty || 1)).toFixed(2)}
                       </span>
 
-                      {/* Green Box: Quantity Indicator */}
-                      <span className="text-[11px] font-mono font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20 whitespace-nowrap shadow-xs">
-                        {item.qty} {item.selected_unit || 'Pc'}
-                      </span>
-                    </div>
-
-                    {/* Right (Black box): Dhivehi Name */}
-                    <div className="flex-1 text-right min-w-0">
-                      <p className="text-sm sm:text-base font-black text-foreground leading-tight truncate">
-                        {item.name_dv}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Middle Row (Pink box): English Name (Bigger and prominent across card) */}
-                  <div className="text-right">
-                    <p className="text-xs sm:text-[13px] font-bold text-foreground/80 leading-snug uppercase tracking-wide truncate font-mono">
-                      {item.name_en}
-                    </p>
-                  </div>
-
-                  {/* Bottom Row: Stepper + Subtotal + Unit Switcher */}
-                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40">
-                    {/* Left: Stepper and Line Price */}
-                    <div className="flex items-center gap-2">
+                      {/* Quantity Stepper directly in first row */}
                       <div className="flex items-center bg-background/90 dark:bg-black/40 rounded-lg p-0.5 border border-border h-7">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6 text-muted-foreground hover:text-foreground rounded"
+                          className="h-6 w-6 text-muted-foreground hover:text-foreground rounded p-0"
                           onClick={() => updateCartItemQty(item.id, -1, item.selected_unit)}
                         >
                           <Minus className="h-3 w-3" />
@@ -1520,25 +1496,19 @@ const POS = () => {
                               focusSearchBar();
                             }
                           }}
-                          className="cart-qty-input w-12 text-center text-xs font-black text-foreground bg-transparent border-none h-6 p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:bg-background focus:ring-1 focus:ring-primary rounded font-mono"
+                          className="cart-qty-input w-10 text-center text-xs font-black text-foreground bg-transparent border-none h-6 p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus:bg-background focus:ring-1 focus:ring-primary rounded font-mono"
                         />
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6 text-muted-foreground hover:text-foreground rounded"
+                          className="h-6 w-6 text-muted-foreground hover:text-foreground rounded p-0"
                           onClick={() => updateCartItemQty(item.id, 1, item.selected_unit)}
                         >
                           <Plus className="h-3 w-3" />
                         </Button>
                       </div>
 
-                      <div className="text-xs sm:text-sm font-black text-primary font-mono whitespace-nowrap">
-                        {settings.shop.currency} {(item.price * (item.qty || 1)).toFixed(2)}
-                      </div>
-                    </div>
-
-                    {/* Right: Unit badge / Unit dropdown */}
-                    <div className="flex items-center justify-end">
+                      {/* Unit switcher in first row */}
                       {(() => {
                         const prod = products.find(p => p.id === item.id);
                         const hasUnits = prod?.units && prod.units.length > 0;
@@ -1546,7 +1516,7 @@ const POS = () => {
 
                         if (!hasUnits) {
                           return item.selected_unit && item.selected_unit !== 'Piece' ? (
-                            <Badge variant="outline" className="text-[9px] border-primary/30 text-primary uppercase font-black px-1.5 py-0.5 h-auto leading-none">
+                            <Badge variant="outline" className="text-[9px] border-primary/30 text-primary uppercase font-black px-1.5 py-0.5 h-6 leading-none flex items-center">
                               {item.selected_unit}
                             </Badge>
                           ) : null;
@@ -1557,7 +1527,7 @@ const POS = () => {
                             <DropdownMenuTrigger asChild>
                               <button
                                 type="button"
-                                className="flex items-center gap-1 text-[10px] font-black bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 h-6 rounded-md transition-all cursor-pointer shadow-sm active:scale-95"
+                                className="flex items-center gap-1 text-[10px] font-black bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 h-7 rounded-lg transition-all cursor-pointer shadow-xs active:scale-95"
                                 title={t('switch_unit') || 'Switch Unit'}
                               >
                                 <Boxes className="h-3 w-3 text-primary" />
@@ -1565,7 +1535,7 @@ const POS = () => {
                                 <ChevronDown className="h-2.5 w-2.5 opacity-70" />
                               </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-card border-border text-foreground font-faruma text-right min-w-[200px] z-[120] shadow-2xl rounded-xl p-1">
+                            <DropdownMenuContent align="start" className="bg-card border-border text-foreground font-faruma text-right min-w-[200px] z-[120] shadow-2xl rounded-xl p-1">
                               <div className="px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-muted-foreground border-b border-border text-right">
                                 {t('switch_unit') || 'Switch Unit (ޔުނިޓް ބަދަލުކުރޭ)'}
                               </div>
@@ -1579,9 +1549,9 @@ const POS = () => {
                                 <span className="font-mono font-bold text-primary">{settings?.shop?.currency || 'MVR'} {Number(prod.price || 0).toFixed(2)}</span>
                                 <span className="font-bold">Piece (1 pc)</span>
                               </DropdownMenuItem>
-                              {prod.units!.map((u, idx) => (
+                              {prod.units!.map((u, uIdx) => (
                                 <DropdownMenuItem
-                                  key={idx}
+                                  key={uIdx}
                                   onClick={() => switchCartItemUnit(item, u.name)}
                                   className={cn(
                                     "flex items-center justify-between text-xs py-1.5 px-2.5 rounded-lg cursor-pointer hover:bg-muted transition-colors",
@@ -1597,6 +1567,20 @@ const POS = () => {
                         );
                       })()}
                     </div>
+
+                    {/* Right side: Dhivehi Name */}
+                    <div className="flex-1 text-right min-w-0">
+                      <p className="text-sm sm:text-base font-black text-foreground leading-tight truncate">
+                        {item.name_dv}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Second Row: Large & Bold English Name across the available space */}
+                  <div className="text-right">
+                    <p className="text-sm sm:text-[15px] font-black text-foreground/90 leading-tight uppercase tracking-wide truncate font-mono">
+                      {item.name_en}
+                    </p>
                   </div>
                 </div>
               ))}

@@ -158,6 +158,22 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
             return;
         }
 
+        let finalUnits = [...units];
+        // If user filled in the unit form and forgot to click "Save Unit", auto-commit it!
+        if (isUnitFormOpen && unitForm.name.trim() && parseFloat(unitForm.price) > 0 && parseFloat(unitForm.conversion_factor) > 0) {
+            const pendingUnit = {
+                name: unitForm.name.trim(),
+                price: parseFloat(unitForm.price),
+                conversion_factor: parseFloat(unitForm.conversion_factor),
+                barcode: (unitForm.barcode || '').trim()
+            };
+            if (editingUnitIndex !== null) {
+                finalUnits[editingUnitIndex] = pendingUnit;
+            } else if (!finalUnits.some(u => u.name.toLowerCase() === pendingUnit.name.toLowerCase())) {
+                finalUnits.push(pendingUnit);
+            }
+        }
+
         const finalProduct: Product = {
             ...editedProduct,
             cost_price: (editedProduct.cost_price !== undefined && editedProduct.cost_price !== null && !isNaN(Number(editedProduct.cost_price)))
@@ -166,7 +182,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
             item_code: numericCode,
             image: imagePreviewUrl || generatePlaceholderImage(editedProduct.name_en || editedProduct.name_dv, numericCode),
             expiry_date: expiryDate ? format(expiryDate, 'yyyy-MM-dd') : undefined,
-            units: units.length > 0 ? units : []
+            units: finalUnits.length > 0 ? finalUnits : []
         };
 
         onSave(finalProduct);

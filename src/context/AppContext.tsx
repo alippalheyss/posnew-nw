@@ -561,11 +561,18 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       ]);
 
       if (productsData && productsData.length > 0) {
-        const sanitizedProducts = productsData.map(p => ({
-          ...p,
-          item_code: p.item_code !== undefined && p.item_code !== null ? String(p.item_code).trim() : '',
-          barcode: p.barcode !== undefined && p.barcode !== null ? String(p.barcode).trim() : ''
-        }));
+        const sanitizedProducts = productsData.map(p => {
+          let units = p.units;
+          if (typeof units === 'string') {
+            try { units = JSON.parse(units); } catch (e) { units = []; }
+          }
+          return {
+            ...p,
+            item_code: p.item_code !== undefined && p.item_code !== null ? String(p.item_code).trim() : '',
+            barcode: p.barcode !== undefined && p.barcode !== null ? String(p.barcode).trim() : '',
+            units: Array.isArray(units) ? units : []
+          };
+        });
         setProducts(sanitizedProducts);
         console.log(`Successfully fetched all ${sanitizedProducts.length} products from Supabase!`);
       }

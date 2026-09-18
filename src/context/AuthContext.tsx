@@ -41,6 +41,7 @@ export interface User {
     isActive: boolean;
     createdAt: string;
     lastLogin?: string;
+    password?: string;
 }
 
 // Auth Context Type

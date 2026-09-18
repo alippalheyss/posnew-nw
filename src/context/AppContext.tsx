@@ -1230,11 +1230,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
     const checkUpdates = async () => {
       if (!isMounted || isChecking) return;
+      const currentSettings = settingsRef.current;
+      if (currentSettings.telegram?.enabled === false) return;
+
       try {
         isChecking = true;
         const currentCustomers = customersRef.current;
         const currentSales = salesRef.current;
-        const currentSettings = settingsRef.current;
 
         await processPendingTelegramUpdates({
           customers: currentCustomers,
@@ -1295,9 +1297,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       }
     };
 
-    // Initial check after 1.5 seconds, then poll steadily every 4 seconds
-    const initialTimer = setTimeout(checkUpdates, 1500);
-    const interval = setInterval(checkUpdates, 4000);
+    // Initial check after 2 seconds, then poll steadily every 8 seconds
+    const initialTimer = setTimeout(checkUpdates, 2000);
+    const interval = setInterval(checkUpdates, 8000);
 
     return () => {
       isMounted = false;

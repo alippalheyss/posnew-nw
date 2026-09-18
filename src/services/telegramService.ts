@@ -170,7 +170,8 @@ export const setBotCommands = async (token?: string): Promise<{ ok: boolean; des
   }
 };
 
-let hasAttemptedWebhookCleanup = false;
+let isPollInFlight = false;
+let nextAllowedPollTime = 0;
 
 /**
  * Poll recent Telegram updates (works 100% in browser without any webhook or CLI)
@@ -182,33 +183,40 @@ export const pollTelegramUpdates = async (
   const activeToken = (token || DEFAULT_TELEGRAM_BOT_TOKEN).trim();
   if (!activeToken) return { ok: false, updates: [], error: 'Bot token missing' };
 
+  // If in backoff cooldown or another request is currently in-flight, return silently
+  if (Date.now() < nextAllowedPollTime || isPollInFlight) {
+    return { ok: false, updates: [] };
+  }
+
+  isPollInFlight = true;
+
   try {
     const url = offset
       ? `https://api.telegram.org/bot${activeToken}/getUpdates?offset=${offset}&timeout=0`
       : `https://api.telegram.org/bot${activeToken}/getUpdates?timeout=0`;
     const res = await fetch(url);
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
 
-    if (data.ok) {
-      hasAttemptedWebhookCleanup = false;
+    if (data && data.ok) {
+      nextAllowedPollTime = 0;
       return { ok: true, updates: data.result || [] };
     }
 
     // Auto-resolve Telegram 409 Conflict error
-    // If a webhook was active, delete it so browser getUpdates polling resumes immediately
+    // If a webhook was active or another instance is running, delete webhook and back off for 15s
     if (res.status === 409 || data.error_code === 409) {
-      if (!hasAttemptedWebhookCleanup) {
-        hasAttemptedWebhookCleanup = true;
-        try {
-          await deleteTelegramWebhook(activeToken);
-        } catch (e) {}
-      }
+      nextAllowedPollTime = Date.now() + 15000;
+      try {
+        await deleteTelegramWebhook(activeToken);
+      } catch (e) {}
       return { ok: false, updates: [], error: data.description || '409 Conflict' };
     }
 
     return { ok: false, updates: [], error: data.description };
   } catch (err: any) {
     return { ok: false, updates: [], error: err.message };
+  } finally {
+    isPollInFlight = false;
   }
 };
 

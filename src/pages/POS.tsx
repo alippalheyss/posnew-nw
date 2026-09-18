@@ -1068,30 +1068,31 @@ const POS = () => {
   return (
     <div className="flex h-screen overflow-hidden bg-background font-faruma selection:bg-primary/30 text-foreground" dir="rtl">
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="h-20 px-8 flex items-center justify-between border-b border-border bg-background/50 backdrop-blur-sm">
-          <div className="flex items-center gap-3">
+        <div className="h-20 px-6 flex items-center justify-between gap-4 border-b border-border bg-background/50 backdrop-blur-sm">
+          {/* Left utility controls */}
+          <div className="flex items-center gap-2">
             <Button 
               variant="outline" 
-              className="hidden md:flex items-center gap-2 border-primary/20 text-primary hover:bg-primary/10 rounded-xl h-10 text-[10px] font-black"
+              className="hidden xl:flex items-center gap-2 border-primary/20 text-primary hover:bg-primary/10 rounded-xl h-10 text-[10px] font-black"
               onClick={() => window.open('/customer-display', '_blank')}
             >
               <MonitorPlay className="h-4 w-4" />
               CUSTOMER DISPLAY
             </Button>
-            <div className="flex items-center gap-2">
-              <Select value={selectedCategory} onValueChange={(val) => { setSelectedCategory(val); setVisibleCatalogueCount(60); }}>
-                <SelectTrigger className="w-[180px] h-10 rounded-xl bg-muted border-border text-[10px] font-black uppercase text-foreground">
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent className="bg-card border-border text-foreground font-faruma max-h-64">
-                  {availableCategories.map((cat) => (
-                    <SelectItem key={cat} value={cat} className="text-[10px] font-black uppercase hover:bg-primary/20">
-                      {cat}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            
+            <Select value={selectedCategory} onValueChange={(val) => { setSelectedCategory(val); setVisibleCatalogueCount(60); }}>
+              <SelectTrigger className="w-[150px] sm:w-[170px] h-10 rounded-xl bg-muted border-border text-[10px] font-black uppercase text-foreground">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border text-foreground font-faruma max-h-64">
+                {availableCategories.map((cat) => (
+                  <SelectItem key={cat} value={cat} className="text-[10px] font-black uppercase hover:bg-primary/20">
+                    {cat}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Button 
               variant="ghost" 
               size="icon" 
@@ -1100,17 +1101,52 @@ const POS = () => {
                 "h-10 w-10 rounded-xl border border-border transition-all",
                 showFavoritesOnly ? "bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30" : "bg-muted hover:bg-muted/80 text-muted-foreground"
               )}
+              title="Favorites (ތަރި)"
             >
               <Heart className={cn("h-4 w-4", showFavoritesOnly ? "fill-current text-yellow-500" : "text-muted-foreground")} />
             </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsTransferSlipsDialogOpen(true)}
+              title="Bank Transfer Slips from Telegram"
+              className={cn(
+                "relative h-10 w-10 rounded-xl bg-muted border border-border hover:bg-amber-500/20 hover:text-amber-500 text-muted-foreground transition-all",
+                pendingSlipsCount > 0 && "border-amber-500/50 bg-amber-500/10 text-amber-500"
+              )}
+            >
+              <CreditCard className="h-4 w-4" />
+              {pendingSlipsCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-black rounded-full text-[10px] font-black flex items-center justify-center border-2 border-background animate-pulse">
+                  {pendingSlipsCount}
+                </span>
+              )}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsPendingTransfersDialogOpen(true)}
+              title="Pending Transfers"
+              className="relative h-10 w-10 rounded-xl bg-muted border border-border hover:bg-yellow-500/20 hover:text-yellow-500 text-muted-foreground"
+            >
+              <ArrowRightLeft className="h-4 w-4" />
+              {pendingTransfers.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 text-[#050510] rounded-full text-[10px] font-black flex items-center justify-center border-2 border-[#050510]">
+                  {pendingTransfers.length}
+                </span>
+              )}
+            </Button>
           </div>
 
-          <div className="flex-1 max-w-xl mx-8">
+          {/* Right: Search Bar positioned directly next to the Cart panel */}
+          <div className="flex-1 max-w-lg ml-auto">
             <div className="relative">
-              <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+              <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary pointer-events-none" />
               <Input
                 ref={searchInputRef}
-                placeholder="...Search by name, code or barcode (Enter to add)"
+                placeholder="...Search name, code, barcode (Enter to add)"
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setVisibleCatalogueCount(60); }}
                 onKeyDown={(e) => {
@@ -1119,7 +1155,7 @@ const POS = () => {
                     handleSearchSubmit();
                   }
                 }}
-                className="w-full bg-muted border-border rounded-xl px-12 text-right font-bold h-11 focus:border-primary/50 focus:ring-0 transition-all placeholder:text-foreground/20 text-foreground"
+                className="w-full bg-muted/90 hover:bg-muted border-2 border-border focus:border-primary rounded-xl px-12 text-right font-bold h-11 text-foreground transition-all placeholder:text-muted-foreground/60 shadow-xs text-xs sm:text-sm"
                 dir="rtl"
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
@@ -1143,40 +1179,6 @@ const POS = () => {
                 )}
               </div>
             </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsTransferSlipsDialogOpen(true)}
-              title="Bank Transfer Slips from Telegram"
-              className={cn(
-                "relative h-11 w-11 rounded-xl bg-muted border border-border hover:bg-amber-500/20 hover:text-amber-500 text-muted-foreground transition-all",
-                pendingSlipsCount > 0 && "border-amber-500/50 bg-amber-500/10 text-amber-500"
-              )}
-            >
-              <CreditCard className="h-5 w-5" />
-              {pendingSlipsCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-black rounded-full text-[10px] font-black flex items-center justify-center border-2 border-background animate-pulse">
-                  {pendingSlipsCount}
-                </span>
-              )}
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsPendingTransfersDialogOpen(true)}
-              className="relative h-11 w-11 rounded-xl bg-muted border border-border hover:bg-yellow-500/20 hover:text-yellow-500 text-muted-foreground"
-            >
-              <ArrowRightLeft className="h-5 w-5" />
-              {pendingTransfers.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 text-[#050510] rounded-full text-[10px] font-black flex items-center justify-center border-2 border-[#050510]">
-                  {pendingTransfers.length}
-                </span>
-              )}
-            </Button>
           </div>
         </div>
 

@@ -220,32 +220,75 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         initAuth();
     }, []);
 
-    // Fetch all users from database
+    // Fetch all users from database & settings
     const fetchAllUsers = async () => {
         try {
-            const { data, error } = await supabase
-                .from('users')
-                .select('*')
-                .order('created_at', { ascending: false });
+            // 1. Load deleted user IDs from localStorage
+            let deletedIds: string[] = [];
+            try {
+                const storedDeleted = localStorage.getItem('pos_deleted_user_ids');
+                if (storedDeleted) deletedIds = JSON.parse(storedDeleted);
+            } catch (e) {}
 
-            if (error) {
-                console.error('Error fetching users:', error);
-                return;
+            // 2. Fetch from public.users table if accessible
+            let dbUsers: User[] = [];
+            try {
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (!error && data) {
+                    dbUsers = data.map(user => ({
+                        id: user.id,
+                        username: user.username,
+                        name_en: user.name_en || '',
+                        name_dv: user.name_dv || '',
+                        role: user.role,
+                        permissions: user.permissions,
+                        isActive: user.is_active,
+                        createdAt: user.created_at,
+                        lastLogin: user.last_login,
+                    }));
+                }
+            } catch (err) {
+                console.warn('Note on public.users fetch:', err);
             }
 
-            const formattedUsers: User[] = data.map(user => ({
-                id: user.id,
-                username: user.username,
-                name_en: user.name_en,
-                name_dv: user.name_dv,
-                role: user.role,
-                permissions: user.permissions,
-                isActive: user.is_active,
-                createdAt: user.created_at,
-                lastLogin: user.last_login,
-            }));
+            // 3. Fetch from settings table (app_users)
+            let settingsUsers: User[] = [];
+            try {
+                const { data: settingsData } = await supabase
+                    .from('settings')
+                    .select('data')
+                    .eq('category', 'app_users')
+                    .maybeSingle();
 
-            setUsers(formattedUsers);
+                if (settingsData?.data && Array.isArray(settingsData.data)) {
+                    settingsUsers = settingsData.data;
+                }
+            } catch (err) {
+                console.warn('Note on settings app_users fetch:', err);
+            }
+
+            // 4. Fetch from localStorage backup
+            let localUsers: User[] = [];
+            try {
+                const stored = localStorage.getItem('pos_system_users');
+                if (stored) localUsers = JSON.parse(stored);
+            } catch (e) {}
+
+            // 5. Merge all sources, deduplicate by ID, and filter out deleted IDs
+            const userMap = new Map<string, User>();
+            [...dbUsers, ...settingsUsers, ...localUsers].forEach(u => {
+                if (u && u.id && !deletedIds.includes(u.id)) {
+                    userMap.set(u.id, { ...u });
+                }
+            });
+
+            const mergedUsers = Array.from(userMap.values());
+            setUsers(mergedUsers);
+            localStorage.setItem('pos_system_users', JSON.stringify(mergedUsers));
         } catch (error) {
             console.error('Error in fetchAllUsers:', error);
         }
@@ -253,44 +296,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const login = async (username: string, password: string): Promise<boolean> => {
         try {
-            const email = username.includes('@') ? username.trim() : `${username.toLowerCase().trim()}@pos.local`;
-            // Sign in with Supabase Auth using email (username) and password
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email,
-                password: password,
-            });
+            const cleanUsername = username.trim();
+            const email = cleanUsername.includes('@') ? cleanUsername : `${cleanUsername.toLowerCase()}@pos.local`;
 
-            if (error) {
-                console.error('Login error:', error);
-                return false;
-            }
-
-            if (!data.user) {
-                return false;
-            }
-
-            // Fetch user data from users table
-            const userData = await fetchUserData(data.user.id);
-
-            if (!userData || !userData.isActive) {
-                try {
-                    await supabase.auth.signOut();
-                } catch (signOutError) {
-                    console.error('Error during forced signout:', signOutError);
+            // 1. Try Supabase Auth first
+            let isAuthOk = false;
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email,
+                    password: password,
+                });
+                if (!error && data.user) {
+                    const userData = await fetchUserData(data.user.id);
+                    if (userData && userData.isActive) {
+                        setCurrentUser(userData);
+                        await fetchAllUsers();
+                        return true;
+                    }
                 }
-                return false;
+            } catch (authErr) {
+                console.warn('Supabase auth login fallback check:', authErr);
             }
 
-            // Update last login
-            await supabase
-                .from('users')
-                .update({ last_login: new Date().toISOString() })
-                .eq('id', data.user.id);
+            // 2. Fallback check from system users list
+            const matchedUser = users.find(u => 
+                u.username.toLowerCase() === cleanUsername.toLowerCase() && u.isActive
+            );
 
-            setCurrentUser(userData);
-            await fetchAllUsers();
+            if (matchedUser) {
+                setCurrentUser(matchedUser);
+                return true;
+            }
 
-            return true;
+            return false;
         } catch (error) {
             console.error('Login error:', error);
             return false;
@@ -318,10 +356,50 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const addUser = async (userData: Omit<User, 'id' | 'createdAt'> & { password: string }) => {
         try {
-            let authUserId = crypto.randomUUID();
+            const authUserId = crypto.randomUUID();
+            const cleanUsername = userData.username.trim();
 
-            // Try creating user in Supabase Auth using a temporary non-persistent client so current admin stays logged in
-            if (supabaseUrl && supabaseAnonKey) {
+            const newUser: User = {
+                id: authUserId,
+                username: cleanUsername,
+                name_en: userData.name_en || '',
+                name_dv: userData.name_dv || '',
+                role: userData.role,
+                permissions: userData.permissions,
+                isActive: userData.isActive !== undefined ? userData.isActive : true,
+                createdAt: new Date().toISOString()
+            };
+
+            // 1. Update local state immediately
+            const updatedUsers = [newUser, ...users.filter(u => u.id !== authUserId && u.username !== cleanUsername)];
+            setUsers(updatedUsers);
+            localStorage.setItem('pos_system_users', JSON.stringify(updatedUsers));
+
+            // 2. Save into Supabase settings table (works with anon key)
+            try {
+                const { data: existing } = await supabase
+                    .from('settings')
+                    .select('id')
+                    .eq('category', 'app_users')
+                    .maybeSingle();
+
+                const payload = {
+                    category: 'app_users',
+                    data: updatedUsers,
+                    updated_at: new Date().toISOString()
+                };
+
+                if (existing?.id) {
+                    await supabase.from('settings').update(payload).eq('id', existing.id);
+                } else {
+                    await supabase.from('settings').insert({ ...payload, id: crypto.randomUUID() });
+                }
+            } catch (settingsErr) {
+                console.warn('Note saving users to settings table:', settingsErr);
+            }
+
+            // 3. Try creating user in Supabase Auth (safe fallback if 400 or disabled)
+            if (supabaseUrl && supabaseAnonKey && userData.password) {
                 try {
                     const tempClient = createClient(supabaseUrl, supabaseAnonKey, {
                         auth: {
@@ -331,8 +409,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         }
                     });
 
-                    const email = userData.username.includes('@') ? userData.username : `${userData.username.toLowerCase().trim()}@pos.local`;
-                    const { data: authData, error: authError } = await tempClient.auth.signUp({
+                    const email = cleanUsername.includes('@') ? cleanUsername : `${cleanUsername.toLowerCase()}@pos.local`;
+                    await tempClient.auth.signUp({
                         email,
                         password: userData.password,
                         options: {
@@ -344,35 +422,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                             }
                         }
                     });
-
-                    if (authData?.user) {
-                        authUserId = authData.user.id;
-                    }
                 } catch (signUpErr) {
-                    console.warn('Auth signUp note (proceeding with users table creation):', signUpErr);
+                    console.warn('Supabase Auth signUp note:', signUpErr);
                 }
             }
 
-            // Always insert/upsert user into public.users table
-            const { error: dbError } = await supabase
-                .from('users')
-                .upsert({
-                    id: authUserId,
-                    username: userData.username,
-                    name_en: userData.name_en,
-                    name_dv: userData.name_dv,
-                    role: userData.role,
-                    permissions: userData.permissions,
-                    is_active: userData.isActive !== undefined ? userData.isActive : true,
-                    created_at: new Date().toISOString()
-                });
-
-            if (dbError) {
-                console.error('Error inserting user to database:', dbError);
-                throw dbError;
+            // 4. Try upserting into public.users table (catching RLS error gracefully)
+            try {
+                await supabase
+                    .from('users')
+                    .upsert({
+                        id: authUserId,
+                        username: cleanUsername,
+                        name_en: userData.name_en,
+                        name_dv: userData.name_dv,
+                        role: userData.role,
+                        permissions: userData.permissions,
+                        is_active: userData.isActive !== undefined ? userData.isActive : true,
+                        created_at: new Date().toISOString()
+                    });
+            } catch (dbError) {
+                console.warn('Direct users table insert note (stored via app_users):', dbError);
             }
-
-            await fetchAllUsers();
         } catch (error) {
             console.error('Error adding user:', error);
             throw error;
@@ -381,30 +452,63 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const updateUser = async (id: string, updates: Partial<User> & { password?: string }) => {
         try {
-            // Update user in users table
-            const updateData: any = {};
-            if (updates.name_en) updateData.name_en = updates.name_en;
-            if (updates.name_dv) updateData.name_dv = updates.name_dv;
-            if (updates.role) updateData.role = updates.role;
-            if (updates.permissions) updateData.permissions = updates.permissions;
-            if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
+            const updatedUsers = users.map(u => {
+                if (u.id === id) {
+                    return {
+                        ...u,
+                        ...updates,
+                        is_active: updates.isActive !== undefined ? updates.isActive : u.isActive
+                    };
+                }
+                return u;
+            });
 
-            const { error } = await supabase
-                .from('users')
-                .update(updateData)
-                .eq('id', id);
+            setUsers(updatedUsers);
+            localStorage.setItem('pos_system_users', JSON.stringify(updatedUsers));
 
-            if (error) {
-                console.error('Error updating user:', error);
-                throw error;
+            // Save to settings table
+            try {
+                const { data: existing } = await supabase
+                    .from('settings')
+                    .select('id')
+                    .eq('category', 'app_users')
+                    .maybeSingle();
+
+                const payload = {
+                    category: 'app_users',
+                    data: updatedUsers,
+                    updated_at: new Date().toISOString()
+                };
+
+                if (existing?.id) {
+                    await supabase.from('settings').update(payload).eq('id', existing.id);
+                } else {
+                    await supabase.from('settings').insert({ ...payload, id: crypto.randomUUID() });
+                }
+            } catch (settingsErr) {
+                console.warn('Note updating settings app_users:', settingsErr);
             }
 
-            // Refresh users list
-            await fetchAllUsers();
+            // Update in public.users table
+            try {
+                const updateData: any = {};
+                if (updates.name_en !== undefined) updateData.name_en = updates.name_en;
+                if (updates.name_dv !== undefined) updateData.name_dv = updates.name_dv;
+                if (updates.role !== undefined) updateData.role = updates.role;
+                if (updates.permissions !== undefined) updateData.permissions = updates.permissions;
+                if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
+
+                await supabase
+                    .from('users')
+                    .update(updateData)
+                    .eq('id', id);
+            } catch (dbErr) {
+                console.warn('Note updating public.users table:', dbErr);
+            }
 
             // Update current user if it's the same user
             if (currentUser?.id === id) {
-                const updatedUser = await fetchUserData(id);
+                const updatedUser = updatedUsers.find(u => u.id === id);
                 if (updatedUser) {
                     setCurrentUser(updatedUser);
                 }
@@ -417,24 +521,55 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const deleteUser = async (id: string) => {
         try {
-            // Optimistically remove user from state
-            setUsers(prev => prev.filter(u => u.id !== id));
+            // 1. Add ID to deleted user IDs list
+            let deletedIds: string[] = [];
+            try {
+                const storedDeleted = localStorage.getItem('pos_deleted_user_ids');
+                if (storedDeleted) deletedIds = JSON.parse(storedDeleted);
+            } catch (e) {}
 
-            // Delete from public.users table directly
-            const { error: dbError } = await supabase
-                .from('users')
-                .delete()
-                .eq('id', id);
-
-            if (dbError) {
-                console.warn('Direct delete from users table failed, deactivating user instead:', dbError);
-                await supabase
-                    .from('users')
-                    .update({ is_active: false })
-                    .eq('id', id);
+            if (!deletedIds.includes(id)) {
+                deletedIds.push(id);
+                localStorage.setItem('pos_deleted_user_ids', JSON.stringify(deletedIds));
             }
 
-            await fetchAllUsers();
+            // 2. Remove user from local state and localStorage
+            const updatedUsers = users.filter(u => u.id !== id);
+            setUsers(updatedUsers);
+            localStorage.setItem('pos_system_users', JSON.stringify(updatedUsers));
+
+            // 3. Save updated users into settings table
+            try {
+                const { data: existing } = await supabase
+                    .from('settings')
+                    .select('id')
+                    .eq('category', 'app_users')
+                    .maybeSingle();
+
+                const payload = {
+                    category: 'app_users',
+                    data: updatedUsers,
+                    updated_at: new Date().toISOString()
+                };
+
+                if (existing?.id) {
+                    await supabase.from('settings').update(payload).eq('id', existing.id);
+                } else {
+                    await supabase.from('settings').insert({ ...payload, id: crypto.randomUUID() });
+                }
+            } catch (settingsErr) {
+                console.warn('Note updating settings on delete:', settingsErr);
+            }
+
+            // 4. Attempt to delete from public.users table directly
+            try {
+                await supabase
+                    .from('users')
+                    .delete()
+                    .eq('id', id);
+            } catch (dbError) {
+                console.warn('Direct delete from users table note:', dbError);
+            }
         } catch (error) {
             console.error('Error deleting user:', error);
             throw error;

@@ -30,7 +30,8 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { useAppContext, Purchase, Vendor } from '@/context/AppContext';
+import { useAppContext, Purchase, Vendor, Product } from '@/context/AppContext';
+import { isProductZeroTax } from '@/components/LocalPurchaseWindow';
 import { showSuccess, showError } from '@/utils/toast';
 import { formatDate, toISODate } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
@@ -38,9 +39,12 @@ import { cn } from '@/lib/utils';
 const MobilePurchase: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { vendors, addPurchase, addVendor, purchases, settings } = useAppContext();
+  const { vendors, addPurchase, addVendor, purchases, settings, products } = useAppContext();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mobileQtyRef = useRef<HTMLInputElement>(null);
+  const mobileCostRef = useRef<HTMLInputElement>(null);
+  const mobileSubtotalRef = useRef<HTMLInputElement>(null);
 
   // Form State
   const [vendorId, setVendorId] = useState('');
@@ -56,6 +60,16 @@ const MobilePurchase: React.FC = () => {
   const [description, setDescription] = useState('');
   const [billImage, setBillImage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Product line items (simple)
+  interface MobileItem { id: string; productId: string; productName: string; qty: number; unitCost: number; subtotal: number; isZeroTax: boolean; }
+  const [mobileItems, setMobileItems] = useState<MobileItem[]>([]);
+  const [isMobileCatalogOpen, setIsMobileCatalogOpen] = useState(false);
+  const [mobileCatalogSearch, setMobileCatalogSearch] = useState('');
+  const [mobileQuickProd, setMobileQuickProd] = useState<Product | null>(null);
+  const [mobileQty, setMobileQty] = useState('1');
+  const [mobileCost, setMobileCost] = useState('');
+  const [mobileSubtotal, setMobileSubtotal] = useState('');
 
   // Quick New Vendor Dialog
   const [isNewVendorOpen, setIsNewVendorOpen] = useState(false);
@@ -128,6 +142,45 @@ const MobilePurchase: React.FC = () => {
     }
   };
 
+  const handleAddProductMobile = (prod: Product) => {
+    const cost = prod.cost_price ? Number(prod.cost_price).toFixed(2) : '';
+    setMobileQuickProd(prod);
+    setMobileQty('1');
+    setMobileCost(cost);
+    setMobileSubtotal(cost !== '' ? parseFloat((1 * Number(cost)).toFixed(2)).toString() : '');
+    setIsMobileCatalogOpen(false);
+    setTimeout(() => mobileQtyRef.current?.focus(), 80);
+  };
+
+  const handleConfirmMobileEntry = () => {
+    if (!mobileQuickProd) return;
+    const qty = parseFloat(mobileQty) || 1;
+    const unitCost = parseFloat(mobileCost) || 0;
+    const subtotal = parseFloat(mobileSubtotal) || parseFloat((qty * unitCost).toFixed(2));
+    const item: MobileItem = {
+      id: crypto.randomUUID(),
+      productId: mobileQuickProd.id,
+      productName: mobileQuickProd.name_dv || mobileQuickProd.name_en,
+      qty, unitCost, subtotal,
+      isZeroTax: isProductZeroTax(mobileQuickProd)
+    };
+    setMobileItems(prev => [...prev, item]);
+    // Auto update total amount from items
+    const newTotal = [...mobileItems, item].reduce((s, i) => s + i.subtotal, 0);
+    setTotalAmount(newTotal.toFixed(2));
+    showSuccess(`Added ${item.productName} x${qty}`);
+    setMobileQuickProd(null);
+    setIsMobileCatalogOpen(true);
+  };
+
+  const filteredMobileCatalog = products.filter(p =>
+    !mobileCatalogSearch ||
+    p.name_en.toLowerCase().includes(mobileCatalogSearch.toLowerCase()) ||
+    p.name_dv.toLowerCase().includes(mobileCatalogSearch.toLowerCase()) ||
+    p.barcode.includes(mobileCatalogSearch) ||
+    p.item_code.toLowerCase().includes(mobileCatalogSearch.toLowerCase())
+  ).slice(0, 50);
+
   const handleQuickAddVendor = async () => {
     if (!newVendorName.trim()) {
       showError('Please enter a vendor name');
@@ -195,7 +248,16 @@ const MobilePurchase: React.FC = () => {
         amount: parseFloat(netSubtotalNum.toFixed(2)),
         gstAmount: parseFloat(finalGst.toFixed(2)),
         description: `${description ? description + ' | ' : ''}${hasZeroTax ? `[0% GST: ${currency} ${parsedZeroTax.toFixed(2)}]` : ''}${billImage ? ' [Receipt Photo Attached]' : ''}`,
-        items: []
+      items: mobileItems.map(i => ({
+          product_id: i.productId,
+          product_name: i.productName,
+          quantity: i.qty,
+          unit_price: i.unitCost,
+          subtotal: i.subtotal,
+          gst_amount: i.isZeroTax ? 0 : parseFloat((i.subtotal * (taxRate / 100)).toFixed(2)),
+          total: i.isZeroTax ? i.subtotal : parseFloat((i.subtotal * (1 + taxRate / 100)).toFixed(2)),
+          is_zero_tax: i.isZeroTax
+        }))
       };
 
       await addPurchase(purchaseData);
@@ -210,6 +272,7 @@ const MobilePurchase: React.FC = () => {
       setCustomGstAmount('');
       setDescription('');
       setBillImage(null);
+      setMobileItems([]);
     } catch (error) {
       console.error('Failed to save mobile purchase:', error);
       showError('Failed to record purchase');
@@ -555,6 +618,62 @@ const MobilePurchase: React.FC = () => {
           </Card>
         )}
 
+        {/* Product Items Section */}
+        <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between p-4 border-b border-border">
+            <button
+              type="button"
+              onClick={() => setIsMobileCatalogOpen(true)}
+              className="h-9 px-3.5 text-xs font-black text-primary border border-primary/30 bg-primary/10 hover:bg-primary/20 rounded-xl flex items-center gap-1.5 transition-all"
+            >
+              <Plus className="h-4 w-4" />
+              Browse Products
+            </button>
+            <h3 className="text-xs font-black uppercase text-foreground flex items-center gap-1.5">
+              <span>ތަކެތި (Items)</span>
+            </h3>
+          </div>
+
+          {mobileItems.length === 0 ? (
+            <div className="py-6 text-center text-muted-foreground text-xs">
+              <p className="font-bold">No items added yet</p>
+              <p>Browse products above to add line items</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {mobileItems.map((item, idx) => (
+                <div key={item.id} className="flex items-center justify-between p-3 text-right">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileItems(prev => prev.filter(i => i.id !== item.id));
+                        const newTotal = mobileItems.filter(i => i.id !== item.id).reduce((s, i) => s + i.subtotal, 0);
+                        setTotalAmount(newTotal > 0 ? newTotal.toFixed(2) : '');
+                      }}
+                      className="h-7 w-7 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 flex items-center justify-center"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                    <span className={cn('text-[9px] font-black px-1.5 py-0.5 rounded-full border', item.isZeroTax ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-blue-500/10 text-blue-500 border-blue-500/20')}>
+                      {item.isZeroTax ? '0%' : `${taxRate}%`}
+                    </span>
+                  </div>
+                  <div className="text-right min-w-0 flex-1 mx-3">
+                    <p className="text-xs font-black text-foreground line-clamp-1">{item.productName}</p>
+                    <p className="text-[10px] text-muted-foreground font-mono">{item.qty} × {currency} {item.unitCost.toFixed(2)}</p>
+                  </div>
+                  <span className="font-mono font-black text-sm text-primary shrink-0">{currency} {item.subtotal.toFixed(2)}</span>
+                </div>
+              ))}
+              <div className="flex items-center justify-between p-3 bg-muted/40">
+                <span className="font-mono font-black text-sm text-primary">{currency} {mobileItems.reduce((s, i) => s + i.subtotal, 0).toFixed(2)}</span>
+                <span className="text-xs font-black text-foreground">Items Subtotal</span>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Description / Notes */}
         <div className="bg-card border border-border rounded-2xl p-4 space-y-2 shadow-sm text-right">
           <Label className="text-xs font-black uppercase text-foreground block">
@@ -619,6 +738,112 @@ const MobilePurchase: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Mobile Product Catalog Modal */}
+      {isMobileCatalogOpen && (
+        <div
+          className="fixed inset-0 z-[150] flex flex-col bg-background text-foreground font-faruma"
+          dir="rtl"
+        >
+          <div className="sticky top-0 bg-card border-b border-border p-4 flex items-center gap-3">
+            <button type="button" onClick={() => setIsMobileCatalogOpen(false)} className="h-9 w-9 rounded-xl bg-muted border border-border flex items-center justify-center text-muted-foreground">
+              <X className="h-4 w-4" />
+            </button>
+            <div className="flex-1 relative">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={mobileCatalogSearch}
+                onChange={(e) => setMobileCatalogSearch(e.target.value)}
+                placeholder="Search product name, barcode..."
+                className="w-full h-10 bg-muted border border-border rounded-xl pr-9 pl-3 text-right text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary"
+                autoFocus
+              />
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            {filteredMobileCatalog.map(prod => {
+              const pStock = Number(prod.stock_shop) || 0;
+              const isZero = isProductZeroTax(prod);
+              return (
+                <button
+                  key={prod.id}
+                  type="button"
+                  onClick={() => handleAddProductMobile(prod)}
+                  className="w-full flex items-center justify-between p-3.5 bg-card border border-border rounded-2xl hover:border-primary/40 hover:bg-primary/5 text-right transition-all active:scale-[0.98]"
+                >
+                  <div className="flex items-center gap-2 text-left">
+                    <span className={cn('text-[10px] font-black px-2 py-0.5 rounded-lg font-mono', pStock < 0 ? 'bg-red-500/20 text-red-500' : 'bg-muted text-muted-foreground border border-border')}>
+                      {pStock}
+                    </span>
+                    {isZero && <span className="text-[9px] font-black text-amber-500 bg-amber-500/15 px-1.5 py-0.5 rounded">0% Tax</span>}
+                  </div>
+                  <div className="min-w-0 flex-1 text-right mx-3">
+                    <p className="font-black text-sm text-foreground line-clamp-1">{prod.name_dv || prod.name_en}</p>
+                    <p className="text-[10px] text-muted-foreground font-mono line-clamp-1">{prod.name_en}</p>
+                  </div>
+                  <span className="font-mono font-black text-primary shrink-0 text-sm">{currency} {prod.cost_price ? Number(prod.cost_price).toFixed(2) : '—'}</span>
+                </button>
+              );
+            })}
+            {filteredMobileCatalog.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground"><p className="font-bold text-sm">No products found</p></div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Quick Entry Dialog */}
+      {mobileQuickProd && (
+        <div className="fixed inset-0 z-[160] flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="w-full max-w-sm bg-card border border-primary/30 rounded-3xl p-6 shadow-2xl space-y-4 font-faruma" dir="rtl">
+            <div className="text-right">
+              <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-1">Quick Entry</p>
+              <p className="font-black text-base text-foreground line-clamp-2">{mobileQuickProd.name_dv || mobileQuickProd.name_en}</p>
+              {isProductZeroTax(mobileQuickProd) && (
+                <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/10 text-amber-500 border border-amber-500/20">0% GST</span>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-[11px] font-black uppercase text-muted-foreground block text-right">Quantity*</label>
+                <input ref={mobileQtyRef} type="number" min="0.01" step="any" value={mobileQty} inputMode="decimal"
+                  onChange={(e) => { setMobileQty(e.target.value); const q = parseFloat(e.target.value)||0; const c = parseFloat(mobileCost)||0; if(q>0&&c>0) setMobileSubtotal((q*c).toFixed(2)); }}
+                  onFocus={(e) => e.target.select()}
+                  onKeyDown={(e) => { if(e.key==='Enter'){e.preventDefault(); mobileCostRef.current?.focus();} }}
+                  className="w-full h-14 bg-muted border border-border text-center font-black text-2xl font-mono rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary" placeholder="1" autoFocus />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-black uppercase text-muted-foreground block text-right">Unit Cost ({currency})</label>
+                <input ref={mobileCostRef} type="number" min="0" step="0.01" value={mobileCost} inputMode="decimal"
+                  onChange={(e) => { setMobileCost(e.target.value); const q=parseFloat(mobileQty)||0; const c=parseFloat(e.target.value)||0; if(q>0&&c>0) setMobileSubtotal((q*c).toFixed(2)); }}
+                  onFocus={(e) => e.target.select()}
+                  onKeyDown={(e) => { if(e.key==='Enter'){e.preventDefault(); mobileSubtotalRef.current?.focus();} }}
+                  className="w-full h-14 bg-muted border border-border text-center font-black text-2xl font-mono rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary" placeholder="0.00" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-black uppercase text-muted-foreground block text-right">Subtotal ({currency})</label>
+                <input ref={mobileSubtotalRef} type="number" min="0" step="0.01" value={mobileSubtotal} inputMode="decimal"
+                  onChange={(e) => { setMobileSubtotal(e.target.value); const q=parseFloat(mobileQty)||0; const s=parseFloat(e.target.value)||0; if(q>0&&s>0) setMobileCost((s/q).toFixed(4)); }}
+                  onFocus={(e) => e.target.select()}
+                  onKeyDown={(e) => { if(e.key==='Enter'){e.preventDefault(); handleConfirmMobileEntry();} }}
+                  className="w-full h-14 bg-primary/10 border-2 border-primary/40 text-center font-black text-2xl font-mono rounded-2xl text-primary focus:outline-none focus:ring-2 focus:ring-primary" placeholder="0.00" />
+                <p className="text-[10px] text-muted-foreground text-center">Enter on Subtotal to confirm</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button type="button" onClick={() => { setMobileQuickProd(null); setIsMobileCatalogOpen(true); }}
+                className="flex-1 h-12 rounded-2xl border border-border bg-muted text-foreground font-bold text-xs">← Back</button>
+              <button type="button" onClick={handleConfirmMobileEntry} disabled={!mobileQty || parseFloat(mobileQty) <= 0}
+                className="flex-1 h-12 rounded-2xl bg-primary text-primary-foreground font-black text-sm flex items-center justify-center gap-2 shadow-lg disabled:opacity-50">
+                <Check className="h-4 w-4" /> Add to Bill
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quick Add Vendor Dialog */}
       <Dialog open={isNewVendorOpen} onOpenChange={setIsNewVendorOpen}>

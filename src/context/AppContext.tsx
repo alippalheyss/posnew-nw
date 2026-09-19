@@ -2124,14 +2124,16 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   const getNextProductCode = () => {
+    const MIN_CODE = 3201; // Start from 03201 (stored as number, displayed with leading zero)
     const lastItemCode = products.reduce((maxCode, product) => {
       // Extract digits only from code
       const digits = (product.item_code || '').replace(/\D/g, '');
       const codeNum = digits ? parseInt(digits, 10) : 0;
       return isNaN(codeNum) ? maxCode : Math.max(maxCode, codeNum);
-    }, 0);
-    const nextNum = lastItemCode + 1;
-    return nextNum < 1000 ? String(nextNum).padStart(3, '0') : String(nextNum);
+    }, MIN_CODE - 1);
+    const nextNum = Math.max(lastItemCode + 1, MIN_CODE);
+    // Always pad to 5 digits to preserve leading zero (e.g. 03201)
+    return String(nextNum).padStart(5, '0');
   };
 
   // Helper function to get top N products by sales count

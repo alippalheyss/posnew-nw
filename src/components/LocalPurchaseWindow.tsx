@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   Minus, 
@@ -102,6 +102,16 @@ const LocalPurchaseWindow = () => {
   const [catalogSearchQuery, setCatalogSearchQuery] = useState('');
   const [catalogSelectedCategory, setCatalogSelectedCategory] = useState('all');
 
+  // Quick Entry Dialog — shown when user picks a product from catalog
+  const [quickEntryProduct, setQuickEntryProduct] = useState<Product | null>(null);
+  const [quickEntryQty, setQuickEntryQty] = useState('1');
+  const [quickEntryUnitCost, setQuickEntryUnitCost] = useState('');
+  const [quickEntrySubtotal, setQuickEntrySubtotal] = useState('');
+  const quickEntryQtyRef = useRef<HTMLInputElement>(null);
+  const quickEntryUnitCostRef = useRef<HTMLInputElement>(null);
+  const quickEntrySubtotalRef = useRef<HTMLInputElement>(null);
+  const quickEntryConfirmRef = useRef<HTMLButtonElement>(null);
+
   const [vendorSearchQuery, setVendorSearchQuery] = useState('');
 
   // Quick Add Vendor State
@@ -160,43 +170,50 @@ const LocalPurchaseWindow = () => {
     setActiveSearchRowId(null);
   };
 
-  // Add Product directly from Catalog Picker
+  // Add Product from Catalog — opens Quick Entry dialog for Qty/Cost/Subtotal
   const handleAddProductFromCatalog = (prod: Product) => {
-    const cost = prod.cost_price ? Number(prod.cost_price) : '';
-    const isZero = isProductZeroTax(prod);
+    const cost = prod.cost_price ? Number(prod.cost_price).toFixed(2) : '';
+    setQuickEntryProduct(prod);
+    setQuickEntryQty('1');
+    setQuickEntryUnitCost(cost);
+    const initialSub = cost !== '' ? parseFloat((1 * Number(cost)).toFixed(2)).toString() : '';
+    setQuickEntrySubtotal(initialSub);
+    setIsCatalogPickerOpen(false);
+    // Focus qty field after dialog renders
+    setTimeout(() => quickEntryQtyRef.current?.focus(), 80);
+  };
+
+  const handleConfirmQuickEntry = () => {
+    if (!quickEntryProduct) return;
+    const qty = parseFloat(quickEntryQty) || 1;
+    const unitCost = parseFloat(quickEntryUnitCost) || 0;
+    const subtotal = parseFloat(quickEntrySubtotal) || parseFloat((qty * unitCost).toFixed(2));
+    const isZero = isProductZeroTax(quickEntryProduct);
 
     setItems(prev => {
-      // Check if there is an empty row we can fill
       const emptyIndex = prev.findIndex(item => !item.productId);
       if (emptyIndex !== -1) {
         const newItems = [...prev];
-        const qty = typeof newItems[emptyIndex].quantity === 'number' ? newItems[emptyIndex].quantity : 1;
-        const sub = typeof cost === 'number' ? parseFloat((qty * cost).toFixed(2)) : '';
         newItems[emptyIndex] = {
           ...newItems[emptyIndex],
-          productId: prod.id,
+          productId: quickEntryProduct!.id,
           quantity: qty,
-          unitPrice: cost,
-          subtotal: sub,
+          unitPrice: unitCost,
+          subtotal: subtotal,
           isZeroTax: isZero
         };
         return newItems;
       }
-      // Otherwise append new row
       return [
         ...prev,
-        {
-          id: crypto.randomUUID(),
-          productId: prod.id,
-          quantity: 1,
-          unitPrice: cost,
-          subtotal: cost !== '' ? cost : '',
-          isZeroTax: isZero
-        }
+        { id: crypto.randomUUID(), productId: quickEntryProduct!.id, quantity: qty, unitPrice: unitCost, subtotal: subtotal, isZeroTax: isZero }
       ];
     });
 
-    showSuccess(`Added "${prod.name_dv || prod.name_en}" to purchase bill`);
+    showSuccess(`Added "${quickEntryProduct.name_dv || quickEntryProduct.name_en}" × ${qty}`);
+    setQuickEntryProduct(null);
+    // Re-open catalog so user can keep adding products
+    setIsCatalogPickerOpen(true);
   };
 
   const handleUpdateItemField = (rowId: string, field: 'quantity' | 'unitPrice' | 'subtotal' | 'isZeroTax', value: any) => {
@@ -926,6 +943,132 @@ const LocalPurchaseWindow = () => {
           </Button>
         </div>
       </div>
+
+      {/* Quick Entry Dialog — after picking a product from catalog */}
+      {quickEntryProduct && (
+        <div
+          className="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in"
+          onClick={(e) => { if (e.target === e.currentTarget) { setQuickEntryProduct(null); setIsCatalogPickerOpen(true); } }}
+        >
+          <div
+            className="w-full max-w-sm bg-card border border-primary/30 rounded-3xl p-6 shadow-2xl shadow-primary/10 space-y-5 font-faruma text-foreground animate-in zoom-in-95"
+            dir="rtl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => { setQuickEntryProduct(null); setIsCatalogPickerOpen(true); }}
+                className="h-8 w-8 rounded-xl border border-border bg-muted/50 hover:bg-muted text-muted-foreground flex items-center justify-center shrink-0 mt-0.5"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <div className="text-right flex-1 min-w-0">
+                <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-1">Quick Entry — ޕްރޮޑަކްޓް</p>
+                <p className="font-black text-base text-foreground line-clamp-2">{quickEntryProduct.name_dv || quickEntryProduct.name_en}</p>
+                <p className="text-[11px] text-muted-foreground font-mono line-clamp-1">{quickEntryProduct.name_en}</p>
+                {isProductZeroTax(quickEntryProduct) && (
+                  <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/10 text-amber-500 border border-amber-500/20">0% GST</span>
+                )}
+              </div>
+            </div>
+
+            {/* Fields with Enter-key navigation */}
+            <div className="space-y-3">
+              {/* Qty */}
+              <div className="space-y-1 text-right">
+                <label className="text-[11px] font-black uppercase text-muted-foreground block">Quantity (ތަދާދު)*</label>
+                <input
+                  ref={quickEntryQtyRef}
+                  type="number"
+                  min="0.01"
+                  step="any"
+                  value={quickEntryQty}
+                  onChange={(e) => {
+                    setQuickEntryQty(e.target.value);
+                    const qty = parseFloat(e.target.value) || 0;
+                    const uc = parseFloat(quickEntryUnitCost) || 0;
+                    if (qty > 0 && uc > 0) setQuickEntrySubtotal((qty * uc).toFixed(2));
+                  }}
+                  onFocus={(e) => e.target.select()}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); quickEntryUnitCostRef.current?.focus(); } }}
+                  className="w-full h-14 bg-muted border border-border text-center font-black text-2xl font-mono rounded-2xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                  placeholder="1"
+                  autoFocus
+                />
+              </div>
+
+              {/* Unit Cost */}
+              <div className="space-y-1 text-right">
+                <label className="text-[11px] font-black uppercase text-muted-foreground block">Unit Cost — {currency} (ޔުނިޓް ކޮސްޓް)</label>
+                <input
+                  ref={quickEntryUnitCostRef}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={quickEntryUnitCost}
+                  onChange={(e) => {
+                    setQuickEntryUnitCost(e.target.value);
+                    const qty = parseFloat(quickEntryQty) || 0;
+                    const uc = parseFloat(e.target.value) || 0;
+                    if (qty > 0 && uc > 0) setQuickEntrySubtotal((qty * uc).toFixed(2));
+                  }}
+                  onFocus={(e) => e.target.select()}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); quickEntrySubtotalRef.current?.focus(); } }}
+                  className="w-full h-14 bg-muted border border-border text-center font-black text-2xl font-mono rounded-2xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                  placeholder="0.00"
+                />
+              </div>
+
+              {/* Subtotal — highlighted */}
+              <div className="space-y-1 text-right">
+                <label className="text-[11px] font-black uppercase text-muted-foreground block">Subtotal — {currency} (ސަބްޓޯޓަލް)</label>
+                <input
+                  ref={quickEntrySubtotalRef}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={quickEntrySubtotal}
+                  onChange={(e) => {
+                    setQuickEntrySubtotal(e.target.value);
+                    const qty = parseFloat(quickEntryQty) || 0;
+                    const sub = parseFloat(e.target.value) || 0;
+                    if (qty > 0 && sub > 0) setQuickEntryUnitCost((sub / qty).toFixed(4));
+                  }}
+                  onFocus={(e) => e.target.select()}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleConfirmQuickEntry(); } }}
+                  className="w-full h-14 bg-primary/10 border-2 border-primary/40 text-center font-black text-2xl font-mono rounded-2xl text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                  placeholder="0.00"
+                />
+                <p className="text-[10px] text-muted-foreground text-center">Enter on Subtotal to confirm</p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => { setQuickEntryProduct(null); setIsCatalogPickerOpen(true); }}
+                className="flex-1 h-12 rounded-2xl border border-border bg-muted hover:bg-muted/80 text-foreground font-bold text-xs transition-all"
+              >
+                ← Back
+              </button>
+              <button
+                ref={quickEntryConfirmRef}
+                type="button"
+                onClick={handleConfirmQuickEntry}
+                disabled={!quickEntryQty || parseFloat(quickEntryQty) <= 0}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmQuickEntry(); }}
+                className="flex-1 h-12 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-black text-sm gap-2 shadow-lg shadow-primary/20 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                <Check className="h-4 w-4" />
+                Add to Bill
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Full Product Catalog Browser Modal */}
       {isCatalogPickerOpen && (

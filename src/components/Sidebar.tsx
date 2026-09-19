@@ -36,7 +36,7 @@ const Sidebar = () => {
     { name_dv: t('customers'), name_en: t('customers', { lng: 'en' }), icon: Users, path: '/customers', permission: 'canAccessCustomers' as const },
     { name_dv: t('daily_sales'), name_en: t('daily_sales', { lng: 'en' }), icon: CalendarDays, path: '/daily-sales', permission: 'canAccessSales' as const },
     { name_dv: t('stock'), name_en: t('stock', { lng: 'en' }), icon: Boxes, path: '/stock', permission: 'canAccessStock' as const },
-    { name_dv: 'ސްޓޮކް އޮޑިޓް', name_en: 'Stock Audit', icon: Boxes, path: '/stock-audit', permission: 'canAccessStock' as const },
+    // Stock Audit is kept as a route but intentionally hidden from sidebar navigation
     { name_dv: t('sales_reports'), name_en: t('sales_reports', { lng: 'en' }), icon: BarChart, path: '/sales-reports', permission: 'canAccessReports' as const },
     { name_dv: t('expenses') || 'ޚަރަދުތައް', name_en: t('expenses', { lng: 'en' }) || 'Expenses', icon: Wallet, path: '/expenses', permission: 'canAccessSales' as const },
     { name_dv: t('expiry_alerts'), name_en: t('expiry_alerts', { lng: 'en' }), icon: AlertTriangle, path: '/expiry-alerts', permission: 'canAccessStock' as const },

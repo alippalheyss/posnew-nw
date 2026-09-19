@@ -1416,11 +1416,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
       const groupChat = settings.shop?.telegramGroupChatId || settings.telegram?.groupChatId || settings.telegram?.ownerChatId;
 
-      // 1. Midnight / Evening Store Close Executive Briefing to B BACK Group
-      if (
-        settings.telegram?.autoExecutiveBriefing !== false &&
-        groupChat
-      ) {
+      // 1. Midnight / Evening Store Close Executive Briefing to B BACK Group (always active)
+      if (groupChat) {
         const hours = now.getHours();
         const isEveningOrNight = hours >= 22 || hours <= 3; // From 10:00 PM onwards through midnight
 

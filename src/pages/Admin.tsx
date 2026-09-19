@@ -1069,14 +1069,14 @@ const Admin = () => {
                       </div>
 
                       <div className="flex items-center justify-between p-4 bg-muted/40 rounded-2xl border border-border">
-                        <Switch
-                          checked={telegramSettings.autoExecutiveBriefing !== false}
-                          onCheckedChange={(val) => handleSettingsChange('telegram', 'autoExecutiveBriefing', val)}
-                        />
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                          Always Active
+                        </span>
                         <div className="text-right">
                           <p className="text-sm font-black text-foreground">Auto-Send Midnight Store Close Summary</p>
                           <p className="text-xs text-muted-foreground">
-                            Sends daily total sales breakdown (Cash | Transfer | Credit), credit collections settled today, and top selling items
+                            Sends daily total sales breakdown (Cash | Transfer | Credit), credit collections settled today, and top selling items. Always active — cannot be disabled.
                           </p>
                         </div>
                       </div>

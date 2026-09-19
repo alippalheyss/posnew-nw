@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,9 @@ import {
   ArrowUpRight, 
   Download, 
   FileSpreadsheet,
-  Calendar
+  Calendar,
+  Eye,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -93,6 +95,118 @@ const SalesReports = () => {
   const dayProfit = calculateProfitForPeriod('day');
   const monthProfit = calculateProfitForPeriod('month');
   const yearProfit = calculateProfitForPeriod('year');
+
+  // --- Custom Report State ---
+  const [customPeriodType, setCustomPeriodType] = useState<'date' | 'month' | 'year'>('date');
+  const [customDate, setCustomDate] = useState(toISODate(new Date()));
+  const [customMonth, setCustomMonth] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`);
+  const [customYear, setCustomYear] = useState(String(new Date().getFullYear()));
+  const [showCustomPreview, setShowCustomPreview] = useState(false);
+
+  // Filter sales for custom period
+  const customSales = useMemo(() => {
+    return sales.filter(sale => {
+      if (!sale.date) return false;
+      const saleDate = new Date(sale.date);
+      if (customPeriodType === 'date') {
+        return extractDateOnly(sale.date) === customDate || saleDate.toDateString() === new Date(customDate).toDateString();
+      }
+      if (customPeriodType === 'month') {
+        const [yr, mo] = customMonth.split('-').map(Number);
+        return saleDate.getFullYear() === yr && saleDate.getMonth() === mo - 1;
+      }
+      if (customPeriodType === 'year') {
+        return saleDate.getFullYear() === Number(customYear);
+      }
+      return false;
+    });
+  }, [sales, customPeriodType, customDate, customMonth, customYear]);
+
+  const customTotalSales = customSales.reduce((sum, s) => sum + num(s.grandTotal), 0);
+  const customCashTotal = customSales.filter(s => (s.paymentMethod || 'cash').toLowerCase() === 'cash').reduce((sum, s) => sum + num(s.grandTotal), 0);
+  const customCardTotal = customSales.filter(s => (s.paymentMethod || '').toLowerCase() === 'card').reduce((sum, s) => sum + num(s.grandTotal), 0);
+  const customTransferTotal = customSales.filter(s => (s.paymentMethod || '').toLowerCase() === 'transfer').reduce((sum, s) => sum + num(s.grandTotal), 0);
+  const customCreditTotal = customSales.filter(s => (s.paymentMethod || '').toLowerCase() === 'credit').reduce((sum, s) => sum + num(s.grandTotal), 0);
+
+  const getCustomPeriodLabel = () => {
+    if (customPeriodType === 'date') return formatDate(new Date(customDate + 'T00:00:00'));
+    if (customPeriodType === 'month') {
+      const [yr, mo] = customMonth.split('-').map(Number);
+      return new Date(yr, mo - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    }
+    return customYear;
+  };
+
+  const handleExportCustomReport = () => {
+    const currency = settings.shop.currency || 'MVR';
+    const gstRate = settings.shop.taxRate || 0;
+    const totalSalesAmount = customTotalSales;
+    const totalTaxable = customSales.reduce((sum, s) => sum + (num(s.grandTotal) / (1 + (gstRate / 100))), 0);
+    const totalGst = totalSalesAmount - totalTaxable;
+
+    let totalCost = 0;
+    customSales.forEach(sale => {
+      (sale.items || []).forEach(item => {
+        const prod = products.find(p => p.id === item.id);
+        if (prod) totalCost += num(prod.cost_price) * num(item.qty);
+      });
+    });
+    const estProfit = totalSalesAmount - totalCost;
+    const margin = totalSalesAmount > 0 ? ((estProfit / totalSalesAmount) * 100).toFixed(1) : '0';
+
+    const periodLabel = getCustomPeriodLabel();
+
+    const data: any[][] = [
+      [settings.shop.shopName || 'POS Store'],
+      [`SALES REPORT — ${periodLabel.toUpperCase()}`],
+      ['Report Period', periodLabel],
+      ['Generated At', formatDateTime(new Date())],
+      [],
+      ['--- Summary ---'],
+      ['Total Sales', `${currency} ${totalSalesAmount.toFixed(2)}`],
+      ['Total Transactions', customSales.length],
+      ['Average Transaction', `${currency} ${(customSales.length > 0 ? totalSalesAmount / customSales.length : 0).toFixed(2)}`],
+      ['Estimated Profit', `${currency} ${estProfit.toFixed(2)} (${margin}% Margin)`],
+      ['Cash Sales', `${currency} ${customCashTotal.toFixed(2)}`],
+      ['Card Sales', `${currency} ${customCardTotal.toFixed(2)}`],
+      ['Transfer Sales', `${currency} ${customTransferTotal.toFixed(2)}`],
+      ['Credit Sales', `${currency} ${customCreditTotal.toFixed(2)}`],
+      ['Subtotal (Excl. GST)', `${currency} ${totalTaxable.toFixed(2)}`],
+      [`Total GST (${gstRate}%)`, `${currency} ${totalGst.toFixed(2)}`],
+      [],
+      ['--- Transactions ---'],
+      ['Invoice / ID', 'Date', 'Time', 'Customer', 'Payment Method', 'Items', `Subtotal (${currency})`, `GST (${currency})`, `Grand Total (${currency})`]
+    ];
+
+    customSales.forEach(sale => {
+      const sub = num(sale.grandTotal) / (1 + (gstRate / 100));
+      const gst = num(sale.grandTotal) - sub;
+      const itemsSummary = (sale.items || []).map(i => `${i.qty}x ${i.name_en || i.name_dv || 'Item'}`).join('; ');
+      const customerName = sale.customer ? (sale.customer.name_en || sale.customer.name_dv) : 'Walk-in';
+      const sDate = new Date(sale.date);
+      data.push([
+        sale.invoiceNumber || sale.id,
+        sDate.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }),
+        formatTime(sale.date),
+        customerName,
+        (sale.paymentMethod || 'CASH').toUpperCase(),
+        itemsSummary,
+        Number(sub.toFixed(2)),
+        Number(gst.toFixed(2)),
+        Number(num(sale.grandTotal).toFixed(2))
+      ]);
+    });
+
+    data.push(['TOTAL', '', '', '', '', '', Number(totalTaxable.toFixed(2)), Number(totalGst.toFixed(2)), Number(totalSalesAmount.toFixed(2))]);
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [{ wch: 18 }, { wch: 14 }, { wch: 10 }, { wch: 22 }, { wch: 16 }, { wch: 45 }, { wch: 16 }, { wch: 14 }, { wch: 18 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sales Report');
+    const safeLabel = periodLabel.replace(/[^a-zA-Z0-9_-]/g, '_');
+    XLSX.writeFile(wb, `Sales_Report_${safeLabel}.xlsx`);
+    showSuccess(`Sales report for ${periodLabel} downloaded!`);
+  };
 
   // --- Excel Export Handlers ---
 
@@ -758,6 +872,172 @@ const SalesReports = () => {
 
       <ScrollArea className="flex-1 custom-scrollbar">
         <div className="space-y-8 pb-6">
+
+          {/* ── Custom Report Builder ── */}
+          <div className="bg-card border border-border rounded-[2rem] overflow-hidden">
+            <div className="p-6 pb-4 border-b border-border">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  {/* Period Type Selector */}
+                  <div className="flex bg-muted rounded-xl p-1 gap-1">
+                    {(['date', 'month', 'year'] as const).map(pt => (
+                      <button
+                        key={pt}
+                        onClick={() => { setCustomPeriodType(pt); setShowCustomPreview(false); }}
+                        className={cn(
+                          'px-3 py-1.5 rounded-lg text-xs font-black transition-all',
+                          customPeriodType === pt
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
+                        )}
+                      >
+                        {pt === 'date' ? 'Date' : pt === 'month' ? 'Month' : 'Year'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Period Picker */}
+                  {customPeriodType === 'date' && (
+                    <input
+                      type="date"
+                      value={customDate}
+                      onChange={e => { setCustomDate(e.target.value); setShowCustomPreview(false); }}
+                      className="h-9 px-3 rounded-xl border border-border bg-muted text-foreground text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  )}
+                  {customPeriodType === 'month' && (
+                    <input
+                      type="month"
+                      value={customMonth}
+                      onChange={e => { setCustomMonth(e.target.value); setShowCustomPreview(false); }}
+                      className="h-9 px-3 rounded-xl border border-border bg-muted text-foreground text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  )}
+                  {customPeriodType === 'year' && (
+                    <input
+                      type="number"
+                      value={customYear}
+                      min="2020"
+                      max="2099"
+                      onChange={e => { setCustomYear(e.target.value); setShowCustomPreview(false); }}
+                      className="h-9 px-3 w-24 rounded-xl border border-border bg-muted text-foreground text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary"
+                      dir="ltr"
+                    />
+                  )}
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowCustomPreview(true)}
+                    className="h-9 rounded-xl text-xs font-black gap-1.5 border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    Preview
+                  </Button>
+                </div>
+
+                <div className="text-right">
+                  <h3 className="text-base font-black text-foreground flex items-center justify-end gap-2">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    Custom Report
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground">Select a period, preview, then download</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Preview Panel */}
+            {showCustomPreview && (
+              <div className="p-6 space-y-5">
+                {/* Summary Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { label: 'Total Sales', value: customTotalSales, color: 'text-primary' },
+                    { label: 'Cash', value: customCashTotal, color: 'text-emerald-500' },
+                    { label: 'Transfer', value: customTransferTotal, color: 'text-blue-500' },
+                    { label: 'Credit', value: customCreditTotal, color: 'text-amber-500' },
+                  ].map(item => (
+                    <div key={item.label} className="bg-muted/50 rounded-2xl p-4 text-right border border-border">
+                      <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">{item.label}</p>
+                      <p className={cn('text-lg font-black', item.color)}>
+                        {settings.shop.currency} {item.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Button
+                    onClick={handleExportCustomReport}
+                    size="sm"
+                    className="h-9 rounded-xl text-xs font-black gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    <FileSpreadsheet className="h-3.5 w-3.5" />
+                    Download Excel Report
+                  </Button>
+                  <p className="text-xs text-muted-foreground font-bold">
+                    {customSales.length} transaction{customSales.length !== 1 ? 's' : ''} for <span className="text-foreground">{getCustomPeriodLabel()}</span>
+                  </p>
+                </div>
+
+                {/* Transactions Table */}
+                {customSales.length === 0 ? (
+                  <div className="text-center py-10 text-muted-foreground">
+                    <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                    <p className="text-sm font-bold">No sales found for this period</p>
+                  </div>
+                ) : (
+                  <div className="overflow-auto rounded-2xl border border-border" dir="ltr">
+                    <table className="w-full text-xs min-w-[640px]">
+                      <thead>
+                        <tr className="bg-muted/60 border-b border-border">
+                          {['Invoice', 'Date', 'Time', 'Customer', 'Method', 'Items', `Total (${settings.shop.currency})`].map(h => (
+                            <th key={h} className="px-3 py-2.5 text-left font-black text-muted-foreground uppercase tracking-wider whitespace-nowrap">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {customSales.map(sale => {
+                          const sDate = new Date(sale.date);
+                          const itemsSummary = (sale.items || []).slice(0, 3).map(i => `${i.qty}× ${i.name_en || i.name_dv || '?'}`).join(', ') + (sale.items && sale.items.length > 3 ? ` +${sale.items.length - 3} more` : '');
+                          const customerName = sale.customer ? (sale.customer.name_en || sale.customer.name_dv) : 'Walk-in';
+                          const methodColors: Record<string, string> = {
+                            cash: 'bg-emerald-500/10 text-emerald-500',
+                            card: 'bg-blue-500/10 text-blue-500',
+                            transfer: 'bg-blue-500/10 text-blue-500',
+                            credit: 'bg-amber-500/10 text-amber-500'
+                          };
+                          const method = (sale.paymentMethod || 'cash').toLowerCase();
+                          return (
+                            <tr key={sale.id} className="hover:bg-muted/30 transition-colors">
+                              <td className="px-3 py-2.5 font-mono text-[10px] text-muted-foreground">{(sale.invoiceNumber || sale.id || '').toString().slice(-8)}</td>
+                              <td className="px-3 py-2.5 font-bold whitespace-nowrap">{sDate.toLocaleDateString('en-US', { day: '2-digit', month: 'short' })}</td>
+                              <td className="px-3 py-2.5 text-muted-foreground whitespace-nowrap">{formatTime(sale.date)}</td>
+                              <td className="px-3 py-2.5 font-bold max-w-[120px] truncate">{customerName}</td>
+                              <td className="px-3 py-2.5">
+                                <span className={cn('px-2 py-0.5 rounded-full font-black text-[10px]', methodColors[method] || 'bg-muted text-muted-foreground')}>
+                                  {(sale.paymentMethod || 'Cash').toUpperCase()}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2.5 text-muted-foreground max-w-[180px] truncate">{itemsSummary || '—'}</td>
+                              <td className="px-3 py-2.5 font-black text-right">{num(sale.grandTotal).toFixed(2)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot>
+                        <tr className="bg-muted/60 border-t-2 border-border font-black">
+                          <td colSpan={6} className="px-3 py-2.5 text-right text-xs uppercase tracking-wider">Total</td>
+                          <td className="px-3 py-2.5 text-right text-sm text-primary">{customTotalSales.toFixed(2)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Main Stats with direct Download buttons */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <StatCard 

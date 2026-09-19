@@ -802,22 +802,21 @@ const LocalPurchaseWindow = () => {
                             </div>
                           </td>
 
-                          {/* Zero Tax Auto-Detect & Toggle */}
+                          {/* Zero Tax Auto-Detect (Read-Only Display) */}
                           <td className="p-3 text-center">
                             <div className="flex flex-col items-center justify-center gap-1">
-                              <input
-                                type="checkbox"
-                                checked={item.isZeroTax}
-                                onChange={(e) => handleUpdateItemField(item.id, 'isZeroTax', e.target.checked)}
-                                className="h-4 w-4 rounded accent-primary cursor-pointer"
-                                title="Check if this product is 0% GST (Tax Exempt)"
-                              />
-                              <span className={cn(
-                                "text-[9px] font-black",
-                                item.isZeroTax ? "text-amber-500" : "text-muted-foreground/60"
-                              )}>
-                                {item.isZeroTax ? "0% GST" : `${taxRate}% GST`}
-                              </span>
+                              {item.productId ? (
+                                <span className={cn(
+                                  "px-2 py-0.5 rounded-full text-[9px] font-black border",
+                                  item.isZeroTax
+                                    ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                    : "bg-blue-500/10 text-blue-500 border-blue-500/20"
+                                )}>
+                                  {item.isZeroTax ? "0% GST" : `${taxRate}% GST`}
+                                </span>
+                              ) : (
+                                <span className="text-[9px] text-muted-foreground/40 font-bold">—</span>
+                              )}
                             </div>
                           </td>
 

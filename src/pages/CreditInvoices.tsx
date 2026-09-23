@@ -84,8 +84,14 @@ const CreditInvoices = () => {
             .totals { float: right; width: 300px; }
             .total-row { display: flex; justify-content: space-between; padding: 5px 0; }
             .grand-total { font-weight: bold; font-size: 1.2em; border-top: 2px solid #eee; margin-top: 10px; padding-top: 10px; }
-            .footer { margin-top: 100px; text-align: center; font-size: 12px; color: #777; }
-            @media print { body { padding: 20px; } .no-print { display: none; } }
+            .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #777; border-top: 1px solid #eee; padding-top: 10px; }
+            @media print {
+              body { padding: 20px; }
+              .no-print { display: none; }
+              @page { margin: 15mm; size: A4; }
+              html, body { height: auto !important; }
+              .footer { page-break-after: avoid; }
+            }
           </style>
         </head>
         <body>

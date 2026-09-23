@@ -87,6 +87,13 @@ export interface Cart {
   items: CartItem[];
 }
 
+export interface ReturnItem {
+  itemId: string; // CartItem id (product id)
+  name: string;
+  returnQty: number;
+  unitPrice: number;
+}
+
 export interface Sale {
   id: string;
   date: string;
@@ -325,6 +332,7 @@ interface AppContextType {
   updateProductCostPrice: (productId: string, newCost: number, purchaseDate: string) => Promise<void>;
   calculateProfitMargin: (product: Product) => number;
   addSale: (sale: Sale) => Promise<Sale>;
+  processReturn: (originalSale: Sale, returnItems: ReturnItem[]) => Promise<void>;
   addCustomer: (customer: Customer) => Promise<Customer | void>;
   updateCustomer: (customer: Customer) => Promise<void>;
   pendingTransfers: any[];
@@ -1203,6 +1211,77 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
+  // --- Sale Return ---
+  const processReturn = async (originalSale: Sale, returnItems: ReturnItem[]) => {
+    if (!returnItems || returnItems.length === 0) return;
+
+    const returnTotal = returnItems.reduce((sum, ri) => sum + (ri.returnQty * ri.unitPrice), 0);
+    const isCredit = String(originalSale.paymentMethod).toLowerCase() === 'credit';
+
+    // 1. Restore stock for each returned item
+    await Promise.all(returnItems.map(async (ri) => {
+      const product = products.find(p => p.id === ri.itemId);
+      if (product) {
+        await updateStock(product.id, (product.stock_shop || 0) + ri.returnQty);
+      }
+    }));
+
+    // 2. Record the return as a negative-value sale (audit trail)
+    const returnSale: Sale = {
+      id: crypto.randomUUID(),
+      date: toISODatetime(),
+      customer: originalSale.customer || null,
+      items: returnItems.map(ri => ({
+        id: ri.itemId,
+        name: ri.name,
+        name_dv: ri.name,
+        name_en: ri.name,
+        barcode: '',
+        price: -Math.abs(ri.unitPrice),
+        qty: ri.returnQty,
+        unit_conversion: 1,
+        stock_shop: 0,
+        category: 'RETURN',
+      } as any)),
+      grandTotal: -Math.abs(returnTotal),
+      paymentMethod: 'cash',
+      invoiceNumber: `RET-${originalSale.invoiceNumber || originalSale.id.slice(-6)}`,
+      paidAmount: -Math.abs(returnTotal),
+      balance: 0,
+    };
+
+    // Insert return record directly (bypassing normal addSale stock-deduction logic)
+    try {
+      await supabase.from('sales').insert([{
+        id: returnSale.id,
+        date: returnSale.date,
+        customer_id: returnSale.customer?.id || null,
+        items: returnSale.items,
+        grand_total: returnSale.grandTotal,
+        payment_method: 'return',
+        paid_amount: returnSale.paidAmount,
+        balance: 0,
+        invoice_number: returnSale.invoiceNumber,
+        split_details: null,
+      }]);
+      setSales(prev => [returnSale, ...prev]);
+    } catch (err) {
+      console.error('Error recording return sale:', err);
+      throw err;
+    }
+
+    // 3. For credit sales: reduce customer outstanding balance
+    if (isCredit && originalSale.customer?.id) {
+      try {
+        await updateCustomerBalance(originalSale.customer.id, -Math.abs(returnTotal));
+      } catch (err) {
+        console.warn('Could not adjust credit balance for return:', err);
+      }
+    }
+
+    showSuccess(`Return processed: ${settings.shop?.currency || 'MVR'} ${returnTotal.toFixed(2)} refunded. Stock restored.`);
+  };
+
   const addCustomer = async (customer: Customer) => {
     try {
       // Strip settlement_history as it's a relation, not a column
@@ -1419,7 +1498,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       // 1. Midnight / Evening Store Close Executive Briefing to B BACK Group (always active)
       if (groupChat) {
         const hours = now.getHours();
-        const isEveningOrNight = hours >= 22 || hours <= 3; // From 10:00 PM onwards through midnight
+        const isEveningOrNight = hours >= 21 || hours <= 4; // From 9:00 PM onwards through early morning
 
         const briefingKey = `telegram_briefing_sent_${todayIso}`;
         const briefingSendingKey = `telegram_briefing_sending_${todayIso}`;
@@ -1562,53 +1641,61 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           }
         }
 
-        // B. Missed Yesterday Briefing Catch-Up (e.g. PC was shut down early before 10 PM and opened next morning)
+        // B. Missed Yesterday/Recent Briefing Catch-Up (e.g. PC was shut down before 9 PM)
         const yesterday = new Date(now);
         yesterday.setDate(now.getDate() - 1);
         const yesterdayIso = toISODate(yesterday);
 
         if (
           !isEveningOrNight &&
-          settings.telegram?.lastNightlyBriefingDate !== yesterdayIso &&
-          settings.telegram?.lastNightlyBriefingDate !== todayIso &&
-          !localStorage.getItem(`telegram_briefing_sent_${yesterdayIso}`) &&
           !isBriefingSendingRef.current
         ) {
-          const yesterdaySales = (sales || []).filter(s => extractDateOnly(s.date) === yesterdayIso);
-          if (yesterdaySales.length > 0) {
+          // Check cloud state to avoid relying on stale local memory
+          let cloudLastBriefing = '';
+          if (supabase) {
             try {
-              if (supabase) {
-                const { data: cloudRow } = await supabase
-                  .from('settings')
-                  .select('settings')
-                  .eq('category', 'telegram')
-                  .maybeSingle();
+              const { data: cloudRow } = await supabase
+                .from('settings')
+                .select('settings')
+                .eq('category', 'telegram')
+                .maybeSingle();
+              cloudLastBriefing = cloudRow?.settings?.lastNightlyBriefingDate || '';
+            } catch (_) {}
+          }
 
-                if (cloudRow?.settings?.lastNightlyBriefingDate === yesterdayIso || cloudRow?.settings?.lastNightlyBriefingDate === todayIso) {
-                  return;
+          const alreadySentYesterday =
+            cloudLastBriefing === yesterdayIso ||
+            cloudLastBriefing === todayIso ||
+            !!localStorage.getItem(`telegram_briefing_sent_${yesterdayIso}`);
+
+          if (!alreadySentYesterday) {
+            const yesterdaySales = (sales || []).filter(s => extractDateOnly(s.date) === yesterdayIso);
+            if (yesterdaySales.length > 0) {
+              try {
+                isBriefingSendingRef.current = true;
+                const allSettlements = customers.flatMap(c => c.settlement_history || []);
+                const res = await sendNightlyExecutiveBriefing({
+                  chatId: groupChat,
+                  sales,
+                  settlements: allSettlements,
+                  shopSettings: settings.shop,
+                  date: yesterday,
+                  token: settings.telegram?.botToken,
+                });
+                if (res?.ok) {
+                  localStorage.setItem(`telegram_briefing_sent_${yesterdayIso}`, Date.now().toString());
+                  setSettings(prev => ({
+                    ...prev,
+                    telegram: { ...prev.telegram, lastNightlyBriefingDate: yesterdayIso },
+                  }));
+                  await updateSettings('telegram', { lastNightlyBriefingDate: yesterdayIso });
+                  console.log("Yesterday's missed Store Close Briefing caught-up and sent!");
                 }
+              } catch (e) {
+                console.warn('Missed yesterday briefing auto-catchup error:', e);
+              } finally {
+                isBriefingSendingRef.current = false;
               }
-
-              const allSettlements = customers.flatMap(c => c.settlement_history || []);
-              const res = await sendNightlyExecutiveBriefing({
-                chatId: groupChat,
-                sales,
-                settlements: allSettlements,
-                shopSettings: settings.shop,
-                date: yesterday,
-                token: settings.telegram?.botToken,
-              });
-              if (res?.ok) {
-                localStorage.setItem(`telegram_briefing_sent_${yesterdayIso}`, Date.now().toString());
-                setSettings(prev => ({
-                  ...prev,
-                  telegram: { ...prev.telegram, lastNightlyBriefingDate: yesterdayIso },
-                }));
-                await updateSettings('telegram', { lastNightlyBriefingDate: yesterdayIso });
-                console.log("Yesterday's missed Store Close Briefing automatically caught up and sent to Telegram group!");
-              }
-            } catch (e) {
-              console.warn('Missed yesterday briefing auto-catchup error:', e);
             }
           }
         }
@@ -2783,6 +2870,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       updateProductCostPrice,
       calculateProfitMargin,
       addSale,
+      processReturn,
       addCustomer,
       updateCustomer,
       pendingTransfers,

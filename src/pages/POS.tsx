@@ -262,6 +262,7 @@ const POS = () => {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const lastQtyInputRef = useRef<HTMLInputElement>(null);
+  const focusQuantityInputRef = useRef<() => void>(() => {});
 
   const focusSearchBar = () => {
     setTimeout(() => {
@@ -273,27 +274,21 @@ const POS = () => {
   };
 
   const focusQuantityInput = () => {
-    const currentCart = openCarts.get(activeCartId);
-    if (!currentCart || currentCart.items.length === 0) {
+    // Use DOM directly — never stale, always reads live cart
+    const qtyInputs = document.querySelectorAll<HTMLInputElement>('.cart-qty-input');
+    if (qtyInputs.length === 0) {
       showError(t('cart_empty_error') || 'ކާޓުގައި އެއްވެސް އައިޓަމެއް ނެތް (Cart is empty)');
       return;
     }
     setTimeout(() => {
-      if (lastQtyInputRef.current) {
-        lastQtyInputRef.current.focus();
-        lastQtyInputRef.current.select();
-        lastQtyInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      } else {
-        const qtyInputs = document.querySelectorAll<HTMLInputElement>('.cart-qty-input');
-        if (qtyInputs.length > 0) {
-          const lastInput = qtyInputs[qtyInputs.length - 1];
-          lastInput.focus();
-          lastInput.select();
-          lastInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-      }
+      const lastInput = qtyInputs[qtyInputs.length - 1];
+      lastInput.focus();
+      lastInput.select();
+      lastInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 40);
   };
+  // Keep ref in sync so keyboard effect (with [] deps) never gets a stale closure
+  focusQuantityInputRef.current = focusQuantityInput;
 
   const openCashDialog = () => {
     const currentCart = openCarts.get(activeCartId);
@@ -353,7 +348,7 @@ const POS = () => {
       // Global F10 shortcut - focus quantity of last cart item
       if (e.key === 'F10') {
         e.preventDefault();
-        focusQuantityInput();
+        focusQuantityInputRef.current(); // always fresh, never stale
         return;
       }
 

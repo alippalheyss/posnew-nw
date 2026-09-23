@@ -59,7 +59,7 @@ const SalesReports = () => {
       .filter(item => (returnQtys[item.id] || 0) > 0)
       .map(item => ({
         itemId: item.id,
-        name: item.name_en || item.name_dv || item.name || 'Item',
+        name: item.name_en || item.name_dv || (item as any).name || 'Item',
         returnQty: returnQtys[item.id],
         unitPrice: Number(item.price || 0),
       }));

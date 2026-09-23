@@ -266,6 +266,7 @@ interface PrintSettings {
 interface TelegramSettings {
   botToken: string;
   botUsername: string;
+  enabled?: boolean;
   autoSendPaymentReceipts: boolean;
   autoSendSaleReceipts: boolean;
   webhookUrl: string;
@@ -906,7 +907,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         botUsername: 'Bbacksh0p_bot',
         autoSendPaymentReceipts: true,
         autoSendSaleReceipts: false,
-        webhookUrl: '',
+        webhookUrl: 'https://bback.store/api/telegram-webhook',
         ownerChatId: '',
         autoExecutiveBriefing: true,
         autoCreditReminderThreshold: true,

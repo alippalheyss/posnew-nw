@@ -582,7 +582,32 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   useEffect(() => {
     fetchTransferSlips();
     const interval = setInterval(fetchTransferSlips, 15000);
-    return () => clearInterval(interval);
+
+    // Realtime subscription for transfer slips table
+    let channel: any = null;
+    if (supabase) {
+      try {
+        channel = supabase
+          .channel('transfer_slips_realtime_channel')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'transfer_slips' },
+            () => {
+              fetchTransferSlips();
+            }
+          )
+          .subscribe();
+      } catch (err) {
+        console.warn('Realtime subscription failed for transfer_slips:', err);
+      }
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (channel && supabase) {
+        supabase.removeChannel(channel);
+      }
+    };
   }, [fetchTransferSlips]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {

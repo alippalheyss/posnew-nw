@@ -1,5 +1,6 @@
 import { Customer, Sale } from '@/context/AppContext';
 import { formatDate, formatTime, formatMaldivesDate, formatMaldivesTime, extractDateOnly, toISODate } from '@/utils/formatters';
+import { supabase } from '@/lib/supabase';
 
 export const DEFAULT_TELEGRAM_BOT_TOKEN = '8815725998:AAHVMSujW5JM-ND4CJAzPr_Qsj_enXm2cYQ';
 export const DEFAULT_TELEGRAM_BOT_USERNAME = 'Bbacksh0p_bot';
@@ -371,6 +372,67 @@ export const handleTelegramBotCommand = async ({
   const cleanText = text.trim();
   // Strip bot username suffix like /balance@Bbacksh0p_bot -> /balance
   const cmd = cleanText.split(' ')[0].toLowerCase().replace(/@\w+/g, '');
+
+  // 0. Check if message is an amount entry (e.g. "250", "250.00", "MVR 250", "250 MVR", "250/-", "rf 250")
+  const cleanForAmt = cleanText.replace(/,/g, '').trim();
+  const amtRegex = /(?:mvr|rf|ރ|amount|slip)?\s*([0-9]+(?:\.[0-9]{1,2})?)\s*(?:mvr|rf|ރ|\/-|rufiyaa)?/i;
+  const numMatch = cleanForAmt.match(amtRegex);
+
+  if (numMatch && !cleanText.startsWith('/') && !['start', 'balance', 'help', 'account', 'transfer', 'statement', 'briefing', 'today', 'close', 'summary'].includes(cmd)) {
+    const typedAmount = parseFloat(numMatch[1]);
+    if (!isNaN(typedAmount) && typedAmount > 0 && supabase) {
+      const isChatLinked = (c: Customer) => Boolean(c.telegram_chat_id) && String(c.telegram_chat_id).trim() === String(chatId).trim();
+      const customer = customers.find(isChatLinked);
+
+      let slipQuery = supabase
+        .from('transfer_slips')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (customer) {
+        slipQuery = slipQuery.or(`telegram_chat_id.eq.${chatId},customer_id.eq.${customer.id}`);
+      } else {
+        slipQuery = slipQuery.eq('telegram_chat_id', chatId);
+      }
+
+      const { data: recentSlip } = await slipQuery.maybeSingle();
+
+      if (recentSlip) {
+        await supabase
+          .from('transfer_slips')
+          .update({
+            suggested_amount: typedAmount,
+            caption: (recentSlip.caption ? `${recentSlip.caption} | ` : '') + `Entered Amount: MVR ${typedAmount.toFixed(2)}`,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', recentSlip.id);
+
+        await sendTelegramMessage(
+          chatId,
+          `✅ *ފައިސާގެ އަދަދު ރައްކާކުރެވިއްޖެ: MVR ${typedAmount.toFixed(2)}*
+━━━━━━━━━━━━━━━━━━━━
+💰 *Transfer Amount Recorded:* MVR ${typedAmount.toFixed(2)}
+
+ކޭޝިއަރު ވެރިފައި ކުރުމަށްފަހު ރަސްމީ ރަސީދު މި ޗެޓަށް ލިބޭނެއެވެ. ޝުކުރިއްޔާ! 🙏
+_Your slip has been updated in POS for instant cashier verification._`,
+          token
+        );
+        return;
+      } else if (customer) {
+        await sendTelegramMessage(
+          chatId,
+          `✅ *ފައިސާގެ އަދަދު: MVR ${typedAmount.toFixed(2)}*
+━━━━━━━━━━━━━━━━━━━━
+📸 *މިހާރު ޓްރާންސްފަރ ސްލިޕް ފޮނުއްވާލައްވާ!*
+Please attach and send your BML payment slip screenshot now to complete verification. 🙏`,
+          token
+        );
+        return;
+      }
+    }
+  }
 
   // 1. /start <code_or_id> or bare /start
   if (cmd.startsWith('/start') || cmd.startsWith('start')) {

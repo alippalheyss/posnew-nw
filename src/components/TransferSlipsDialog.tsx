@@ -93,7 +93,7 @@ export const TransferSlipsDialog: React.FC<TransferSlipsDialogProps> = ({
     );
   }, [selectedSlip, customers]);
 
-  // Initialize or update settleAmount when selected slip changes
+  // Initialize or update settleAmount when selected slip or suggested_amount changes
   React.useEffect(() => {
     if (selectedSlip) {
       setShowRejectForm(false);
@@ -109,7 +109,7 @@ export const TransferSlipsDialog: React.FC<TransferSlipsDialogProps> = ({
         setSettleAmount('');
       }
     }
-  }, [selectedSlip?.id, linkedCustomer?.outstanding_balance]);
+  }, [selectedSlip?.id, selectedSlip?.suggested_amount, linkedCustomer?.outstanding_balance]);
 
   // Rotation handler
   const handleRotate = () => {
@@ -546,19 +546,28 @@ export const TransferSlipsDialog: React.FC<TransferSlipsDialogProps> = ({
                     {/* Settle Form (Only for pending slips) */}
                     {selectedSlip.status === 'pending' && !showRejectForm && (
                       <div className="p-4 rounded-2xl bg-card border border-primary/30 shadow-sm space-y-3">
-                        <label className="block text-xs font-black uppercase tracking-wider text-foreground">
-                          Amount to Settle ({currency})
-                        </label>
+                        <div className="flex items-center justify-between">
+                          <label className="block text-xs font-black uppercase tracking-wider text-foreground">
+                            Amount to Settle ({currency})
+                          </label>
+                          {selectedSlip.suggested_amount && selectedSlip.suggested_amount > 0 && (
+                            <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-black px-2 py-0.5 rounded-lg">
+                              ✨ From Customer: {currency} {selectedSlip.suggested_amount.toFixed(2)}
+                            </Badge>
+                          )}
+                        </div>
 
                         <div className="relative">
-                          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-primary/70 font-mono select-none">
+                            {currency}
+                          </span>
                           <Input
                             type="number"
                             step="any"
                             placeholder="0.00"
                             value={settleAmount}
                             onChange={(e) => setSettleAmount(e.target.value)}
-                            className="pl-9 text-lg font-black bg-background border-border rounded-xl h-12 text-primary"
+                            className="pl-14 text-lg font-black bg-background border-border rounded-xl h-12 text-primary font-mono"
                           />
                         </div>
 

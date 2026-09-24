@@ -121,6 +121,11 @@ const CartQtyStepper = ({
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
+            e.stopPropagation();
+            focusSearchBar();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
             focusSearchBar();
           }
         }}
@@ -352,7 +357,16 @@ const POS = () => {
         return;
       }
 
-      if (document.activeElement?.tagName === 'INPUT' && document.activeElement !== searchInputRef.current && !document.activeElement.classList.contains('cart-qty-input')) {
+      // If user is focused in a cart-qty-input, Enter or Escape must move back to product search
+      if (document.activeElement?.classList.contains('cart-qty-input')) {
+        if (e.key === 'Enter' || e.key === 'Escape') {
+          e.preventDefault();
+          focusSearchBar();
+          return;
+        }
+      }
+
+      if (document.activeElement?.tagName === 'INPUT' && document.activeElement !== searchInputRef.current) {
         if (e.key === 'Escape') {
           (document.activeElement as HTMLElement).blur();
         }
@@ -2265,11 +2279,11 @@ const POS = () => {
       </Dialog>
 
       <Dialog open={isConfirmRemoveCartDialogOpen} onOpenChange={setIsConfirmRemoveCartDialogOpen}>
-        <DialogContent className="sm:max-w-[420px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border p-6 sm:p-7 shadow-2xl rounded-3xl space-y-4" dir="rtl">
+        <DialogContent className="sm:max-w-[480px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border p-6 sm:p-7 shadow-2xl rounded-3xl box-border overflow-hidden [&>button]:left-4 [&>button]:right-auto space-y-4" dir="rtl">
           <DialogHeader className="text-right pb-3 border-b border-border/60">
             <div className="flex items-center justify-between pl-8">
               <div className="text-right flex-1 min-w-0">
-                <DialogTitle className="text-xl font-black text-foreground flex items-center justify-end gap-2.5">
+                <DialogTitle className="text-lg sm:text-xl font-black text-foreground flex items-center justify-end gap-2.5">
                   <span className="truncate">{renderBoth('confirm_cart_removal')}</span>
                   <div className="h-9 w-9 rounded-xl bg-red-500/15 text-red-500 flex items-center justify-center shrink-0 ring-1 ring-red-500/30">
                     <Trash2 className="h-5 w-5" />
@@ -2288,7 +2302,7 @@ const POS = () => {
             </p>
           </div>
 
-          <DialogFooter className="gap-3 pt-2 border-t border-border flex flex-row justify-between items-center">
+          <DialogFooter className="gap-3 pt-3 border-t border-border flex flex-row justify-between items-center w-full">
             <Button
               variant="outline"
               onClick={() => setIsConfirmRemoveCartDialogOpen(false)}

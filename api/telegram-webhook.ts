@@ -404,32 +404,64 @@ This will record the exact amount for cashier verification & official receipt! �
         const text = String(msg.text).trim();
         const cleanCmd = text.split(' ')[0].toLowerCase().replace(/@\w+/g, '');
 
-        // Check if message is a numeric amount response for a pending slip
-        const numMatch = text.match(/^(?:mvr|rf|ރ)?\s*([0-9]+(?:\.[0-9]{1,2})?)$/i);
-        if (numMatch && !text.startsWith('/')) {
+        // Check if message is an amount entry (e.g. "250", "250.00", "MVR 250", "250 MVR", "250/-", "rf 250", "150 rf")
+        const cleanForAmt = text.replace(/,/g, '').trim();
+        const amtRegex = /(?:mvr|rf|ރ|amount|slip)?\s*([0-9]+(?:\.[0-9]{1,2})?)\s*(?:mvr|rf|ރ|\/-|rufiyaa)?/i;
+        const numMatch = cleanForAmt.match(amtRegex);
+        
+        if (numMatch && !text.startsWith('/') && !['start', 'balance', 'help', 'account', 'transfer', 'statement'].includes(cleanCmd)) {
           const typedAmount = parseFloat(numMatch[1]);
           if (!isNaN(typedAmount) && typedAmount > 0) {
-            const { data: recentSlip } = await supabase
+            // Find linked customer first to be 100% reliable
+            const { data: customer } = await supabase
+              .from('customers')
+              .select('id, name_en, name_dv, outstanding_balance')
+              .eq('telegram_chat_id', chatId)
+              .maybeSingle();
+
+            // Find most recent pending slip for this user or customer
+            let slipQuery = supabase
               .from('transfer_slips')
               .select('*')
-              .eq('telegram_chat_id', chatId)
               .eq('status', 'pending')
               .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
+              .limit(1);
+
+            if (customer) {
+              slipQuery = slipQuery.or(`telegram_chat_id.eq.${chatId},customer_id.eq.${customer.id}`);
+            } else {
+              slipQuery = slipQuery.eq('telegram_chat_id', chatId);
+            }
+
+            const { data: recentSlip } = await slipQuery.maybeSingle();
 
             if (recentSlip) {
               await supabase
                 .from('transfer_slips')
                 .update({
                   suggested_amount: typedAmount,
-                  caption: (recentSlip.caption ? `${recentSlip.caption} | ` : '') + `Entered Amount: MVR ${typedAmount.toFixed(2)}`
+                  caption: (recentSlip.caption ? `${recentSlip.caption} | ` : '') + `Entered Amount: MVR ${typedAmount.toFixed(2)}`,
+                  updated_at: new Date().toISOString()
                 })
                 .eq('id', recentSlip.id);
 
               await sendTelegramMessage(
                 chatId,
-                `✅ *Transfer Amount Recorded: MVR ${typedAmount.toFixed(2)}*\n━━━━━━━━━━━━━━━━━━━━\nYour transfer slip has been updated with this amount for cashier verification. You will receive an official receipt once approved! 🙏`
+                `✅ *ފައިސާގެ އަދަދު ރައްކާކުރެވިއްޖެ: MVR ${typedAmount.toFixed(2)}*
+━━━━━━━━━━━━━━━━━━━━
+💰 *Transfer Amount Recorded:* MVR ${typedAmount.toFixed(2)}
+
+ކޭޝިއަރު ވެރިފައި ކުރުމަށްފަހު ރަސްމީ ރަސީދު މި ޗެޓަށް ލިބޭނެއެވެ. ޝުކުރިއްޔާ! 🙏
+_Your slip has been updated in POS for instant cashier verification._`
+              );
+              return res.status(200).json({ ok: true });
+            } else if (customer) {
+              await sendTelegramMessage(
+                chatId,
+                `✅ *ފައިސާގެ އަދަދު: MVR ${typedAmount.toFixed(2)}*
+━━━━━━━━━━━━━━━━━━━━
+📸 *މިހާރު ޓްރާންސްފަރ ސްލިޕް ފޮނުއްވާލައްވާ!*
+Please attach and send your BML payment slip screenshot now to complete verification. 🙏`
               );
               return res.status(200).json({ ok: true });
             }

@@ -25,7 +25,6 @@ import { showSuccess, showError } from '@/utils/toast';
 import LoyaltyRedemptionDialog from '@/components/LoyaltyRedemptionDialog';
 import UnitSelectionDialog from '@/components/UnitSelectionDialog';
 import CustomerAddDialog from '@/components/CustomerAddDialog';
-import { NearExpiryBroadcastDialog } from '@/components/NearExpiryBroadcastDialog';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from "@/components/ui/progress";
 import { printContent } from '@/utils/printHelper';
@@ -196,19 +195,7 @@ const POS = () => {
   const [telegramCustomer, setTelegramCustomer] = useState<Customer | null>(null);
   const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false);
   const [isTransferSlipsDialogOpen, setIsTransferSlipsDialogOpen] = useState(false);
-  const [isExpiryBroadcastModalOpen, setIsExpiryBroadcastModalOpen] = useState(false);
   const [shouldPrintCashReceipt, setShouldPrintCashReceipt] = useState<boolean>(() => localStorage.getItem('pos_print_cash_receipt') === 'true');
-
-  const nearExpiryProductsCount = useMemo(() => {
-    const today = new Date();
-    return products.filter(p => {
-      if (!p.expiry_date) return false;
-      const exp = new Date(p.expiry_date);
-      const diffTime = exp.getTime() - today.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays >= 0 && diffDays <= 30;
-    }).length;
-  }, [products]);
 
   const TelegramIcon = ({ className }: { className?: string }) => (
     <svg viewBox="0 0 24 24" className={className} fill="currentColor">
@@ -1291,24 +1278,6 @@ const POS = () => {
               {pendingTransfers.length > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 text-[#050510] rounded-full text-[10px] font-black flex items-center justify-center border-2 border-[#050510]">
                   {pendingTransfers.length}
-                </span>
-              )}
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsExpiryBroadcastModalOpen(true)}
-              title="Near Expiry Price Drops & Telegram Alerts (މުއްދަތު ހަމަވާ ތަކެތި)"
-              className={cn(
-                "relative h-10 w-10 rounded-xl bg-muted border border-border hover:bg-orange-500/20 hover:text-orange-500 text-muted-foreground transition-all",
-                nearExpiryProductsCount > 0 && "border-orange-500/50 bg-orange-500/10 text-orange-500"
-              )}
-            >
-              <Flame className="h-4 w-4 fill-orange-500/20" />
-              {nearExpiryProductsCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white rounded-full text-[10px] font-black flex items-center justify-center border-2 border-background animate-pulse">
-                  {nearExpiryProductsCount}
                 </span>
               )}
             </Button>
@@ -3074,20 +3043,6 @@ const POS = () => {
       <TransferSlipsDialog
         open={isTransferSlipsDialogOpen}
         onOpenChange={setIsTransferSlipsDialogOpen}
-      />
-
-      {/* Near Expiry Management & Telegram Clearance Broadcast Modal */}
-      <NearExpiryBroadcastDialog
-        open={isExpiryBroadcastModalOpen}
-        onOpenChange={setIsExpiryBroadcastModalOpen}
-        products={products}
-        customers={customers}
-        settings={settings}
-        updateProduct={updateProduct}
-        onAddToCart={(prod) => {
-          addToCart(prod);
-          showSuccess(`Added ${prod.name_dv} to cart`);
-        }}
       />
     </div>
   );

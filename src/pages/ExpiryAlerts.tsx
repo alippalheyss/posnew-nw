@@ -6,18 +6,20 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppContext } from '@/context/AppContext';
 import { format, isPast, parseISO, addDays } from 'date-fns';
-import { AlertCircle, CheckCircle2, AlertTriangle, Clock, Calendar, ShieldAlert } from 'lucide-react';
+import { AlertCircle, CheckCircle2, AlertTriangle, Clock, Calendar, ShieldAlert, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import ExpiryUpdateDialog from '@/components/ExpiryUpdateDialog';
+import { NearExpiryBroadcastDialog } from '@/components/NearExpiryBroadcastDialog';
 
 const ExpiryAlerts = () => {
   const { t } = useTranslation();
-  const { products } = useAppContext();
+  const { products, customers, settings, updateProduct } = useAppContext();
   const today = new Date();
   const thirtyDaysFromNow = addDays(today, 30);
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
+  const [isBroadcastDialogOpen, setIsBroadcastDialogOpen] = useState(false);
 
   const expiringProducts = products.filter(product => {
     if (!product.expiry_date) return false;
@@ -28,6 +30,12 @@ const ExpiryAlerts = () => {
     return parseISO(a.expiry_date).getTime() - parseISO(b.expiry_date).getTime();
   });
 
+  const nearExpiryCount = expiringProducts.filter(p => {
+    if (!p.expiry_date) return false;
+    const exp = parseISO(p.expiry_date);
+    return !isPast(exp) && exp <= thirtyDaysFromNow;
+  }).length;
+
   const renderBoth = (key: string, options?: any) => (
     <>
       {t(key, options)} ({t(key, { ...options, lng: 'en' })})
@@ -37,16 +45,32 @@ const ExpiryAlerts = () => {
   return (
     <div className="p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
       {/* Header Section */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div className="text-right">
            <h1 className="text-3xl font-black text-foreground flex items-center justify-end gap-3">
              {renderBoth('expiry_alerts')} <ShieldAlert className="h-8 w-8 text-red-500" />
            </h1>
            <p className="text-sm text-muted-foreground mt-1">{renderBoth('expiry_alerts_description')}</p>
         </div>
-        <div className="flex gap-3">
-           <Button onClick={() => setIsUpdateDialogOpen(true)} className="gap-2 bg-primary hover:bg-primary/90 h-10 px-6 rounded-xl font-black shadow-[0_0_20px_rgba(0,132,255,0.3)] text-foreground uppercase tracking-widest">
-               <Calendar className="h-4 w-4" /> Update Expiry Dates
+        <div className="flex flex-wrap items-center gap-3">
+           <Button
+             onClick={() => setIsBroadcastDialogOpen(true)}
+             className="gap-2 bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 hover:opacity-95 text-white h-10 px-5 rounded-xl font-black shadow-lg shadow-orange-500/25 text-xs uppercase tracking-wider relative"
+           >
+             <Flame className="h-4 w-4 fill-white/20" />
+             <span>އަގު ތިރިކުރުމާއި ޓެލެގްރާމް އެލާޓް (Drop Price & Alert)</span>
+             {nearExpiryCount > 0 && (
+               <Badge className="bg-white text-orange-600 font-mono text-[10px] font-black px-1.5 py-0 rounded-full ml-1 border-none shadow-xs">
+                 {nearExpiryCount}
+               </Badge>
+             )}
+           </Button>
+
+           <Button
+             onClick={() => setIsUpdateDialogOpen(true)}
+             className="gap-2 bg-primary hover:bg-primary/90 h-10 px-5 rounded-xl font-black shadow-[0_0_20px_rgba(0,132,255,0.3)] text-foreground uppercase tracking-widest text-xs"
+           >
+             <Calendar className="h-4 w-4" /> Update Expiry Dates
            </Button>
         </div>
       </div>
@@ -121,9 +145,20 @@ const ExpiryAlerts = () => {
           </div>
         )}
       </ScrollArea>
+      
       <ExpiryUpdateDialog 
         isOpen={isUpdateDialogOpen}
         onClose={() => setIsUpdateDialogOpen(false)}
+      />
+
+      {/* Near Expiry Management & Telegram Clearance Broadcast Modal */}
+      <NearExpiryBroadcastDialog
+        open={isBroadcastDialogOpen}
+        onOpenChange={setIsBroadcastDialogOpen}
+        products={products}
+        customers={customers}
+        settings={settings}
+        updateProduct={updateProduct}
       />
     </div>
   );

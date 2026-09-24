@@ -367,12 +367,67 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { setTheme } = useTheme();
   
-  const [products, setProducts] = useState<Product[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [sales, setSales] = useState<Sale[]>([]);
+  const [products, setProducts] = useState<Product[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('cached_pos_products');
+        if (saved) return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error reading cached_pos_products', e);
+      }
+    }
+    return [];
+  });
+
+  const [customers, setCustomers] = useState<Customer[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('cached_pos_customers');
+        if (saved) return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error reading cached_pos_customers', e);
+      }
+    }
+    return [];
+  });
+
+  const [sales, setSales] = useState<Sale[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('cached_pos_sales');
+        if (saved) return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error reading cached_pos_sales', e);
+      }
+    }
+    return [];
+  });
+
   const [isInitialDataLoaded, setIsInitialDataLoaded] = useState(false);
-  const [purchases, setPurchases] = useState<Purchase[]>([]);
-  const [vendors, setVendors] = useState<Vendor[]>([]);
+
+  const [purchases, setPurchases] = useState<Purchase[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('cached_pos_purchases');
+        if (saved) return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error reading cached_pos_purchases', e);
+      }
+    }
+    return [];
+  });
+
+  const [vendors, setVendors] = useState<Vendor[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('cached_pos_vendors');
+        if (saved) return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error reading cached_pos_vendors', e);
+      }
+    }
+    return [];
+  });
   const [expenses, setExpenses] = useState<Expense[]>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -396,6 +451,83 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       localStorage.setItem('app_expenses', JSON.stringify(expenses));
     }
   }, [expenses]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && products.length > 0) {
+      try { localStorage.setItem('cached_pos_products', JSON.stringify(products)); } catch (e) {}
+    }
+  }, [products]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && customers.length > 0) {
+      try { localStorage.setItem('cached_pos_customers', JSON.stringify(customers)); } catch (e) {}
+    }
+  }, [customers]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && sales.length > 0) {
+      try { localStorage.setItem('cached_pos_sales', JSON.stringify(sales)); } catch (e) {}
+    }
+  }, [sales]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && purchases.length > 0) {
+      try { localStorage.setItem('cached_pos_purchases', JSON.stringify(purchases)); } catch (e) {}
+    }
+  }, [purchases]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && vendors.length > 0) {
+      try { localStorage.setItem('cached_pos_vendors', JSON.stringify(vendors)); } catch (e) {}
+    }
+  }, [vendors]);
+
+  // Offline Sync Queue Helper
+  const queueOfflineAction = (type: string, payload: any) => {
+    if (typeof window === 'undefined') return;
+    try {
+      const existing = JSON.parse(localStorage.getItem('pos_offline_queue') || '[]');
+      existing.push({ id: crypto.randomUUID(), type, payload, timestamp: Date.now() });
+      localStorage.setItem('pos_offline_queue', JSON.stringify(existing));
+    } catch (e) {
+      console.error('Error queuing offline action:', e);
+    }
+  };
+
+  const processOfflineQueue = useCallback(async () => {
+    if (typeof window === 'undefined' || !navigator.onLine || !supabase) return;
+    try {
+      const queue = JSON.parse(localStorage.getItem('pos_offline_queue') || '[]');
+      if (!queue || queue.length === 0) return;
+      
+      console.log(`[Offline Sync] Processing ${queue.length} offline actions...`);
+      const remaining: any[] = [];
+      
+      for (const item of queue) {
+        try {
+          if (item.type === 'insert_sale') {
+            await supabase.from('sales').upsert([item.payload]);
+          } else if (item.type === 'update_stock') {
+            await supabase.from('products').update({ stock_shop: item.payload.stock_shop, updated_at: new Date().toISOString() }).eq('id', item.payload.id);
+          } else if (item.type === 'update_customer_balance') {
+            await supabase.from('customers').update({ outstanding_balance: item.payload.newBalance }).eq('id', item.payload.customerId);
+          } else if (item.type === 'add_settlement') {
+            await supabase.from('settlements').insert([item.payload]);
+          }
+        } catch (err) {
+          console.error('[Offline Sync] Failed to sync item:', item, err);
+          remaining.push(item);
+        }
+      }
+      
+      localStorage.setItem('pos_offline_queue', JSON.stringify(remaining));
+      if (remaining.length < queue.length) {
+        console.log(`[Offline Sync] Synchronized ${queue.length - remaining.length} actions to cloud.`);
+      }
+    } catch (e) {
+      console.error('[Offline Sync] Error processing offline queue:', e);
+    }
+  }, []);
 
   const [transferSlips, setTransferSlips] = useState<TransferSlip[]>(() => {
     if (typeof window !== 'undefined') {
@@ -776,6 +908,70 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     };
   }, []);
 
+  // Online status listener: auto-sync queued offline changes when internet reconnects
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleOnline = () => {
+      console.log('[Network] Device came online. Synchronizing data...');
+      processOfflineQueue();
+      fetchData();
+    };
+
+    window.addEventListener('online', handleOnline);
+    // Initial attempt to flush any leftover queue
+    if (navigator.onLine) {
+      processOfflineQueue();
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [processOfflineQueue]);
+
+  // Realtime settings synchronization across all computers/users (hardware settings excluded)
+  useEffect(() => {
+    if (!supabase) return;
+    const settingsChannel = supabase.channel('settings_realtime_sync_channel', {
+      config: { broadcast: { self: false } }
+    });
+
+    settingsChannel
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, (payload) => {
+        const row = payload.new as any;
+        if (row && row.category && row.settings) {
+          console.log(`[Cloud Settings] Received realtime update for category: ${row.category}`);
+          setSettings(prev => {
+            const currentCat = prev[row.category as keyof AppSettings] || {};
+            // Preserve machine-specific hardware/printer settings on this computer
+            if (row.category === 'printing') {
+              return {
+                ...prev,
+                printing: {
+                  ...row.settings,
+                  printerName: prev.printing?.printerName,
+                  thermalPrinterWidth: prev.printing?.thermalPrinterWidth,
+                  useQzTray: prev.printing?.useQzTray,
+                  enableDirectPrint: prev.printing?.enableDirectPrint
+                }
+              };
+            }
+            return {
+              ...prev,
+              [row.category]: {
+                ...currentCat,
+                ...row.settings
+              }
+            };
+          });
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(settingsChannel);
+    };
+  }, []);
+
   const [favoriteProductIds, setFavoriteProductIds] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('favorite_products');
@@ -1077,35 +1273,38 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   const updateCustomerBalance = async (customerId: string, amount: number) => {
+    const customer = customers.find(c => c.id === customerId);
+    if (!customer) {
+      console.error('Customer not found for balance update:', customerId);
+      return;
+    }
+
+    const newBalance = (customer.outstanding_balance || 0) + amount;
+
+    // 1. Immediately update local state
+    setCustomers(prev => prev.map(c =>
+      c.id === customerId ? { ...c, outstanding_balance: newBalance } : c
+    ));
+
+    // 2. Persist to cloud or queue offline
     try {
-      console.log(`Updating balance for customer ${customerId} by amount ${amount}`);
-      const customer = customers.find(c => c.id === customerId);
-      if (!customer) {
-        console.error('Customer not found for balance update:', customerId);
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        queueOfflineAction('update_customer_balance', { customerId, newBalance });
         return;
       }
 
-      const newBalance = (customer.outstanding_balance || 0) + amount;
-      console.log(`New balance will be: ${newBalance}`);
-      
       const { error } = await supabase
         .from('customers')
         .update({ outstanding_balance: newBalance })
         .eq('id', customerId);
 
       if (error) {
-        console.error('Supabase update balance error:', error);
-        throw error;
+        console.warn('Network error updating balance, queued for offline sync:', error);
+        queueOfflineAction('update_customer_balance', { customerId, newBalance });
       }
-
-      setCustomers(prev => prev.map(c =>
-        c.id === customerId ? { ...c, outstanding_balance: newBalance } : c
-      ));
-      console.log('Balance updated successfully in both DB and state');
     } catch (error) {
-      console.error('Error updating customer balance:', error);
-      showError('Failed to update customer balance');
-      throw error;
+      console.warn('Exception updating customer balance, queued for offline sync:', error);
+      queueOfflineAction('update_customer_balance', { customerId, newBalance });
     }
   };
 
@@ -1134,82 +1333,83 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   const addSale = async (sale: Sale): Promise<Sale> => {
+    const isCredit = String(sale.paymentMethod).toLowerCase() === 'credit';
+    const invoiceNumber = sale.invoiceNumber || generateInvoiceNumber(sale.date, isCredit, sales);
+    const saleWithInvoice = { ...sale, invoiceNumber, date: sale.date || toISODatetime() };
+
+    console.log('Adding sale (offline resilient):', saleWithInvoice.id, saleWithInvoice.paymentMethod, saleWithInvoice.invoiceNumber);
+
+    // 1. Immediately add to local state
+    setSales(prev => [saleWithInvoice, ...prev]);
+
+    // 2. Update local product stock
+    sale.items.forEach((item) => {
+      const product = products.find(p => p.id === item.id);
+      if (product) {
+        const qtyToDeduct = item.qty * (item.unit_conversion || 1);
+        updateStock(product.id, product.stock_shop - qtyToDeduct);
+      }
+    });
+
+    const salePayload = {
+      id: saleWithInvoice.id,
+      date: saleWithInvoice.date,
+      customer_id: saleWithInvoice.customer?.id || null,
+      items: saleWithInvoice.items,
+      grand_total: Number(saleWithInvoice.grandTotal),
+      payment_method: String(saleWithInvoice.paymentMethod).toLowerCase(),
+      paid_amount: saleWithInvoice.paidAmount !== undefined ? Number(saleWithInvoice.paidAmount) : null,
+      balance: saleWithInvoice.balance !== undefined ? Number(saleWithInvoice.balance) : null,
+      invoice_number: saleWithInvoice.invoiceNumber,
+      split_details: saleWithInvoice.splitDetails || null
+    };
+
+    // 3. Persist to DB if online, else queue
     try {
-      const isCredit = String(sale.paymentMethod).toLowerCase() === 'credit';
-      const invoiceNumber = sale.invoiceNumber || generateInvoiceNumber(sale.date, isCredit, sales);
-      const saleWithInvoice = { ...sale, invoiceNumber };
-
-      console.log('Adding sale to Supabase:', saleWithInvoice.id, saleWithInvoice.paymentMethod, saleWithInvoice.invoiceNumber);
-      
-      const { error } = await supabase
-        .from('sales')
-        .insert([{
-          id: saleWithInvoice.id,
-          date: toISODatetime(), // Use full timestamp for sorting and accuracy
-          customer_id: saleWithInvoice.customer?.id || null,
-          items: saleWithInvoice.items,
-          grand_total: Number(saleWithInvoice.grandTotal),
-          payment_method: String(saleWithInvoice.paymentMethod).toLowerCase(),
-          paid_amount: saleWithInvoice.paidAmount !== undefined ? Number(saleWithInvoice.paidAmount) : null,
-          balance: saleWithInvoice.balance !== undefined ? Number(saleWithInvoice.balance) : null,
-          invoice_number: saleWithInvoice.invoiceNumber,
-          split_details: saleWithInvoice.splitDetails || null
-        }]);
-
-      if (error) {
-        console.error('Supabase add sale error:', error);
-        throw error;
-      }
-
-      setSales(prev => [saleWithInvoice, ...prev]);
-      console.log('Sale added successfully to local state');
-
-      // Update stock levels asynchronously without blocking the UI
-      Promise.all(sale.items.map(async (item) => {
-        const product = products.find(p => p.id === item.id);
-        if (product) {
-          const qtyToDeduct = item.qty * (item.unit_conversion || 1);
-          await updateStock(product.id, product.stock_shop - qtyToDeduct);
-        }
-      })).catch(err => console.error('Error updating stock after sale:', err));
-
-      // Automatic 90% credit threshold reminder via Telegram
-      if (saleWithInvoice.customer?.id && settings.telegram?.autoCreditReminderThreshold !== false) {
-        const cust = customers.find(c => c.id === saleWithInvoice.customer?.id);
-        if (cust && cust.telegram_chat_id && cust.credit_limit > 0) {
-          const thresholdPct = settings.telegram?.creditReminderThresholdPct || 90;
-          const limit = Number(cust.credit_limit);
-          const isCreditTx = String(saleWithInvoice.paymentMethod).toLowerCase() === 'credit' ||
-            (String(saleWithInvoice.paymentMethod).toLowerCase() === 'split' && saleWithInvoice.splitDetails?.some((d: any) => d.method?.toLowerCase() === 'credit'));
-          const creditAmount = isCreditTx 
-            ? (String(saleWithInvoice.paymentMethod).toLowerCase() === 'credit' 
-                ? Number(saleWithInvoice.grandTotal) 
-                : saleWithInvoice.splitDetails?.filter((d: any) => d.method?.toLowerCase() === 'credit').reduce((s: number, d: any) => s + d.amount, 0) || 0)
-            : 0;
-          const newBalance = (cust.outstanding_balance || 0) + creditAmount;
-          if (newBalance >= limit * (thresholdPct / 100)) {
-            sendAutomatedCreditReminder({
-              chatId: cust.telegram_chat_id,
-              customer: cust,
-              shopSettings: settings.shop,
-              balance: newBalance,
-              isThreshold: true,
-              thresholdPct,
-              creditLimit: limit,
-              token: settings.telegram?.botToken,
-            }).catch(e => console.warn('Credit threshold alert error:', e));
-          }
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        queueOfflineAction('insert_sale', salePayload);
+      } else {
+        const { error } = await supabase.from('sales').insert([salePayload]);
+        if (error) {
+          console.warn('Error inserting sale to cloud, queuing for offline sync:', error);
+          queueOfflineAction('insert_sale', salePayload);
         }
       }
-      
-      // Do NOT await fetchData() here to prevent race conditions with optimistic state
-
-      return saleWithInvoice;
-    } catch (error) {
-      console.error('Error adding sale:', error);
-      showError('Failed to save sale to database');
-      throw error;
+    } catch (err) {
+      console.warn('Network exception adding sale, queuing for offline sync:', err);
+      queueOfflineAction('insert_sale', salePayload);
     }
+
+    // Automatic 90% credit threshold reminder via Telegram if online
+    if (saleWithInvoice.customer?.id && settings.telegram?.autoCreditReminderThreshold !== false && (typeof navigator === 'undefined' || navigator.onLine)) {
+      const cust = customers.find(c => c.id === saleWithInvoice.customer?.id);
+      if (cust && cust.telegram_chat_id && cust.credit_limit > 0) {
+        const thresholdPct = settings.telegram?.creditReminderThresholdPct || 90;
+        const limit = Number(cust.credit_limit);
+        const isCreditTx = String(saleWithInvoice.paymentMethod).toLowerCase() === 'credit' ||
+          (String(saleWithInvoice.paymentMethod).toLowerCase() === 'split' && saleWithInvoice.splitDetails?.some((d: any) => d.method?.toLowerCase() === 'credit'));
+        const creditAmount = isCreditTx 
+          ? (String(saleWithInvoice.paymentMethod).toLowerCase() === 'credit' 
+              ? Number(saleWithInvoice.grandTotal) 
+              : saleWithInvoice.splitDetails?.filter((d: any) => d.method?.toLowerCase() === 'credit').reduce((s: number, d: any) => s + d.amount, 0) || 0)
+          : 0;
+        const newBalance = (cust.outstanding_balance || 0) + creditAmount;
+        if (newBalance >= limit * (thresholdPct / 100)) {
+          sendAutomatedCreditReminder({
+            chatId: cust.telegram_chat_id,
+            customer: cust,
+            shopSettings: settings.shop,
+            balance: newBalance,
+            isThreshold: true,
+            thresholdPct,
+            creditLimit: limit,
+            token: settings.telegram?.botToken,
+          }).catch(e => console.warn('Credit threshold alert error:', e));
+        }
+      }
+    }
+
+    return saleWithInvoice;
   };
 
   // --- Sale Return ---

@@ -1474,22 +1474,22 @@ const POS = () => {
 
           {/* Customer Loyalty Points Card & Redeem Action */}
           {activeCart?.customer && (settings.general.enableLoyaltyProgram ?? true) && (
-            <div className="flex items-center justify-between px-3.5 py-2.5 bg-amber-500/10 border border-amber-500/25 rounded-2xl mb-3 transition-all">
+            <div className="flex items-center justify-between px-3.5 py-2.5 bg-gradient-to-l from-amber-500/15 via-amber-500/10 to-transparent border border-amber-500/30 rounded-2xl mb-3 transition-all shadow-sm">
               <div className="flex items-center gap-2.5">
-                <div className="h-8 w-8 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0 shadow-sm">
-                  <Gift className="h-4 w-4" />
+                <div className="h-9 w-9 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0 shadow-sm ring-1 ring-amber-500/30">
+                  <Gift className="h-4.5 w-4.5" />
                 </div>
                 <div className="text-right">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-black text-foreground font-mono">
+                    <span className="text-sm font-black text-foreground font-mono">
                       {(activeCart.customer.loyalty_points || 0).toFixed(0)} PTS
                     </span>
-                    <span className="text-[10px] text-muted-foreground font-mono font-bold">
+                    <span className="text-[11px] text-amber-600 dark:text-amber-400 font-mono font-bold">
                       (≈ {settings.shop.currency} {((activeCart.customer.loyalty_points || 0) / (settings.general.loyaltyPointsValue || 10)).toFixed(2)})
                     </span>
                   </div>
-                  <span className="text-[9px] text-amber-600 dark:text-amber-400 font-bold block mt-0.5">
-                    ލޯޔަލްޓީ ޕޮއިންޓް (Loyalty Balance)
+                  <span className="text-[10px] text-muted-foreground font-bold block">
+                    ލޯޔަލްޓީ ޕޮއިންޓް (Loyalty Points)
                   </span>
                 </div>
               </div>
@@ -1500,22 +1500,41 @@ const POS = () => {
                   size="sm"
                   variant="outline"
                   onClick={() => setPointsToRedeem(0)}
-                  className="h-8 px-2.5 text-xs font-black border-red-500/30 text-red-500 hover:bg-red-500/10 rounded-xl"
+                  className="h-8 px-3 text-xs font-black border-red-500/30 text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
                   title="Cancel loyalty discount"
                 >
                   Cancel ({pointsToRedeem} pts)
                 </Button>
               ) : (
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={(activeCart.customer.loyalty_points || 0) < (settings.general.loyaltyMinRedeemPoints || 10) || activeCart.items.length === 0}
-                  onClick={() => setIsLoyaltyRedemptionDialogOpen(true)}
-                  className="h-8 bg-amber-500 hover:bg-amber-600 text-black text-xs font-black px-3 rounded-xl shadow-sm gap-1.5 active:scale-95 disabled:opacity-40"
-                >
-                  <Gift className="h-3.5 w-3.5" />
-                  <span>Redeem (ބޭނުންކުރޭ)</span>
-                </Button>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={(activeCart.customer.loyalty_points || 0) <= 0 || activeCart.items.length === 0}
+                    onClick={() => {
+                      const maxPointsForCart = Math.floor(grandTotal * (settings.general.loyaltyPointsValue || 10));
+                      const maxUse = Math.min(activeCart.customer!.loyalty_points || 0, maxPointsForCart);
+                      if (maxUse > 0) {
+                        setPointsToRedeem(maxUse);
+                        showSuccess(`⭐ Applied ${maxUse} Loyalty Points discount!`);
+                      }
+                    }}
+                    className="h-8 bg-amber-500/20 hover:bg-amber-500/30 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[11px] font-black px-2.5 rounded-xl transition-all disabled:opacity-40"
+                    title="Redeem maximum available points"
+                  >
+                    All (ހުރިހާ)
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={(activeCart.customer.loyalty_points || 0) <= 0 || activeCart.items.length === 0}
+                    onClick={() => setIsLoyaltyRedemptionDialogOpen(true)}
+                    className="h-8 bg-amber-500 hover:bg-amber-600 text-black text-xs font-black px-3.5 rounded-xl shadow-sm gap-1.5 active:scale-95 disabled:opacity-40 transition-all"
+                  >
+                    <Gift className="h-3.5 w-3.5" />
+                    <span>Redeem (ބޭނުންކުރޭ)</span>
+                  </Button>
+                </div>
               )}
             </div>
           )}
@@ -2246,14 +2265,45 @@ const POS = () => {
       </Dialog>
 
       <Dialog open={isConfirmRemoveCartDialogOpen} onOpenChange={setIsConfirmRemoveCartDialogOpen}>
-        <DialogContent className="sm:max-w-[400px] font-faruma bg-card text-foreground border-border shadow-2xl" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-right font-black text-xl">{renderBoth('confirm_cart_removal')}</DialogTitle>
-            <DialogDescription className="text-right text-muted-foreground">{renderBoth('confirm_cart_removal_description')}</DialogDescription>
+        <DialogContent className="sm:max-w-[420px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border p-6 sm:p-7 shadow-2xl rounded-3xl space-y-4" dir="rtl">
+          <DialogHeader className="text-right pb-3 border-b border-border/60">
+            <div className="flex items-center justify-between pl-8">
+              <div className="text-right flex-1 min-w-0">
+                <DialogTitle className="text-xl font-black text-foreground flex items-center justify-end gap-2.5">
+                  <span className="truncate">{renderBoth('confirm_cart_removal')}</span>
+                  <div className="h-9 w-9 rounded-xl bg-red-500/15 text-red-500 flex items-center justify-center shrink-0 ring-1 ring-red-500/30">
+                    <Trash2 className="h-5 w-5" />
+                  </div>
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-1.5 leading-relaxed text-right">
+                  {renderBoth('confirm_cart_removal_description')}
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setIsConfirmRemoveCartDialogOpen(false)} className="flex-1 border-border hover:bg-muted text-foreground">{renderBoth('cancel')}</Button>
-            <Button variant="destructive" onClick={confirmRemoveCart} className="flex-1 text-white font-bold">{renderBoth('confirm')}</Button>
+
+          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-right">
+            <p className="text-xs font-bold text-red-600 dark:text-red-400 leading-relaxed">
+              ⚠️ ކާޓުގައި ހުރި ހުރިހާ އައިޓަމެއް އުނިވާނެއެވެ. މި އަމަލު އަނބުރާ ނުގެނެވޭނެއެވެ.
+            </p>
+          </div>
+
+          <DialogFooter className="gap-3 pt-2 border-t border-border flex flex-row justify-between items-center">
+            <Button
+              variant="outline"
+              onClick={() => setIsConfirmRemoveCartDialogOpen(false)}
+              className="flex-1 h-11 border-border hover:bg-muted text-foreground rounded-xl font-bold text-xs"
+            >
+              {renderBoth('cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmRemoveCart}
+              className="flex-1 h-11 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl shadow-lg shadow-red-600/20 text-xs uppercase tracking-wider gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>{renderBoth('confirm')}</span>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -2261,9 +2311,9 @@ const POS = () => {
       <Dialog open={isExpiryDialogOpen} onOpenChange={setIsExpiryDialogOpen}>
         <DialogContent className="sm:max-w-[500px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto font-faruma bg-card text-foreground border border-border text-right p-6 sm:p-7 shadow-2xl rounded-3xl box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
           <DialogHeader className="pb-3 text-right space-y-2 border-b border-border/60">
-            <div className="flex items-start justify-between gap-3 pl-10">
+            <div className="flex items-start justify-between gap-3 pl-8">
               {selectedProductForExpiry?.expiry_date && (
-                <Badge variant="outline" className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30 text-[11px] font-black shrink-0 mt-0.5 px-2.5 py-1">
+                <Badge variant="outline" className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30 text-[11px] font-black shrink-0 mt-0.5 px-3 py-1 rounded-xl">
                   {formatDate(selectedProductForExpiry.expiry_date)}
                 </Badge>
               )}
@@ -2272,7 +2322,7 @@ const POS = () => {
                   <span className="truncate">{t('item_near_expiry')}</span>
                   <AlertTriangle className="h-5 w-5 shrink-0 text-orange-500" />
                 </DialogTitle>
-                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider mt-0.5">
+                <p className="text-[11px] text-muted-foreground font-bold tracking-wide mt-0.5">
                   {t('item_near_expiry', { lng: 'en' })}
                 </p>
               </div>
@@ -2285,9 +2335,9 @@ const POS = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="bg-orange-500/10 dark:bg-orange-500/20 p-4 sm:p-5 rounded-2xl border border-orange-500/30 text-right space-y-3.5 box-border w-full my-2">
+          <div className="bg-orange-500/10 dark:bg-orange-500/20 p-5 rounded-2xl border border-orange-500/30 text-right space-y-4 box-border w-full my-3">
             <div className="flex justify-between items-center">
-              <span className="text-xl font-black text-orange-600 dark:text-orange-300 font-mono">
+              <span className="text-2xl font-black text-orange-600 dark:text-orange-300 font-mono">
                 {expiryDiscountPercent}% {t('discount')}
               </span>
               <p className="text-xs text-orange-600 dark:text-orange-400 font-black uppercase tracking-wider">
@@ -2295,7 +2345,7 @@ const POS = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-4 gap-2 w-full">
+            <div className="grid grid-cols-4 gap-2.5 w-full">
               {[10, 20, 30, 50].map((pct) => (
                 <Button
                   key={pct}
@@ -2303,10 +2353,10 @@ const POS = () => {
                   variant="outline"
                   onClick={() => setExpiryDiscountPercent(pct)}
                   className={cn(
-                    "h-10 border-orange-500/30 font-black text-xs sm:text-sm rounded-xl transition-all font-mono",
+                    "h-11 border-orange-500/30 font-black text-sm rounded-xl transition-all font-mono",
                     expiryDiscountPercent === pct 
                       ? "bg-orange-500 text-white hover:bg-orange-600 shadow-md shadow-orange-500/20" 
-                      : "text-orange-600 dark:text-orange-400 hover:bg-orange-500/20 bg-background/50"
+                      : "text-orange-600 dark:text-orange-400 hover:bg-orange-500/20 bg-background/60"
                   )}
                 >
                   {pct}%
@@ -2322,16 +2372,16 @@ const POS = () => {
                 value={expiryDiscountPercent}
                 onChange={(e) => setExpiryDiscountPercent(parseFloat(e.target.value) || 0)}
                 onFocus={handleFocus}
-                className="bg-background border-orange-500/30 text-orange-600 dark:text-orange-300 font-black h-11 pl-10 pr-4 text-right text-lg rounded-xl font-mono w-full"
+                className="bg-background border-orange-500/30 text-orange-600 dark:text-orange-300 font-black h-12 pl-10 pr-4 text-right text-lg rounded-xl font-mono w-full"
               />
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-600 dark:text-orange-400 font-black text-sm">%</span>
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-orange-600 dark:text-orange-400 font-black text-sm">%</span>
             </div>
           </div>
 
-          <DialogFooter className="flex sm:flex-row flex-row-reverse gap-3 mt-3 pt-3 border-t border-border space-x-0 sm:space-x-0 w-full">
+          <DialogFooter className="flex sm:flex-row flex-row-reverse gap-3 pt-3 border-t border-border space-x-0 sm:space-x-0 w-full">
             <Button 
               onClick={confirmExpiryDiscount} 
-              className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-black h-11 rounded-xl shadow-lg shadow-orange-600/20 text-xs uppercase"
+              className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-black h-12 rounded-xl shadow-lg shadow-orange-600/20 text-xs uppercase tracking-wider"
             >
               {renderBoth('apply_discount')}
             </Button>
@@ -2341,7 +2391,7 @@ const POS = () => {
                 if (selectedProductForExpiry) addToCart(selectedProductForExpiry);
                 setIsExpiryDialogOpen(false);
               }} 
-              className="flex-1 text-muted-foreground hover:text-foreground h-11 rounded-xl border-border text-xs font-bold"
+              className="flex-1 text-muted-foreground hover:text-foreground h-12 rounded-xl border-border text-xs font-bold"
             >
               {renderBoth('no_thanks')}
             </Button>
@@ -2357,8 +2407,8 @@ const POS = () => {
           setSplitSearchTerm('');
         }
       }}>
-        <DialogContent className="sm:max-w-[560px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border text-right p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
-          <DialogHeader className="pb-3 text-right space-y-1.5 border-b border-border/60">
+        <DialogContent className="sm:max-w-[580px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border text-right p-6 sm:p-7 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+          <DialogHeader className="pb-3.5 text-right space-y-1.5 border-b border-border/60">
             <div className="flex items-center justify-between pl-8">
               <div className="text-right flex-1 min-w-0">
                 <DialogTitle className="text-xl md:text-2xl font-black text-foreground flex items-center gap-2.5">
@@ -2374,9 +2424,9 @@ const POS = () => {
 
           <div className="py-3">
             {splitStep === 1 ? (
-              <div className="space-y-3">
+              <div className="space-y-3.5">
                 {/* Total & Selected bar */}
-                <div className="flex items-center justify-between px-3.5 py-2.5 bg-muted/40 rounded-2xl border border-border text-xs font-bold">
+                <div className="flex items-center justify-between px-4 py-3 bg-muted/50 rounded-2xl border border-border text-xs font-bold">
                   <div className="text-right">
                     <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider block mb-0.5">{renderBoth('total_to_split')}</span>
                     <span className="font-mono text-base font-black text-primary">{settings.shop.currency} {grandTotal.toFixed(2)}</span>
@@ -2445,7 +2495,7 @@ const POS = () => {
                                 )}>
                                   <Check className="h-3.5 w-3.5 stroke-[3]" />
                                 </div>
-                                <Badge variant="outline" className="text-[10px] font-black px-2 py-0.5 rounded-md">
+                                <Badge variant="outline" className="text-[10px] font-black px-2 py-0.5 rounded-md font-mono">
                                   {settings.shop.currency} {customer.outstanding_balance.toFixed(2)}
                                 </Badge>
                               </div>
@@ -2468,15 +2518,15 @@ const POS = () => {
                 </ScrollArea>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-3.5">
                 {/* Financial Summary Grid */}
                 <div className="grid grid-cols-2 gap-3 text-right">
-                  <div className="p-3 bg-muted/60 rounded-2xl border border-border">
+                  <div className="p-3.5 bg-muted/60 rounded-2xl border border-border">
                     <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider block mb-0.5">{renderBoth('total_to_split')}</span>
                     <span className="text-lg font-black text-foreground font-mono">{settings.shop.currency} {grandTotal.toFixed(2)}</span>
                   </div>
                   <div className={cn(
-                    "p-3 rounded-2xl border",
+                    "p-3.5 rounded-2xl border",
                     Math.abs(splitRemaining) < 0.01 
                       ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400" 
                       : "bg-orange-500/10 border-orange-500/30 text-orange-600 dark:text-orange-400"
@@ -2488,7 +2538,7 @@ const POS = () => {
 
                 {/* Balance Status & Equal Split button */}
                 <div className={cn(
-                  "flex items-center justify-between px-3.5 py-2 rounded-xl text-xs font-bold border",
+                  "flex items-center justify-between px-4 py-2.5 rounded-xl text-xs font-bold border",
                   Math.abs(splitRemaining) < 0.01 
                     ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400" 
                     : "bg-red-500/10 border-red-500/30 text-red-500"
@@ -2569,7 +2619,7 @@ const POS = () => {
                 <Button 
                   variant="outline" 
                   onClick={() => setIsSplitDialogOpen(false)} 
-                  className="flex-1 h-11 border-border hover:bg-muted text-foreground rounded-xl font-bold"
+                  className="flex-1 h-11 border-border hover:bg-muted text-foreground rounded-xl font-bold text-xs"
                 >
                   {renderBoth('cancel')}
                 </Button>
@@ -2586,7 +2636,7 @@ const POS = () => {
                 <Button 
                   variant="outline" 
                   onClick={backToSelection} 
-                  className="h-11 px-5 border-border hover:bg-muted text-foreground rounded-xl font-bold flex items-center gap-1.5"
+                  className="h-11 px-5 border-border hover:bg-muted text-foreground rounded-xl font-bold flex items-center gap-1.5 text-xs"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   {renderBoth('back')}

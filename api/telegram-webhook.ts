@@ -371,12 +371,9 @@ export default async function handler(req: any, res: any) {
 🏪 *B BACK*
 👤 *Customer:* ${customer.name_en || customer.name_dv || firstName}
 📊 *Current Tab Due:* *MVR ${dueStr}*
-${caption ? `📝 *Note:* _${caption}_\n` : ''}
-━━━━━━━━━━━━━━━━━━━━
-✅ Your slip has been submitted to our cashier for verification.
-Once verified in our bank account, your balance will be settled and you'll receive your official receipt here!
-
-_Thank you!_ 🙏`;
+${suggestedAmount ? `💰 *Detected Amount:* MVR ${suggestedAmount.toFixed(2)}\n` : ''}${caption && !suggestedAmount ? `📝 *Note:* _${caption}_\n` : ''}━━━━━━━━━━━━━━━━━━━━
+✍️ *Please type & reply with the transfer amount (e.g. \`250.00\` or \`150\`):*
+This will record the exact amount for cashier verification & official receipt! 🙏`;
 
             await sendTelegramMessage(chatId, ackMsg);
 
@@ -402,10 +399,42 @@ _Thank you!_ 🙏`;
         return res.status(200).json({ ok: true });
       }
 
-      // 2. Text Commands
+      // 2. Text Commands & Amount Inputs
       if (msg.text) {
         const text = String(msg.text).trim();
         const cleanCmd = text.split(' ')[0].toLowerCase().replace(/@\w+/g, '');
+
+        // Check if message is a numeric amount response for a pending slip
+        const numMatch = text.match(/^(?:mvr|rf|ރ)?\s*([0-9]+(?:\.[0-9]{1,2})?)$/i);
+        if (numMatch && !text.startsWith('/')) {
+          const typedAmount = parseFloat(numMatch[1]);
+          if (!isNaN(typedAmount) && typedAmount > 0) {
+            const { data: recentSlip } = await supabase
+              .from('transfer_slips')
+              .select('*')
+              .eq('telegram_chat_id', chatId)
+              .eq('status', 'pending')
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (recentSlip) {
+              await supabase
+                .from('transfer_slips')
+                .update({
+                  suggested_amount: typedAmount,
+                  caption: (recentSlip.caption ? `${recentSlip.caption} | ` : '') + `Entered Amount: MVR ${typedAmount.toFixed(2)}`
+                })
+                .eq('id', recentSlip.id);
+
+              await sendTelegramMessage(
+                chatId,
+                `✅ *Transfer Amount Recorded: MVR ${typedAmount.toFixed(2)}*\n━━━━━━━━━━━━━━━━━━━━\nYour transfer slip has been updated with this amount for cashier verification. You will receive an official receipt once approved! 🙏`
+              );
+              return res.status(200).json({ ok: true });
+            }
+          }
+        }
 
         const now = new Date();
         const dateStr = now.toLocaleDateString('en-GB', { timeZone: 'Indian/Maldives' }).replace(/\//g, '-');

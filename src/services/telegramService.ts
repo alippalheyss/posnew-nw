@@ -714,12 +714,9 @@ Our cashier will immediately verify the transaction and update your account bala
 🏪 *${shopName}*
 👤 *Customer:* ${slipData.customer_name}
 📊 *Current Tab Due:* *${currency} ${dueStr}*
-${caption ? `📝 *Note:* _${caption}_\n` : ''}
-━━━━━━━━━━━━━━━━━━━━
-✅ Your slip has been submitted to our cashier for verification.
-Once verified in our bank account, your balance will be settled and you'll receive your official receipt here!
-
-_Thank you!_ 🙏`;
+${suggestedAmount ? `💰 *Detected Amount:* ${currency} ${suggestedAmount.toFixed(2)}\n` : ''}${caption && !suggestedAmount ? `📝 *Note:* _${caption}_\n` : ''}━━━━━━━━━━━━━━━━━━━━
+✍️ *Please type & reply with the transfer amount (e.g. \`250.00\` or \`150\`):*
+This will record the exact amount for cashier verification & official receipt! 🙏`;
 
             await sendTelegramMessage(chatId, ackMsg, token);
 

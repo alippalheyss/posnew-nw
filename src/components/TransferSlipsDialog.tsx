@@ -63,6 +63,7 @@ export const TransferSlipsDialog: React.FC<TransferSlipsDialogProps> = ({
   const [rejectionReason, setRejectionReason] = useState<string>('');
   const [showRejectForm, setShowRejectForm] = useState<boolean>(false);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [isConfirmSettleModalOpen, setIsConfirmSettleModalOpen] = useState<boolean>(false);
 
   const currency = settings?.shop?.currency || 'MVR';
 
@@ -121,19 +122,28 @@ export const TransferSlipsDialog: React.FC<TransferSlipsDialogProps> = ({
     setTimeout(() => setIsRefreshing(false), 500);
   };
 
-  // Confirm and settle payment
-  const handleConfirmSettlement = async () => {
+  // Open confirmation modal
+  const handleConfirmSettlement = () => {
     if (!selectedSlip) return;
     const amount = parseFloat(settleAmount);
     if (isNaN(amount) || amount <= 0) {
       alert('Please enter a valid settlement amount greater than 0.');
       return;
     }
+    setIsConfirmSettleModalOpen(true);
+  };
+
+  // Execute confirmed settlement
+  const executeSettlement = async () => {
+    if (!selectedSlip) return;
+    const amount = parseFloat(settleAmount);
+    if (isNaN(amount) || amount <= 0) return;
 
     setIsSubmitting(true);
     try {
       const success = await confirmTransferSlip(selectedSlip.id, amount);
       if (success) {
+        setIsConfirmSettleModalOpen(false);
         // Move to the next pending slip if available
         const remaining = transferSlips.filter(
           (s) => s.status === 'pending' && s.id !== selectedSlip.id
@@ -686,6 +696,73 @@ export const TransferSlipsDialog: React.FC<TransferSlipsDialogProps> = ({
           </div>
         )}
       </DialogContent>
+
+      {/* Confirmation Modal before Settling Slip */}
+      {isConfirmSettleModalOpen && selectedSlip && (
+        <Dialog open={isConfirmSettleModalOpen} onOpenChange={setIsConfirmSettleModalOpen}>
+          <DialogContent className="sm:max-w-[440px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border p-6 sm:p-7 shadow-2xl rounded-3xl space-y-4" dir="rtl">
+            <DialogHeader className="text-right pb-3 border-b border-border/60">
+              <DialogTitle className="text-xl font-black text-foreground flex items-center justify-end gap-2.5">
+                <span>ޓްރާންސްފަރ ސްލިޕް ކަށަވަރުކުރުން</span>
+                <div className="h-9 w-9 rounded-xl bg-green-500/15 text-green-600 dark:text-green-400 flex items-center justify-center shrink-0 ring-1 ring-green-500/30">
+                  <CheckCircle2 className="h-5 w-5" />
+                </div>
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground mt-1 text-right">
+                Confirm Bank Transfer Settlement
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 py-1 text-right">
+              <div className="p-4 rounded-2xl bg-muted/50 border border-border space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground">ކަސްޓަމަރު (Customer):</span>
+                  <span className="font-black text-foreground">{selectedSlip.customer_name}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground">ކުރީގެ ދަރަނި (Old Debt):</span>
+                  <span className="font-mono font-bold">{currency} {currentOutstanding.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm pt-2 border-t border-border/60">
+                  <span className="font-black text-green-600 dark:text-green-400">ޚަލާޞްކުރާ ޢަދަދު (Settle Amount):</span>
+                  <span className="font-mono text-lg font-black text-green-600 dark:text-green-400">{currency} {parsedAmount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs pt-1">
+                  <span className="text-muted-foreground">ބާކީ ދަރަނި (Remaining Debt):</span>
+                  <span className="font-mono font-black text-primary">{currency} {newOutstandingPreview.toFixed(2)}</span>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-muted-foreground leading-relaxed px-1">
+                💬 ކަށަވަރުކުރުމުން ކަސްޓަމަރުގެ ދަރަނި ކެނޑި، ރަސްމީ ރަސީދު ޓެލެގްރާމް މެދުވެރިކޮށް ކަސްޓަމަރަށް އޮޓޮމެޓިކުން ފޮނުވޭނެއެވެ.
+              </p>
+            </div>
+
+            <DialogFooter className="gap-3 pt-2 border-t border-border flex flex-row justify-between items-center">
+              <Button
+                variant="outline"
+                onClick={() => setIsConfirmSettleModalOpen(false)}
+                disabled={isSubmitting}
+                className="flex-1 h-11 border-border hover:bg-muted text-foreground rounded-xl font-bold text-xs"
+              >
+                ކެންސަލް (Cancel)
+              </Button>
+              <Button
+                onClick={executeSettlement}
+                disabled={isSubmitting}
+                className="flex-1 h-11 bg-green-600 hover:bg-green-700 text-white font-black rounded-xl shadow-lg shadow-green-600/20 text-xs uppercase tracking-wider gap-2"
+              >
+                {isSubmitting ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4" />
+                )}
+                <span>{isSubmitting ? 'ކަށަވަރުކުރަނީ...' : 'ކަށަވަރުކުރޭ (Confirm)'}</span>
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </Dialog>
   );
 };

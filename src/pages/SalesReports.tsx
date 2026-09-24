@@ -135,9 +135,10 @@ const SalesReports = () => {
   const yearProfit = calculateProfitForPeriod('year');
 
   // --- Custom Report State ---
-  const [customPeriodType, setCustomPeriodType] = useState<'date' | 'month' | 'year'>('date');
+  const [customPeriodType, setCustomPeriodType] = useState<'date' | 'month' | 'quarter' | 'year'>('date');
   const [customDate, setCustomDate] = useState(toISODate(new Date()));
   const [customMonth, setCustomMonth] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`);
+  const [customQuarter, setCustomQuarter] = useState<string>(String(Math.floor(new Date().getMonth() / 3) + 1));
   const [customYear, setCustomYear] = useState(String(new Date().getFullYear()));
   const [showCustomPreview, setShowCustomPreview] = useState(false);
 
@@ -153,12 +154,22 @@ const SalesReports = () => {
         const [yr, mo] = customMonth.split('-').map(Number);
         return saleDate.getFullYear() === yr && saleDate.getMonth() === mo - 1;
       }
+      if (customPeriodType === 'quarter') {
+        const qNum = Number(customQuarter);
+        const startMonth = (qNum - 1) * 3;
+        const endMonth = startMonth + 2;
+        return (
+          saleDate.getFullYear() === Number(customYear) &&
+          saleDate.getMonth() >= startMonth &&
+          saleDate.getMonth() <= endMonth
+        );
+      }
       if (customPeriodType === 'year') {
         return saleDate.getFullYear() === Number(customYear);
       }
       return false;
     });
-  }, [sales, customPeriodType, customDate, customMonth, customYear]);
+  }, [sales, customPeriodType, customDate, customMonth, customQuarter, customYear]);
 
   const customTotalSales = customSales.reduce((sum, s) => sum + num(s.grandTotal), 0);
   const customCashTotal = customSales.filter(s => (s.paymentMethod || 'cash').toLowerCase() === 'cash').reduce((sum, s) => sum + num(s.grandTotal), 0);
@@ -171,6 +182,10 @@ const SalesReports = () => {
     if (customPeriodType === 'month') {
       const [yr, mo] = customMonth.split('-').map(Number);
       return new Date(yr, mo - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    }
+    if (customPeriodType === 'quarter') {
+      const qLabels = ['Q1 (Jan - Mar)', 'Q2 (Apr - Jun)', 'Q3 (Jul - Sep)', 'Q4 (Oct - Dec)'];
+      return `${qLabels[Number(customQuarter) - 1]} ${customYear}`;
     }
     return customYear;
   };
@@ -196,25 +211,47 @@ const SalesReports = () => {
 
     const data: any[][] = [
       [settings.shop.shopName || 'POS Store'],
-      [`SALES REPORT — ${periodLabel.toUpperCase()}`],
+      [`SALES & GST REPORT — ${periodLabel.toUpperCase()}`],
       ['Report Period', periodLabel],
       ['Generated At', formatDateTime(new Date())],
       [],
-      ['--- Summary ---'],
-      ['Total Sales', `${currency} ${totalSalesAmount.toFixed(2)}`],
+      ['=== MIRA GST & FINANCIAL SUMMARY ==='],
+      ['Total Gross Sales (Inc. GST)', `${currency} ${totalSalesAmount.toFixed(2)}`],
+      ['Taxable Standard-Rated Supplies', `${currency} ${totalTaxable.toFixed(2)}`],
+      [`Output GST @ ${gstRate}%`, `${currency} ${totalGst.toFixed(2)}`],
+      ['Total Cost of Goods Sold', `${currency} ${totalCost.toFixed(2)}`],
+      ['Estimated Gross Profit', `${currency} ${estProfit.toFixed(2)} (${margin}% Margin)`],
       ['Total Transactions', customSales.length],
-      ['Average Transaction', `${currency} ${(customSales.length > 0 ? totalSalesAmount / customSales.length : 0).toFixed(2)}`],
-      ['Estimated Profit', `${currency} ${estProfit.toFixed(2)} (${margin}% Margin)`],
+      ['Average Transaction Value', `${currency} ${(customSales.length > 0 ? totalSalesAmount / customSales.length : 0).toFixed(2)}`],
+      [],
+      ['=== PAYMENT METHOD BREAKDOWN ==='],
       ['Cash Sales', `${currency} ${customCashTotal.toFixed(2)}`],
       ['Card Sales', `${currency} ${customCardTotal.toFixed(2)}`],
-      ['Transfer Sales', `${currency} ${customTransferTotal.toFixed(2)}`],
-      ['Credit Sales', `${currency} ${customCreditTotal.toFixed(2)}`],
-      ['Subtotal (Excl. GST)', `${currency} ${totalTaxable.toFixed(2)}`],
-      [`Total GST (${gstRate}%)`, `${currency} ${totalGst.toFixed(2)}`],
-      [],
-      ['--- Transactions ---'],
-      ['Invoice / ID', 'Date', 'Time', 'Customer', 'Payment Method', 'Items', `Subtotal (${currency})`, `GST (${currency})`, `Grand Total (${currency})`]
+      ['Bank Transfer Sales', `${currency} ${customTransferTotal.toFixed(2)}`],
+      ['Credit (Tab) Sales', `${currency} ${customCreditTotal.toFixed(2)}`],
+      []
     ];
+
+    if (customPeriodType === 'quarter') {
+      const qNum = Number(customQuarter);
+      const startMo = (qNum - 1) * 3;
+      data.push(['=== MONTHLY BREAKDOWN IN QUARTER ===']);
+      data.push(['Month', 'Transactions', `Taxable Sales (${currency})`, `GST (${currency})`, `Gross Sales (${currency})`]);
+      
+      for (let m = 0; m < 3; m++) {
+        const targetMo = startMo + m;
+        const moSales = customSales.filter(s => new Date(s.date).getMonth() === targetMo);
+        const moGross = moSales.reduce((sum, s) => sum + num(s.grandTotal), 0);
+        const moTaxable = moSales.reduce((sum, s) => sum + (num(s.grandTotal) / (1 + (gstRate / 100))), 0);
+        const moGst = moGross - moTaxable;
+        const moName = new Date(Number(customYear), targetMo, 1).toLocaleString('en-US', { month: 'long' });
+        data.push([moName, moSales.length, Number(moTaxable.toFixed(2)), Number(moGst.toFixed(2)), Number(moGross.toFixed(2))]);
+      }
+      data.push([]);
+    }
+
+    data.push(['=== DETAILED TRANSACTIONS ===']);
+    data.push(['Invoice / ID', 'Date', 'Time', 'Customer', 'Payment Method', 'Items', `Subtotal (${currency})`, `GST (${currency})`, `Grand Total (${currency})`]);
 
     customSales.forEach(sale => {
       const sub = num(sale.grandTotal) / (1 + (gstRate / 100));
@@ -238,12 +275,12 @@ const SalesReports = () => {
     data.push(['TOTAL', '', '', '', '', '', Number(totalTaxable.toFixed(2)), Number(totalGst.toFixed(2)), Number(totalSalesAmount.toFixed(2))]);
 
     const ws = XLSX.utils.aoa_to_sheet(data);
-    ws['!cols'] = [{ wch: 18 }, { wch: 14 }, { wch: 10 }, { wch: 22 }, { wch: 16 }, { wch: 45 }, { wch: 16 }, { wch: 14 }, { wch: 18 }];
+    ws['!cols'] = [{ wch: 22 }, { wch: 14 }, { wch: 10 }, { wch: 22 }, { wch: 16 }, { wch: 45 }, { wch: 16 }, { wch: 14 }, { wch: 18 }];
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Sales Report');
+    XLSX.utils.book_append_sheet(wb, ws, 'Sales & GST Report');
     const safeLabel = periodLabel.replace(/[^a-zA-Z0-9_-]/g, '_');
-    XLSX.writeFile(wb, `Sales_Report_${safeLabel}.xlsx`);
-    showSuccess(`Sales report for ${periodLabel} downloaded!`);
+    XLSX.writeFile(wb, `Sales_GST_Report_${safeLabel}.xlsx`);
+    showSuccess(`Quarterly/Sales report for ${periodLabel} downloaded!`);
   };
 
   // --- Excel Export Handlers ---
@@ -874,7 +911,7 @@ const SalesReports = () => {
            <p className="text-sm text-muted-foreground mt-1">{renderBoth('sales_reports_description')}</p>
         </div>
 
-        {/* Action Buttons for downloading daily, monthly, yearly sales */}
+        {/* Action Buttons for downloading daily, monthly, yearly, quarterly sales */}
         <div className="flex flex-wrap items-center gap-2.5">
           <Button
             variant="outline"
@@ -899,6 +936,19 @@ const SalesReports = () => {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => {
+              setCustomPeriodType('quarter');
+              setShowCustomPreview(true);
+            }}
+            className="rounded-xl border-border/80 bg-card hover:bg-amber-600 hover:text-white transition-all text-xs font-black gap-2 shadow-xs h-9 px-3.5"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-amber-500" />
+            <span>Quarterly & GST Report (ކުއާޓަރ / ޖީއެސްޓީ)</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleExportYearlySales}
             className="rounded-xl border-border/80 bg-card hover:bg-emerald-600 hover:text-white transition-all text-xs font-black gap-2 shadow-xs h-9 px-3.5"
           >
@@ -915,10 +965,10 @@ const SalesReports = () => {
           <div className="bg-card border border-border rounded-[2rem] overflow-hidden">
             <div className="p-6 pb-4 border-b border-border">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {/* Period Type Selector */}
                   <div className="flex bg-muted rounded-xl p-1 gap-1">
-                    {(['date', 'month', 'year'] as const).map(pt => (
+                    {(['date', 'month', 'quarter', 'year'] as const).map(pt => (
                       <button
                         key={pt}
                         onClick={() => { setCustomPeriodType(pt); setShowCustomPreview(false); }}
@@ -929,7 +979,7 @@ const SalesReports = () => {
                             : 'text-muted-foreground hover:text-foreground'
                         )}
                       >
-                        {pt === 'date' ? 'Date' : pt === 'month' ? 'Month' : 'Year'}
+                        {pt === 'date' ? 'Date' : pt === 'month' ? 'Month' : pt === 'quarter' ? 'Quarter (GST)' : 'Year'}
                       </button>
                     ))}
                   </div>
@@ -950,6 +1000,30 @@ const SalesReports = () => {
                       onChange={e => { setCustomMonth(e.target.value); setShowCustomPreview(false); }}
                       className="h-9 px-3 rounded-xl border border-border bg-muted text-foreground text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary"
                     />
+                  )}
+                  {customPeriodType === 'quarter' && (
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={customQuarter}
+                        onChange={e => { setCustomQuarter(e.target.value); setShowCustomPreview(false); }}
+                        className="h-9 px-3 rounded-xl border border-border bg-muted text-foreground text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                        dir="ltr"
+                      >
+                        <option value="1">Q1 (Jan - Mar) / 1 ވަނަ ކުއާޓަރ</option>
+                        <option value="2">Q2 (Apr - Jun) / 2 ވަނަ ކުއާޓަރ</option>
+                        <option value="3">Q3 (Jul - Sep) / 3 ވަނަ ކުއާޓަރ</option>
+                        <option value="4">Q4 (Oct - Dec) / 4 ވަނަ ކުއާޓަރ</option>
+                      </select>
+                      <input
+                        type="number"
+                        value={customYear}
+                        min="2020"
+                        max="2099"
+                        onChange={e => { setCustomYear(e.target.value); setShowCustomPreview(false); }}
+                        className="h-9 px-3 w-20 rounded-xl border border-border bg-muted text-foreground text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary"
+                        dir="ltr"
+                      />
+                    </div>
                   )}
                   {customPeriodType === 'year' && (
                     <input
@@ -977,9 +1051,9 @@ const SalesReports = () => {
                 <div className="text-right">
                   <h3 className="text-base font-black text-foreground flex items-center justify-end gap-2">
                     <Calendar className="h-4 w-4 text-primary" />
-                    Custom Report
+                    Custom & GST Report
                   </h3>
-                  <p className="text-[11px] text-muted-foreground">Select a period, preview, then download</p>
+                  <p className="text-[11px] text-muted-foreground">Select a period (day, month, quarter, year), preview & download</p>
                 </div>
               </div>
             </div>

@@ -140,6 +140,8 @@ export const NearExpiryBroadcastDialog: React.FC<NearExpiryBroadcastDialogProps>
       return;
     }
 
+    const activeBotToken = (settings?.telegram?.botToken || settings?.shop?.telegramBotToken || '').trim();
+
     setIsBroadcasting(true);
     try {
       const itemsPayload = itemsToBroadcast.map((p) => ({
@@ -156,6 +158,7 @@ export const NearExpiryBroadcastDialog: React.FC<NearExpiryBroadcastDialogProps>
         items: itemsPayload,
         customers,
         shopSettings: settings?.shop,
+        token: activeBotToken,
       });
 
       if (result.successCount > 0) {
@@ -164,7 +167,14 @@ export const NearExpiryBroadcastDialog: React.FC<NearExpiryBroadcastDialogProps>
         );
         onOpenChange(false);
       } else {
-        showError('Could not send broadcast. Please check bot token and connections.');
+        const errDetail = result.error || '';
+        if (errDetail.toLowerCase().includes('unauthorized') || errDetail.includes('401')) {
+          showError('Telegram Bot Token is Unauthorized (401). Please verify your bot token in Admin -> Settings -> Telegram Bot.');
+        } else if (errDetail) {
+          showError(`Could not send broadcast: ${errDetail}. Please check Telegram settings.`);
+        } else {
+          showError('Could not send broadcast. Please check bot token and connections.');
+        }
       }
     } catch (err: any) {
       showError(err.message || 'Error sending broadcast');

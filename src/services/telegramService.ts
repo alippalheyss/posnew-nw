@@ -1613,7 +1613,6 @@ export const formatNearExpiryClearanceBroadcastMessage = ({
 }): string => {
   const shopName = shopSettings?.shopName || 'B BACK';
   const shopPhone = shopSettings?.shopPhone || '+960 9336337';
-  const shopAddress = shopSettings?.shopAddress || 'Malé, Maldives';
   const currency = shopSettings?.currency || 'MVR';
   const now = new Date();
 
@@ -1660,10 +1659,9 @@ export const formatNearExpiryClearanceBroadcastMessage = ({
   });
 
   msg += `━━━━━━━━━━━━━━━━━━━━\n`;
-  msg += `🏃‍♂️ *Visit our store counter or reply to this bot now to claim deals!*\n`;
-  msg += `📍 *Location:* ${shopAddress}\n`;
-  msg += `📞 *Contact:* ${shopPhone}\n`;
-  msg += `⏰ *Store Hours:* Sat - Thu: 08:30 - 22:00 | Fri: 14:00 - 22:00\n\n`;
+  if (shopPhone) {
+    msg += `📞 *Contact:* ${shopPhone}\n\n`;
+  }
   msg += `_Don't miss out on these limited special price drops!_ ✨`;
 
   return msg;
@@ -1690,10 +1688,10 @@ export const sendNearExpiryClearanceBroadcast = async ({
   customers: Customer[];
   shopSettings?: any;
   token?: string;
-}): Promise<{ successCount: number; failedCount: number; totalRecipients: number }> => {
+}): Promise<{ successCount: number; failedCount: number; totalRecipients: number; error?: string }> => {
   const activeToken = (token || DEFAULT_TELEGRAM_BOT_TOKEN).trim();
   if (!activeToken || items.length === 0) {
-    return { successCount: 0, failedCount: 0, totalRecipients: 0 };
+    return { successCount: 0, failedCount: 0, totalRecipients: 0, error: 'Missing token or no items' };
   }
 
   const messageText = formatNearExpiryClearanceBroadcastMessage({ items, shopSettings });
@@ -1717,6 +1715,7 @@ export const sendNearExpiryClearanceBroadcast = async ({
   const chatIdsArray = Array.from(recipientChatIds);
   let successCount = 0;
   let failedCount = 0;
+  let lastError = '';
 
   for (const chatId of chatIdsArray) {
     try {
@@ -1724,17 +1723,24 @@ export const sendNearExpiryClearanceBroadcast = async ({
       if (res.ok) {
         successCount++;
       } else {
-        // Retry plain text if Markdown parsing failed
-        const plainText = messageText.replace(/[*_~`]/g, '');
-        const retryRes = await sendTelegramMessage(chatId, plainText, activeToken);
-        if (retryRes.ok) {
-          successCount++;
+        lastError = res.description || 'Failed to send';
+        // Retry plain text if Markdown entity parsing failed
+        if (res.description && res.description.toLowerCase().includes('parse')) {
+          const plainText = messageText.replace(/[*_~`]/g, '');
+          const retryRes = await sendTelegramMessage(chatId, plainText, activeToken);
+          if (retryRes.ok) {
+            successCount++;
+          } else {
+            failedCount++;
+            lastError = retryRes.description || lastError;
+          }
         } else {
           failedCount++;
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       failedCount++;
+      lastError = e?.message || 'Network error';
     }
     // Small throttling delay to avoid Telegram rate limits
     await new Promise(r => setTimeout(r, 60));
@@ -1744,6 +1750,7 @@ export const sendNearExpiryClearanceBroadcast = async ({
     successCount,
     failedCount,
     totalRecipients: chatIdsArray.length,
+    error: lastError,
   };
 };
 

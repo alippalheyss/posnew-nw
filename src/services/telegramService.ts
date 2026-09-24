@@ -1593,3 +1593,157 @@ export const sendAutoTransferToCreditNotification = async ({
   return await sendTelegramMessage(chatId, text, token, 'Markdown');
 };
 
+/**
+ * Format an eye-catching, attention-seeking promotional broadcast for near-expiry clearance products
+ */
+export const formatNearExpiryClearanceBroadcastMessage = ({
+  items,
+  shopSettings,
+}: {
+  items: Array<{
+    name_dv: string;
+    name_en: string;
+    price: number;
+    original_price?: number;
+    price_before?: number;
+    expiry_date?: string;
+    stock_shop?: number;
+  }>;
+  shopSettings?: any;
+}): string => {
+  const shopName = shopSettings?.shopName || 'B BACK';
+  const shopPhone = shopSettings?.shopPhone || '+960 9336337';
+  const shopAddress = shopSettings?.shopAddress || 'Malé, Maldives';
+  const currency = shopSettings?.currency || 'MVR';
+  const now = new Date();
+
+  let msg = `🚨🔥 *SPECIAL FLASH CLEARANCE DEALS!* 🔥🚨\n`;
+  msg += `*ޚާއްސަ އަގުހެޔޮ ސޭލް — މުއްދަތު ހަމަވާ މުދާ ބޮޑު ޑިސްކައުންޓުގައި!*\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `🏪 *${shopName}*\n`;
+  msg += `⚡ *LIMITED QUANTITIES — HURRY WHILE STOCKS LAST!* ⚡\n\n`;
+  msg += `🛒 *FEATURED CLEARANCE PRODUCTS:*\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+  items.forEach((item, idx) => {
+    const numEmoji = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'][idx] || `🔹`;
+    const priceBefore = item.original_price || item.price_before || (item.price > 0 ? item.price : 0);
+    const currentPrice = item.price;
+    
+    let discountPct = 0;
+    if (priceBefore > currentPrice && priceBefore > 0) {
+      discountPct = Math.round(((priceBefore - currentPrice) / priceBefore) * 100);
+    }
+
+    let expiryText = '';
+    if (item.expiry_date) {
+      const exp = new Date(item.expiry_date);
+      const diffDays = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      const expFormatted = formatMaldivesDate(exp);
+      expiryText = diffDays > 0 ? `${expFormatted} (${diffDays} days left)` : `${expFormatted} (Expiring soon)`;
+    }
+
+    msg += `${numEmoji} *${item.name_dv}* (${item.name_en})\n`;
+    if (expiryText) {
+      msg += `   ⏳ *Expiry Date:* ${expiryText}\n`;
+    }
+    if (priceBefore > currentPrice && discountPct > 0) {
+      msg += `   💰 *Price Before:* ~${currency} ${priceBefore.toFixed(2)}~\n`;
+      msg += `   🔥 *CLEARANCE PRICE:* *${currency} ${currentPrice.toFixed(2)}* (*${discountPct}% OFF!*)\n`;
+    } else {
+      msg += `   🔥 *CLEARANCE PRICE:* *${currency} ${currentPrice.toFixed(2)}*\n`;
+    }
+    if (item.stock_shop !== undefined && item.stock_shop > 0) {
+      msg += `   📦 *Available Stock:* ${item.stock_shop} units\n`;
+    }
+    msg += `\n`;
+  });
+
+  msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `🏃‍♂️ *Visit our store counter or reply to this bot now to claim deals!*\n`;
+  msg += `📍 *Location:* ${shopAddress}\n`;
+  msg += `📞 *Contact:* ${shopPhone}\n`;
+  msg += `⏰ *Store Hours:* Sat - Thu: 08:30 - 22:00 | Fri: 14:00 - 22:00\n\n`;
+  msg += `_Don't miss out on these limited special price drops!_ ✨`;
+
+  return msg;
+};
+
+/**
+ * Broadcast near expiry promotional message to all Telegram-connected customers & store group
+ */
+export const sendNearExpiryClearanceBroadcast = async ({
+  items,
+  customers,
+  shopSettings,
+  token,
+}: {
+  items: Array<{
+    name_dv: string;
+    name_en: string;
+    price: number;
+    original_price?: number;
+    price_before?: number;
+    expiry_date?: string;
+    stock_shop?: number;
+  }>;
+  customers: Customer[];
+  shopSettings?: any;
+  token?: string;
+}): Promise<{ successCount: number; failedCount: number; totalRecipients: number }> => {
+  const activeToken = (token || DEFAULT_TELEGRAM_BOT_TOKEN).trim();
+  if (!activeToken || items.length === 0) {
+    return { successCount: 0, failedCount: 0, totalRecipients: 0 };
+  }
+
+  const messageText = formatNearExpiryClearanceBroadcastMessage({ items, shopSettings });
+
+  // Gather unique recipient chat IDs
+  const recipientChatIds = new Set<string | number>();
+
+  // 1. All linked customers
+  customers.forEach(c => {
+    if (c.telegram_chat_id) {
+      recipientChatIds.add(c.telegram_chat_id);
+    }
+  });
+
+  // 2. Store Telegram group
+  const groupChatId = shopSettings?.telegramGroupChatId;
+  if (groupChatId) {
+    recipientChatIds.add(groupChatId);
+  }
+
+  const chatIdsArray = Array.from(recipientChatIds);
+  let successCount = 0;
+  let failedCount = 0;
+
+  for (const chatId of chatIdsArray) {
+    try {
+      const res = await sendTelegramMessage(chatId, messageText, activeToken, 'Markdown');
+      if (res.ok) {
+        successCount++;
+      } else {
+        // Retry plain text if Markdown parsing failed
+        const plainText = messageText.replace(/[*_~`]/g, '');
+        const retryRes = await sendTelegramMessage(chatId, plainText, activeToken);
+        if (retryRes.ok) {
+          successCount++;
+        } else {
+          failedCount++;
+        }
+      }
+    } catch (e) {
+      failedCount++;
+    }
+    // Small throttling delay to avoid Telegram rate limits
+    await new Promise(r => setTimeout(r, 60));
+  }
+
+  return {
+    successCount,
+    failedCount,
+    totalRecipients: chatIdsArray.length,
+  };
+};
+

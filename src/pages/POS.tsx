@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ShoppingCart, PlusCircle, Minus, Trash2, MonitorPlay, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, ArrowLeft, Plus, ChevronDown, Boxes, X, CheckCircle2, Package, Loader2, Check, Printer, Gift } from 'lucide-react';
+import { ShoppingCart, PlusCircle, Minus, Trash2, MonitorPlay, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, ArrowLeft, Plus, ChevronDown, Boxes, X, CheckCircle2, Package, Loader2, Check, Printer, Gift, Flame, TrendingDown } from 'lucide-react';
 import { formatDate, toISODate, toISODatetime, formatTime, formatDateTime } from '@/utils/formatters';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
@@ -25,6 +25,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import LoyaltyRedemptionDialog from '@/components/LoyaltyRedemptionDialog';
 import UnitSelectionDialog from '@/components/UnitSelectionDialog';
 import CustomerAddDialog from '@/components/CustomerAddDialog';
+import { NearExpiryBroadcastDialog } from '@/components/NearExpiryBroadcastDialog';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from "@/components/ui/progress";
 import { printContent } from '@/utils/printHelper';
@@ -167,6 +168,7 @@ const POS = () => {
     pendingTransfers,
     resolvePendingTransfer,
     convertAllPendingToCredit,
+    updateProduct,
     refreshCustomers,
     pendingSlipsCount
   } = useAppContext();
@@ -194,7 +196,19 @@ const POS = () => {
   const [telegramCustomer, setTelegramCustomer] = useState<Customer | null>(null);
   const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false);
   const [isTransferSlipsDialogOpen, setIsTransferSlipsDialogOpen] = useState(false);
+  const [isExpiryBroadcastModalOpen, setIsExpiryBroadcastModalOpen] = useState(false);
   const [shouldPrintCashReceipt, setShouldPrintCashReceipt] = useState<boolean>(() => localStorage.getItem('pos_print_cash_receipt') === 'true');
+
+  const nearExpiryProductsCount = useMemo(() => {
+    const today = new Date();
+    return products.filter(p => {
+      if (!p.expiry_date) return false;
+      const exp = new Date(p.expiry_date);
+      const diffTime = exp.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays >= 0 && diffDays <= 30;
+    }).length;
+  }, [products]);
 
   const TelegramIcon = ({ className }: { className?: string }) => (
     <svg viewBox="0 0 24 24" className={className} fill="currentColor">
@@ -229,7 +243,9 @@ const POS = () => {
   const [isLoyaltyRedemptionDialogOpen, setIsLoyaltyRedemptionDialogOpen] = useState(false);
   const [creditDialogStep, setCreditDialogStep] = useState<1 | 2>(1);
   const [isExpiryDialogOpen, setIsExpiryDialogOpen] = useState(false);
-  const [expiryDiscountPercent, setExpiryDiscountPercent] = useState<number>(10);
+  const [expiryDiscountPercent, setExpiryDiscountPercent] = useState<number>(20);
+  const [expiryDropPrice, setExpiryDropPrice] = useState<number>(0);
+  const [isUpdatingProductPrice, setIsUpdatingProductPrice] = useState(false);
   const [selectedProductForExpiry, setSelectedProductForExpiry] = useState<Product | null>(null);
   const [isUnitSelectionDialogOpen, setIsUnitSelectionDialogOpen] = useState(false);
   const [productForUnitSelection, setProductForUnitSelection] = useState<Product | null>(null);
@@ -515,6 +531,10 @@ const POS = () => {
 
       if (diffDays <= NEAR_EXPIRY_DAYS) {
         setSelectedProductForExpiry(product);
+        const basePrice = product.original_price || product.price;
+        const defaultDrop = Math.max(1, Number((basePrice * 0.8).toFixed(2))); // default 20% drop
+        setExpiryDropPrice(defaultDrop);
+        setExpiryDiscountPercent(20);
         setIsExpiryDialogOpen(true);
         return;
       }
@@ -577,13 +597,39 @@ const POS = () => {
     }
   };
 
-  const confirmExpiryDiscount = () => {
+  const confirmExpiryPriceDrop = async () => {
     if (selectedProductForExpiry) {
-      const discountFactor = (100 - expiryDiscountPercent) / 100;
-      addToCart(selectedProductForExpiry, discountFactor);
+      setIsUpdatingProductPrice(true);
+      const priceBefore = selectedProductForExpiry.original_price || selectedProductForExpiry.price;
+      const newPrice = Number(expiryDropPrice) || selectedProductForExpiry.price;
+
+      const updatedProduct: Product = {
+        ...selectedProductForExpiry,
+        original_price: priceBefore,
+        price: newPrice,
+      };
+
+      try {
+        await updateProduct(updatedProduct);
+      } catch (e) {
+        console.warn('Could not persist product price update to cloud:', e);
+      } finally {
+        setIsUpdatingProductPrice(false);
+      }
+
+      addToCart(updatedProduct);
       setIsExpiryDialogOpen(false);
       setSelectedProductForExpiry(null);
-      showSuccess(t('expiry_discount_applied'));
+      showSuccess(`✅ Price dropped to ${settings.shop.currency} ${newPrice.toFixed(2)} (Original: ${settings.shop.currency} ${priceBefore.toFixed(2)}) & added to cart!`);
+      focusSearchBar();
+    }
+  };
+
+  const keepOriginalPriceAndAddToCart = () => {
+    if (selectedProductForExpiry) {
+      addToCart(selectedProductForExpiry);
+      setIsExpiryDialogOpen(false);
+      setSelectedProductForExpiry(null);
       focusSearchBar();
     }
   };
@@ -1245,6 +1291,24 @@ const POS = () => {
               {pendingTransfers.length > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 text-[#050510] rounded-full text-[10px] font-black flex items-center justify-center border-2 border-[#050510]">
                   {pendingTransfers.length}
+                </span>
+              )}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsExpiryBroadcastModalOpen(true)}
+              title="Near Expiry Price Drops & Telegram Alerts (މުއްދަތު ހަމަވާ ތަކެތި)"
+              className={cn(
+                "relative h-10 w-10 rounded-xl bg-muted border border-border hover:bg-orange-500/20 hover:text-orange-500 text-muted-foreground transition-all",
+                nearExpiryProductsCount > 0 && "border-orange-500/50 bg-orange-500/10 text-orange-500"
+              )}
+            >
+              <Flame className="h-4 w-4 fill-orange-500/20" />
+              {nearExpiryProductsCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white rounded-full text-[10px] font-black flex items-center justify-center border-2 border-background animate-pulse">
+                  {nearExpiryProductsCount}
                 </span>
               )}
             </Button>
@@ -2323,93 +2387,167 @@ const POS = () => {
       </Dialog>
 
       <Dialog open={isExpiryDialogOpen} onOpenChange={setIsExpiryDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto font-faruma bg-card text-foreground border border-border text-right p-6 sm:p-7 shadow-2xl rounded-3xl box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
-          <DialogHeader className="pb-3 text-right space-y-2 border-b border-border/60">
-            <div className="flex items-start justify-between gap-3 pl-8">
-              {selectedProductForExpiry?.expiry_date && (
-                <Badge variant="outline" className="bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30 text-[11px] font-black shrink-0 mt-0.5 px-3 py-1 rounded-xl">
-                  {formatDate(selectedProductForExpiry.expiry_date)}
-                </Badge>
-              )}
-              <div className="text-right flex-1 min-w-0">
-                <DialogTitle className="text-xl font-black text-orange-600 dark:text-orange-400 flex items-center justify-end gap-2">
-                  <span className="truncate">{t('item_near_expiry')}</span>
-                  <AlertTriangle className="h-5 w-5 shrink-0 text-orange-500" />
-                </DialogTitle>
-                <p className="text-[11px] text-muted-foreground font-bold tracking-wide mt-0.5">
-                  {t('item_near_expiry', { lng: 'en' })}
-                </p>
-              </div>
-            </div>
-            <DialogDescription className="text-muted-foreground text-xs leading-relaxed text-right pt-1">
-              {renderBoth('expiry_discount_message', {
-                itemName: selectedProductForExpiry?.name_dv || selectedProductForExpiry?.name_en || 'Product',
-                expiryDate: selectedProductForExpiry?.expiry_date ? formatDate(selectedProductForExpiry.expiry_date) : ''
-              })}
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-[520px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto font-faruma bg-card text-foreground border border-border text-right p-6 sm:p-7 shadow-2xl rounded-3xl box-border [&>button]:left-4 [&>button]:right-auto space-y-4" dir="rtl">
+          {(() => {
+            const basePrice = selectedProductForExpiry?.original_price || selectedProductForExpiry?.price || 0;
+            const currentNewPrice = Number(expiryDropPrice) || basePrice;
+            const savings = Math.max(0, basePrice - currentNewPrice);
+            const discountPct = basePrice > 0 ? Math.round((savings / basePrice) * 100) : 0;
+            const expiryDate = selectedProductForExpiry?.expiry_date ? new Date(selectedProductForExpiry.expiry_date) : null;
+            const today = new Date();
+            const diffDays = expiryDate ? Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
-          <div className="bg-orange-500/10 dark:bg-orange-500/20 p-5 rounded-2xl border border-orange-500/30 text-right space-y-4 box-border w-full my-3">
-            <div className="flex justify-between items-center">
-              <span className="text-2xl font-black text-orange-600 dark:text-orange-300 font-mono">
-                {expiryDiscountPercent}% {t('discount')}
-              </span>
-              <p className="text-xs text-orange-600 dark:text-orange-400 font-black uppercase tracking-wider">
-                {renderBoth('discount_offer')}
-              </p>
-            </div>
+            return (
+              <>
+                <DialogHeader className="pb-3 text-right space-y-2 border-b border-border/60">
+                  <div className="flex items-start justify-between gap-3 pl-8">
+                    {selectedProductForExpiry?.expiry_date && (
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[11px] font-black shrink-0 mt-0.5 px-3 py-1 rounded-xl font-mono",
+                          diffDays <= 7
+                            ? "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30"
+                            : "bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30"
+                        )}
+                      >
+                        <Clock className="h-3 w-3 mr-1 inline" />
+                        {diffDays <= 0 ? 'Expires Today' : `${diffDays} days left`} ({formatDate(selectedProductForExpiry.expiry_date)})
+                      </Badge>
+                    )}
+                    <div className="text-right flex-1 min-w-0">
+                      <DialogTitle className="text-xl font-black text-orange-600 dark:text-orange-400 flex items-center justify-end gap-2">
+                        <span className="truncate">މުއްދަތު ހަމަވާތީ އަގު ތިރިކުރުން</span>
+                        <Flame className="h-5 w-5 shrink-0 text-orange-500" />
+                      </DialogTitle>
+                      <p className="text-[11px] text-muted-foreground font-bold tracking-wide mt-0.5">
+                        Drop Selling Price for Near-Expiry Item
+                      </p>
+                    </div>
+                  </div>
+                  <DialogDescription className="text-muted-foreground text-xs leading-relaxed text-right pt-1">
+                    މި މުދަލުގެ މުއްދަތު ހަމަވާން ކައިރިވެފައިވާތީ އަގު ތިރިކޮށް، ސިސްޓަމްގައި ރައްކާކުރަން ބޭނުންފުޅުވާ އާ އަގު ކަނޑައަޅުއްވާ.
+                  </DialogDescription>
+                </DialogHeader>
 
-            <div className="grid grid-cols-4 gap-2.5 w-full">
-              {[10, 20, 30, 50].map((pct) => (
-                <Button
-                  key={pct}
-                  type="button"
-                  variant="outline"
-                  onClick={() => setExpiryDiscountPercent(pct)}
-                  className={cn(
-                    "h-11 border-orange-500/30 font-black text-sm rounded-xl transition-all font-mono",
-                    expiryDiscountPercent === pct 
-                      ? "bg-orange-500 text-white hover:bg-orange-600 shadow-md shadow-orange-500/20" 
-                      : "text-orange-600 dark:text-orange-400 hover:bg-orange-500/20 bg-background/60"
-                  )}
-                >
-                  {pct}%
-                </Button>
-              ))}
-            </div>
+                {/* Product details & Price comparison card */}
+                <div className="p-4 bg-orange-500/10 dark:bg-orange-500/15 rounded-2xl border border-orange-500/30 space-y-3.5 text-right">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs font-mono font-bold text-muted-foreground">
+                      Stock: {selectedProductForExpiry?.stock_shop || 0} pcs
+                    </span>
+                    <div className="min-w-0 flex-1 text-right">
+                      <p className="font-black text-sm text-foreground truncate">{selectedProductForExpiry?.name_dv}</p>
+                      <p className="text-[11px] text-muted-foreground font-mono font-bold truncate">{selectedProductForExpiry?.name_en}</p>
+                    </div>
+                  </div>
 
-            <div className="relative w-full">
-              <Input
-                type="number"
-                min="0"
-                max="100"
-                value={expiryDiscountPercent}
-                onChange={(e) => setExpiryDiscountPercent(parseFloat(e.target.value) || 0)}
-                onFocus={handleFocus}
-                className="bg-background border-orange-500/30 text-orange-600 dark:text-orange-300 font-black h-12 pl-10 pr-4 text-right text-lg rounded-xl font-mono w-full"
-              />
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-orange-600 dark:text-orange-400 font-black text-sm">%</span>
-            </div>
-          </div>
+                  {/* Pricing Comparison Grid */}
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div className="p-3 bg-background/80 rounded-xl border border-border text-right">
+                      <span className="text-[10px] text-muted-foreground font-bold uppercase block mb-0.5">
+                        ކުރީގެ އަގު (Price Before)
+                      </span>
+                      <span className="text-base font-black text-muted-foreground font-mono line-through opacity-80">
+                        {settings.shop.currency} {basePrice.toFixed(2)}
+                      </span>
+                    </div>
 
-          <DialogFooter className="flex sm:flex-row flex-row-reverse gap-3 pt-3 border-t border-border space-x-0 sm:space-x-0 w-full">
-            <Button 
-              onClick={confirmExpiryDiscount} 
-              className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-black h-12 rounded-xl shadow-lg shadow-orange-600/20 text-xs uppercase tracking-wider"
-            >
-              {renderBoth('apply_discount')}
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                if (selectedProductForExpiry) addToCart(selectedProductForExpiry);
-                setIsExpiryDialogOpen(false);
-              }} 
-              className="flex-1 text-muted-foreground hover:text-foreground h-12 rounded-xl border-border text-xs font-bold"
-            >
-              {renderBoth('no_thanks')}
-            </Button>
-          </DialogFooter>
+                    <div className="p-3 bg-orange-500/20 rounded-xl border border-orange-500/40 text-right">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-[10px] text-orange-600 dark:text-orange-400 font-black uppercase">
+                          އާ އަގު (Drop Price)
+                        </span>
+                        {discountPct > 0 && (
+                          <Badge className="bg-orange-500 text-white text-[9px] font-mono px-1.5 py-0 h-4">
+                            {discountPct}% OFF
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="text-lg font-black text-orange-600 dark:text-orange-300 font-mono">
+                        {settings.shop.currency} {currentNewPrice.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Preset Percent Drop Pills */}
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[11px] font-bold text-muted-foreground block text-right">
+                      އަވަސް ޑިސްކައުންޓް ޕަސެންޓް (Quick Drop Presets):
+                    </span>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[10, 20, 30, 50].map((pct) => (
+                        <Button
+                          key={pct}
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            const newP = Math.max(1, Number((basePrice * (1 - pct / 100)).toFixed(2)));
+                            setExpiryDropPrice(newP);
+                            setExpiryDiscountPercent(pct);
+                          }}
+                          className={cn(
+                            "h-9 border-orange-500/30 font-black text-xs rounded-xl transition-all font-mono",
+                            discountPct === pct
+                              ? "bg-orange-500 text-white hover:bg-orange-600 shadow-sm"
+                              : "text-orange-600 dark:text-orange-400 hover:bg-orange-500/20 bg-background/60"
+                          )}
+                        >
+                          -{pct}%
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Direct Price Input */}
+                  <div className="space-y-1.5 pt-1">
+                    <Label className="text-[11px] font-bold text-muted-foreground block text-right">
+                      ކަނޑައަޅާ އާ އަގު ލިޔުއްވާ (Enter Drop Price):
+                    </Label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-orange-600 dark:text-orange-400 font-mono">
+                        {settings.shop.currency}
+                      </span>
+                      <Input
+                        type="number"
+                        step="any"
+                        min="0"
+                        value={expiryDropPrice || ''}
+                        onChange={(e) => setExpiryDropPrice(parseFloat(e.target.value) || 0)}
+                        onFocus={handleFocus}
+                        className="bg-background border-orange-500/40 text-orange-600 dark:text-orange-300 font-black h-11 pl-14 pr-3 text-right text-base rounded-xl font-mono"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <DialogFooter className="gap-2.5 pt-3 border-t border-border flex flex-col sm:flex-row justify-between items-center w-full">
+                  <Button
+                    variant="outline"
+                    onClick={keepOriginalPriceAndAddToCart}
+                    className="w-full sm:w-auto h-11 border-border hover:bg-muted text-muted-foreground hover:text-foreground rounded-xl font-bold text-xs"
+                    title="Add to cart at regular price without changing product data"
+                  >
+                    އަގު ބަދަލުނުކޮށް ކާޓަށް ލާ (Keep Price)
+                  </Button>
+
+                  <Button
+                    onClick={confirmExpiryPriceDrop}
+                    disabled={isUpdatingProductPrice || !expiryDropPrice || expiryDropPrice <= 0}
+                    className="flex-1 w-full sm:w-auto h-11 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-xl shadow-lg shadow-orange-600/20 text-xs uppercase tracking-wider flex items-center justify-center gap-2"
+                  >
+                    {isUpdatingProductPrice ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <TrendingDown className="h-4 w-4" />
+                    )}
+                    <span>އަގު ތިރިކޮށް ސޭވްކުރޭ (Drop & Save Price)</span>
+                  </Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
@@ -2936,6 +3074,20 @@ const POS = () => {
       <TransferSlipsDialog
         open={isTransferSlipsDialogOpen}
         onOpenChange={setIsTransferSlipsDialogOpen}
+      />
+
+      {/* Near Expiry Management & Telegram Clearance Broadcast Modal */}
+      <NearExpiryBroadcastDialog
+        open={isExpiryBroadcastModalOpen}
+        onOpenChange={setIsExpiryBroadcastModalOpen}
+        products={products}
+        customers={customers}
+        settings={settings}
+        updateProduct={updateProduct}
+        onAddToCart={(prod) => {
+          addToCart(prod);
+          showSuccess(`Added ${prod.name_dv} to cart`);
+        }}
       />
     </div>
   );

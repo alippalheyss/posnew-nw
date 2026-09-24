@@ -20,6 +20,7 @@ export interface Product {
   name_dv: string;
   name_en: string;
   price: number;
+  original_price?: number; // Price before near-expiry clearance price drop
   cost_price?: number; // Latest cost from purchases
   last_purchase_date?: string; // Track when cost was updated
   image: string; // Can be URL or Base64

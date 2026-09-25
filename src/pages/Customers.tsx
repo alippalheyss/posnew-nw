@@ -213,7 +213,7 @@ const Customers = () => {
       <ScrollArea className="flex-1 custom-scrollbar">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-6">
           {filteredCustomers.map((customer) => (
-            <Card key={customer.id} className="bg-card border-border hover:border-primary/30 transition-all rounded-3xl overflow-hidden group">
+            <Card key={customer.id} className="apple-glass-card border border-white/20 dark:border-white/10 hover:border-primary/50 transition-all duration-300 rounded-3xl overflow-hidden group shadow-sm hover:shadow-lg">
               <CardContent className="p-0">
                  <div className="p-6">
                     <div className="flex justify-between items-start mb-6">

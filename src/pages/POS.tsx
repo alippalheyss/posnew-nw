@@ -742,8 +742,19 @@ const POS = () => {
     return Array.from(cats);
   }, [products]);
 
+  // Frequency ranking based on total sold quantity (Best Sellers first)
+  const productSalesFrequencyMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    (sales || []).forEach(sale => {
+      (sale.items || []).forEach(item => {
+        map[item.id] = (map[item.id] || 0) + (item.qty || 1);
+      });
+    });
+    return map;
+  }, [sales]);
+
   const filteredCatalogueProducts = useMemo(() => {
-    return products.filter(product => {
+    const list = products.filter(product => {
       const matchesSearch = !searchTerm ||
         product.name_dv.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -755,7 +766,17 @@ const POS = () => {
 
       return matchesSearch && matchesCategory && matchesFavorite;
     });
-  }, [products, searchTerm, selectedCategory, showFavoritesOnly, favoriteProductIds]);
+
+    // Sort automatically by Best Sellers first (most frequently sold first)
+    return list.sort((a, b) => {
+      const salesA = productSalesFrequencyMap[a.id] || 0;
+      const salesB = productSalesFrequencyMap[b.id] || 0;
+      if (salesB !== salesA) {
+        return salesB - salesA;
+      }
+      return (a.name_dv || '').localeCompare(b.name_dv || '');
+    });
+  }, [products, searchTerm, selectedCategory, showFavoritesOnly, favoriteProductIds, productSalesFrequencyMap]);
 
   const displayProducts = useMemo(() => {
     return filteredCatalogueProducts.slice(0, visibleCatalogueCount);
@@ -1344,10 +1365,10 @@ const POS = () => {
                 <div
                   key={product.id}
                   onClick={() => handleProductSelection(product)}
-                  className="group bg-card hover:bg-muted/50 dark:hover:bg-[#334155]/60 border border-border rounded-xl p-2 transition-all cursor-pointer relative"
+                  className="group apple-glass-card hover:-translate-y-1 hover:shadow-xl border border-white/25 dark:border-white/10 rounded-2xl p-2.5 transition-all duration-300 cursor-pointer relative active:scale-[0.98]"
                 >
                   <div className={cn(
-                    "aspect-square rounded-lg mb-2 flex items-center justify-center overflow-hidden relative border border-border",
+                    "aspect-square rounded-xl mb-2 flex items-center justify-center overflow-hidden relative border border-white/20 dark:border-white/10 shadow-xs",
                     product.image ? "bg-muted/30" : colorClass
                   )}>
                     {product.image ? (
@@ -1362,14 +1383,19 @@ const POS = () => {
                         LOW
                       </Badge>
                     )}
+                    {(productSalesFrequencyMap[product.id] || 0) >= 5 && (
+                      <Badge className="absolute top-2 left-2 bg-amber-500 text-black border-none text-[8px] font-black px-1.5 py-0 rounded-full shadow-md uppercase tracking-wider font-mono">
+                        🔥 HOT
+                      </Badge>
+                    )}
                   </div>
 
                   <div className="text-center px-1">
                     <h3 className="text-sm font-black text-foreground leading-tight truncate mb-0.5">{product.name_dv}</h3>
-                    <p className="text-[11px] font-bold text-muted-foreground truncate uppercase tracking-normal mb-1.5">{product.name_en}</p>
+                    <p className="text-[11px] font-bold text-muted-foreground truncate uppercase tracking-normal mb-1.5 font-mono">{product.name_en}</p>
 
                     <div className="flex items-center justify-center gap-1.5">
-                      <span className="text-xs font-black text-primary leading-none">{settings.shop.currency} {product.price.toFixed(2)}</span>
+                      <span className="text-xs font-black text-primary font-mono leading-none">{settings.shop.currency} {product.price.toFixed(2)}</span>
                       <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white scale-0 group-hover:scale-100 transition-transform shadow-[0_0_15px_rgba(0,132,255,0.5)]">
                         <PlusCircle className="h-4 w-4" />
                       </div>
@@ -1385,7 +1411,7 @@ const POS = () => {
               <Button
                 variant="outline"
                 onClick={() => setVisibleCatalogueCount(prev => prev + 60)}
-                className="bg-card hover:bg-muted border border-border text-foreground font-black px-8 py-3 rounded-xl text-xs tracking-wider shadow-md hover:border-primary/50 transition-all gap-2"
+                className="apple-glass-card hover:bg-muted border border-white/20 text-foreground font-black px-8 py-3 rounded-2xl text-xs tracking-wider shadow-md hover:border-primary/50 transition-all gap-2 apple-glass-pill"
               >
                 <span>Load More Products</span>
                 <Badge variant="secondary" className="font-mono text-[11px]">
@@ -1400,7 +1426,7 @@ const POS = () => {
         </ScrollArea>
       </div>
 
-      <div className="w-[32rem] xl:w-[36rem] 2xl:w-[40rem] max-w-[45vw] flex flex-col bg-card/80 backdrop-blur-xl border-l border-border shadow-2xl z-20">
+      <div className="w-[32rem] xl:w-[36rem] 2xl:w-[40rem] max-w-[45vw] flex flex-col apple-liquid-glass border-l border-white/20 dark:border-white/10 shadow-2xl z-20">
         <div className="p-6 pb-2">
           <div className="flex items-center gap-1 bg-muted p-1 rounded-2xl border border-border mb-6">
             <div className="flex items-center gap-3 px-4 py-1.5 bg-primary/20 rounded-xl text-primary border border-primary/20">

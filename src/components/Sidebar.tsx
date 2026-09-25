@@ -143,6 +143,9 @@ const Sidebar = () => {
     </div>
   );
 
+  const [isHovered, setIsHovered] = useState(false);
+  const isExpanded = !sidebarCollapsed || isHovered;
+
   return (
     <>
       {/* Mobile Floating Menu Button */}
@@ -152,12 +155,12 @@ const Sidebar = () => {
             <Button 
               variant="default" 
               size="icon" 
-              className="h-11 w-11 rounded-2xl bg-primary text-foreground shadow-lg shadow-primary/30 flex items-center justify-center"
+              className="h-11 w-11 rounded-2xl bg-primary text-foreground shadow-lg shadow-primary/30 flex items-center justify-center apple-glass-pill"
             >
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="p-0 w-80 bg-background border-border">
+          <SheetContent side="right" className="p-0 w-80 apple-liquid-glass border-white/15">
             {renderNavContent(true)}
           </SheetContent>
         </Sheet>
@@ -166,26 +169,42 @@ const Sidebar = () => {
       {/* Desktop Sidebar Spacer */}
       <div className={cn("flex-shrink-0 transition-all duration-300 hidden md:block", sidebarCollapsed ? "w-0" : "w-72 xl:w-80 2xl:w-88")} />
       
+      {/* Invisible edge trigger zone when sidebar is collapsed */}
+      {sidebarCollapsed && (
+        <div 
+          onMouseEnter={() => setIsHovered(true)}
+          className="hidden md:flex fixed right-0 top-0 bottom-0 w-5 z-[95] items-center justify-end cursor-pointer group/edge"
+          title="Hover to view navigation bar"
+        >
+          <div className="h-20 w-2.5 bg-primary/40 group-hover/edge:bg-primary group-hover/edge:w-3.5 rounded-l-2xl border-l border-y border-white/30 shadow-md backdrop-blur-md transition-all duration-300 mr-0" />
+        </div>
+      )}
+
       {/* Desktop Floating Right-Side Liquid Glass Sidebar */}
-      <div className={cn(
-        "hidden md:flex flex-col font-faruma overflow-hidden z-[100] transition-all duration-300 group/sidebar fixed right-3 top-3 bottom-3 rounded-[2.5rem] apple-liquid-glass shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35)] border border-white/20 dark:border-white/10",
-        sidebarCollapsed 
-          ? "w-2.5 opacity-40 hover:opacity-100 hover:w-72 xl:hover:w-80 2xl:hover:w-88 bg-primary/20 hover:apple-liquid-glass" 
-          : "w-72 xl:w-80 2xl:w-88"
-      )}>
+      <div 
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className={cn(
+          "hidden md:flex flex-col font-faruma overflow-hidden z-[100] transition-all duration-300 group/sidebar fixed right-3 top-3 bottom-3 rounded-[2.5rem] apple-liquid-glass shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35)] border border-white/25 dark:border-white/10",
+          isExpanded 
+            ? "w-72 xl:w-80 2xl:w-88 opacity-100 pointer-events-auto translate-x-0" 
+            : "w-0 opacity-0 pointer-events-none translate-x-12 border-none shadow-none"
+        )}
+      >
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className={cn(
-            "absolute top-5 left-5 z-[110] transition-all h-8 w-8 bg-background/60 hover:bg-background/90 text-muted-foreground hover:text-foreground rounded-2xl border border-white/20 dark:border-white/10 shadow-xs backdrop-blur-md",
-            sidebarCollapsed ? "opacity-0 group-hover/sidebar:opacity-100" : "opacity-100"
-          )}
+          onClick={() => {
+            setSidebarCollapsed(!sidebarCollapsed);
+            if (sidebarCollapsed) setIsHovered(false);
+          }}
+          className="absolute top-5 left-5 z-[110] transition-all h-8 w-8 bg-background/70 hover:bg-background text-muted-foreground hover:text-foreground rounded-2xl border border-white/20 dark:border-white/10 shadow-xs backdrop-blur-md apple-glass-pill"
+          title={sidebarCollapsed ? "Pin Sidebar Open" : "Unpin (Auto-hide)"}
         >
           {sidebarCollapsed ? <Pin className="h-4 w-4" /> : <PinOff className="h-4 w-4" />}
         </Button>
 
-        <div className={cn("flex-1 flex flex-col h-full transition-opacity duration-300", sidebarCollapsed ? "opacity-0 group-hover/sidebar:opacity-100" : "opacity-100")}>
+        <div className={cn("flex-1 flex flex-col h-full transition-opacity duration-300", isExpanded ? "opacity-100" : "opacity-0")}>
           {renderNavContent(false)}
         </div>
       </div>

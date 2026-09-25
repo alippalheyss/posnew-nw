@@ -551,34 +551,36 @@ const DailySales = () => {
 
       {/* Stats Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-         <Card className="bg-card border-border rounded-3xl p-6 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-primary/20 transition-all" />
+         <Card className="apple-glass-card border border-white/20 dark:border-white/10 rounded-3xl p-6 relative overflow-hidden group shadow-lg">
+            <div className="absolute top-0 right-0 w-28 h-28 bg-primary/15 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-primary/25 transition-all" />
             <div className="flex justify-between items-center mb-4">
                <DollarSign className="h-5 w-5 text-primary" />
                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Total Sales</span>
             </div>
-            <p className="text-3xl font-black text-foreground">{settings.shop.currency} {totalSalesAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-            <p className="text-[10px] text-muted-foreground/50 mt-1 font-bold uppercase tracking-widest">{dateFilter} SUMMARY</p>
+            <p className="text-3xl font-black text-foreground font-mono">{settings.shop.currency} {totalSalesAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            <p className="text-[10px] text-muted-foreground/60 mt-1 font-bold uppercase tracking-widest">{dateFilter} SUMMARY</p>
          </Card>
 
-         <Card className="bg-card border-border rounded-3xl p-6 relative overflow-hidden group">
+         <Card className="apple-glass-card border border-white/20 dark:border-white/10 rounded-3xl p-6 relative overflow-hidden group shadow-lg">
+            <div className="absolute top-0 right-0 w-28 h-28 bg-purple-500/15 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-purple-500/25 transition-all" />
             <div className="flex justify-between items-center mb-4">
                <Receipt className="h-5 w-5 text-purple-500" />
                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Total Transactions</span>
             </div>
-            <p className="text-3xl font-black text-foreground">{filteredSales.length}</p>
-            <p className="text-[10px] text-muted-foreground/50 mt-1 font-bold uppercase tracking-widest">RECEIPTS ISSUED</p>
+            <p className="text-3xl font-black text-foreground font-mono">{filteredSales.length}</p>
+            <p className="text-[10px] text-muted-foreground/60 mt-1 font-bold uppercase tracking-widest">RECEIPTS ISSUED</p>
          </Card>
 
-         <Card className="bg-card border-border rounded-3xl p-6 relative overflow-hidden group">
+         <Card className="apple-glass-card border border-white/20 dark:border-white/10 rounded-3xl p-6 relative overflow-hidden group shadow-lg">
+            <div className="absolute top-0 right-0 w-28 h-28 bg-emerald-500/15 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-emerald-500/25 transition-all" />
             <div className="flex justify-between items-center mb-4">
-               <TrendingUp className="h-5 w-5 text-green-500" />
+               <TrendingUp className="h-5 w-5 text-emerald-500" />
                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Average Transaction</span>
             </div>
-            <p className="text-3xl font-black text-foreground">
+            <p className="text-3xl font-black text-foreground font-mono">
               {settings.shop.currency} {(filteredSales.length > 0 ? totalSalesAmount / filteredSales.length : 0).toFixed(2)}
             </p>
-            <p className="text-[10px] text-muted-foreground/50 mt-1 font-bold uppercase tracking-widest">PER CUSTOMER</p>
+            <p className="text-[10px] text-muted-foreground/60 mt-1 font-bold uppercase tracking-widest">PER CUSTOMER</p>
          </Card>
       </div>
 
@@ -593,10 +595,10 @@ const DailySales = () => {
               </div>
             ) : (
               filteredSales.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale) => (
-                <Card key={sale.id} className="bg-card border-border hover:border-primary/30 transition-all rounded-3xl p-6 group">
+                <Card key={sale.id} className="apple-glass-card border border-white/15 dark:border-white/10 hover:border-primary/50 transition-all duration-300 rounded-3xl p-6 group shadow-sm hover:shadow-md">
                   <div className="flex items-center justify-between gap-6">
                      <div className="flex items-center gap-6">
-                        <div className="h-14 w-14 rounded-2xl bg-muted border border-border flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                        <div className="h-14 w-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
                            <Receipt className="h-7 w-7" />
                         </div>
                         <div className="text-right">

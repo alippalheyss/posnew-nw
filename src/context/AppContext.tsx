@@ -143,6 +143,7 @@ export interface Purchase {
   date: string;
   vendor: string; // Legacy field for backward compatibility
   vendorId?: string; // New field to reference Vendor by ID
+  vendorName?: string; // Optional vendor name field
   billNumber: string;
   amount: number; // For legacy purchases or calculated from items
   gstAmount: number; // For legacy purchases or calculated from items

@@ -73,7 +73,7 @@ const Sidebar = () => {
       </div>
 
       {/* Navigation Links */}
-      <div className="flex-1 overflow-y-auto px-4 custom-scrollbar whitespace-nowrap py-2">
+      <div className="flex-1 overflow-y-auto px-3.5 custom-scrollbar whitespace-nowrap py-2">
         <ul className="space-y-1.5">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
@@ -84,38 +84,39 @@ const Sidebar = () => {
                   to={item.path}
                   onClick={() => isMobile && setMobileOpen(false)}
                   className={cn(
-                    "flex items-center justify-between p-3 rounded-2xl transition-all group relative overflow-hidden",
+                    "flex items-center justify-between p-3 rounded-2xl transition-all duration-300 group relative overflow-hidden apple-glass-pill",
                     isActive 
-                      ? "bg-muted text-foreground font-bold" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                      ? "bg-primary text-white font-bold shadow-[0_10px_25px_-5px_rgba(0,132,255,0.4)] border border-white/20" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-white/10 dark:hover:bg-white/5"
                   )}
                 >
-                  {isActive && (
-                    <div className="absolute right-0 top-0 bottom-0 w-1 bg-primary rounded-l-full shadow-[0_0_15px_rgba(249,115,22,1)]" />
-                  )}
-                  
                   <div className="flex items-center gap-3">
                     <div className={cn(
                       "h-9 w-9 rounded-xl flex items-center justify-center transition-all shrink-0",
-                      isActive ? "bg-primary text-white" : "bg-muted text-muted-foreground group-hover:bg-muted/80 group-hover:text-foreground"
+                      isActive 
+                        ? "bg-white/20 text-white shadow-inner" 
+                        : "bg-muted/80 text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary"
                     )}>
                       <item.icon className="h-4.5 w-4.5" />
                     </div>
                     <div className="flex flex-col text-right">
                       <span className="text-[14px] sm:text-[15px] font-black leading-tight mb-0.5 whitespace-nowrap">{item.name_dv}</span>
-                      <span className="text-[11px] sm:text-xs font-bold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{item.name_en}</span>
+                      <span className={cn(
+                        "text-[10px] sm:text-[11px] font-bold uppercase tracking-wide whitespace-nowrap font-mono",
+                        isActive ? "text-white/80" : "text-muted-foreground/70"
+                      )}>{item.name_en}</span>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
                     {isCreditOutstanding && pendingSlipsCount > 0 && (
-                      <span className="px-2 py-0.5 text-[10px] font-black bg-amber-500 text-black rounded-full animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.5)]">
+                      <span className="px-2 py-0.5 text-[10px] font-black bg-amber-400 text-black rounded-full animate-pulse shadow-[0_0_12px_rgba(251,191,36,0.6)]">
                         {pendingSlipsCount}
                       </span>
                     )}
                     <ChevronRight className={cn(
                       "h-3.5 w-3.5 transition-all shrink-0",
-                      isActive ? "text-primary opacity-100" : "opacity-0 group-hover:opacity-30"
+                      isActive ? "text-white opacity-100" : "opacity-0 group-hover:opacity-40"
                     )} />
                   </div>
                 </Link>
@@ -126,14 +127,14 @@ const Sidebar = () => {
       </div>
 
       {/* Bottom Install & User Section */}
-      <div className="p-5 mt-auto border-t border-border bg-muted/40 flex flex-col gap-3">
+      <div className="p-4 mt-auto border-t border-white/10 bg-background/40 backdrop-blur-md rounded-b-[2.5rem] flex flex-col gap-3">
         <PWAInstallButton />
         <div className="flex items-center justify-between px-1">
           <div className="text-right">
             <p className="text-[10px] text-primary uppercase font-black tracking-wider mb-0.5">{currentUser?.role}</p>
-            <p className="text-base font-black text-foreground truncate w-32">{currentUser?.name_dv}</p>
+            <p className="text-sm sm:text-base font-black text-foreground truncate w-32">{currentUser?.name_dv}</p>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-muted border border-border flex items-center justify-center relative">
+          <div className="w-9 h-9 rounded-xl bg-background/80 border border-white/20 shadow-xs flex items-center justify-center relative">
             <Users className="h-4 w-4 text-muted-foreground" />
             <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-background" />
           </div>
@@ -165,19 +166,19 @@ const Sidebar = () => {
       {/* Desktop Sidebar Spacer */}
       <div className={cn("flex-shrink-0 transition-all duration-300 hidden md:block", sidebarCollapsed ? "w-0" : "w-72 xl:w-80 2xl:w-88")} />
       
-      {/* Desktop Fixed Sidebar */}
+      {/* Desktop Floating Right-Side Liquid Glass Sidebar */}
       <div className={cn(
-        "hidden md:flex flex-col h-screen font-faruma overflow-hidden z-[100] transition-all duration-300 group/sidebar fixed right-0 top-0 bottom-0",
+        "hidden md:flex flex-col font-faruma overflow-hidden z-[100] transition-all duration-300 group/sidebar fixed right-3 top-3 bottom-3 rounded-[2.5rem] apple-liquid-glass shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35)] border border-white/20 dark:border-white/10",
         sidebarCollapsed 
-          ? "w-2 hover:w-72 xl:hover:w-80 2xl:hover:w-88 bg-transparent hover:bg-background hover:border-l hover:border-border hover:shadow-[-20px_0_50px_rgba(0,0,0,0.5)]" 
-          : "w-72 xl:w-80 2xl:w-88 bg-background border-l border-border shadow-[-20px_0_50px_rgba(0,0,0,0.5)]"
+          ? "w-2.5 opacity-40 hover:opacity-100 hover:w-72 xl:hover:w-80 2xl:hover:w-88 bg-primary/20 hover:apple-liquid-glass" 
+          : "w-72 xl:w-80 2xl:w-88"
       )}>
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           className={cn(
-            "absolute top-5 left-5 z-[110] transition-all h-8 w-8 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded-xl border border-border",
+            "absolute top-5 left-5 z-[110] transition-all h-8 w-8 bg-background/60 hover:bg-background/90 text-muted-foreground hover:text-foreground rounded-2xl border border-white/20 dark:border-white/10 shadow-xs backdrop-blur-md",
             sidebarCollapsed ? "opacity-0 group-hover/sidebar:opacity-100" : "opacity-100"
           )}
         >

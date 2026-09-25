@@ -180,6 +180,51 @@
   .custom-scrollbar::-webkit-scrollbar-thumb {
     @apply bg-white/10 rounded-full hover:bg-white/20;
   }
+
+  /* Apple Liquid Glass Design System */
+  .apple-liquid-glass {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(28px) saturate(190%);
+    -webkit-backdrop-filter: blur(28px) saturate(190%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 20px 50px -12px rgba(0, 75, 135, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.6);
+  }
+
+  .dark .apple-liquid-glass {
+    background: rgba(15, 23, 42, 0.72);
+    backdrop-filter: blur(28px) saturate(190%);
+    -webkit-backdrop-filter: blur(28px) saturate(190%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+  }
+
+  .apple-glass-card {
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  }
+
+  .dark .apple-glass-card {
+    background: rgba(30, 41, 59, 0.70);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .apple-glass-pill {
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .apple-glass-pill:hover {
+    transform: translateY(-1px);
+  }
+
+  .apple-glass-pill:active {
+    transform: scale(0.97);
+  }
 }
 
 @font-face {

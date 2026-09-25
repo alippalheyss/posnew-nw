@@ -1692,11 +1692,18 @@ const POS = () => {
                     />
                   </div>
 
-                  {/* Right Side: Product Names (Dhivehi Name on top, English Name below) */}
+                  {/* Right Side: Product Names and Item Code Badge */}
                   <div className="flex-1 text-right min-w-0 pl-2">
-                    <p className="text-xs sm:text-sm font-black text-foreground leading-tight truncate">
-                      {item.name_dv}
-                    </p>
+                    <div className="flex items-center justify-end gap-1.5 leading-tight">
+                      {item.item_code && (
+                        <span className="font-mono text-[10px] font-black text-primary bg-primary/10 border border-primary/25 px-1.5 py-0.5 rounded-md tracking-wider shrink-0 select-all">
+                          #{item.item_code}
+                        </span>
+                      )}
+                      <p className="text-xs sm:text-sm font-black text-foreground truncate">
+                        {item.name_dv}
+                      </p>
+                    </div>
                     <p className="text-[11px] sm:text-xs font-bold text-muted-foreground leading-tight uppercase truncate font-mono mt-0.5">
                       {item.name_en}
                     </p>
@@ -2312,17 +2319,17 @@ const POS = () => {
       </Dialog>
 
       <Dialog open={isConfirmRemoveCartDialogOpen} onOpenChange={setIsConfirmRemoveCartDialogOpen}>
-        <DialogContent className="sm:max-w-[480px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border p-6 sm:p-7 shadow-2xl rounded-3xl box-border overflow-hidden [&>button]:left-4 [&>button]:right-auto space-y-4" dir="rtl">
+        <DialogContent className="sm:max-w-[480px] w-[calc(100vw-2rem)] font-faruma apple-glass-card bg-card/95 text-foreground border border-white/20 dark:border-white/10 p-6 sm:p-7 shadow-2xl rounded-3xl box-border overflow-hidden [&>button]:left-4 [&>button]:right-auto space-y-4" dir="rtl">
           <DialogHeader className="text-right pb-3 border-b border-border/60">
-            <div className="flex items-center justify-between pl-8">
+            <div className="flex items-start justify-between pl-8">
               <div className="text-right flex-1 min-w-0">
-                <DialogTitle className="text-lg sm:text-xl font-black text-foreground flex items-center justify-end gap-2.5">
-                  <span className="truncate">{renderBoth('confirm_cart_removal')}</span>
+                <DialogTitle className="text-lg sm:text-xl font-black text-foreground flex items-center justify-end gap-2.5 flex-wrap">
+                  <span className="leading-tight break-words">{renderBoth('confirm_cart_removal')}</span>
                   <div className="h-9 w-9 rounded-xl bg-red-500/15 text-red-500 flex items-center justify-center shrink-0 ring-1 ring-red-500/30">
                     <Trash2 className="h-5 w-5" />
                   </div>
                 </DialogTitle>
-                <DialogDescription className="text-xs text-muted-foreground mt-1.5 leading-relaxed text-right">
+                <DialogDescription className="text-xs text-muted-foreground mt-1.5 leading-relaxed text-right break-words">
                   {renderBoth('confirm_cart_removal_description')}
                 </DialogDescription>
               </div>
@@ -2356,7 +2363,7 @@ const POS = () => {
       </Dialog>
 
       <Dialog open={isExpiryDialogOpen} onOpenChange={setIsExpiryDialogOpen}>
-        <DialogContent className="sm:max-w-[520px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto font-faruma bg-card text-foreground border border-border text-right p-6 sm:p-7 shadow-2xl rounded-3xl box-border [&>button]:left-4 [&>button]:right-auto space-y-4" dir="rtl">
+        <DialogContent className="sm:max-w-[500px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto overflow-x-hidden font-faruma apple-glass-card bg-card/95 text-foreground border border-white/20 dark:border-white/10 text-right p-5 sm:p-6 shadow-2xl rounded-3xl box-border [&>button]:left-4 [&>button]:right-auto space-y-4" dir="rtl">
           {(() => {
             const basePrice = selectedProductForExpiry?.original_price || selectedProductForExpiry?.price || 0;
             const currentNewPrice = Number(expiryDropPrice) || basePrice;
@@ -2369,12 +2376,12 @@ const POS = () => {
             return (
               <>
                 <DialogHeader className="pb-3 text-right space-y-2 border-b border-border/60">
-                  <div className="flex items-start justify-between gap-3 pl-8">
+                  <div className="flex flex-col-reverse sm:flex-row items-start sm:items-center justify-between gap-2.5 pl-8">
                     {selectedProductForExpiry?.expiry_date && (
                       <Badge
                         variant="outline"
                         className={cn(
-                          "text-[11px] font-black shrink-0 mt-0.5 px-3 py-1 rounded-xl font-mono",
+                          "text-[11px] font-black shrink-0 px-3 py-1 rounded-xl font-mono",
                           diffDays <= 7
                             ? "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30"
                             : "bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30"
@@ -2394,7 +2401,7 @@ const POS = () => {
                       </p>
                     </div>
                   </div>
-                  <DialogDescription className="text-muted-foreground text-xs leading-relaxed text-right pt-1">
+                  <DialogDescription className="text-muted-foreground text-xs leading-relaxed text-right pt-1 break-words">
                     މި މުދަލުގެ މުއްދަތު ހަމަވާން ކައިރިވެފައިވާތީ އަގު ތިރިކޮށް، ސިސްޓަމްގައި ރައްކާކުރަން ބޭނުންފުޅުވާ އާ އަގު ކަނޑައަޅުއްވާ.
                   </DialogDescription>
                 </DialogHeader>
@@ -2528,7 +2535,7 @@ const POS = () => {
           setSplitSearchTerm('');
         }
       }}>
-        <DialogContent className="sm:max-w-[580px] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border text-right p-6 sm:p-7 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+        <DialogContent className="sm:max-w-[600px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto overflow-x-hidden font-faruma apple-glass-card bg-card/95 text-foreground border border-white/20 dark:border-white/10 text-right p-5 sm:p-6 shadow-2xl rounded-3xl box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
           <DialogHeader className="pb-3.5 text-right space-y-1.5 border-b border-border/60">
             <div className="flex items-center justify-between pl-8">
               <div className="text-right flex-1 min-w-0">
@@ -2691,8 +2698,8 @@ const POS = () => {
                     {splitEntries.map((entry) => {
                       const customer = customers.find(c => c.id === entry.customerId);
                       return (
-                        <div key={entry.id} className="p-3.5 rounded-2xl bg-card border border-border flex items-center justify-between gap-3 text-right hover:border-primary/40 transition-all shadow-sm">
-                          <div className="relative w-36 shrink-0">
+                        <div key={entry.id} className="p-3 sm:p-3.5 rounded-2xl bg-card border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-right hover:border-primary/40 transition-all shadow-sm">
+                          <div className="relative w-full sm:w-36 shrink-0 order-2 sm:order-1">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">{settings.shop.currency}</span>
                             <Input
                               type="number"
@@ -2709,7 +2716,7 @@ const POS = () => {
                             />
                           </div>
 
-                          <div className="flex-1 text-right min-w-0">
+                          <div className="flex-1 text-right min-w-0 order-1 sm:order-2">
                             <p className="font-black text-foreground text-sm truncate">{customer?.name_dv} {customer?.name_en ? `(${customer?.name_en})` : ''}</p>
                             <div className="flex items-center justify-end gap-2 mt-1">
                               <Select value={entry.method} onValueChange={(val: any) => updateSplitMethod(entry.id, val)}>

@@ -851,11 +851,11 @@ const SalesReports = () => {
   };
 
   const StatCard = ({ title, stats, icon: Icon, color, profit, onDownload, downloadLabel }: any) => (
-    <Card className="bg-card border-border hover:border-primary/40 transition-all rounded-[2rem] overflow-hidden group flex flex-col justify-between shadow-sm">
+    <Card className="apple-glass-card border border-white/20 dark:border-white/10 hover:border-primary/50 transition-all duration-300 rounded-[2rem] overflow-hidden group flex flex-col justify-between shadow-md hover:shadow-xl">
       <CardContent className="p-6 text-right flex-1 flex flex-col justify-between">
         <div>
           <div className="flex justify-between items-center mb-6">
-            <div className={cn("p-3 rounded-2xl bg-muted border border-border group-hover:scale-110 transition-transform", color)}>
+            <div className={cn("p-3.5 rounded-2xl bg-white/40 dark:bg-white/10 border border-white/20 dark:border-white/10 group-hover:scale-110 transition-transform shadow-xs", color)}>
               <Icon className="h-6 w-6" />
             </div>
             <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">{title}</p>
@@ -866,19 +866,19 @@ const SalesReports = () => {
                {settings.shop.currency} {stats.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
              </p>
              <div className="flex items-center justify-end gap-2">
-                <span className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest">{stats.count} TRANSACTIONS</span>
-                <Activity className="h-3 w-3 text-foreground/10" />
+                <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">{stats.count} TRANSACTIONS</span>
+                <Activity className="h-3 w-3 text-primary/40" />
              </div>
           </div>
 
           {profit && (
-            <div className="pt-4 border-t border-border flex justify-between items-center mb-4">
-               <div className="flex items-center gap-1 text-green-500">
-                  <ArrowUpRight className="h-3 w-3" />
-                  <span className="text-[10px] font-black">{profit.margin.toFixed(1)}% MARGIN</span>
+            <div className="pt-4 border-t border-white/15 dark:border-white/10 flex justify-between items-center mb-4">
+               <div className="flex items-center gap-1 text-emerald-500">
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                  <span className="text-[11px] font-black">{profit.margin.toFixed(1)}% MARGIN</span>
                </div>
                <div className="text-right">
-                  <p className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest">EST. PROFIT</p>
+                  <p className="text-[8px] font-black text-muted-foreground/60 uppercase tracking-widest">EST. PROFIT</p>
                   <p className="text-sm font-black text-foreground">{settings.shop.currency} {profit.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                </div>
             </div>
@@ -890,9 +890,9 @@ const SalesReports = () => {
             variant="outline"
             size="sm"
             onClick={onDownload}
-            className="w-full mt-2 h-9 rounded-xl border-border/80 bg-muted/50 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all text-xs font-bold gap-2 flex items-center justify-center group/btn shadow-xs"
+            className="w-full mt-2 h-9.5 rounded-xl transition-all text-xs font-bold gap-2 flex items-center justify-center group/btn apple-glass-pill"
           >
-            <FileSpreadsheet className="h-4 w-4 text-emerald-500 group-hover/btn:text-primary-foreground transition-colors" />
+            <FileSpreadsheet className="h-4 w-4 text-emerald-500 group-hover/btn:text-primary transition-colors" />
             <span>{downloadLabel || "Download Excel (އެކްސެލް ޑައުންލޯޑް)"}</span>
           </Button>
         )}

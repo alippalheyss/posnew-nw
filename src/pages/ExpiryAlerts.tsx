@@ -90,22 +90,23 @@ const ExpiryAlerts = () => {
 
               return (
                 <Card key={product.id} className={cn(
-                  "bg-card border-border hover:border-primary/30 transition-all rounded-[2rem] overflow-hidden group relative",
-                  isExpired ? "border-red-500/20" : isNearingExpiry ? "border-orange-500/20" : ""
+                  "apple-glass-card transition-all duration-300 rounded-[2rem] overflow-hidden group relative shadow-md hover:shadow-xl border",
+                  isExpired 
+                    ? "border-red-500/40 shadow-[0_4px_20px_rgba(239,68,68,0.15)]" 
+                    : isNearingExpiry 
+                    ? "border-amber-500/40 shadow-[0_4px_20px_rgba(245,158,11,0.15)]" 
+                    : "border-white/20 dark:border-white/10"
                 )}>
                    <CardContent className="p-0">
                       <div className="p-6">
                          <div className="flex justify-between items-start mb-6">
                             <div className={cn(
-                              "w-12 h-12 rounded-2xl flex items-center justify-center border transition-all group-hover:scale-110",
-                              isExpired ? "bg-red-500/10 border-red-500/20 text-red-500" : "bg-orange-500/10 border-orange-500/20 text-orange-500"
+                              "w-12 h-12 rounded-2xl flex items-center justify-center border transition-all group-hover:scale-110 shadow-xs",
+                              isExpired ? "bg-red-500/15 border-red-500/30 text-red-500" : "bg-amber-500/15 border-amber-500/30 text-amber-500"
                             )}>
                                <AlertTriangle className="h-6 w-6" />
                             </div>
-                            <Badge className={cn(
-                              "border-none text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest",
-                              isExpired ? "bg-red-500 text-foreground animate-pulse" : "bg-orange-500 text-foreground"
-                            )}>
+                            <Badge variant={isExpired ? "destructive" : "warning"} className="text-[9px] font-black px-2.5 py-0.5 uppercase tracking-wider">
                                {isExpired ? 'EXPIRED' : 'NEARING EXPIRY'}
                             </Badge>
                          </div>
@@ -113,28 +114,28 @@ const ExpiryAlerts = () => {
                          <div className="text-right mb-6">
                             <h3 className="text-lg font-black text-foreground leading-tight mb-1 truncate">{product.name_dv}</h3>
                             <p className="text-xs sm:text-[13px] font-bold text-muted-foreground uppercase tracking-wider truncate">{product.name_en}</p>
-                            <p className="text-xs font-mono text-primary font-bold mt-2">ID: {product.item_code}</p>
+                            <p className="text-xs font-mono text-primary font-bold mt-2">ID: #{product.item_code}</p>
                          </div>
 
                          <div className={cn(
-                           "p-4 rounded-2xl border flex flex-col items-center justify-center transition-all",
-                           isExpired ? "bg-red-500/10 border-red-500/10" : "bg-orange-500/10 border-orange-500/10"
+                           "p-4 rounded-2xl border flex flex-col items-center justify-center transition-all apple-glass-card",
+                           isExpired ? "bg-red-500/10 border-red-500/20" : "bg-amber-500/10 border-amber-500/20"
                          )}>
                             <div className="flex items-center gap-2 mb-1">
-                               <Calendar className={cn("h-4 w-4", isExpired ? "text-red-500" : "text-orange-500")} />
+                               <Calendar className={cn("h-4 w-4", isExpired ? "text-red-500" : "text-amber-500")} />
                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">EXPIRY DATE</span>
                             </div>
                             <p className={cn(
                               "text-xl font-black",
-                              isExpired ? "text-red-500" : "text-orange-500"
+                              isExpired ? "text-red-500" : "text-amber-500"
                             )}>
                                {format(expiryDate!, 'dd MMMM yyyy')}
                             </p>
                             <div className="flex items-center gap-1 mt-2">
                                <Clock className="h-3 w-3 text-muted-foreground/50" />
-                               <span className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest">
+                               <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">
                                   {isExpired ? 'STOCK SHOULD BE REMOVED' : `${Math.ceil((expiryDate!.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))} DAYS REMAINING`}
-                               </span>
+                                </span>
                             </div>
                          </div>
                       </div>

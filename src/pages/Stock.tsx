@@ -151,7 +151,7 @@ const Stock = () => {
       <ScrollArea className="flex-1 custom-scrollbar">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-6">
           {displayStockItems.map((item) => (
-            <Card key={item.id} className="bg-card border-border hover:border-primary/30 transition-all rounded-[2rem] overflow-hidden group relative">
+            <Card key={item.id} className="apple-glass-card border border-white/20 dark:border-white/10 hover:border-primary/50 transition-all duration-300 rounded-[2rem] overflow-hidden group relative shadow-md hover:shadow-xl">
                <CardContent className="p-0">
                   <div className="p-6">
                      <div className="flex justify-between items-start mb-6">
@@ -159,9 +159,9 @@ const Stock = () => {
                            <Boxes className="h-6 w-6" />
                         </div>
                         <div className="flex flex-col items-end gap-2">
-                           <Badge className="bg-primary/20 text-primary border-primary/20 text-[10px] font-black px-3 py-1 rounded-full">{item.item_code}</Badge>
+                           <Badge variant="glass" className="font-mono text-[10px] font-black px-3 py-1">{item.item_code}</Badge>
                            {item.stock_shop < LOW_STOCK_THRESHOLD && (
-                             <Badge className="bg-red-500 text-foreground border-none text-[8px] font-black px-2 py-0.5 rounded-full animate-pulse">CRITICAL STOCK</Badge>
+                             <Badge variant="destructive" className="text-[8px] font-black px-2 py-0.5 animate-pulse">CRITICAL STOCK</Badge>
                            )}
                         </div>
                      </div>
@@ -172,16 +172,16 @@ const Stock = () => {
                      </div>
 
                      <div className="grid grid-cols-2 gap-4 mb-6">
-                        <div className="bg-muted p-4 rounded-2xl border border-border group-hover:bg-muted/80 transition-all">
+                        <div className="apple-glass-card p-4 rounded-2xl border border-white/20 dark:border-white/10 transition-all">
                            <div className="flex items-center justify-end gap-2 text-xs font-black text-muted-foreground uppercase tracking-wider mb-2">
                               {renderBoth('shop')} <Store className="h-3.5 w-3.5" />
                            </div>
                            <p className={cn(
                              "text-2xl font-black text-right",
-                             item.stock_shop < LOW_STOCK_THRESHOLD ? "text-red-500" : item.stock_shop < WARNING_STOCK_THRESHOLD ? "text-orange-500" : "text-green-500"
+                             item.stock_shop < LOW_STOCK_THRESHOLD ? "text-red-500" : item.stock_shop < WARNING_STOCK_THRESHOLD ? "text-orange-500" : "text-emerald-500"
                            )}>{item.stock_shop}</p>
                         </div>
-                        <div className="bg-muted p-4 rounded-2xl border border-border group-hover:bg-muted/80 transition-all">
+                        <div className="apple-glass-card p-4 rounded-2xl border border-white/20 dark:border-white/10 transition-all">
                            <div className="flex items-center justify-end gap-2 text-xs font-black text-muted-foreground uppercase tracking-wider mb-2">
                               {renderBoth('godown')} <Warehouse className="h-3.5 w-3.5" />
                            </div>
@@ -191,14 +191,16 @@ const Stock = () => {
 
                      <div className="flex gap-2">
                         <Button 
+                          variant="outline"
                           onClick={() => handleUpdateStockClick(item)}
-                          className="flex-1 bg-muted hover:bg-muted/80 text-foreground text-[10px] font-black h-11 rounded-xl border border-border transition-all"
+                          className="flex-1 text-[10px] font-black h-11 rounded-xl apple-glass-pill"
                         >
                           MANUAL UPDATE
                         </Button>
                         <Button 
+                          variant="default"
                           onClick={() => handleTransferClick(item, 'to_shop')}
-                          className="flex-1 bg-primary/10 hover:bg-primary text-primary hover:text-foreground text-[10px] font-black h-11 rounded-xl border border-primary/20 transition-all gap-2"
+                          className="flex-1 text-[10px] font-black h-11 rounded-xl gap-2 apple-glass-pill"
                         >
                           <ArrowRightLeft className="h-3 w-3" /> TRANSFER
                         </Button>

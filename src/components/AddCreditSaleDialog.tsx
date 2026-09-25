@@ -137,8 +137,8 @@ const AddCreditSaleDialog: React.FC<AddCreditSaleDialogProps> = ({ isOpen, onClo
         </DialogHeader>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-4">
           {/* Products Selection */}
-          <div className="flex flex-col border p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
-            <h3 className="font-semibold mb-4 text-right">{renderBoth('products')}</h3>
+          <div className="flex flex-col apple-glass-card p-5 rounded-2xl">
+            <h3 className="font-bold mb-4 text-right text-foreground">{renderBoth('products')}</h3>
             <Input
               placeholder={renderBothString('search_products')}
               value={searchTerm}
@@ -152,13 +152,13 @@ const AddCreditSaleDialog: React.FC<AddCreditSaleDialogProps> = ({ isOpen, onClo
                   <Button
                     key={product.id}
                     variant="outline"
-                    className="flex flex-col h-auto p-2 text-center hover:bg-primary hover:text-foreground transition-colors"
+                    className="flex flex-col h-auto p-2.5 text-center hover:bg-primary hover:text-white transition-all rounded-xl apple-glass-pill"
                     onClick={() => addToCart(product)}
                   >
-                    <img src={getAdaptedImageUrl(product.image, product.name_en || product.name_dv, product.item_code)} alt={product.name_dv} className="w-10 h-10 object-cover mb-1 rounded-md dark:opacity-100 opacity-95" />
-                    <p className="font-semibold text-[10px] break-words line-clamp-1">{product.name_dv}</p>
-                    <p className="text-[10px] text-black dark:text-foreground opacity-80 break-words line-clamp-1">({product.name_en})</p>
-                    <p className="text-[10px] font-bold mt-1">{settings.shop.currency} {product.price.toFixed(2)}</p>
+                    <img src={getAdaptedImageUrl(product.image, product.name_en || product.name_dv, product.item_code)} alt={product.name_dv} className="w-12 h-12 object-cover mb-1.5 rounded-lg shadow-xs" />
+                    <p className="font-bold text-xs break-words line-clamp-1">{product.name_dv}</p>
+                    <p className="text-[10px] text-muted-foreground break-words line-clamp-1">({product.name_en})</p>
+                    <p className="text-xs font-black mt-1 text-primary">{settings.shop.currency} {product.price.toFixed(2)}</p>
                   </Button>
                 ))}
               </div>
@@ -166,8 +166,8 @@ const AddCreditSaleDialog: React.FC<AddCreditSaleDialogProps> = ({ isOpen, onClo
           </div>
 
           {/* Cart and Customer Selection */}
-          <div className="flex flex-col border p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
-            <h3 className="font-semibold mb-4 text-right">{renderBoth('transaction_details')}</h3>
+          <div className="flex flex-col apple-glass-card p-5 rounded-2xl">
+            <h3 className="font-bold mb-4 text-right text-foreground">{renderBoth('transaction_details')}</h3>
             <div className="grid grid-cols-3 items-center gap-4 mb-6">
               <Label htmlFor="customerSelect" className="text-right">
                 {renderBoth('customer')}

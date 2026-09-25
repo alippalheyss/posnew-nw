@@ -227,30 +227,30 @@ const GSTReports = () => {
                 <div className="space-y-8 pb-6">
                     {/* Summary Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <Card className="bg-card border-border rounded-[2rem] p-6 relative group overflow-hidden">
-                           <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full -mr-12 -mt-12 blur-2xl" />
+                        <Card className="apple-glass-card border border-white/20 dark:border-white/10 rounded-[2rem] p-6 relative group overflow-hidden shadow-md hover:shadow-xl transition-all duration-300">
+                           <div className="absolute top-0 right-0 w-28 h-28 bg-primary/15 rounded-full -mr-12 -mt-12 blur-2xl" />
                            <div className="flex justify-between items-center mb-4">
                               <ArrowUpRight className="h-5 w-5 text-primary" />
                               <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Output GST (Sales)</span>
                            </div>
                            <p className="text-3xl font-black text-foreground">{settings.shop.currency} {outputGST.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                           <p className="text-[10px] text-muted-foreground/50 mt-1 font-bold uppercase tracking-widest">TOTAL TAXABLE: {totalTaxableSales.toLocaleString()}</p>
+                           <p className="text-[10px] text-muted-foreground/60 mt-1 font-bold uppercase tracking-widest">TOTAL TAXABLE: {totalTaxableSales.toLocaleString()}</p>
                         </Card>
 
-                        <Card className="bg-card border-border rounded-[2rem] p-6 relative group overflow-hidden">
-                           <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/10 rounded-full -mr-12 -mt-12 blur-2xl" />
+                        <Card className="apple-glass-card border border-white/20 dark:border-white/10 rounded-[2rem] p-6 relative group overflow-hidden shadow-md hover:shadow-xl transition-all duration-300">
+                           <div className="absolute top-0 right-0 w-28 h-28 bg-amber-500/15 rounded-full -mr-12 -mt-12 blur-2xl" />
                            <div className="flex justify-between items-center mb-4">
-                              <ArrowDownLeft className="h-5 w-5 text-orange-500" />
+                              <ArrowDownLeft className="h-5 w-5 text-amber-500" />
                               <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Input GST (Purchases)</span>
                            </div>
                            <p className="text-3xl font-black text-foreground">{settings.shop.currency} {inputGST.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                           <p className="text-[10px] text-muted-foreground/50 mt-1 font-bold uppercase tracking-widest">TOTAL PURCHASES: {totalPurchases.toLocaleString()}</p>
+                           <p className="text-[10px] text-muted-foreground/60 mt-1 font-bold uppercase tracking-widest">TOTAL PURCHASES: {totalPurchases.toLocaleString()}</p>
                         </Card>
 
-                        <Card className="bg-card border-border rounded-[2rem] p-6 relative group overflow-hidden">
+                        <Card className="apple-glass-card border border-white/20 dark:border-white/10 rounded-[2rem] p-6 relative group overflow-hidden shadow-md hover:shadow-xl transition-all duration-300">
                            <div className={cn(
-                             "absolute top-0 right-0 w-24 h-24 rounded-full -mr-12 -mt-12 blur-2xl",
-                             netGST >= 0 ? "bg-red-500/10" : "bg-green-500/10"
+                             "absolute top-0 right-0 w-28 h-28 rounded-full -mr-12 -mt-12 blur-2xl",
+                             netGST >= 0 ? "bg-red-500/15" : "bg-emerald-500/15"
                            )} />
                            <div className="flex justify-between items-center mb-4">
                               <Calculator className="h-5 w-5 text-purple-500" />

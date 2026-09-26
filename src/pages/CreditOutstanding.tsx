@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import AddCreditSaleDialog from '@/components/AddCreditSaleDialog';
 import SaleEditDialog from '@/components/SaleEditDialog';
 import { supabase } from '@/lib/supabase';
 import { useAppContext, Product, Sale, Customer } from '@/context/AppContext';
@@ -80,7 +79,6 @@ const CreditOutstanding = () => {
       return next;
     });
   };
-  const [isAddCreditSaleDialogOpen, setIsAddCreditSaleDialogOpen] = useState(false);
   const [selectedCustomerForAction, setSelectedCustomerForAction] = useState<Customer | null>(null);
   const [paymentAmount, setPaymentAmount] = useState<number | ''>('');
   
@@ -146,12 +144,6 @@ const CreditOutstanding = () => {
   const handleViewCreditPurchases = (customer: Customer) => {
     setSelectedCustomerForAction(customer);
     setIsCreditPurchasesDialogOpen(true);
-  };
-
-  const handleAddCreditSale = (newSale: any) => {
-    addSale(newSale as Sale);
-    updateCustomerBalance(newSale.customer.id, newSale.grandTotal);
-    showSuccess(t('credit_sale_added_successfully'));
   };
 
   const processSettlement = () => {
@@ -608,9 +600,6 @@ const CreditOutstanding = () => {
                        {pendingSlipsCount} NEW
                      </Badge>
                    )}
-                 </Button>
-                 <Button onClick={() => setIsAddCreditSaleDialogOpen(true)} className="gap-2 bg-primary hover:bg-primary/90 h-11 px-6 rounded-xl font-black shadow-[0_0_20px_rgba(0,132,255,0.3)]">
-                    <PlusCircle className="h-4 w-4" /> RECORD CREDIT
                  </Button>
               </div>
             </div>
@@ -1071,15 +1060,6 @@ const CreditOutstanding = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <AddCreditSaleDialog
-        isOpen={isAddCreditSaleDialogOpen}
-        onClose={() => {
-          setIsAddCreditSaleDialogOpen(false);
-          document.body.style.pointerEvents = '';
-        }}
-        onAdd={handleAddCreditSale}
-      />
 
       <TransferSlipsDialog
         open={isTransferSlipsDialogOpen}

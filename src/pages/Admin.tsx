@@ -388,18 +388,18 @@ const Admin = () => {
        </div>
 
        <div className="flex-1 flex overflow-hidden max-w-7xl mx-auto w-full gap-6 pb-6">
-          <div className="w-80 flex-shrink-0 bg-card rounded-3xl border border-border p-4 flex flex-col gap-2 overflow-y-auto custom-scrollbar">
-            <Button variant={activeTab === 'shopSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-xl font-bold h-auto py-3 whitespace-normal text-right" onClick={() => setActiveTab('shopSettings')}><Building2 className="h-5 w-5 shrink-0" /> {renderBoth('shop_settings')}</Button>
-            <Button variant={activeTab === 'accountingSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-xl font-bold h-auto py-3 whitespace-normal text-right" onClick={() => setActiveTab('accountingSettings')}><Landmark className="h-5 w-5 shrink-0" /> {renderBoth('accounting_settings')}</Button>
-            <Button variant={activeTab === 'softwareSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-xl font-bold h-auto py-3 whitespace-normal text-right" onClick={() => setActiveTab('softwareSettings')}><Monitor className="h-5 w-5 shrink-0" /> {renderBoth('software_settings')}</Button>
-            <Button variant={activeTab === 'generalSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-xl font-bold h-auto py-3 whitespace-normal text-right" onClick={() => setActiveTab('generalSettings')}><Layout className="h-5 w-5 shrink-0" /> {renderBoth('general_settings')}</Button>
-            <Button variant={activeTab === 'reportSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-xl font-bold h-auto py-3 whitespace-normal text-right" onClick={() => setActiveTab('reportSettings')}><FileText className="h-5 w-5 shrink-0" /> {renderBoth('report_settings')}</Button>
-            <Button variant={activeTab === 'printingSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-xl font-bold h-auto py-3 whitespace-normal text-right" onClick={() => setActiveTab('printingSettings')}><Printer className="h-5 w-5 shrink-0" /> {renderBoth('printing_settings')}</Button>
-            <Button variant={activeTab === 'telegramSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-xl font-bold h-auto py-3 whitespace-normal text-right text-[#229ED9]" onClick={() => setActiveTab('telegramSettings')}><TelegramIcon className="h-5 w-5 shrink-0" /> Telegram Bot</Button>
-            <Button variant={activeTab === 'userManagement' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-xl font-bold h-auto py-3 whitespace-normal text-right" onClick={() => setActiveTab('userManagement')}><Users className="h-5 w-5 shrink-0" /> {renderBoth('user_management')}</Button>
-            <Button variant={activeTab === 'dataManagement' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-xl font-bold h-auto py-3 whitespace-normal text-right" onClick={() => setActiveTab('dataManagement')}><Database className="h-5 w-5 shrink-0" /> {renderBoth('data_management')}</Button>
+          <div className="w-80 flex-shrink-0 apple-glass-card rounded-3xl border border-white/20 dark:border-white/10 p-4 flex flex-col gap-2 overflow-y-auto custom-scrollbar shadow-md">
+            <Button variant={activeTab === 'shopSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-2xl font-bold h-auto py-3 whitespace-normal text-right transition-all" onClick={() => setActiveTab('shopSettings')}><Building2 className="h-5 w-5 shrink-0" /> {renderBoth('shop_settings')}</Button>
+            <Button variant={activeTab === 'accountingSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-2xl font-bold h-auto py-3 whitespace-normal text-right transition-all" onClick={() => setActiveTab('accountingSettings')}><Landmark className="h-5 w-5 shrink-0" /> {renderBoth('accounting_settings')}</Button>
+            <Button variant={activeTab === 'softwareSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-2xl font-bold h-auto py-3 whitespace-normal text-right transition-all" onClick={() => setActiveTab('softwareSettings')}><Monitor className="h-5 w-5 shrink-0" /> {renderBoth('software_settings')}</Button>
+            <Button variant={activeTab === 'generalSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-2xl font-bold h-auto py-3 whitespace-normal text-right transition-all" onClick={() => setActiveTab('generalSettings')}><Layout className="h-5 w-5 shrink-0" /> {renderBoth('general_settings')}</Button>
+            <Button variant={activeTab === 'reportSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-2xl font-bold h-auto py-3 whitespace-normal text-right transition-all" onClick={() => setActiveTab('reportSettings')}><FileText className="h-5 w-5 shrink-0" /> {renderBoth('report_settings')}</Button>
+            <Button variant={activeTab === 'printingSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-2xl font-bold h-auto py-3 whitespace-normal text-right transition-all" onClick={() => setActiveTab('printingSettings')}><Printer className="h-5 w-5 shrink-0" /> {renderBoth('printing_settings')}</Button>
+            <Button variant={activeTab === 'telegramSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-2xl font-bold h-auto py-3 whitespace-normal text-right text-[#229ED9] transition-all" onClick={() => setActiveTab('telegramSettings')}><TelegramIcon className="h-5 w-5 shrink-0" /> Telegram Bot</Button>
+            <Button variant={activeTab === 'userManagement' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-2xl font-bold h-auto py-3 whitespace-normal text-right transition-all" onClick={() => setActiveTab('userManagement')}><Users className="h-5 w-5 shrink-0" /> {renderBoth('user_management')}</Button>
+            <Button variant={activeTab === 'dataManagement' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-2xl font-bold h-auto py-3 whitespace-normal text-right transition-all" onClick={() => setActiveTab('dataManagement')}><Database className="h-5 w-5 shrink-0" /> {renderBoth('data_management')}</Button>
           </div>
-          <ScrollArea className="flex-1 custom-scrollbar bg-card rounded-3xl border border-border">
+          <ScrollArea className="flex-1 custom-scrollbar apple-glass-card rounded-3xl border border-white/20 dark:border-white/10 shadow-xl">
             <div className="p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
              {/* Shop Settings */}
              {activeTab === 'shopSettings' && (
@@ -412,7 +412,7 @@ const Admin = () => {
                               <Input 
                                 value={shopSettings.shopName} 
                                 onChange={(e) => handleSettingsChange('shop', 'shopName', e.target.value)}
-                                className="bg-muted border-border h-12 rounded-xl text-right font-bold"
+                                className="apple-glass-input h-12 rounded-2xl text-right font-bold"
                               />
                            </div>
                            <div className="space-y-2">
@@ -420,7 +420,7 @@ const Admin = () => {
                               <Input 
                                 value={shopSettings.shopAddress} 
                                 onChange={(e) => handleSettingsChange('shop', 'shopAddress', e.target.value)}
-                                className="bg-muted border-border h-12 rounded-xl text-right font-bold"
+                                className="apple-glass-input h-12 rounded-2xl text-right font-bold"
                               />
                            </div>
                            <div className="space-y-2">
@@ -428,7 +428,7 @@ const Admin = () => {
                               <Input 
                                 value={shopSettings.shopPhone} 
                                 onChange={(e) => handleSettingsChange('shop', 'shopPhone', e.target.value)}
-                                className="bg-muted border-border h-12 rounded-xl text-right font-mono"
+                                className="apple-glass-input h-12 rounded-2xl text-right font-mono"
                               />
                            </div>
                         </div>

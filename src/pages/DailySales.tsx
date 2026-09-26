@@ -499,7 +499,7 @@ const DailySales = () => {
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-card border-border text-foreground" align="end">
+                <PopoverContent className="w-auto p-0 apple-glass-dialog border-white/20 dark:border-white/10 text-foreground" align="end">
                   <Calendar
                     mode="range"
                     selected={dateRange}
@@ -522,7 +522,7 @@ const DailySales = () => {
                variant="outline"
                size="sm"
                onClick={() => setIsBriefingDialogOpen(true)}
-               className="bg-muted border-border hover:bg-[#229ED9]/10 hover:border-[#229ED9]/30 hover:text-[#229ED9] text-foreground gap-2 h-9 px-3 rounded-xl text-xs font-bold transition-all"
+               className="apple-glass-card border-white/20 dark:border-white/10 hover:bg-[#229ED9]/15 hover:border-[#229ED9]/30 hover:text-[#229ED9] text-foreground gap-2 h-9 px-3 rounded-2xl text-xs font-bold transition-all shadow-xs"
              >
                <Moon className="h-4 w-4 text-[#229ED9]" />
                Briefing
@@ -531,7 +531,7 @@ const DailySales = () => {
                variant="outline"
                size="sm"
                onClick={handleDownloadExcel}
-               className="bg-muted border-border hover:bg-emerald-500/10 hover:border-emerald-500/30 hover:text-emerald-500 text-foreground gap-2 h-9 px-3 rounded-xl text-xs font-bold transition-all"
+               className="apple-glass-card border-white/20 dark:border-white/10 hover:bg-emerald-500/15 hover:border-emerald-500/30 hover:text-emerald-500 text-foreground gap-2 h-9 px-3 rounded-2xl text-xs font-bold transition-all shadow-xs"
              >
                <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
                Excel
@@ -540,7 +540,7 @@ const DailySales = () => {
                variant="outline"
                size="sm"
                onClick={handleDownloadPDF}
-               className="bg-muted border-border hover:bg-primary/10 hover:border-primary/30 hover:text-primary text-foreground gap-2 h-9 px-3 rounded-xl text-xs font-bold transition-all"
+               className="apple-glass-card border-white/20 dark:border-white/10 hover:bg-primary/15 hover:border-primary/30 hover:text-primary text-foreground gap-2 h-9 px-3 rounded-2xl text-xs font-bold transition-all shadow-xs"
              >
                <Download className="h-4 w-4" />
                PDF

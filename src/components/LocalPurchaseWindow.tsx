@@ -454,19 +454,19 @@ const LocalPurchaseWindow = () => {
       }}
     >
       <div 
-        className="w-[98vw] max-w-[1520px] h-[96vh] sm:h-[94vh] bg-card border border-border rounded-3xl shadow-2xl overflow-hidden flex flex-col font-faruma relative cursor-default" 
+        className="w-[98vw] max-w-[1520px] h-[96vh] sm:h-[94vh] apple-glass-dialog border border-white/20 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col font-faruma relative cursor-default" 
         dir="rtl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-border bg-muted/70 gap-4 shrink-0">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-white/15 dark:border-white/10 bg-white/20 dark:bg-white/5 backdrop-blur-md gap-4 shrink-0">
           <div className="flex items-center gap-2 shrink-0" dir="ltr">
             <Button 
               type="button" 
               variant="outline" 
               size="icon" 
               onClick={() => setIsPurchaseWindowMinimized(true)} 
-              className="h-9 w-9 rounded-xl border border-border/80 bg-background hover:bg-amber-500/15 hover:border-amber-500/50 hover:text-amber-500 text-foreground shadow-sm transition-all active:scale-90"
+              className="h-9 w-9 rounded-xl border border-white/20 bg-white/10 hover:bg-amber-500/15 hover:border-amber-500/50 hover:text-amber-500 text-foreground shadow-sm transition-all active:scale-90"
               title="Minimize (ކުޑަކޮށްލާ)"
             >
               <Minus className="h-4 w-4 stroke-[2.5]" />
@@ -484,7 +484,7 @@ const LocalPurchaseWindow = () => {
           </div>
           <div className="text-right flex-1 min-w-0">
             <div className="flex items-center justify-end gap-3 flex-wrap">
-              <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20">
+              <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg bg-primary/15 text-primary border border-primary/30">
                 GST Input Tax & Inventory Management
               </span>
               <h2 className="text-xl sm:text-2xl font-black text-foreground flex items-center justify-end gap-2.5 truncate">
@@ -501,7 +501,7 @@ const LocalPurchaseWindow = () => {
         {/* Scrollable Content Body */}
         <div className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
           {/* Bill Master Information Header */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/40 border border-border rounded-2xl shadow-xs">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 apple-glass-card border border-white/20 dark:border-white/10 rounded-2xl shadow-xs">
             {/* Vendor Selector */}
             <div className="space-y-1.5 text-right">
               <div className="flex items-center justify-between">
@@ -520,21 +520,21 @@ const LocalPurchaseWindow = () => {
                 </Label>
               </div>
               <Select value={vendorId} onValueChange={setVendorId}>
-                <SelectTrigger className="w-full bg-background border-border text-right h-11 rounded-xl font-bold">
+                <SelectTrigger className="w-full apple-glass-input text-right h-11 rounded-xl font-bold">
                   <SelectValue placeholder="Choose Vendor (ވެންޑަރ އިޚްތިޔާރުކުރޭ)" />
                 </SelectTrigger>
-                <SelectContent className="bg-card border-border text-foreground !z-[110]">
-                  <div className="p-2 sticky top-0 bg-card border-b border-border z-10">
+                <SelectContent className="apple-glass-dialog border border-white/20 text-foreground !z-[110]">
+                  <div className="p-2 sticky top-0 apple-glass-dialog border-b border-white/10 z-10">
                     <Input 
                       placeholder="Search vendors / ހޯއްދަވާ..." 
                       value={vendorSearchQuery}
                       onChange={(e) => setVendorSearchQuery(e.target.value)}
-                      className="h-8 bg-muted border-border text-right text-xs"
+                      className="h-8 apple-glass-input text-right text-xs"
                     />
                   </div>
                   <ScrollArea className="h-48">
                     {filteredVendors.map(v => (
-                      <SelectItem key={v.id} value={v.id} className="text-right hover:bg-muted font-bold text-xs">
+                      <SelectItem key={v.id} value={v.id} className="text-right hover:bg-white/10 font-bold text-xs">
                         {v.name_dv || v.name_en} {v.tin_number ? `(TIN: ${v.tin_number})` : ''}
                       </SelectItem>
                     ))}
@@ -552,7 +552,7 @@ const LocalPurchaseWindow = () => {
                 value={billNumber}
                 onChange={(e) => setBillNumber(e.target.value)}
                 placeholder="e.g. INV-2026-001"
-                className="bg-background border-border font-bold h-11 rounded-xl text-right font-mono text-sm"
+                className="apple-glass-input font-bold h-11 rounded-xl text-right font-mono text-sm"
               />
             </div>
 
@@ -565,7 +565,7 @@ const LocalPurchaseWindow = () => {
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="bg-background border-border font-bold h-11 rounded-xl text-right font-mono text-sm"
+                className="apple-glass-input font-bold h-11 rounded-xl text-right font-mono text-sm"
               />
             </div>
           </div>

@@ -265,7 +265,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                     <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
                                         {renderBoth('product_image')}
                                     </Label>
-                                    <div className="w-24 h-24 rounded-2xl bg-muted border-2 border-dashed border-border flex flex-col items-center justify-center relative overflow-hidden group">
+                                    <div className="w-24 h-24 rounded-2xl bg-white/5 dark:bg-black/20 border-2 border-dashed border-white/20 flex flex-col items-center justify-center relative overflow-hidden group backdrop-blur-md">
                                         {imagePreviewUrl ? (
                                             <img src={imagePreviewUrl} alt="Preview" className="w-full h-full object-cover" />
                                         ) : (
@@ -289,7 +289,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                         <Input 
                                             value={editedProduct.name_dv} 
                                             onChange={(e) => updateField('name_dv', e.target.value)} 
-                                            className="bg-muted border-border h-10 rounded-xl text-right font-bold text-sm focus:border-primary/50"
+                                            className="apple-glass-input h-10 rounded-xl text-right font-bold text-sm"
                                             placeholder="ތަކެތީގެ ނަން"
                                         />
                                     </div>
@@ -300,7 +300,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                         <Input 
                                             value={editedProduct.name_en} 
                                             onChange={(e) => updateField('name_en', e.target.value)} 
-                                            className="bg-muted border-border h-10 rounded-xl text-right font-bold text-sm focus:border-primary/50"
+                                            className="apple-glass-input h-10 rounded-xl text-right font-bold text-sm"
                                             placeholder="Product Name"
                                         />
                                     </div>
@@ -335,7 +335,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                             value={editedProduct.price} 
                                             onChange={(e) => updateField('price', parseFloat(e.target.value) || 0)} 
                                             onFocus={handleFocus}
-                                            className="bg-muted border-border h-11 rounded-xl text-right pl-12 pr-3 text-lg font-black text-primary focus:border-primary" 
+                                            className="apple-glass-input h-11 rounded-xl text-right pl-12 pr-3 text-lg font-black text-primary" 
                                         />
                                     </div>
                                 </div>
@@ -355,7 +355,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                             onChange={(e) => updateField('cost_price', e.target.value === '' ? undefined : (parseFloat(e.target.value) || 0))} 
                                             onFocus={handleFocus}
                                             placeholder="0.00"
-                                            className="bg-muted border-border h-11 rounded-xl text-right pl-12 pr-3 text-lg font-black text-foreground focus:border-emerald-500/50" 
+                                            className="apple-glass-input h-11 rounded-xl text-right pl-12 pr-3 text-lg font-black text-foreground" 
                                         />
                                     </div>
                                 </div>
@@ -373,7 +373,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                             value={editedProduct.item_code} 
                                             onChange={(e) => updateField('item_code', e.target.value.replace(/\D/g, ''))} 
                                             placeholder="1001"
-                                            className="bg-muted border-border h-11 rounded-xl text-right pr-8 font-mono text-xs focus:border-primary/50" 
+                                            className="apple-glass-input h-11 rounded-xl text-right pr-8 font-mono text-xs" 
                                         />
                                     </div>
                                 </div>
@@ -387,7 +387,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                         <Input 
                                             value={editedProduct.barcode} 
                                             onChange={(e) => updateField('barcode', e.target.value)} 
-                                            className="bg-muted border-border h-11 rounded-xl text-right pr-8 font-mono text-xs focus:border-primary/50" 
+                                            className="apple-glass-input h-11 rounded-xl text-right pr-8 font-mono text-xs" 
                                         />
                                     </div>
                                 </div>
@@ -400,10 +400,10 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                         {renderBoth('category')}
                                     </Label>
                                     <Select value={editedProduct.category} onValueChange={(val) => updateField('category', val)}>
-                                        <SelectTrigger className="bg-muted border-border h-11 rounded-xl text-right text-xs font-bold">
+                                        <SelectTrigger className="apple-glass-input h-11 rounded-xl text-right text-xs font-bold">
                                             <SelectValue />
                                         </SelectTrigger>
-                                        <SelectContent className="bg-card border-border text-foreground">
+                                        <SelectContent className="apple-glass-dialog border border-white/20 text-foreground">
                                             <SelectItem value="DRINKS" className="text-right">DRINKS</SelectItem>
                                             <SelectItem value="FOOD" className="text-right">FOOD</SelectItem>
                                             <SelectItem value="HARDWARE" className="text-right">HARDWARE</SelectItem>
@@ -419,18 +419,18 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                     </Label>
                                     <Popover>
                                         <PopoverTrigger asChild>
-                                            <Button variant="outline" className={cn("w-full justify-between text-right font-bold h-11 text-xs rounded-xl bg-muted border-border hover:bg-muted/80", !expiryDate && "text-muted-foreground")}>
+                                            <Button variant="outline" className={cn("w-full justify-between text-right font-bold h-11 text-xs rounded-xl apple-glass-input hover:bg-white/10", !expiryDate && "text-muted-foreground")}>
                                                 {expiryDate ? format(expiryDate, "dd/MM/yyyy") : <span>{renderBoth('pick_a_date')}</span>}
                                                 <CalendarIcon className="h-3.5 w-3.5 opacity-50" />
                                             </Button>
                                         </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0 bg-card border-border z-[120]" align="start">
+                                        <PopoverContent className="w-auto p-0 apple-glass-dialog border border-white/20 z-[120]" align="start">
                                             <Calendar mode="single" selected={expiryDate} onSelect={setExpiryDate} initialFocus className="text-foreground" />
                                         </PopoverContent>
                                     </Popover>
                                 </div>
 
-                                <div className="bg-muted p-2.5 rounded-xl border border-border flex items-center justify-between h-11">
+                                <div className="apple-glass-card p-2.5 rounded-xl border border-white/15 dark:border-white/10 flex items-center justify-between h-11">
                                     <Switch 
                                         checked={editedProduct.is_zero_tax} 
                                         onCheckedChange={(val) => updateField('is_zero_tax', val)}

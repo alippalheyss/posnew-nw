@@ -378,7 +378,7 @@ const CreditInvoices = () => {
           <Button 
             onClick={handleDownloadExcel} 
             variant="outline" 
-            className="bg-muted border-border hover:bg-emerald-500/10 hover:border-emerald-500/30 hover:text-emerald-500 text-foreground gap-2 h-11 px-4 rounded-xl text-xs font-bold transition-all"
+            className="apple-glass-card border-white/20 dark:border-white/10 hover:bg-emerald-500/15 hover:border-emerald-500/30 hover:text-emerald-500 text-foreground gap-2 h-11 px-4 rounded-2xl text-xs font-bold transition-all shadow-xs"
           >
             <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
             Excel
@@ -386,7 +386,7 @@ const CreditInvoices = () => {
           <Button 
             onClick={handleDownloadPDF} 
             variant="outline" 
-            className="bg-muted border-border hover:bg-orange-500/10 hover:border-orange-500/30 hover:text-orange-500 text-foreground gap-2 h-11 px-4 rounded-xl text-xs font-bold transition-all"
+            className="apple-glass-card border-white/20 dark:border-white/10 hover:bg-orange-500/15 hover:border-orange-500/30 hover:text-orange-500 text-foreground gap-2 h-11 px-4 rounded-2xl text-xs font-bold transition-all shadow-xs"
           >
             <Download className="h-4 w-4 text-orange-500" />
             PDF
@@ -395,12 +395,12 @@ const CreditInvoices = () => {
       </div>
 
       {/* Filters Section */}
-      <div className="flex flex-wrap items-center gap-4 mb-8 bg-muted p-2 rounded-2xl border border-border w-fit">
+      <div className="flex flex-wrap items-center gap-2 mb-8 apple-glass-card p-1.5 rounded-2xl border border-white/20 dark:border-white/10 w-fit shadow-xs">
         <Button 
           variant="ghost" 
           size="sm" 
           onClick={() => setDateFilter('all')}
-          className={cn("rounded-xl text-xs font-bold transition-all", dateFilter === 'all' ? "bg-primary text-foreground" : "text-muted-foreground hover:text-foreground")}
+          className={cn("rounded-xl text-xs font-bold transition-all", dateFilter === 'all' ? "bg-primary text-primary-foreground shadow-sm font-black" : "text-muted-foreground hover:text-foreground hover:bg-white/10")}
         >
           {t('all')}
         </Button>
@@ -408,7 +408,7 @@ const CreditInvoices = () => {
           variant="ghost" 
           size="sm" 
           onClick={() => setDateFilter('today')}
-          className={cn("rounded-xl text-xs font-bold transition-all", dateFilter === 'today' ? "bg-primary text-foreground" : "text-muted-foreground hover:text-foreground")}
+          className={cn("rounded-xl text-xs font-bold transition-all", dateFilter === 'today' ? "bg-primary text-primary-foreground shadow-sm font-black" : "text-muted-foreground hover:text-foreground hover:bg-white/10")}
         >
           {t('today')}
         </Button>
@@ -416,7 +416,7 @@ const CreditInvoices = () => {
           variant="ghost" 
           size="sm" 
           onClick={() => setDateFilter('yesterday')}
-          className={cn("rounded-xl text-xs font-bold transition-all", dateFilter === 'yesterday' ? "bg-primary text-foreground" : "text-muted-foreground hover:text-foreground")}
+          className={cn("rounded-xl text-xs font-bold transition-all", dateFilter === 'yesterday' ? "bg-primary text-primary-foreground shadow-sm font-black" : "text-muted-foreground hover:text-foreground hover:bg-white/10")}
         >
           {t('yesterday')}
         </Button>
@@ -427,7 +427,7 @@ const CreditInvoices = () => {
               variant="ghost" 
               size="sm" 
               onClick={() => setDateFilter('custom')}
-              className={cn("rounded-xl text-xs font-bold flex gap-2 items-center transition-all", dateFilter === 'custom' ? "bg-primary text-foreground" : "text-muted-foreground hover:text-foreground")}
+              className={cn("rounded-xl text-xs font-bold flex gap-2 items-center transition-all", dateFilter === 'custom' ? "bg-primary text-primary-foreground shadow-sm font-black" : "text-muted-foreground hover:text-foreground hover:bg-white/10")}
             >
               <CalendarIcon className="h-4 w-4" />
               {dateFilter === 'custom' && dateRange?.from ? (
@@ -437,7 +437,7 @@ const CreditInvoices = () => {
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 bg-card border-border text-foreground" align="end">
+          <PopoverContent className="w-auto p-0 apple-glass-dialog border-white/20 dark:border-white/10 text-foreground" align="end">
             <Calendar
               mode="range"
               selected={dateRange}
@@ -462,7 +462,7 @@ const CreditInvoices = () => {
            placeholder="Search invoices by ID or customer name..."
            value={searchTerm}
            onChange={(e) => setSearchTerm(e.target.value)}
-           className="w-full bg-muted border-border rounded-xl pr-12 h-14 text-right font-bold focus:border-primary/50 transition-all text-lg"
+           className="w-full apple-glass-input rounded-2xl pr-12 h-14 text-right font-bold transition-all text-lg shadow-sm"
          />
       </div>
 
@@ -476,7 +476,7 @@ const CreditInvoices = () => {
             </div>
           ) : (
             filteredSales.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale) => (
-              <Card key={sale.id} className="bg-card border-border hover:border-orange-500/30 transition-all rounded-3xl p-6 group">
+              <Card key={sale.id} className="apple-glass-card border border-white/20 dark:border-white/10 hover:border-orange-500/40 transition-all rounded-3xl p-6 group shadow-sm hover:shadow-lg">
                 <div className="flex items-center justify-between gap-6">
                    <div className="flex items-center gap-6">
                       <div className="h-14 w-14 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 group-hover:scale-110 transition-transform">
@@ -485,7 +485,7 @@ const CreditInvoices = () => {
                       <div className="text-right">
                          <div className="flex items-center justify-end gap-3 mb-1">
                             <span className="text-lg font-black text-foreground">{sale.invoiceNumber || sale.id}</span>
-                            <Badge className="bg-orange-500 text-foreground border-none text-[8px] font-black uppercase tracking-widest px-2 py-0.5">
+                            <Badge className="bg-orange-500 text-white border-none text-[8px] font-black uppercase tracking-widest px-2 py-0.5">
                                CREDIT
                             </Badge>
                          </div>
@@ -501,7 +501,7 @@ const CreditInvoices = () => {
                             <Clock className="h-4 w-4 mb-1" />
                             <span className="text-[10px] font-black uppercase tracking-widest">{new Date(sale.date).toLocaleDateString()}</span>
                          </div>
-                         <div className="h-8 w-[1px] bg-muted" />
+                         <div className="h-8 w-[1px] bg-white/20 dark:bg-white/10" />
                          <div className="flex flex-col items-center">
                             <Receipt className="h-4 w-4 mb-1" />
                             <span className="text-[10px] font-black uppercase tracking-widest">{sale.items.length} ITEMS</span>

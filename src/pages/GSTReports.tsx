@@ -267,20 +267,20 @@ const GSTReports = () => {
                     </div>
 
                     {/* Input GST Table */}
-                    <Card className="bg-card border-border rounded-[2rem] overflow-hidden shadow-2xl flex flex-col">
-                        <CardHeader className="border-b border-border px-8 py-6 flex flex-row items-center justify-between">
+                    <Card className="apple-glass-card border border-white/20 dark:border-white/10 rounded-[2rem] overflow-hidden shadow-2xl flex flex-col">
+                        <CardHeader className="border-b border-white/20 dark:border-white/10 px-8 py-6 flex flex-row items-center justify-between bg-white/30 dark:bg-white/5 backdrop-blur-md">
                             <div className="flex items-center gap-2">
                                <FileText className="h-5 w-5 text-primary" />
                                <span className="text-sm font-black text-foreground">Purchase History (Input GST)</span>
                             </div>
-                            <Badge className="bg-muted text-muted-foreground border-border uppercase tracking-widest font-black text-[10px]">
+                            <Badge className="bg-white/20 text-foreground border-white/20 uppercase tracking-widest font-black text-[10px]">
                                {filteredPurchases.length} RECORDS
                             </Badge>
                         </CardHeader>
                         <CardContent className="p-0">
                             <Table dir="rtl">
-                                <TableHeader className="bg-muted">
-                                    <TableRow className="border-border">
+                                <TableHeader className="bg-white/40 dark:bg-white/5 backdrop-blur-md sticky top-0 z-10 border-b border-white/20 dark:border-white/10">
+                                    <TableRow className="border-white/20 dark:border-white/10">
                                         <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">Date</TableHead>
                                         <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">Bill #</TableHead>
                                         <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">Vendor</TableHead>
@@ -299,7 +299,7 @@ const GSTReports = () => {
                                         </TableRow>
                                     ) : (
                                         filteredPurchases.map((purchase) => (
-                                            <TableRow key={purchase.id} className="border-border hover:bg-muted transition-colors group">
+                                            <TableRow key={purchase.id} className="border-white/10 dark:border-white/5 hover:bg-white/40 dark:hover:bg-white/10 transition-colors group">
                                                 <TableCell className="text-right font-medium">{formatDate(purchase.date)}</TableCell>
                                                 <TableCell className="text-right font-black text-foreground">
                                                     <div>{purchase.billNumber || '-'}</div>

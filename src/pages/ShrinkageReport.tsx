@@ -185,26 +185,26 @@ const ShrinkageReport = () => {
 
       {/* Stats Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-         <Card className="bg-card border-border rounded-[2rem] p-6 relative overflow-hidden group">
+         <Card className="apple-glass-card border border-red-500/25 rounded-[2rem] p-6 relative overflow-hidden group shadow-md">
             <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/10 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-red-500/20 transition-all" />
             <div className="flex justify-between items-center mb-4">
                <TrendingDown className="h-5 w-5 text-red-500" />
                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Total Value Loss</span>
             </div>
             <p className="text-3xl font-black text-foreground">{settings.shop.currency} {totalLoss.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-            <p className="text-[10px] text-muted-foreground/50 mt-1 font-bold uppercase tracking-widest">ACCUMULATED SHRINKAGE</p>
+            <p className="text-[10px] text-muted-foreground/60 mt-1 font-bold uppercase tracking-widest">ACCUMULATED SHRINKAGE</p>
          </Card>
 
-         <Card className="bg-card border-border rounded-[2rem] p-6 relative overflow-hidden group">
+         <Card className="apple-glass-card border border-orange-500/25 rounded-[2rem] p-6 relative overflow-hidden group shadow-md">
             <div className="flex justify-between items-center mb-4">
                <AlertTriangle className="h-5 w-5 text-orange-500" />
                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Loss Incidents</span>
             </div>
             <p className="text-3xl font-black text-foreground">{records.length}</p>
-            <p className="text-[10px] text-muted-foreground/50 mt-1 font-bold uppercase tracking-widest">TOTAL RECORDS</p>
+            <p className="text-[10px] text-muted-foreground/60 mt-1 font-bold uppercase tracking-widest">TOTAL RECORDS</p>
          </Card>
 
-         <Card className="bg-card border-border rounded-[2rem] p-6 relative overflow-hidden group">
+         <Card className="apple-glass-card border border-white/20 dark:border-white/10 rounded-[2rem] p-6 relative overflow-hidden group shadow-md">
             <div className="flex justify-between items-center mb-4">
                <Package className="h-5 w-5 text-primary" />
                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Highest Loss Reason</span>
@@ -212,7 +212,7 @@ const ShrinkageReport = () => {
             <p className="text-2xl font-black text-foreground uppercase truncate">
                {records.length > 0 ? records[0].reason : 'N/A'}
             </p>
-            <p className="text-[10px] text-muted-foreground/50 mt-1 font-bold uppercase tracking-widest">BY FREQUENCY</p>
+            <p className="text-[10px] text-muted-foreground/60 mt-1 font-bold uppercase tracking-widest">BY FREQUENCY</p>
          </Card>
       </div>
 
@@ -223,26 +223,26 @@ const ShrinkageReport = () => {
            placeholder="Search records by product or notes..."
            value={searchTerm}
            onChange={(e) => setSearchTerm(e.target.value)}
-           className="w-full bg-muted border-border rounded-xl pr-12 h-14 text-right font-bold focus:border-primary/50 transition-all text-lg"
+           className="w-full apple-glass-input rounded-2xl pr-12 h-14 text-right font-bold transition-all text-lg shadow-sm"
          />
       </div>
 
       {/* Main Table Container */}
-      <Card className="bg-card border-border rounded-[2rem] overflow-hidden shadow-2xl flex-1 flex flex-col">
-         <CardHeader className="border-b border-border px-8 py-6 flex flex-row items-center justify-between">
+      <Card className="apple-glass-card border border-white/25 dark:border-white/10 rounded-[2rem] overflow-hidden shadow-2xl flex-1 flex flex-col">
+         <CardHeader className="border-b border-white/20 dark:border-white/10 px-8 py-6 flex flex-row items-center justify-between bg-white/30 dark:bg-white/5 backdrop-blur-md">
             <div className="flex items-center gap-2">
                <History className="h-5 w-5 text-primary" />
                <span className="text-sm font-black text-foreground">Loss History Log</span>
             </div>
-            <Badge className="bg-muted text-muted-foreground border-border uppercase tracking-widest font-black text-[10px]">
+            <Badge className="bg-white/20 text-foreground border-white/20 uppercase tracking-widest font-black text-[10px]">
                {filteredRecords.length} ENTRIES
             </Badge>
          </CardHeader>
          <CardContent className="p-0 flex-1 overflow-hidden">
             <ScrollArea className="h-full custom-scrollbar">
                <Table dir="rtl">
-                  <TableHeader className="bg-muted sticky top-0 z-10">
-                     <TableRow className="border-border">
+                  <TableHeader className="bg-white/40 dark:bg-white/5 backdrop-blur-md sticky top-0 z-10 border-b border-white/20 dark:border-white/10">
+                     <TableRow className="border-white/20 dark:border-white/10">
                         <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">Date</TableHead>
                         <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">Product</TableHead>
                         <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">Qty</TableHead>

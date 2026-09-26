@@ -758,7 +758,7 @@ const Expenses: React.FC = () => {
         {/* Date Filter & Search */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Date Selector */}
-          <div className="bg-muted p-1 rounded-2xl border border-border flex items-center gap-1">
+          <div className="apple-glass-card p-1.5 rounded-2xl border border-white/20 dark:border-white/10 flex items-center gap-1 shadow-xs">
             {(['today', 'this_month', 'this_year', 'all'] as const).map(filter => (
               <Button
                 key={filter}
@@ -767,7 +767,7 @@ const Expenses: React.FC = () => {
                 onClick={() => setDateFilter(filter)}
                 className={cn(
                   "px-3 h-8 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all",
-                  dateFilter === filter ? "bg-primary text-foreground" : "text-muted-foreground hover:text-foreground"
+                  dateFilter === filter ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-white/10"
                 )}
               >
                 {filter === 'this_month' ? 'This Month' : filter === 'this_year' ? 'This Year' : filter}
@@ -783,14 +783,14 @@ const Expenses: React.FC = () => {
                   onClick={() => setDateFilter('custom')}
                   className={cn(
                     "px-3 h-8 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all",
-                    dateFilter === 'custom' ? "bg-primary text-foreground" : "text-muted-foreground hover:text-foreground"
+                    dateFilter === 'custom' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-white/10"
                   )}
                 >
                   <CalendarIcon className="h-3.5 w-3.5" />
                   <span>{dateFilter === 'custom' && dateRange?.from ? getDateFilterLabel() : 'Custom Range'}</span>
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-card border-border text-foreground" align="end">
+              <PopoverContent className="w-auto p-0 apple-glass-dialog border-white/20 dark:border-white/10 text-foreground" align="end">
                 <Calendar
                   mode="range"
                   selected={dateRange}
@@ -817,7 +817,7 @@ const Expenses: React.FC = () => {
           placeholder="Search expenses by title, bill/ref number, category, or remarks..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
-          className="w-full bg-muted border-border rounded-2xl pr-12 h-12 text-right font-bold focus:border-primary/50 transition-all"
+          className="w-full apple-glass-input rounded-2xl pr-12 h-12 text-right font-bold transition-all shadow-sm"
         />
       </div>
 
@@ -831,7 +831,7 @@ const Expenses: React.FC = () => {
               <Button 
                 onClick={() => handleOpenAddDialog(selectedCategory !== 'all' ? selectedCategory : undefined)}
                 variant="outline"
-                className="mt-4 gap-2 border-border text-xs rounded-xl"
+                className="mt-4 gap-2 border-white/20 dark:border-white/10 text-xs rounded-xl hover:bg-white/10"
               >
                 <PlusCircle className="h-4 w-4" /> Record New Expense
               </Button>
@@ -845,7 +845,7 @@ const Expenses: React.FC = () => {
                 <Card
                   key={expense.id}
                   className={cn(
-                    "bg-card border-border transition-all rounded-3xl p-5 group shadow-sm",
+                    "apple-glass-card border border-white/20 dark:border-white/10 transition-all rounded-3xl p-5 group shadow-sm hover:shadow-md",
                     config.borderColor
                   )}
                 >

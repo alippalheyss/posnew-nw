@@ -346,6 +346,36 @@ export const answerCallbackQuery = async (
 };
 
 /**
+ * Banking Apps (BML & MIB) launch buttons for Telegram Inline Keyboards
+ */
+export const getBankingAppInlineKeyboard = () => {
+  return {
+    inline_keyboard: [
+      [
+        {
+          text: '🏦 BML (Android)',
+          url: 'https://play.google.com/store/apps/details?id=mv.com.bml.mib&hl=en-US&pli=1',
+        },
+        {
+          text: '🍏 BML (iOS)',
+          url: 'https://apps.apple.com/us/app/bml-mobile-banking/id975025664',
+        },
+      ],
+      [
+        {
+          text: '🟢 MIB (Android)',
+          url: 'https://play.google.com/store/apps/details?id=mv.com.mib.faisamobilex&hl=en-US',
+        },
+        {
+          text: '🍏 MIB (iOS)',
+          url: 'https://apps.apple.com/us/app/faisamobile-x-by-mib/id6553987435',
+        },
+      ],
+    ],
+  };
+};
+
+/**
  * Handle incoming bot commands (/start, /balance, /account, /help)
  */
 export const handleTelegramBotCommand = async ({
@@ -543,7 +573,7 @@ Account: \`7730000442060\` (B BACK)
 
 _Please send transfer receipt slip to the cashier._`;
 
-      await sendTelegramMessage(chatId, msg, token);
+      await sendTelegramMessage(chatId, msg, token, 'Markdown', getBankingAppInlineKeyboard());
     } else {
       await sendTelegramMessage(
         chatId,
@@ -614,7 +644,7 @@ _To update your contact details, please inform the cashier at the counter._`;
     msg += `3. *Attach and send the slip photo directly in this chat!* 📎\n\n`;
     msg += `_Our cashier will verify the transfer in our bank account and settle your tab immediately._ 🙏`;
 
-    await sendTelegramMessage(chatId, msg, token);
+    await sendTelegramMessage(chatId, msg, token, 'Markdown', getBankingAppInlineKeyboard());
     return;
   }
 
@@ -1169,7 +1199,7 @@ export const sendTelegramOutstandingStatement = async ({
   msg += `━━━━━━━━━━━━━━━━━━━━\n`;
   msg += `_Please transfer and send the payment slip. Thank you!_ 🙏`;
 
-  return await sendTelegramMessage(chatId, msg, token);
+  return await sendTelegramMessage(chatId, msg, token, 'Markdown', getBankingAppInlineKeyboard());
 };
 
 /**
@@ -1527,7 +1557,7 @@ export const sendAutomatedCreditReminder = async ({
     creditLimit,
   });
 
-  return await sendTelegramMessage(chatId, text, token, 'Markdown');
+  return await sendTelegramMessage(chatId, text, token, 'Markdown', getBankingAppInlineKeyboard());
 };
 
 /**
@@ -1590,7 +1620,7 @@ export const sendAutoTransferToCreditNotification = async ({
     newBalance,
     shopSettings,
   });
-  return await sendTelegramMessage(chatId, text, token, 'Markdown');
+  return await sendTelegramMessage(chatId, text, token, 'Markdown', getBankingAppInlineKeyboard());
 };
 
 /**

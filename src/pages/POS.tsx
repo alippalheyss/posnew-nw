@@ -183,6 +183,7 @@ const POS = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paidAmount, setPaidAmount] = useState<number | ''>(0);
   const [isConfirmRemoveCartDialogOpen, setIsConfirmRemoveCartDialogOpen] = useState(false);
+  const [isConfirmClearCartDialogOpen, setIsConfirmClearCartDialogOpen] = useState(false);
   const [cartToRemoveId, setCartToRemoveId] = useState<string | null>(null);
   const [isPrintConfirmDialogOpen, setIsPrintConfirmDialogOpen] = useState(false);
   const [lastSaleForPrint, setLastSaleForPrint] = useState<Sale | null>(null);
@@ -336,7 +337,7 @@ const POS = () => {
 
   const isAnyModalOpen = isCashDialogOpen || isCreditDialogOpen || isSplitDialogOpen || 
                          isAwaitingTransferDialogOpen || isPendingTransfersDialogOpen || 
-                         isExpiryDialogOpen || isConfirmRemoveCartDialogOpen || 
+                         isExpiryDialogOpen || isConfirmRemoveCartDialogOpen || isConfirmClearCartDialogOpen ||
                          isLoyaltyRedemptionDialogOpen || isUnitSelectionDialogOpen || 
                          isAddCustomerDialogOpen || isPrintConfirmDialogOpen;
   const isAnyModalOpenRef = useRef(isAnyModalOpen);
@@ -385,6 +386,7 @@ const POS = () => {
           setIsPendingTransfersDialogOpen(false);
           setIsExpiryDialogOpen(false);
           setIsConfirmRemoveCartDialogOpen(false);
+          setIsConfirmClearCartDialogOpen(false);
           setIsPrintConfirmDialogOpen(false);
         }
         return;
@@ -433,6 +435,20 @@ const POS = () => {
       return newMap;
     });
     setPointsToRedeem(0);
+  };
+
+  const handleClearCartClick = () => {
+    if (activeCart && activeCart.items.length > 0) {
+      setIsConfirmClearCartDialogOpen(true);
+    } else {
+      clearActiveCart();
+    }
+  };
+
+  const confirmClearCart = () => {
+    clearActiveCart();
+    setIsConfirmClearCartDialogOpen(false);
+    focusSearchBar();
   };
 
   useEffect(() => {
@@ -1775,7 +1791,7 @@ const POS = () => {
               <Users className="h-4 w-4" /> SPLIT BILL
             </Button>
             <Button
-              onClick={clearActiveCart}
+              onClick={handleClearCartClick}
               className="h-10 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 text-[10px] font-black uppercase tracking-widest gap-2"
             >
               <Trash2 className="h-4 w-4" /> CLEAR
@@ -2383,6 +2399,56 @@ const POS = () => {
             >
               <Trash2 className="h-4 w-4" />
               <span>{renderBoth('confirm')}</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Clear Active Cart Dialog */}
+      <Dialog open={isConfirmClearCartDialogOpen} onOpenChange={setIsConfirmClearCartDialogOpen}>
+        <DialogContent className="sm:max-w-[480px] w-[calc(100vw-2rem)] font-faruma apple-glass-dialog text-foreground border-white/20 dark:border-white/10 p-6 sm:p-7 shadow-2xl rounded-3xl box-border overflow-hidden [&>button]:left-4 [&>button]:right-auto space-y-4" dir="rtl">
+          <DialogHeader className="text-right pb-3 border-b border-border/60">
+            <div className="flex items-start justify-between pl-8">
+              <div className="text-right flex-1 min-w-0">
+                <DialogTitle className="text-lg sm:text-xl font-black text-foreground flex items-center justify-end gap-2.5 flex-wrap">
+                  <span className="leading-tight break-words">ކާޓު ހުސްކޮށްލަންވީތަ؟ (Clear Cart?)</span>
+                  <div className="h-9 w-9 rounded-xl bg-red-500/15 text-red-500 flex items-center justify-center shrink-0 ring-1 ring-red-500/30">
+                    <Trash2 className="h-5 w-5" />
+                  </div>
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-1.5 leading-relaxed text-right break-words">
+                  މިހާރު ކާޓުގައިވާ ހުރިހާ އައިޓަމެއް އުނިކުރެވޭނެއެވެ. މިކަން ޔަޤީންކުރައްވާތޯ؟
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-right space-y-1">
+            <p className="text-xs font-bold text-red-600 dark:text-red-400 leading-relaxed">
+              ⚠️ ކާޓުގައި މިވަގުތު {activeCart?.items.length || 0} އައިޓަމް އެބައޮތެވެ. ކާޓު ހުސްކޮށްލުމުން މި ހުރިހާ އައިޓަމެއް ފޮހެވިގެންދާނެއެވެ.
+            </p>
+            <p className="text-[11px] text-muted-foreground font-sans text-right" dir="ltr">
+              Are you sure you want to clear all {activeCart?.items.length || 0} item(s) from this cart? This action cannot be undone.
+            </p>
+          </div>
+
+          <DialogFooter className="gap-3 pt-3 border-t border-border flex flex-row justify-between items-center w-full">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => setIsConfirmClearCartDialogOpen(false)}
+              className="flex-1 h-11 border-border hover:bg-muted text-foreground rounded-xl font-bold text-xs"
+            >
+              Cancel (ނޫން)
+            </Button>
+            <Button
+              variant="destructive"
+              type="button"
+              onClick={confirmClearCart}
+              className="flex-1 h-11 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl shadow-lg shadow-red-600/20 text-xs uppercase tracking-wider gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Clear Cart (ހުސްކުރޭ)</span>
             </Button>
           </DialogFooter>
         </DialogContent>

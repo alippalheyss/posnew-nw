@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Opening Bank of Maldives (BML)...</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: linear-gradient(135deg, #0d1b2a, #1b263b);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+      box-sizing: border-box;
+      text-align: center;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 24px;
+      padding: 32px 24px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+    .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-size: 20px;
+      font-weight: 800;
+      margin: 0 0 8px 0;
+      color: #f87171;
+    }
+    p {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.7);
+      margin: 0 0 24px 0;
+      line-height: 1.5;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      margin-bottom: 12px;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      text-decoration: none;
+      box-sizing: border-box;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: #e11d48;
+      color: #fff;
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+  </style>
+  <script>
+    (function() {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      const isAndroid = /Android/.test(navigator.userAgent);
+      if (isIOS) {
+        window.location.replace("https://apps.apple.com/us/app/bml-mobile-banking/id975025664");
+      } else if (isAndroid) {
+        window.location.replace("https://play.google.com/store/apps/details?id=mv.com.bml.mib&hl=en-US&pli=1");
+      }
+    })();
+  </script>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🏦</div>
+    <h1>Bank of Maldives (BML)</h1>
+    <p>Redirecting to BML Mobile Banking app...</p>
+    <a class="btn btn-primary" href="https://play.google.com/store/apps/details?id=mv.com.bml.mib&hl=en-US&pli=1">
+      Open for Android (Google Play)
+    </a>
+    <a class="btn btn-secondary" href="https://apps.apple.com/us/app/bml-mobile-banking/id975025664">
+      Open for iPhone / iPad (App Store)
+    </a>
+  </div>
+</body>
+</html>

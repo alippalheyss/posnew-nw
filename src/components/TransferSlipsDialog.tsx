@@ -207,7 +207,7 @@ export const TransferSlipsDialog: React.FC<TransferSlipsDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[96vw] lg:max-w-6xl w-full max-h-[94vh] flex flex-col p-0 gap-0 overflow-hidden apple-liquid-glass bg-card/95 border border-white/20 dark:border-white/10 text-foreground rounded-[2rem] shadow-2xl box-border">
+      <DialogContent className="max-w-[96vw] lg:max-w-6xl w-full max-h-[94vh] flex flex-col p-0 gap-0 overflow-hidden apple-liquid-glass border border-white/20 dark:border-white/10 text-foreground rounded-[2rem] shadow-2xl box-border">
         {/* Header */}
         <DialogHeader className="p-6 pb-4 border-b border-border/80 flex flex-row items-center justify-between">
           <div>
@@ -710,7 +710,7 @@ export const TransferSlipsDialog: React.FC<TransferSlipsDialogProps> = ({
       {/* Confirmation Modal before Settling Slip */}
       {isConfirmSettleModalOpen && selectedSlip && (
         <Dialog open={isConfirmSettleModalOpen} onOpenChange={setIsConfirmSettleModalOpen}>
-          <DialogContent className="sm:max-w-[460px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto font-faruma apple-glass-card bg-card/95 text-foreground border border-white/20 dark:border-white/10 p-6 sm:p-7 shadow-2xl rounded-3xl box-border overflow-hidden [&>button]:left-4 [&>button]:right-auto space-y-4" dir="rtl">
+          <DialogContent className="sm:max-w-[460px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto font-faruma apple-glass-dialog text-foreground border border-white/20 dark:border-white/10 p-6 sm:p-7 shadow-2xl rounded-3xl box-border overflow-hidden [&>button]:left-4 [&>button]:right-auto space-y-4" dir="rtl">
             <DialogHeader className="text-right pb-3 border-b border-border/60">
               <DialogTitle className="text-xl font-black text-foreground flex items-center justify-end gap-2.5">
                 <span>ޓްރާންސްފަރ ސްލިޕް ކަށަވަރުކުރުން</span>

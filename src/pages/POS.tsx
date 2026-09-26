@@ -2345,7 +2345,7 @@ const POS = () => {
       </Dialog>
 
       <Dialog open={isConfirmRemoveCartDialogOpen} onOpenChange={setIsConfirmRemoveCartDialogOpen}>
-        <DialogContent className="sm:max-w-[480px] w-[calc(100vw-2rem)] font-faruma apple-glass-card bg-card/95 text-foreground border border-white/20 dark:border-white/10 p-6 sm:p-7 shadow-2xl rounded-3xl box-border overflow-hidden [&>button]:left-4 [&>button]:right-auto space-y-4" dir="rtl">
+        <DialogContent className="sm:max-w-[480px] w-[calc(100vw-2rem)] font-faruma apple-glass-dialog text-foreground border-white/20 dark:border-white/10 p-6 sm:p-7 shadow-2xl rounded-3xl box-border overflow-hidden [&>button]:left-4 [&>button]:right-auto space-y-4" dir="rtl">
           <DialogHeader className="text-right pb-3 border-b border-border/60">
             <div className="flex items-start justify-between pl-8">
               <div className="text-right flex-1 min-w-0">
@@ -2389,7 +2389,7 @@ const POS = () => {
       </Dialog>
 
       <Dialog open={isExpiryDialogOpen} onOpenChange={setIsExpiryDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto overflow-x-hidden font-faruma apple-glass-card bg-card/95 text-foreground border border-white/20 dark:border-white/10 text-right p-5 sm:p-6 shadow-2xl rounded-3xl box-border [&>button]:left-4 [&>button]:right-auto space-y-4" dir="rtl">
+        <DialogContent className="sm:max-w-[500px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto overflow-x-hidden font-faruma apple-glass-dialog text-foreground border-white/20 dark:border-white/10 text-right p-5 sm:p-6 shadow-2xl rounded-3xl box-border [&>button]:left-4 [&>button]:right-auto space-y-4" dir="rtl">
           {(() => {
             const basePrice = selectedProductForExpiry?.original_price || selectedProductForExpiry?.price || 0;
             const currentNewPrice = Number(expiryDropPrice) || basePrice;
@@ -2561,7 +2561,7 @@ const POS = () => {
           setSplitSearchTerm('');
         }
       }}>
-        <DialogContent className="sm:max-w-[600px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto overflow-x-hidden font-faruma apple-glass-card bg-card/95 text-foreground border border-white/20 dark:border-white/10 text-right p-5 sm:p-6 shadow-2xl rounded-3xl box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+        <DialogContent className="sm:max-w-[600px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto overflow-x-hidden font-faruma apple-glass-dialog text-foreground border-white/20 dark:border-white/10 text-right p-5 sm:p-6 shadow-2xl rounded-3xl box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
           <DialogHeader className="pb-3.5 text-right space-y-1.5 border-b border-border/60">
             <div className="flex items-center justify-between pl-8">
               <div className="text-right flex-1 min-w-0">

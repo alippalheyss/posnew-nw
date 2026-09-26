@@ -1279,13 +1279,13 @@ const SalesReports = () => {
       {/* Return Sale Dialog */}
       {returnSale && (
         <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/40 dark:bg-black/60 backdrop-blur-md p-4 animate-in fade-in"
           onClick={(e) => { if (e.target === e.currentTarget) setReturnSale(null); }}
         >
-          <div className="w-full max-w-lg bg-card border border-orange-500/30 rounded-3xl p-6 shadow-2xl shadow-orange-500/10 space-y-5 text-foreground animate-in zoom-in-95">
+          <div className="w-full max-w-lg apple-glass-dialog border border-orange-500/30 rounded-3xl p-6 shadow-2xl space-y-5 text-foreground animate-in zoom-in-95" onClick={(e) => e.stopPropagation()}>
             {/* Header */}
-            <div className="flex items-center justify-between">
-              <button type="button" onClick={() => setReturnSale(null)} className="h-8 w-8 rounded-xl border border-border bg-muted/50 hover:bg-muted text-muted-foreground flex items-center justify-center">
+            <div className="flex items-center justify-between border-b border-white/15 dark:border-white/10 pb-3">
+              <button type="button" onClick={() => setReturnSale(null)} className="h-8 w-8 rounded-xl border border-white/20 dark:border-white/10 bg-white/10 hover:bg-white/20 text-foreground flex items-center justify-center">
                 <X className="h-4 w-4" />
               </button>
               <div className="text-right">
@@ -1302,10 +1302,10 @@ const SalesReports = () => {
             </div>
 
             {/* Items List */}
-            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
               <p className="text-[11px] font-black uppercase text-muted-foreground">Select quantities to return:</p>
               {(returnSale.items || []).map(item => (
-                <div key={item.id} className="flex items-center justify-between gap-4 p-3 bg-muted/50 rounded-xl border border-border">
+                <div key={item.id} className="flex items-center justify-between gap-4 p-3 apple-glass-card rounded-2xl border border-white/20 dark:border-white/10">
                   <div className="flex-1 min-w-0 text-right">
                     <p className="font-black text-sm text-foreground line-clamp-1">{item.name_dv || item.name_en || 'Item'}</p>
                     <p className="text-[10px] text-muted-foreground font-mono">
@@ -1325,7 +1325,7 @@ const SalesReports = () => {
                         setReturnQtys(prev => ({ ...prev, [item.id]: v }));
                       }}
                       onFocus={(e) => e.target.select()}
-                      className="w-16 h-9 text-center font-black font-mono text-sm bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      className="w-16 h-9 text-center font-black font-mono text-sm apple-glass-input rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
                 </div>
@@ -1339,12 +1339,12 @@ const SalesReports = () => {
                 return sum + qty * Number(item.price || 0);
               }, 0);
               return refundTotal > 0 ? (
-                <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl flex items-center justify-between">
+                <div className="p-3 bg-orange-500/15 border border-orange-500/30 rounded-2xl flex items-center justify-between">
                   <span className="font-mono font-black text-orange-500 text-lg">{settings.shop.currency} {refundTotal.toFixed(2)}</span>
                   <span className="text-sm font-black text-foreground">Refund Total</span>
                 </div>
               ) : (
-                <div className="p-3 bg-muted/40 border border-border rounded-xl text-center text-xs text-muted-foreground font-bold">
+                <div className="p-3 apple-glass-card rounded-2xl text-center text-xs text-muted-foreground font-bold">
                   Enter return quantities above
                 </div>
               );
@@ -1360,7 +1360,7 @@ const SalesReports = () => {
             {/* Actions */}
             <div className="flex gap-3">
               <button type="button" onClick={() => setReturnSale(null)}
-                className="flex-1 h-11 rounded-2xl border border-border bg-muted hover:bg-muted/80 text-foreground font-bold text-xs transition-all">
+                className="flex-1 h-11 rounded-2xl border border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold text-xs transition-all">
                 Cancel
               </button>
               <button

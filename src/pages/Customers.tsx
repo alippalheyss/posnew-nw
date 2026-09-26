@@ -205,7 +205,7 @@ const Customers = () => {
            placeholder={renderBothString('search_customers')}
            value={searchTerm}
            onChange={(e) => setSearchTerm(e.target.value)}
-           className="w-full bg-muted border-border rounded-xl pr-12 h-14 text-right font-bold focus:border-primary/50 transition-all text-lg"
+           className="w-full apple-glass-input rounded-2xl pr-12 h-14 text-right font-bold transition-all text-lg shadow-sm"
          />
       </div>
 
@@ -228,8 +228,8 @@ const Customers = () => {
                              onClick={() => handleOpenTelegramConnect(customer)}
                              className={
                                customer.telegram_chat_id
-                                 ? "h-7 px-2 text-[10px] font-bold rounded-lg bg-[#229ED9]/10 text-[#229ED9] hover:bg-[#229ED9]/20 gap-1"
-                                 : "h-7 px-2 text-[10px] font-bold rounded-lg bg-muted text-muted-foreground hover:text-[#229ED9] hover:bg-[#229ED9]/10 gap-1"
+                                 ? "h-7 px-2 text-[10px] font-bold rounded-lg bg-[#229ED9]/15 text-[#229ED9] hover:bg-[#229ED9]/25 gap-1"
+                                 : "h-7 px-2 text-[10px] font-bold rounded-lg bg-white/10 dark:bg-white/5 text-muted-foreground hover:text-[#229ED9] hover:bg-[#229ED9]/10 gap-1"
                              }
                              title={customer.telegram_chat_id ? `Telegram Linked (Chat ID: ${customer.telegram_chat_id})` : "Click to connect Telegram"}
                            >
@@ -239,19 +239,19 @@ const Customers = () => {
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/50 hover:text-foreground">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/50 hover:text-foreground hover:bg-white/10">
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent className="bg-card border-border text-foreground" dir="rtl">
-                            <DropdownMenuItem onClick={() => handleEditClick(customer)} className="gap-2 text-right justify-end hover:bg-muted cursor-pointer">
+                          <DropdownMenuContent className="apple-glass-dialog border-white/20 dark:border-white/10 text-foreground" dir="rtl">
+                            <DropdownMenuItem onClick={() => handleEditClick(customer)} className="gap-2 text-right justify-end hover:bg-white/10 cursor-pointer">
                               {renderBoth('edit')} <PencilLine className="h-4 w-4 text-blue-400" />
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleOpenTelegramConnect(customer)} className="gap-2 text-right justify-end hover:bg-muted cursor-pointer text-[#229ED9]">
+                            <DropdownMenuItem onClick={() => handleOpenTelegramConnect(customer)} className="gap-2 text-right justify-end hover:bg-white/10 cursor-pointer text-[#229ED9]">
                               <span>Connect Telegram (QR)</span> <QrCode className="h-4 w-4" />
                             </DropdownMenuItem>
                             {customer.outstanding_balance > 0 && customer.telegram_chat_id && (
-                              <DropdownMenuItem onClick={() => handleSendCustomerTelegram(customer)} className="gap-2 text-right justify-end hover:bg-muted cursor-pointer text-emerald-400">
+                              <DropdownMenuItem onClick={() => handleSendCustomerTelegram(customer)} className="gap-2 text-right justify-end hover:bg-white/10 cursor-pointer text-emerald-400">
                                 <span>Send Telegram Statement</span> <Send className="h-4 w-4" />
                               </DropdownMenuItem>
                             )}
@@ -283,7 +283,7 @@ const Customers = () => {
                               <span className="text-primary">{settings.shop.currency} {customer.outstanding_balance.toFixed(2)}</span>
                               <span className="text-muted-foreground font-bold">Used Credit</span>
                            </div>
-                           <Progress value={Math.min(100, (customer.outstanding_balance / (customer.credit_limit || 1)) * 100)} className="h-1.5 bg-muted" />
+                           <Progress value={Math.min(100, (customer.outstanding_balance / (customer.credit_limit || 1)) * 100)} className="h-1.5 bg-black/10 dark:bg-white/10" />
                            <div className="flex justify-between text-xs font-bold text-muted-foreground">
                               <span>Limit: {settings.shop.currency} {customer.credit_limit.toFixed(2)}</span>
                               <span>{Math.round((customer.outstanding_balance / (customer.credit_limit || 1)) * 100)}%</span>
@@ -291,11 +291,11 @@ const Customers = () => {
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
-                           <div className="bg-muted p-3 rounded-2xl border border-border text-right">
+                           <div className="apple-glass-card p-3 rounded-2xl border border-white/20 dark:border-white/10 text-right">
                               <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-1">{renderBoth('loyalty_points')}</p>
                               <p className="text-sm font-black text-blue-400">{(customer.loyalty_points || 0).toFixed(0)} <span className="text-[9px] font-normal opacity-70">PTS</span></p>
                            </div>
-                           <div className="bg-muted p-3 rounded-2xl border border-border text-right">
+                           <div className="apple-glass-card p-3 rounded-2xl border border-white/20 dark:border-white/10 text-right">
                               <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-1">{renderBoth('credit_limit')}</p>
                               <p className="text-sm font-black text-orange-500">{settings.shop.currency} {customer.credit_limit.toFixed(0)}</p>
                            </div>

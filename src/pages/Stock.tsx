@@ -117,7 +117,7 @@ const Stock = () => {
            <Button onClick={() => setIsQuickStockOpen(true)} className="gap-2 bg-primary hover:bg-primary/90 h-10 px-6 rounded-xl font-black shadow-[0_0_20px_rgba(0,132,255,0.3)]">
                <PackagePlus className="h-4 w-4" /> Quick Stock
            </Button>
-           <div className="bg-muted rounded-xl p-1 border border-border flex gap-1">
+           <div className="apple-glass-card rounded-2xl p-1 border border-white/20 dark:border-white/10 flex gap-1 shadow-sm">
               {['all', 'low', 'warning', 'high'].map((filter) => (
                 <Button 
                   key={filter}
@@ -125,8 +125,8 @@ const Stock = () => {
                   size="sm" 
                   onClick={() => setStockFilter(filter as any)}
                   className={cn(
-                    "px-4 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
-                    stockFilter === filter ? "bg-primary text-foreground" : "text-muted-foreground hover:text-foreground"
+                    "px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                    stockFilter === filter ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-white/10"
                   )}
                 >
                   {filter}
@@ -143,7 +143,7 @@ const Stock = () => {
            placeholder="Search stock by name, code or barcode..."
            value={searchTerm}
            onChange={(e) => { setSearchTerm(e.target.value); setVisibleCount(20); }}
-           className="w-full bg-muted border-border rounded-xl pr-12 h-14 text-right font-bold focus:border-primary/50 transition-all text-lg"
+           className="w-full apple-glass-input rounded-2xl pr-12 h-14 text-right font-bold transition-all text-lg shadow-sm"
          />
       </div>
 

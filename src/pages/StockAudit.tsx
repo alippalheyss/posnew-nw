@@ -1019,23 +1019,23 @@ export default function StockAudit() {
   }, [allCountedList]);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-24 font-faruma selection:bg-primary selection:text-white" dir="rtl">
+    <div className="min-h-screen bg-background text-foreground pb-24 font-faruma selection:bg-primary selection:text-white" dir="rtl">
       
       {/* 1. Header Bar */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3.5 py-2.5 shadow-xs">
+      <header className="sticky top-0 z-40 bg-white/50 dark:bg-slate-950/60 backdrop-blur-xl border-b border-white/20 dark:border-white/10 px-3.5 py-2.5 shadow-sm">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate('/')}
-              className="h-9 w-9 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700"
+              className="h-9 w-9 rounded-2xl bg-white/30 dark:bg-white/10 hover:bg-white/50 dark:hover:bg-white/20 text-foreground border border-white/20 dark:border-white/10"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-sm sm:text-base font-black text-slate-900 leading-tight">ސްޓޮކް އޮޑިޓް</h1>
-              <p className="text-[10px] text-slate-500 font-sans font-medium">Mobile Stock Audit</p>
+              <h1 className="text-sm sm:text-base font-black text-foreground leading-tight">ސްޓޮކް އޮޑިޓް</h1>
+              <p className="text-[10px] text-muted-foreground font-sans font-medium">Mobile Stock Audit</p>
             </div>
           </div>
 
@@ -1050,14 +1050,14 @@ export default function StockAudit() {
                 showSuccess('Synced latest stock from Main App');
               }}
               disabled={isSyncingProducts}
-              className="h-9 px-2 sm:px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700 text-[11px] font-bold gap-1 shadow-none"
+              className="h-9 px-2 sm:px-2.5 rounded-xl apple-glass-card hover:bg-white/40 dark:hover:bg-white/10 border-white/20 dark:border-white/10 text-foreground text-[11px] font-bold gap-1 shadow-none"
               title="Sync stock from Main App"
             >
               <RefreshCw className={cn("h-3.5 w-3.5 text-primary", isSyncingProducts && "animate-spin")} />
               <span className="hidden sm:inline">Sync Stock</span>
             </Button>
 
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-bold">
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl apple-glass-card border border-white/20 dark:border-white/10 text-foreground text-[11px] font-bold">
               <span className={cn("w-2 h-2 rounded-full", isConnected ? "bg-emerald-500 animate-pulse" : "bg-amber-400")} />
               <span>{counterName}</span>
               {isAdminUser && (
@@ -1072,14 +1072,14 @@ export default function StockAudit() {
 
       {/* 2. Clean Segmented Tabs Switcher */}
       <div className="max-w-md mx-auto px-3.5 pt-3">
-        <div className="grid grid-cols-2 p-1 bg-slate-200/80 rounded-2xl text-xs font-bold gap-1 font-sans">
+        <div className="grid grid-cols-2 p-1.5 apple-glass-card rounded-2xl text-xs font-bold gap-1.5 font-sans border border-white/25 dark:border-white/10 shadow-sm">
           <button
             onClick={() => setActiveTab('search')}
             className={cn(
               "py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-none",
               activeTab === 'search' 
-                ? "bg-white text-slate-900 font-black shadow-xs" 
-                : "text-slate-600 hover:text-slate-900"
+                ? "bg-primary text-primary-foreground font-black shadow-md" 
+                : "text-muted-foreground hover:text-foreground hover:bg-white/10"
             )}
           >
             <Search className="h-3.5 w-3.5" />
@@ -1091,11 +1091,11 @@ export default function StockAudit() {
             className={cn(
               "py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-none",
               activeTab === 'counted' 
-                ? "bg-white text-slate-900 font-black shadow-xs" 
-                : "text-slate-600 hover:text-slate-900"
+                ? "bg-primary text-primary-foreground font-black shadow-md" 
+                : "text-muted-foreground hover:text-foreground hover:bg-white/10"
             )}
           >
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+            <CheckCircle2 className="h-3.5 w-3.5" />
             <span>Counted Items</span>
             {totalCountedItems > 0 && (
               <Badge className={cn("text-[9px] px-1.5 py-0 rounded-full font-black", pendingApprovalCount > 0 ? "bg-amber-500 text-white" : "bg-emerald-600 text-white")}>
@@ -1115,18 +1115,18 @@ export default function StockAudit() {
             {/* Search Input with Barcode Camera Button */}
             <div className="relative flex items-center gap-1.5">
               <div className="relative flex-1">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
                   type="text"
                   placeholder="ހޯދާ / Search item, code, barcode..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pr-9 pl-8 h-11 rounded-2xl bg-white border-slate-200 text-xs sm:text-sm font-sans focus-visible:ring-primary shadow-xs"
+                  className="pr-9 pl-8 h-11 rounded-2xl apple-glass-input text-xs sm:text-sm font-sans focus-visible:ring-primary shadow-xs"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -1146,14 +1146,14 @@ export default function StockAudit() {
 
             {/* Product List */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-[11px] text-slate-500 font-sans px-1">
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground font-sans px-1">
                 <span>{searchQuery ? `Matching products (${searchResults.length})` : 'All Products (Tap to count)'}</span>
               </div>
 
               {searchResults.length === 0 ? (
-                <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center space-y-1 font-sans text-xs">
-                  <p className="font-bold text-slate-700">No products found</p>
-                  <p className="text-slate-400 text-[11px]">Try typing a different name or scanning the barcode.</p>
+                <div className="apple-glass-card rounded-2xl border border-white/20 dark:border-white/10 p-6 text-center space-y-1 font-sans text-xs">
+                  <p className="font-bold text-foreground">No products found</p>
+                  <p className="text-muted-foreground text-[11px]">Try typing a different name or scanning the barcode.</p>
                 </div>
               ) : (
                 searchResults.map(product => {
@@ -1165,10 +1165,10 @@ export default function StockAudit() {
                     <div
                       key={product.id}
                       className={cn(
-                        "p-3 rounded-2xl bg-white border transition-all space-y-2 shadow-xs",
+                        "p-3 rounded-2xl apple-glass-card border transition-all space-y-2 shadow-xs",
                         isApproved
-                          ? "border-emerald-400 bg-emerald-50/15"
-                          : (hasCount ? "border-amber-300 bg-amber-50/15" : "border-slate-200 hover:border-slate-300")
+                          ? "border-emerald-400/50 bg-emerald-500/10"
+                          : (hasCount ? "border-amber-400/50 bg-amber-500/10" : "border-white/20 dark:border-white/10 hover:border-primary/40")
                       )}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -1261,18 +1261,18 @@ export default function StockAudit() {
             {totalCountedItems > 0 && (
               <div className="relative flex items-center gap-1.5">
                 <div className="relative flex-1">
-                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   <Input
                     type="text"
                     placeholder="ގުނާފައިވާ ތަކެތިން ހޯދާ / Search counted items..."
                     value={countedSearchQuery}
                     onChange={(e) => setCountedSearchQuery(e.target.value)}
-                    className="pr-9 pl-8 h-10 rounded-2xl bg-white border-slate-200 text-xs sm:text-sm font-sans focus-visible:ring-primary shadow-xs"
+                    className="pr-9 pl-8 h-10 rounded-2xl apple-glass-input text-xs sm:text-sm font-sans focus-visible:ring-primary shadow-xs"
                   />
                   {countedSearchQuery && (
                     <button
                       onClick={() => setCountedSearchQuery('')}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
                       title="Clear Search"
                     >
                       <X className="h-4 w-4" />
@@ -1282,20 +1282,20 @@ export default function StockAudit() {
               </div>
             )}
 
-            <div className="flex items-center justify-between px-1 text-xs font-sans text-slate-600">
-              <span className="font-bold">
+            <div className="flex items-center justify-between px-1 text-xs font-sans text-muted-foreground">
+              <span className="font-bold text-foreground">
                 Counted Items ({totalCountedItems})
                 {countedSearchQuery && ` — Matching (${countedProductsList.length})`}
               </span>
-              <span className="text-[11px] text-slate-400">
+              <span className="text-[11px] text-muted-foreground/80">
                 {pendingApprovalCount > 0 ? `${pendingApprovalCount} pending review` : 'All approved'}
               </span>
             </div>
 
             {totalCountedItems === 0 ? (
-              <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-2 font-sans text-xs">
-                <p className="font-bold text-slate-700">No items counted yet</p>
-                <p className="text-slate-400 text-[11px]">Go to the Search & Count tab to search products or scan barcodes.</p>
+              <div className="apple-glass-card rounded-2xl border border-white/20 dark:border-white/10 p-8 text-center space-y-2 font-sans text-xs">
+                <p className="font-bold text-foreground">No items counted yet</p>
+                <p className="text-muted-foreground text-[11px]">Go to the Search & Count tab to search products or scan barcodes.</p>
                 <Button
                   onClick={() => setActiveTab('search')}
                   className="h-8 px-4 rounded-xl bg-primary text-white text-xs font-bold mt-2"
@@ -1304,14 +1304,14 @@ export default function StockAudit() {
                 </Button>
               </div>
             ) : countedProductsList.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center space-y-2 font-sans text-xs">
-                <p className="font-bold text-slate-700">No matching counted items</p>
-                <p className="text-slate-400 text-[11px]">No counted items match "{countedSearchQuery}".</p>
+              <div className="apple-glass-card rounded-2xl border border-white/20 dark:border-white/10 p-6 text-center space-y-2 font-sans text-xs">
+                <p className="font-bold text-foreground">No matching counted items</p>
+                <p className="text-muted-foreground text-[11px]">No counted items match "{countedSearchQuery}".</p>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => setCountedSearchQuery('')}
-                  className="h-8 px-3 rounded-xl border-slate-200 text-xs font-bold"
+                  className="h-8 px-3 rounded-xl border-white/20 dark:border-white/10 text-xs font-bold"
                 >
                   Clear Search
                 </Button>
@@ -1325,10 +1325,10 @@ export default function StockAudit() {
                   <div 
                     key={product.id}
                     className={cn(
-                      "p-3 rounded-2xl bg-white border transition-all space-y-2 shadow-xs",
+                      "p-3 rounded-2xl apple-glass-card border transition-all space-y-2 shadow-xs",
                       auditState.isApproved 
-                        ? "border-emerald-400 bg-emerald-50/20" 
-                        : "border-slate-200"
+                        ? "border-emerald-400/50 bg-emerald-500/10" 
+                        : "border-white/20 dark:border-white/10"
                     )}
                   >
                     {/* Header */}
@@ -1714,7 +1714,7 @@ export default function StockAudit() {
       {/* ================= DIALOG 3: BARCODE SCANNER MODAL (KEPT IN DOM) ================= */}
       <div 
         className={cn(
-          "fixed inset-0 z-[100] items-center justify-center bg-black/85 backdrop-blur-sm p-4 font-faruma",
+          "fixed inset-0 z-[100] items-center justify-center bg-slate-950/40 dark:bg-black/60 backdrop-blur-md p-4 font-faruma",
           isScannerOpen ? "flex" : "hidden pointer-events-none"
         )}
         dir="rtl"
@@ -1723,36 +1723,36 @@ export default function StockAudit() {
         }}
       >
         <div 
-          className="w-full max-w-sm bg-white rounded-3xl p-4 sm:p-5 shadow-2xl space-y-3 text-slate-900 animate-in fade-in zoom-in-95 duration-150"
+          className="w-full max-w-sm apple-glass-dialog rounded-3xl p-4 sm:p-5 shadow-2xl space-y-3 text-foreground animate-in fade-in zoom-in-95 duration-150 border border-white/30 dark:border-white/10"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between pb-1 border-b border-slate-100">
-            <div className="flex items-center gap-1.5">
-              <div className="w-7 h-7 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                <Camera className="h-3.5 w-3.5" />
+          <div className="flex items-center justify-between pb-2 border-b border-white/20 dark:border-white/10">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                <Camera className="h-4 w-4" />
               </div>
               <div>
-                <h3 className="text-xs sm:text-sm font-black text-slate-900">Barcode Scanner</h3>
-                <p className="text-[9px] text-slate-500 font-sans">Aim camera at product barcode</p>
+                <h3 className="text-xs sm:text-sm font-black text-foreground">Barcode Scanner</h3>
+                <p className="text-[9px] text-muted-foreground font-sans">Aim camera at product barcode</p>
               </div>
             </div>
             <Button
               size="icon"
               variant="ghost"
               onClick={stopCameraScanner}
-              className="h-7 w-7 rounded-full text-slate-400 hover:text-slate-700"
+              className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-white/10"
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
 
           {/* Video Box - Always kept in DOM so html5-qrcode never fails on null element */}
-          <div className="relative overflow-hidden rounded-2xl bg-black aspect-4/3 flex items-center justify-center border border-slate-200">
+          <div className="relative overflow-hidden rounded-2xl bg-black aspect-4/3 flex items-center justify-center border border-white/20 dark:border-white/10 shadow-inner">
             <div id="stock-audit-camera-box" className="w-full h-full" />
             {scannerError && (
-              <div className="absolute inset-0 bg-white/95 p-4 flex flex-col items-center justify-center text-center text-rose-600 text-xs font-sans space-y-2">
+              <div className="absolute inset-0 bg-slate-950/90 p-4 flex flex-col items-center justify-center text-center text-rose-400 text-xs font-sans space-y-2">
                 <p className="font-bold">{scannerError}</p>
-                <Button size="sm" onClick={stopCameraScanner} className="h-8 rounded-xl bg-slate-200 text-slate-800 text-xs">
+                <Button size="sm" onClick={stopCameraScanner} className="h-8 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs">
                   Close
                 </Button>
               </div>
@@ -1763,7 +1763,7 @@ export default function StockAudit() {
             type="button"
             variant="outline"
             onClick={stopCameraScanner}
-            className="w-full h-9 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold"
+            className="w-full h-10 rounded-2xl border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground text-xs font-bold"
           >
             Cancel & Close
           </Button>

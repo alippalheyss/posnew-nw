@@ -1351,12 +1351,12 @@ const POS = () => {
             {displayProducts.map((product) => {
               const isLowStock = product.stock_shop < LOW_STOCK_THRESHOLD;
               const cardColors = [
-                'bg-[#A0D3E8]/30 text-[#004B87] border-[#A0D3E8]/60 dark:bg-[#1E293B] dark:text-[#F1F5F9] dark:border-[#475569]',
-                'bg-[#F5F5F5] text-[#004B87] border-[#A0D3E8]/40 dark:bg-[#0F172A] dark:text-[#F1F5F9] dark:border-[#334155]',
-                'bg-white text-[#004B87] border-[#A0D3E8]/50 dark:bg-[#334155] dark:text-[#F1F5F9] dark:border-[#475569]',
-                'bg-[#A0D3E8]/45 text-[#004B87] border-[#A0D3E8]/70 dark:bg-[#1E293B] dark:text-[#94A3B8] dark:border-[#334155]',
-                'bg-[#F5F5F5] text-[#6C757D] border-[#6C757D]/30 dark:bg-[#0F172A] dark:text-[#94A3B8] dark:border-[#475569]',
-                'bg-[#004B87]/10 text-[#004B87] border-[#004B87]/20 dark:bg-[#334155] dark:text-[#94A3B8] dark:border-[#334155]',
+                'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-400/30 backdrop-blur-md',
+                'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-400/30 backdrop-blur-md',
+                'bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-400/30 backdrop-blur-md',
+                'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-400/30 backdrop-blur-md',
+                'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-400/30 backdrop-blur-md',
+                'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-400/30 backdrop-blur-md',
               ];
               const colorClass = cardColors[Math.abs(product.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % cardColors.length];
               const adaptedImage = getAdaptedImageUrl(product.image, product.name_en || product.name_dv, product.item_code);

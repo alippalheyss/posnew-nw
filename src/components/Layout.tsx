@@ -23,9 +23,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     <div className="flex h-[100dvh] flex-row-reverse bg-background text-foreground overflow-hidden relative">
       {/* Ambient Apple Liquid Glass backdrop mesh */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute -top-[20%] -left-[10%] w-[55vw] h-[55vw] rounded-full bg-blue-500/10 dark:bg-blue-600/12 blur-[120px] pointer-events-none transform -translate-z-0" />
-        <div className="absolute top-[40%] -right-[15%] w-[50vw] h-[50vw] rounded-full bg-indigo-500/8 dark:bg-cyan-500/10 blur-[130px] pointer-events-none transform -translate-z-0" />
-        <div className="absolute -bottom-[20%] left-[25%] w-[45vw] h-[45vw] rounded-full bg-sky-400/8 dark:bg-blue-400/8 blur-[100px] pointer-events-none transform -translate-z-0" />
+        <div className="absolute -top-[15%] -left-[10%] w-[55vw] h-[55vw] rounded-full bg-blue-500/15 dark:bg-blue-600/18 blur-[130px] pointer-events-none transform -translate-z-0" />
+        <div className="absolute top-[35%] -right-[10%] w-[50vw] h-[50vw] rounded-full bg-indigo-500/12 dark:bg-cyan-500/14 blur-[140px] pointer-events-none transform -translate-z-0" />
+        <div className="absolute -bottom-[15%] left-[20%] w-[48vw] h-[48vw] rounded-full bg-sky-400/14 dark:bg-blue-400/12 blur-[120px] pointer-events-none transform -translate-z-0" />
+        <div className="absolute top-[10%] right-[30%] w-[35vw] h-[35vw] rounded-full bg-purple-400/10 dark:bg-purple-600/10 blur-[110px] pointer-events-none transform -translate-z-0" />
       </div>
 
       <Sidebar />

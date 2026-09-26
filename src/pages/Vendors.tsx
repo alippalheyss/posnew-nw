@@ -169,13 +169,13 @@ const Vendors = () => {
                     placeholder={t('search_vendors')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full bg-muted border-border rounded-xl pr-12 h-14 text-right font-bold focus:border-primary/50 transition-all text-lg"
+                    className="w-full apple-glass-input rounded-2xl pr-12 h-14 text-right font-bold transition-all text-lg shadow-sm"
                 />
             </div>
 
             {/* Vendors Table/List Container */}
-            <Card className="bg-card border-border rounded-3xl overflow-hidden flex-1 flex flex-col shadow-2xl">
-                <CardHeader className="border-b border-border px-6 py-4 flex flex-row items-center justify-between">
+            <Card className="apple-glass-card border border-white/30 dark:border-white/10 rounded-3xl overflow-hidden flex-1 flex flex-col shadow-2xl">
+                <CardHeader className="border-b border-white/20 dark:border-white/10 px-6 py-4 flex flex-row items-center justify-between bg-white/30 dark:bg-white/5 backdrop-blur-md">
                     <div className="flex items-center gap-2">
                          <span className="text-xs font-black text-muted-foreground uppercase tracking-widest">{filteredVendors.length} VENDORS FOUND</span>
                     </div>
@@ -186,8 +186,8 @@ const Vendors = () => {
                 <CardContent className="p-0 flex-1 overflow-hidden">
                     <ScrollArea className="h-full custom-scrollbar">
                         <Table dir="rtl">
-                            <TableHeader className="bg-muted sticky top-0 z-10">
-                                <TableRow className="border-border hover:bg-transparent">
+                            <TableHeader className="bg-white/40 dark:bg-white/5 backdrop-blur-md sticky top-0 z-10 border-b border-white/20 dark:border-white/10">
+                                <TableRow className="border-white/20 dark:border-white/10 hover:bg-transparent">
                                     <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">Code</TableHead>
                                     <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">Vendor Name</TableHead>
                                     <TableHead className="text-right font-black text-muted-foreground uppercase text-[10px] tracking-widest">Contact</TableHead>
@@ -204,7 +204,7 @@ const Vendors = () => {
                                     </TableRow>
                                 ) : (
                                     filteredVendors.map((vendor) => (
-                                        <TableRow key={vendor.id} className="border-border hover:bg-muted transition-colors group">
+                                        <TableRow key={vendor.id} className="border-white/10 dark:border-white/5 hover:bg-white/40 dark:hover:bg-white/10 transition-colors group">
                                             <TableCell className="text-right">
                                                 <span className="font-mono text-sm text-primary font-black bg-primary/10 px-3 py-1 rounded-full">{vendor.code}</span>
                                             </TableCell>

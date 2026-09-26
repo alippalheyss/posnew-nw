@@ -643,12 +643,12 @@ const CreditOutstanding = () => {
            <ScrollArea className="h-[140px] overflow-hidden">
               <div className="flex gap-4 p-1" dir="ltr">
                 {allSettlements.length === 0 ? (
-                  <div className="w-full h-24 flex items-center justify-center border-2 border-dashed border-border rounded-3xl text-foreground/10 font-black uppercase tracking-widest text-[10px]">
+                  <div className="w-full h-24 flex items-center justify-center border-2 border-dashed border-white/20 dark:border-white/10 rounded-3xl text-muted-foreground/30 font-black uppercase tracking-widest text-[10px]">
                      No recent settlements recorded
                   </div>
                 ) : (
                   allSettlements.map((s) => (
-                    <div key={s.id} className="min-w-[220px] bg-card border border-border hover:border-green-500/30 rounded-3xl p-4 text-left transition-all group shadow-sm">
+                    <div key={s.id} className="min-w-[220px] apple-glass-card border border-white/20 dark:border-white/10 hover:border-green-500/40 rounded-3xl p-4 text-left transition-all group shadow-sm">
                        <div className="flex items-center justify-between mb-3">
                           <CheckCircle2 className="h-4 w-4 text-green-500" />
                           <span className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest">{formatDate(s.date)} {formatTime(s.date)}</span>
@@ -662,14 +662,14 @@ const CreditOutstanding = () => {
            </ScrollArea>
         </div>
 
-        <Card className="bg-card border-border rounded-[2rem] p-6 relative overflow-hidden group border-orange-500/20">
-           <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-orange-500/10 transition-all" />
+        <Card className="apple-glass-card border border-orange-500/30 rounded-[2rem] p-6 relative overflow-hidden group shadow-md">
+           <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-orange-500/20 transition-all" />
            <div className="flex justify-between items-center mb-6">
               <AlertCircle className="h-6 w-6 text-orange-500" />
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0 text-muted-foreground/50 hover:text-foreground"
+                className="h-8 w-8 p-0 text-muted-foreground/50 hover:text-foreground hover:bg-white/10"
                 onClick={() => setIsOutstandingVisible(!isOutstandingVisible)}
               >
                 <History className={cn("h-4 w-4", !isOutstandingVisible && "opacity-50")} />
@@ -680,7 +680,7 @@ const CreditOutstanding = () => {
               <p className={cn("text-3xl font-black text-foreground transition-all", !isOutstandingVisible && "blur-lg select-none")}>
                 {settings.shop.currency} {customers.reduce((sum, c) => sum + (c.outstanding_balance || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 0 })}
               </p>
-              <p className="text-[10px] text-orange-500/60 mt-2 font-black uppercase tracking-widest">Across {filteredCustomers.length} Accounts</p>
+              <p className="text-[10px] text-orange-500/70 mt-2 font-black uppercase tracking-widest">Across {filteredCustomers.length} Accounts</p>
            </div>
         </Card>
       </div>
@@ -693,12 +693,12 @@ const CreditOutstanding = () => {
              placeholder="Search by customer name or ID code..."
              value={searchTerm}
              onChange={(e) => setSearchTerm(e.target.value)}
-             className="w-full bg-muted border-border rounded-xl pr-12 h-14 text-right font-bold focus:border-primary/50 transition-all text-lg"
+             className="w-full apple-glass-input rounded-2xl pr-12 h-14 text-right font-bold transition-all text-lg shadow-sm"
            />
         </div>
         <Button
           onClick={handleOpenBatchRemindersDialog}
-          className="h-14 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs gap-2 shadow-lg hover:shadow-emerald-500/20 transition-all flex items-center"
+          className="h-14 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs gap-2 shadow-lg hover:shadow-emerald-500/20 transition-all flex items-center active:scale-[0.98]"
         >
           <BellRing className="h-4 w-4" />
           <span>AUTOMATED REMINDERS</span>
@@ -708,7 +708,7 @@ const CreditOutstanding = () => {
             </Badge>
           )}
         </Button>
-        <Button onClick={exportAllOutstanding} variant="outline" className="h-14 px-6 rounded-xl border-border hover:bg-muted gap-2">
+        <Button onClick={exportAllOutstanding} variant="outline" className="h-14 px-6 rounded-2xl border-white/20 dark:border-white/10 hover:bg-white/10 gap-2 font-bold">
            <Download className="h-4 w-4" /> EXPORT REPORT
         </Button>
       </div>
@@ -717,11 +717,11 @@ const CreditOutstanding = () => {
       <ScrollArea className="flex-1 custom-scrollbar">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 pb-6">
           {filteredCustomers.map((customer) => (
-            <Card key={customer.id} className="bg-card border-border hover:border-primary/30 transition-all rounded-[2rem] overflow-hidden group">
+            <Card key={customer.id} className="apple-glass-card border border-white/20 dark:border-white/10 hover:border-primary/40 transition-all rounded-[2rem] overflow-hidden group shadow-sm hover:shadow-lg">
                <CardContent className="p-0">
                   <div className="p-6">
                      <div className="flex justify-between items-start mb-6">
-                        <div className="w-12 h-12 rounded-2xl bg-muted border border-border flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all">
+                        <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-all">
                            <User className="h-6 w-6" />
                         </div>
                         <div className="flex items-center gap-1.5">

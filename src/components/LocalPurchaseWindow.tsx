@@ -471,10 +471,10 @@ const LocalPurchaseWindow = () => {
           </div>
         </div>
 
-        {/* Scrollable Content Body */}
-        <div className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
+        {/* Fixed Top Section: Bill Master Information & Items Toolbar */}
+        <div className="p-3.5 sm:p-4 pb-2.5 border-b border-border/70 space-y-3 shrink-0 bg-background/50 backdrop-blur-xs">
           {/* Bill Master Information Header */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 apple-glass-card border border-white/20 dark:border-white/10 rounded-2xl shadow-xs">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 apple-glass-card border border-white/20 dark:border-white/10 rounded-2xl shadow-xs">
             {/* Vendor Selector */}
             <div className="space-y-1.5 text-right">
               <div className="flex items-center justify-between">
@@ -543,61 +543,61 @@ const LocalPurchaseWindow = () => {
             </div>
           </div>
 
-          {/* Product Items Table Section */}
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddItemRow}
-                  className="h-9 px-3.5 text-xs font-black text-primary border-primary/30 hover:bg-primary/10 gap-1.5 rounded-xl transition-all shadow-xs"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Add Line Row (އައިޓަމެއް އިތުރުކުރޭ)</span>
-                </Button>
+          {/* Product Items Table Toolbar */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddItemRow}
+                className="h-9 px-3.5 text-xs font-black text-primary border-primary/30 hover:bg-primary/10 gap-1.5 rounded-xl transition-all shadow-xs"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Line Row (އައިޓަމެއް އިތުރުކުރޭ)</span>
+              </Button>
 
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setIsCatalogPickerOpen(true)}
-                  className="h-9 px-3.5 text-xs font-black bg-muted/80 hover:bg-muted text-foreground border border-border gap-1.5 rounded-xl transition-all shadow-xs"
-                >
-                  <Layers className="h-4 w-4 text-purple-500" />
-                  <span>Browse Products Catalog (ޕްރޮޑަކްޓް ލިސްޓް)</span>
-                </Button>
-              </div>
-
-              <div className="flex items-center gap-2 text-right">
-                <span className="text-xs text-muted-foreground font-bold font-mono">
-                  {items.length} Rows • {totalQuantity} Units
-                </span>
-                <h3 className="text-sm font-black text-foreground flex items-center gap-2">
-                  <span>Invoice Items (ބިލުގައިވާ ތަކެތި)</span>
-                  <Package className="h-4 w-4 text-primary" />
-                </h3>
-              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsCatalogPickerOpen(true)}
+                className="h-9 px-3.5 text-xs font-black bg-muted/80 hover:bg-muted text-foreground border border-border gap-1.5 rounded-xl transition-all shadow-xs"
+              >
+                <Layers className="h-4 w-4 text-purple-500" />
+                <span>Browse Products Catalog (ޕްރޮޑަކްޓް ލިސްޓް)</span>
+              </Button>
             </div>
 
-            {/* Main Products Table */}
-            <div className="border border-border rounded-2xl bg-card shadow-sm overflow-visible">
-              <div className="w-full">
-                <table className="w-full text-right text-xs">
-                  <thead className="bg-muted/80 border-b border-border text-muted-foreground font-black uppercase tracking-wider">
-                    <tr>
-                      <th className="p-3.5 text-center w-12">#</th>
-                      <th className="p-3.5 text-right min-w-[280px]">Product Item (ޕްރޮޑަކްޓް)</th>
-                      <th className="p-3.5 text-center w-28">Current Stock</th>
-                      <th className="p-3.5 text-center w-28">Invoice Qty*</th>
-                      <th className="p-3.5 text-center w-36">Unit Cost ({currency})*</th>
-                      <th className="p-3.5 text-center w-36">Subtotal ({currency})*</th>
-                      <th className="p-3.5 text-center w-28">0% Tax (Zero GST)</th>
-                      <th className="p-3.5 text-center w-14"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/60">
+            <div className="flex items-center gap-2 text-right">
+              <span className="text-xs text-muted-foreground font-bold font-mono">
+                {items.length} Rows • {totalQuantity} Units
+              </span>
+              <h3 className="text-sm font-black text-foreground flex items-center gap-2">
+                <span>Invoice Items (ބިލުގައިވާ ތަކެތި)</span>
+                <Package className="h-4 w-4 text-primary" />
+              </h3>
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable Products Table Area - ONLY products scroll! */}
+        <div className="flex-1 min-h-0 px-3.5 sm:px-4 py-2.5 flex flex-col overflow-hidden">
+          <div className="border border-border rounded-2xl bg-card shadow-sm flex-1 min-h-0 overflow-y-auto custom-scrollbar relative">
+            <table className="w-full text-right text-xs border-collapse">
+              <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur-md border-b border-border text-muted-foreground font-black uppercase tracking-wider shadow-xs">
+                <tr>
+                  <th className="p-3 text-center w-12 bg-muted/90 backdrop-blur-md">#</th>
+                  <th className="p-3 text-right min-w-[280px] bg-muted/90 backdrop-blur-md">Product Item (ޕްރޮޑަކްޓް)</th>
+                  <th className="p-3 text-center w-28 bg-muted/90 backdrop-blur-md">Current Stock</th>
+                  <th className="p-3 text-center w-28 bg-muted/90 backdrop-blur-md">Invoice Qty*</th>
+                  <th className="p-3 text-center w-36 bg-muted/90 backdrop-blur-md">Unit Cost ({currency})*</th>
+                  <th className="p-3 text-center w-36 bg-muted/90 backdrop-blur-md">Subtotal ({currency})*</th>
+                  <th className="p-3 text-center w-28 bg-muted/90 backdrop-blur-md">0% Tax (Zero GST)</th>
+                  <th className="p-3 text-center w-14 bg-muted/90 backdrop-blur-md"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
                     {items.map((item, index) => {
                       const selectedProd = products.find(p => p.id === item.productId);
                       const currentStock = selectedProd ? (Number(selectedProd.stock_shop) || 0) : null;
@@ -827,66 +827,56 @@ const LocalPurchaseWindow = () => {
                       );
                     })}
                   </tbody>
-                </table>
-              </div>
-            </div>
+            </table>
           </div>
+        </div>
 
-          {/* Description & Summary Totals Card */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start pt-2">
-            <div className="space-y-2 text-right">
-              <Label className="text-xs font-black uppercase text-muted-foreground">
+        {/* Fixed Bottom Section: Description & Calculation Summary */}
+        <div className="px-3.5 sm:px-4 py-2.5 border-t border-border/70 bg-card/60 backdrop-blur-md shrink-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-center">
+            {/* Description & Automation info */}
+            <div className="space-y-1 text-right">
+              <Label className="text-[11px] font-black uppercase text-muted-foreground">
                 Bill Notes / Description (އިތުރު ތަފްޞީލް)
               </Label>
               <Input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Optional purchase details, supplier bill remarks, or payment reference..."
-                className="bg-background border-border text-right h-12 rounded-xl font-bold text-xs sm:text-sm"
+                className="bg-background border-border text-right h-9 rounded-xl font-bold text-xs"
               />
-
-              <div className="p-3 bg-muted/40 rounded-xl border border-border text-xs text-muted-foreground space-y-1">
-                <p className="font-black text-foreground flex items-center justify-end gap-1.5">
-                  <span>Smart Tax & Stock Automation (ޓެކްސް އަދި ސްޓޮކް އަޕްޑޭޓް)</span>
-                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                </p>
-                <p className="text-[11px] leading-relaxed">
-                  Saving this purchase bill will automatically increase the shop inventory stock, record the new unit cost price, and calculate input GST statements.
-                </p>
+              <div className="flex items-center justify-end gap-1.5 text-[10px] text-muted-foreground pt-0.5">
+                <span>Saving bill updates inventory stock, cost price & input GST statements</span>
+                <ShieldCheck className="h-3 w-3 text-emerald-500 shrink-0" />
               </div>
             </div>
 
             {/* Calculations Breakdown */}
-            <div className="bg-muted/70 border border-border rounded-2xl p-5 space-y-3 text-right font-faruma shadow-sm">
-              <div className="flex justify-between items-center text-xs font-bold text-muted-foreground">
-                <span className="font-mono font-black text-foreground">{currency} {totalSubtotal.toFixed(2)}</span>
-                <span>Subtotal ({totalQuantity} Items Total):</span>
-              </div>
-
-              {zeroTaxSubtotal > 0 && (
-                <div className="flex justify-between items-center text-xs font-bold text-amber-500">
-                  <span className="font-mono font-black">{currency} {zeroTaxSubtotal.toFixed(2)}</span>
-                  <span>Zero-Rated / Exempt Items (0% Tax):</span>
+            <div className="bg-muted/70 border border-border rounded-xl p-2.5 text-right font-faruma shadow-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-bold text-muted-foreground pb-2 border-b border-border/60">
+                <div>
+                  <span className="block text-[9px] uppercase text-muted-foreground/80">Subtotal</span>
+                  <span className="font-mono font-black text-foreground text-xs">{currency} {totalSubtotal.toFixed(2)}</span>
                 </div>
-              )}
-
-              <div className="flex justify-between items-center text-xs font-bold text-muted-foreground">
-                <span className="font-mono font-black text-foreground">{currency} {taxableSubtotal.toFixed(2)}</span>
-                <span>Taxable Items ({taxRate}% GST Basis):</span>
+                <div>
+                  <span className="block text-[9px] uppercase text-amber-500">Zero-Tax (0%)</span>
+                  <span className="font-mono font-black text-amber-500 text-xs">{currency} {zeroTaxSubtotal.toFixed(2)}</span>
+                </div>
+                <div>
+                  <span className="block text-[9px] uppercase text-muted-foreground/80">Taxable Basis</span>
+                  <span className="font-mono font-black text-foreground text-xs">{currency} {taxableSubtotal.toFixed(2)}</span>
+                </div>
+                <div>
+                  <span className="block text-[9px] uppercase text-orange-500">Input GST ({taxRate}%)</span>
+                  <span className="font-mono font-black text-orange-500 text-xs">{currency} {totalInputGst.toFixed(2)}</span>
+                </div>
               </div>
 
-              <div className="flex justify-between items-center text-xs font-bold text-muted-foreground">
-                <span className="font-mono font-black text-orange-500">
-                  {currency} {totalInputGst.toFixed(2)}
-                </span>
-                <span>Input GST (އިންޕުޓް ޓެކްސް):</span>
-              </div>
-
-              <div className="pt-3 border-t border-border flex justify-between items-center">
-                <span className="text-2xl font-black text-foreground font-mono text-primary">
+              <div className="pt-2 flex justify-between items-center">
+                <span className="text-xl sm:text-2xl font-black text-primary font-mono">
                   {currency} {grandTotal.toFixed(2)}
                 </span>
-                <span className="text-base font-black text-foreground">
+                <span className="text-sm font-black text-foreground">
                   Grand Total (ޖުމްލަ އަގު):
                 </span>
               </div>

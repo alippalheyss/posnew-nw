@@ -260,52 +260,52 @@ const Vendors = () => {
 
             {/* Add/Edit Vendor Dialogs */}
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogContent className="sm:max-w-[600px] font-faruma bg-card border-border text-foreground" dir="rtl">
-                    <DialogHeader>
-                        <DialogTitle className="text-right text-2xl font-black">{renderBoth('add_vendor')}</DialogTitle>
-                        <DialogDescription className="text-right text-muted-foreground">{renderBoth('enter_vendor_details')}</DialogDescription>
+                <DialogContent className="sm:max-w-[600px] font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground shadow-2xl rounded-3xl p-6 sm:p-7" dir="rtl">
+                    <DialogHeader className="text-right pb-3 border-b border-white/10">
+                        <DialogTitle className="text-right text-2xl font-black text-foreground">{renderBoth('add_vendor')}</DialogTitle>
+                        <DialogDescription className="text-right text-xs text-muted-foreground font-bold">{renderBoth('enter_vendor_details')}</DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-6 py-6">
+                    <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('vendor_name_en')}*</Label>
-                                <Input value={vendorForm.name_en} onChange={(e) => setVendorForm({ ...vendorForm, name_en: e.target.value })} className="text-right h-12 bg-muted border-border rounded-xl" placeholder="e.g. STO" />
+                                <Input value={vendorForm.name_en} onChange={(e) => setVendorForm({ ...vendorForm, name_en: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-bold" placeholder="e.g. STO" />
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('vendor_name_dv')}</Label>
-                                <Input value={vendorForm.name_dv} onChange={(e) => setVendorForm({ ...vendorForm, name_dv: e.target.value })} className="text-right h-12 bg-muted border-border rounded-xl" placeholder="އެސް.ޓީ.އޯ" />
+                                <Input value={vendorForm.name_dv} onChange={(e) => setVendorForm({ ...vendorForm, name_dv: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-bold" placeholder="އެސް.ޓީ.އޯ" />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('phone')}*</Label>
-                                <Input value={vendorForm.phone} onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })} className="text-right h-12 font-mono bg-muted border-border rounded-xl" />
+                                <Input value={vendorForm.phone} onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })} className="text-right h-11 font-mono apple-glass-input rounded-2xl" />
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('contact_person')}</Label>
-                                <Input value={vendorForm.contact_person} onChange={(e) => setVendorForm({ ...vendorForm, contact_person: e.target.value })} className="text-right h-12 bg-muted border-border rounded-xl" />
+                                <Input value={vendorForm.contact_person} onChange={(e) => setVendorForm({ ...vendorForm, contact_person: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-bold" />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('email')}</Label>
-                                <Input type="email" value={vendorForm.email} onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })} className="text-right h-12 bg-muted border-border rounded-xl" />
+                                <Input type="email" value={vendorForm.email} onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-mono" />
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('tin_number')}</Label>
-                                <Input value={vendorForm.tin_number} onChange={(e) => setVendorForm({ ...vendorForm, tin_number: e.target.value })} className="text-right h-12 font-mono bg-muted border-border rounded-xl" />
+                                <Input value={vendorForm.tin_number} onChange={(e) => setVendorForm({ ...vendorForm, tin_number: e.target.value })} className="text-right h-11 font-mono apple-glass-input rounded-2xl" />
                             </div>
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                             <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('address')}</Label>
-                            <Input value={vendorForm.address} onChange={(e) => setVendorForm({ ...vendorForm, address: e.target.value })} className="text-right h-12 bg-muted border-border rounded-xl" />
+                            <Input value={vendorForm.address} onChange={(e) => setVendorForm({ ...vendorForm, address: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-bold" />
                         </div>
                     </div>
-                    <DialogFooter className="gap-3 pt-4 border-t border-border">
-                        <Button variant="ghost" onClick={() => setIsAddDialogOpen(false)} className="flex-1 h-12 border-border hover:bg-muted text-foreground">
+                    <DialogFooter className="gap-2.5 pt-3 border-t border-white/10 flex flex-row">
+                        <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 h-11 border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold text-xs rounded-2xl">
                             {renderBoth('cancel')}
                         </Button>
-                        <Button onClick={handleAddVendor} className="flex-1 h-12 bg-primary hover:bg-primary/90 font-black">
+                        <Button onClick={handleAddVendor} className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs rounded-2xl shadow-lg shadow-primary/25 uppercase">
                             {renderBoth('save_changes')}
                         </Button>
                     </DialogFooter>
@@ -314,53 +314,53 @@ const Vendors = () => {
 
             {/* Edit Vendor Dialog */}
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogContent className="sm:max-w-[600px] font-faruma bg-card border-border text-foreground" dir="rtl">
-                    <DialogHeader>
-                        <DialogTitle className="text-right text-2xl font-black">{renderBoth('edit_vendor')}</DialogTitle>
-                        <DialogDescription className="text-right text-muted-foreground">{renderBoth('update_vendor_details')}</DialogDescription>
+                <DialogContent className="sm:max-w-[600px] font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground shadow-2xl rounded-3xl p-6 sm:p-7" dir="rtl">
+                    <DialogHeader className="text-right pb-3 border-b border-white/10">
+                        <DialogTitle className="text-right text-2xl font-black text-foreground">{renderBoth('edit_vendor')}</DialogTitle>
+                        <DialogDescription className="text-right text-xs text-muted-foreground font-bold">{renderBoth('update_vendor_details')}</DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-6 py-6">
+                    <div className="grid gap-4 py-4">
                         {/* Same form as Add Vendor */}
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('vendor_name_en')}*</Label>
-                                <Input value={vendorForm.name_en} onChange={(e) => setVendorForm({ ...vendorForm, name_en: e.target.value })} className="text-right h-12 bg-muted border-border rounded-xl" />
+                                <Input value={vendorForm.name_en} onChange={(e) => setVendorForm({ ...vendorForm, name_en: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-bold" />
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('vendor_name_dv')}</Label>
-                                <Input value={vendorForm.name_dv} onChange={(e) => setVendorForm({ ...vendorForm, name_dv: e.target.value })} className="text-right h-12 bg-muted border-border rounded-xl" />
+                                <Input value={vendorForm.name_dv} onChange={(e) => setVendorForm({ ...vendorForm, name_dv: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-bold" />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('phone')}*</Label>
-                                <Input value={vendorForm.phone} onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })} className="text-right h-12 font-mono bg-muted border-border rounded-xl" />
+                                <Input value={vendorForm.phone} onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })} className="text-right h-11 font-mono apple-glass-input rounded-2xl" />
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('contact_person')}</Label>
-                                <Input value={vendorForm.contact_person} onChange={(e) => setVendorForm({ ...vendorForm, contact_person: e.target.value })} className="text-right h-12 bg-muted border-border rounded-xl" />
+                                <Input value={vendorForm.contact_person} onChange={(e) => setVendorForm({ ...vendorForm, contact_person: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-bold" />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('email')}</Label>
-                                <Input type="email" value={vendorForm.email} onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })} className="text-right h-12 bg-muted border-border rounded-xl" />
+                                <Input type="email" value={vendorForm.email} onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-mono" />
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-1.5">
                                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('tin_number')}</Label>
-                                <Input value={vendorForm.tin_number} onChange={(e) => setVendorForm({ ...vendorForm, tin_number: e.target.value })} className="text-right h-12 font-mono bg-muted border-border rounded-xl" />
+                                <Input value={vendorForm.tin_number} onChange={(e) => setVendorForm({ ...vendorForm, tin_number: e.target.value })} className="text-right h-11 font-mono apple-glass-input rounded-2xl" />
                             </div>
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                             <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('address')}</Label>
-                            <Input value={vendorForm.address} onChange={(e) => setVendorForm({ ...vendorForm, address: e.target.value })} className="text-right h-12 bg-muted border-border rounded-xl" />
+                            <Input value={vendorForm.address} onChange={(e) => setVendorForm({ ...vendorForm, address: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-bold" />
                         </div>
                     </div>
-                    <DialogFooter className="gap-3 pt-4 border-t border-border">
-                        <Button variant="ghost" onClick={() => setIsEditDialogOpen(false)} className="flex-1 h-12 border-border hover:bg-muted text-foreground">
+                    <DialogFooter className="gap-2.5 pt-3 border-t border-white/10 flex flex-row">
+                        <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="flex-1 h-11 border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold text-xs rounded-2xl">
                             {renderBoth('cancel')}
                         </Button>
-                        <Button onClick={handleEditVendor} className="flex-1 h-12 bg-primary hover:bg-primary/90 font-black">
+                        <Button onClick={handleEditVendor} className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs rounded-2xl shadow-lg shadow-primary/25 uppercase">
                             {renderBoth('save_changes')}
                         </Button>
                     </DialogFooter>
@@ -369,18 +369,18 @@ const Vendors = () => {
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <DialogContent className="sm:max-w-[400px] font-faruma bg-card border-border text-foreground" dir="rtl">
-                    <DialogHeader>
+                <DialogContent className="sm:max-w-[420px] font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground shadow-2xl rounded-3xl p-6" dir="rtl">
+                    <DialogHeader className="text-right pb-3 border-b border-white/10">
                         <DialogTitle className="text-right text-2xl font-black text-red-500">{renderBoth('delete_vendor')}</DialogTitle>
-                        <DialogDescription className="text-right text-muted-foreground">
+                        <DialogDescription className="text-right text-xs text-muted-foreground font-bold mt-1">
                             {t('delete_vendor_confirmation', { vendor: selectedVendor?.name_en })}
                         </DialogDescription>
                     </DialogHeader>
-                    <DialogFooter className="mt-6 gap-3">
-                        <Button variant="ghost" onClick={() => setIsDeleteDialogOpen(false)} className="flex-1 h-12 border-border hover:bg-muted text-foreground">
+                    <DialogFooter className="mt-4 gap-2.5 flex flex-row">
+                        <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="flex-1 h-11 border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold text-xs rounded-2xl">
                             {renderBoth('cancel')}
                         </Button>
-                        <Button onClick={handleDeleteVendor} className="flex-1 h-12 bg-red-600 hover:bg-red-700 font-black text-foreground">
+                        <Button onClick={handleDeleteVendor} className="flex-1 h-11 bg-red-600 hover:bg-red-500 font-black text-white rounded-2xl shadow-lg shadow-red-600/25 uppercase text-xs">
                             {renderBoth('delete')}
                         </Button>
                     </DialogFooter>

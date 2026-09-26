@@ -741,10 +741,10 @@ const DailySales = () => {
 
       {/* Executive Briefing Dialog */}
       <Dialog open={isBriefingDialogOpen} onOpenChange={setIsBriefingDialogOpen}>
-        <DialogContent className="sm:max-w-[36rem] 2xl:max-w-[44rem] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto max-h-[90vh] flex flex-col" dir="rtl">
-          <DialogHeader className="text-right pb-4 border-b border-border/60">
+        <DialogContent className="sm:max-w-[36rem] 2xl:max-w-[44rem] w-[calc(100vw-2rem)] font-faruma apple-glass-dialog text-foreground border-white/20 dark:border-white/10 p-6 sm:p-7 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto max-h-[90vh] flex flex-col" dir="rtl">
+          <DialogHeader className="text-right pb-4 border-b border-white/10 dark:border-white/5">
             <div className="flex items-center justify-between pl-8">
-              <Badge className="bg-[#229ED9]/10 text-[#229ED9] border-[#229ED9]/20 text-xs font-mono font-bold">
+              <Badge className="bg-[#229ED9]/15 text-[#229ED9] border border-[#229ED9]/30 text-xs font-mono font-bold rounded-xl px-2.5 py-1 backdrop-blur-md">
                 Store Report
               </Badge>
               <div className="text-right">
@@ -800,13 +800,13 @@ const DailySales = () => {
             return (
               <div className="flex-1 overflow-y-auto py-4 space-y-4 text-right custom-scrollbar">
                 {/* Date Mode Selector */}
-                <div className="flex items-center justify-center gap-2 bg-muted/60 p-1 rounded-2xl border border-border">
+                <div className="flex items-center justify-center gap-2 bg-black/10 dark:bg-white/5 p-1.5 rounded-2xl border border-white/15 dark:border-white/10 backdrop-blur-md">
                   <button
                     type="button"
                     onClick={() => setBriefingDateMode('today')}
                     className={cn(
-                      "flex-1 py-2 px-3 rounded-xl text-xs transition-all",
-                      briefingDateMode === 'today' ? "bg-primary text-white shadow-sm font-black" : "text-muted-foreground hover:text-foreground font-bold"
+                      "flex-1 py-2 px-3 rounded-xl text-xs transition-all duration-200 active:scale-[0.98]",
+                      briefingDateMode === 'today' ? "bg-primary text-primary-foreground shadow-md font-black" : "text-muted-foreground hover:text-foreground font-bold hover:bg-white/10"
                     )}
                   >
                     Today's Report (މިއަދުގެ ރިޕޯޓް)
@@ -815,8 +815,8 @@ const DailySales = () => {
                     type="button"
                     onClick={() => setBriefingDateMode('yesterday')}
                     className={cn(
-                      "flex-1 py-2 px-3 rounded-xl text-xs transition-all",
-                      briefingDateMode === 'yesterday' ? "bg-primary text-white shadow-sm font-black" : "text-muted-foreground hover:text-foreground font-bold"
+                      "flex-1 py-2 px-3 rounded-xl text-xs transition-all duration-200 active:scale-[0.98]",
+                      briefingDateMode === 'yesterday' ? "bg-primary text-primary-foreground shadow-md font-black" : "text-muted-foreground hover:text-foreground font-bold hover:bg-white/10"
                     )}
                   >
                     Yesterday's Report (އިއްޔެގެ ރިޕޯޓް)
@@ -824,7 +824,7 @@ const DailySales = () => {
                 </div>
 
                 {/* Header overview card */}
-                <div className="p-4 rounded-2xl bg-muted/40 border border-border flex items-center justify-between">
+                <div className="p-4 rounded-2xl apple-glass-card border border-white/20 dark:border-white/10 flex items-center justify-between">
                   <div className="text-left">
                     <p className="text-[10px] uppercase font-black tracking-wider text-muted-foreground">Receipts Issued</p>
                     <p className="text-lg font-black text-foreground">{data.totalTransactions} transactions</p>
@@ -836,7 +836,7 @@ const DailySales = () => {
                 </div>
 
                 {/* Total Sales with Breakdown */}
-                <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20 space-y-2">
+                <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20 space-y-2 backdrop-blur-md">
                   <div className="flex justify-between items-baseline">
                     <span className="text-2xl font-black text-primary">
                       {currency} {data.totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -846,15 +846,15 @@ const DailySales = () => {
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-2 pt-2 border-t border-primary/15 text-center">
-                    <div className="bg-background/60 p-2 rounded-xl border border-primary/10">
+                    <div className="bg-background/40 backdrop-blur-md p-2 rounded-xl border border-primary/10">
                       <p className="text-[9px] font-bold text-muted-foreground uppercase">Cash</p>
                       <p className="text-xs font-black text-foreground">{currency} {data.cashSales.toFixed(0)}</p>
                     </div>
-                    <div className="bg-background/60 p-2 rounded-xl border border-primary/10">
+                    <div className="bg-background/40 backdrop-blur-md p-2 rounded-xl border border-primary/10">
                       <p className="text-[9px] font-bold text-muted-foreground uppercase">BML / Transfer</p>
                       <p className="text-xs font-black text-foreground">{currency} {data.transferSales.toFixed(0)}</p>
                     </div>
-                    <div className="bg-background/60 p-2 rounded-xl border border-primary/10">
+                    <div className="bg-background/40 backdrop-blur-md p-2 rounded-xl border border-primary/10">
                       <p className="text-[9px] font-bold text-muted-foreground uppercase">Credit</p>
                       <p className="text-xs font-black text-foreground">{currency} {data.creditSales.toFixed(0)}</p>
                     </div>
@@ -862,7 +862,7 @@ const DailySales = () => {
                 </div>
 
                 {/* Credit Collections Settled Today */}
-                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
+                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-md flex items-center justify-between">
                   <span className="text-xl font-black text-emerald-500">
                     {currency} {data.creditCollections.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
@@ -873,7 +873,7 @@ const DailySales = () => {
                 </div>
 
                 {/* Top Selling Items */}
-                <div className="p-4 rounded-2xl bg-muted/40 border border-border space-y-2">
+                <div className="p-4 rounded-2xl apple-glass-card border border-white/20 dark:border-white/10 space-y-2">
                   <p className="text-xs font-black text-muted-foreground uppercase tracking-wider text-right">
                     Top Selling Items Today:
                   </p>
@@ -882,13 +882,13 @@ const DailySales = () => {
                   ) : (
                     <div className="space-y-1.5">
                       {data.topItems.map((item, idx) => (
-                        <div key={idx} className="flex justify-between items-center p-2 rounded-xl bg-background/60 border border-border text-xs">
+                        <div key={idx} className="flex justify-between items-center p-2.5 rounded-xl bg-background/40 backdrop-blur-sm border border-white/10 text-xs">
                           <span className="font-mono font-bold text-primary">
                             {currency} {item.totalAmount.toFixed(2)}
                           </span>
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-foreground">{item.name}</span>
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono">
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono border-white/20">
                               {item.qty} {item.unit && item.unit !== 'Piece' ? item.unit : 'pcs'}
                             </Badge>
                             <span className="text-[10px] text-muted-foreground font-black">#{idx + 1}</span>
@@ -900,19 +900,19 @@ const DailySales = () => {
                 </div>
 
                 {/* Group Connection Info */}
-                <div className="p-3 rounded-xl bg-muted/20 border border-border text-xs flex items-center justify-between text-muted-foreground">
+                <div className="p-3 rounded-xl bg-black/10 dark:bg-white/5 border border-white/15 dark:border-white/10 text-xs flex items-center justify-between text-muted-foreground">
                   <span className="font-mono text-[11px] font-bold text-foreground">
                     {groupChat ? `${groupTitle} (${groupChat})` : '⚠️ Not linked'}
                   </span>
                   <span>Destination Telegram Group:</span>
                 </div>
 
-                <DialogFooter className="pt-3 border-t border-border flex gap-3">
+                <DialogFooter className="pt-3 border-t border-white/10 dark:border-white/5 flex gap-3">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setIsBriefingDialogOpen(false)}
-                    className="flex-1 h-12 rounded-xl font-bold"
+                    className="flex-1 h-12 rounded-2xl border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold active:scale-[0.98] transition-all"
                   >
                     Close
                   </Button>
@@ -920,7 +920,7 @@ const DailySales = () => {
                     type="button"
                     onClick={handleSendToGroup}
                     disabled={isSendingBriefing || !groupChat}
-                    className="flex-[2] h-12 rounded-xl bg-[#229ED9] hover:bg-[#229ED9]/90 text-white font-black text-xs gap-2 shadow-lg shadow-[#229ED9]/20"
+                    className="flex-[2] h-12 rounded-2xl bg-[#229ED9] hover:bg-[#229ED9]/90 text-white font-black text-xs gap-2 shadow-lg shadow-[#229ED9]/25 active:scale-[0.98] transition-all"
                   >
                     {isSendingBriefing ? (
                       <>

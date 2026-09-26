@@ -241,9 +241,9 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[65rem] 2xl:max-w-[78rem] w-[95vw] max-h-[92vh] overflow-hidden flex flex-col font-faruma bg-card border-border text-foreground p-0 shadow-2xl rounded-3xl" dir="rtl">
+            <DialogContent className="sm:max-w-[65rem] 2xl:max-w-[78rem] w-[95vw] max-h-[92vh] overflow-hidden flex flex-col font-faruma apple-glass-dialog text-foreground border border-white/20 dark:border-white/10 p-0 shadow-2xl rounded-3xl" dir="rtl">
                 {/* Header */}
-                <DialogHeader className="text-right px-6 pt-5 pb-3 border-b border-border bg-muted/20">
+                <DialogHeader className="text-right px-6 pt-5 pb-3 border-b border-white/15 dark:border-white/10 bg-white/20 dark:bg-white/5 backdrop-blur-md">
                     <DialogTitle className="text-xl font-black flex items-center justify-end gap-2.5 text-foreground">
                         {product ? renderBoth('edit_product') : renderBoth('add_new_product')}
                         <Package className="h-5 w-5 text-primary" />
@@ -444,13 +444,13 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                         </div>
 
                         {/* Left Panel: Units & Packaging (5 cols) */}
-                        <div className="lg:col-span-5 bg-muted/30 p-4 rounded-3xl border border-border flex flex-col min-h-[310px]">
-                            <div className="flex items-center justify-between pb-3 border-b border-border">
+                        <div className="lg:col-span-5 apple-glass-card p-4 rounded-3xl border border-white/20 dark:border-white/10 flex flex-col min-h-[310px]">
+                            <div className="flex items-center justify-between pb-3 border-b border-white/15 dark:border-white/10">
                                 <Button 
                                     type="button"
                                     size="sm" 
                                     onClick={handleOpenAddUnit}
-                                    className="h-8 px-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs gap-1 shadow-sm"
+                                    className="h-8 px-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs gap-1 shadow-sm apple-glass-pill"
                                 >
                                     <Plus className="h-3.5 w-3.5" />
                                     {renderBoth('add_unit')}
@@ -458,7 +458,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                 <div className="text-right">
                                     <h4 className="text-xs font-black uppercase tracking-wider text-foreground flex items-center justify-end gap-1.5">
                                         {units.length > 0 && (
-                                            <Badge variant="outline" className="text-[10px] font-black h-4 px-1.5 bg-primary/10 text-primary border-primary/30">
+                                            <Badge variant="outline" className="text-[10px] font-black h-4 px-1.5 bg-primary/15 text-primary border-primary/30">
                                                 {units.length}
                                             </Badge>
                                         )}
@@ -473,8 +473,8 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
 
                             {/* Inline Unit Form */}
                             {isUnitFormOpen && (
-                                <div className="p-3 bg-card border border-primary/30 rounded-2xl space-y-3 mt-3 animate-in fade-in-50 duration-150">
-                                    <div className="flex items-center justify-between border-b border-border pb-1.5">
+                                <div className="p-3 apple-glass-card border border-primary/40 rounded-2xl space-y-3 mt-3 animate-in fade-in-50 duration-150 shadow-sm">
+                                    <div className="flex items-center justify-between border-b border-white/15 dark:border-white/10 pb-1.5">
                                         <Button
                                             type="button"
                                             variant="ghost"
@@ -497,10 +497,10 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                 type="button"
                                                 onClick={() => setUnitForm(prev => ({ ...prev, name: preset }))}
                                                 className={cn(
-                                                    "px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all",
+                                                    "px-2.5 py-0.5 rounded-lg text-[10px] font-bold border transition-all apple-glass-pill",
                                                     (unitForm.name || '').toLowerCase() === preset.toLowerCase()
-                                                        ? "bg-primary text-white border-primary"
-                                                        : "bg-muted text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
+                                                        ? "bg-primary text-white border-primary shadow-xs"
+                                                        : "bg-white/40 dark:bg-white/10 text-muted-foreground border-white/20 hover:border-primary/40 hover:text-foreground"
                                                 )}
                                             >
                                                 {preset}
@@ -517,7 +517,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                 value={unitForm.name}
                                                 onChange={(e) => setUnitForm(prev => ({ ...prev, name: e.target.value }))}
                                                 placeholder="e.g. Box"
-                                                className="h-9 bg-muted border-border rounded-lg text-right font-bold text-xs"
+                                                className="h-9 apple-glass-input rounded-xl text-right font-bold text-xs"
                                             />
                                         </div>
 
@@ -530,7 +530,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                 value={unitForm.conversion_factor}
                                                 onChange={(e) => setUnitForm(prev => ({ ...prev, conversion_factor: e.target.value }))}
                                                 placeholder="12"
-                                                className="h-9 bg-muted border-border rounded-lg text-right font-bold text-xs"
+                                                className="h-9 apple-glass-input rounded-xl text-right font-bold text-xs"
                                             />
                                         </div>
                                     </div>
@@ -546,7 +546,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                 value={unitForm.price}
                                                 onChange={(e) => setUnitForm(prev => ({ ...prev, price: e.target.value }))}
                                                 placeholder="0.00"
-                                                className="h-9 bg-muted border-border rounded-lg text-right font-bold text-xs text-primary"
+                                                className="h-9 apple-glass-input rounded-xl text-right font-bold text-xs text-primary"
                                             />
                                         </div>
 
@@ -558,13 +558,13 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                 value={unitForm.barcode}
                                                 onChange={(e) => setUnitForm(prev => ({ ...prev, barcode: e.target.value }))}
                                                 placeholder="Optional"
-                                                className="h-9 bg-muted border-border rounded-lg text-right font-mono text-[11px]"
+                                                className="h-9 apple-glass-input rounded-xl text-right font-mono text-[11px]"
                                             />
                                         </div>
                                     </div>
 
                                     {parseFloat(unitForm.price) > 0 && parseFloat(unitForm.conversion_factor) > 0 && (
-                                        <div className="p-1.5 rounded-lg bg-muted/60 text-[10px] text-muted-foreground text-center font-mono">
+                                        <div className="p-1.5 rounded-xl bg-white/40 dark:bg-white/10 text-[10px] text-muted-foreground text-center font-mono border border-white/10">
                                             = {settings?.shop?.currency || 'MVR'} {(parseFloat(unitForm.price) / parseFloat(unitForm.conversion_factor)).toFixed(2)} / pc
                                         </div>
                                     )}
@@ -575,7 +575,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                             variant="ghost"
                                             size="sm"
                                             onClick={() => setIsUnitFormOpen(false)}
-                                            className="h-8 px-3 rounded-lg text-xs font-bold"
+                                            className="h-8 px-3 rounded-lg text-xs font-bold apple-glass-pill"
                                         >
                                             {renderBoth('cancel')}
                                         </Button>
@@ -583,7 +583,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                             type="button"
                                             size="sm"
                                             onClick={handleSaveUnit}
-                                            className="h-8 px-4 rounded-lg bg-primary text-white text-xs font-black"
+                                            className="h-8 px-4 rounded-xl bg-primary text-white text-xs font-black apple-glass-pill"
                                         >
                                             <Check className="h-3 w-3 mr-1" />
                                             {editingUnitIndex !== null ? 'Update' : 'Save Unit'}
@@ -602,7 +602,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                         return (
                                             <div
                                                 key={index}
-                                                className="p-2.5 bg-card border border-border hover:border-primary/40 rounded-xl flex items-center justify-between gap-2 transition-all"
+                                                className="p-2.5 apple-glass-card border border-white/20 dark:border-white/10 hover:border-primary/40 rounded-2xl flex items-center justify-between gap-2 transition-all shadow-xs"
                                             >
                                                 <div className="flex items-center gap-0.5">
                                                     <Button
@@ -610,7 +610,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                         variant="ghost"
                                                         size="icon"
                                                         onClick={() => handleEditUnit(index)}
-                                                        className="h-7 w-7 rounded-md text-blue-400 hover:bg-blue-500/10"
+                                                        className="h-7 w-7 rounded-lg text-blue-400 hover:bg-blue-500/10"
                                                     >
                                                         <Pencil className="h-3 w-3" />
                                                     </Button>
@@ -619,7 +619,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                         variant="ghost"
                                                         size="icon"
                                                         onClick={() => handleDeleteUnit(index)}
-                                                        className="h-7 w-7 rounded-md text-red-400 hover:bg-red-500/10"
+                                                        className="h-7 w-7 rounded-lg text-red-400 hover:bg-red-500/10"
                                                     >
                                                         <Trash2 className="h-3 w-3" />
                                                     </Button>
@@ -650,7 +650,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                     })
                                 ) : (
                                     !isUnitFormOpen && (
-                                        <div className="h-full min-h-[160px] flex flex-col items-center justify-center p-4 border border-dashed border-border rounded-2xl bg-card/30 text-center">
+                                        <div className="h-full min-h-[160px] flex flex-col items-center justify-center p-4 border border-dashed border-white/20 rounded-2xl bg-white/10 dark:bg-white/5 text-center">
                                             <Layers className="h-6 w-6 text-muted-foreground/40 mb-1.5" />
                                             <p className="text-xs font-bold text-muted-foreground">
                                                 {renderBoth('no_units_added')}
@@ -667,11 +667,11 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                 </div>
 
                 {/* Footer */}
-                <DialogFooter className="gap-3 px-6 py-4 border-t border-border bg-muted/20">
-                    <Button variant="ghost" onClick={onClose} className="flex-1 h-11 border-border hover:bg-muted text-foreground font-black uppercase tracking-widest text-xs">
+                <DialogFooter className="gap-3 px-6 py-4 border-t border-white/15 dark:border-white/10 bg-white/20 dark:bg-white/5 backdrop-blur-md">
+                    <Button variant="outline" onClick={onClose} className="flex-1 h-11 text-foreground font-black uppercase tracking-wider text-xs apple-glass-pill">
                         {renderBoth('cancel')}
                     </Button>
-                    <Button onClick={handleSave} className="flex-1 h-11 bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-widest text-xs shadow-[0_0_20px_rgba(0,132,255,0.3)]">
+                    <Button onClick={handleSave} className="flex-1 h-11 bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-wider text-xs shadow-lg shadow-primary/30 apple-glass-pill">
                         <Save className="ml-2 h-4 w-4" /> {renderBoth('save_product')}
                     </Button>
                 </DialogFooter>

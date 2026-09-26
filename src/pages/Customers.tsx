@@ -344,15 +344,15 @@ const Customers = () => {
 
       {/* Edit Customer Dialog */}
       <Dialog open={isEditCustomerDialogOpen} onOpenChange={setIsEditCustomerDialogOpen}>
-        <DialogContent className="sm:max-w-[32rem] 2xl:max-w-[38rem] w-[calc(100vw-2rem)] font-faruma bg-card border-border text-foreground" dir="rtl">
+        <DialogContent className="sm:max-w-[32rem] 2xl:max-w-[38rem] w-[calc(100vw-2rem)] font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground shadow-2xl rounded-3xl p-6 sm:p-7" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-right text-2xl font-black">{renderBoth('edit_customer')}</DialogTitle>
-            <DialogDescription className="text-right text-muted-foreground">
+            <DialogDescription className="text-right text-muted-foreground text-xs">
               {renderBoth('edit_customer_description')}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-5 py-6">
-            <div className="space-y-2">
+          <div className="grid gap-4 py-4">
+            <div className="space-y-1.5">
               <Label htmlFor="customerNameDv" className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
                 {renderBoth('customer_name')} (ދިވެހި)
               </Label>
@@ -360,10 +360,10 @@ const Customers = () => {
                 id="customerNameDv"
                 value={editingCustomer?.name_dv || ''}
                 onChange={(e) => setEditingCustomer(prev => prev ? { ...prev, name_dv: e.target.value } : null)}
-                className="text-right h-12 bg-muted border-border rounded-xl"
+                className="text-right h-12 apple-glass-input rounded-2xl font-medium"
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="customerNameEn" className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
                 {renderBoth('customer_name')} (English)
               </Label>
@@ -371,11 +371,11 @@ const Customers = () => {
                 id="customerNameEn"
                 value={editingCustomer?.name_en || ''}
                 onChange={(e) => setEditingCustomer(prev => prev ? { ...prev, name_en: e.target.value } : null)}
-                className="text-right h-12 bg-muted border-border rounded-xl"
+                className="text-right h-12 apple-glass-input rounded-2xl font-medium"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
                 <Label htmlFor="customerCode" className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
                   {renderBoth('customer_code')}
                 </Label>
@@ -383,10 +383,10 @@ const Customers = () => {
                   id="customerCode"
                   value={editingCustomer?.code || ''}
                   readOnly 
-                  className="text-right h-12 bg-muted border-border rounded-xl opacity-50"
+                  className="text-right h-12 apple-glass-input rounded-2xl opacity-50 font-mono"
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="customerPhone" className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
                   {renderBoth('customer_phone')}
                 </Label>
@@ -394,12 +394,12 @@ const Customers = () => {
                   id="customerPhone"
                   value={editingCustomer?.phone || ''}
                   onChange={(e) => setEditingCustomer(prev => prev ? { ...prev, phone: e.target.value } : null)}
-                  className="text-right h-12 bg-muted border-border rounded-xl"
+                  className="text-right h-12 apple-glass-input rounded-2xl font-medium"
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
                 <Label htmlFor="customerEmail" className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
                   {renderBoth('customer_email')}
                 </Label>
@@ -408,10 +408,10 @@ const Customers = () => {
                   type="email"
                   value={editingCustomer?.email || ''}
                   onChange={(e) => setEditingCustomer(prev => prev ? { ...prev, email: e.target.value } : null)}
-                  className="text-right h-12 bg-muted border-border rounded-xl"
+                  className="text-right h-12 apple-glass-input rounded-2xl font-medium"
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="creditLimit" className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
                   {renderBoth('credit_limit')}
                 </Label>
@@ -420,19 +420,19 @@ const Customers = () => {
                   type="number"
                   value={editingCustomer?.credit_limit !== undefined ? editingCustomer.credit_limit : ''}
                   onChange={(e) => setEditingCustomer(prev => prev ? { ...prev, credit_limit: parseFloat(e.target.value) || 0 } : null)}
-                  className="text-right h-12 bg-muted border-border rounded-xl"
+                  className="text-right h-12 apple-glass-input rounded-2xl font-mono font-bold"
                 />
               </div>
             </div>
 
-            <div className="space-y-2 pt-2 border-t border-border/50">
+            <div className="space-y-2 pt-2 border-t border-white/10 dark:border-white/5">
               <div className="flex justify-between items-center">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => editingCustomer && handleOpenTelegramConnect(editingCustomer)}
-                  className="text-xs h-8 gap-1.5 text-[#229ED9] border-[#229ED9]/30 hover:bg-[#229ED9]/10 rounded-xl"
+                  className="text-xs h-8 gap-1.5 text-[#229ED9] border-[#229ED9]/30 hover:bg-[#229ED9]/15 rounded-xl apple-glass-pill transition-all active:scale-95"
                 >
                   <QrCode className="h-3.5 w-3.5" />
                   <span>Open Connect QR</span>
@@ -446,19 +446,24 @@ const Customers = () => {
                 placeholder="e.g. 123456789 (or scan QR to link)"
                 value={editingCustomer?.telegram_chat_id || ''}
                 onChange={(e) => setEditingCustomer(prev => prev ? { ...prev, telegram_chat_id: e.target.value ? Number(e.target.value) : null } : null)}
-                className="text-left h-12 bg-muted border-border rounded-xl font-mono text-sm"
+                className="text-left h-12 apple-glass-input rounded-2xl font-mono text-sm"
                 dir="ltr"
               />
             </div>
           </div>
-          <DialogFooter className="gap-3 pt-4 border-t border-border">
-            <Button variant="ghost" onClick={() => setIsEditCustomerDialogOpen(false)} disabled={isSavingCustomer} className="flex-1 border-border hover:bg-muted text-foreground">
+          <DialogFooter className="gap-2.5 pt-4 border-t border-white/10 dark:border-white/5 flex flex-row">
+            <Button
+              variant="outline"
+              onClick={() => setIsEditCustomerDialogOpen(false)}
+              disabled={isSavingCustomer}
+              className="flex-1 rounded-2xl h-11 border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold active:scale-[0.98] transition-all"
+            >
               {renderBoth('cancel')}
             </Button>
             <Button 
               onClick={handleSaveCustomer} 
               disabled={isSavingCustomer || !editingCustomer}
-              className="flex-1 bg-primary hover:bg-primary/90 font-black"
+              className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-black rounded-2xl shadow-lg shadow-primary/20 active:scale-[0.98] transition-all"
             >
               {isSavingCustomer ? (
                 <span className="flex items-center justify-center gap-2">

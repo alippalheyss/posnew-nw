@@ -1822,12 +1822,12 @@ const POS = () => {
       />
 
       <Dialog open={isCashDialogOpen} onOpenChange={setIsCashDialogOpen}>
-        <DialogContent className="sm:max-w-[38rem] 2xl:max-w-[44rem] w-[94vw] font-faruma bg-card text-foreground border border-border text-right p-5 sm:p-7 shadow-2xl rounded-3xl box-border overflow-hidden [&>button]:left-4 [&>button]:right-auto" dir="rtl">
-          <DialogHeader className="pb-3.5 text-right space-y-1.5 border-b border-border/60 pl-10 pr-1">
+        <DialogContent className="sm:max-w-[38rem] 2xl:max-w-[44rem] w-[94vw] font-faruma apple-glass-dialog text-foreground border border-white/20 dark:border-white/10 text-right p-5 sm:p-7 shadow-2xl rounded-3xl box-border overflow-hidden [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+          <DialogHeader className="pb-3.5 text-right space-y-1.5 border-b border-white/15 dark:border-white/10 pl-10 pr-1">
             <div className="flex items-center justify-between">
               <div className="text-right flex-1 min-w-0">
                 <DialogTitle className="text-xl sm:text-2xl font-black text-foreground flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary shrink-0 shadow-xs">
                     <DollarSign className="h-5 w-5" />
                   </div>
                   <span>{renderBoth('cash_payment')}</span>
@@ -1841,7 +1841,7 @@ const POS = () => {
 
           <div className="py-3 space-y-3.5 w-full max-w-full overflow-hidden">
             {/* Total Amount Card */}
-            <div className="bg-gradient-to-l from-primary/20 via-primary/10 to-muted/40 border border-primary/30 rounded-2xl p-4 flex items-center justify-between shadow-sm w-full box-border">
+            <div className="apple-glass-card bg-gradient-to-l from-primary/20 via-primary/10 to-white/10 border border-primary/30 rounded-2xl p-4 flex items-center justify-between shadow-sm w-full box-border">
               <div className="text-right">
                 <span className="text-sm font-black text-foreground block">ޖުމްލަ އަދަދު</span>
                 <span className="text-[11px] text-muted-foreground font-bold block mt-0.5">({t('total_amount') || 'Total Payable'})</span>
@@ -2033,8 +2033,8 @@ const POS = () => {
       </Dialog>
 
       <Dialog open={isCreditDialogOpen} onOpenChange={setIsCreditDialogOpen}>
-        <DialogContent className="sm:max-w-[36rem] 2xl:max-w-[42rem] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border text-right p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
-          <DialogHeader className="pb-3 text-right space-y-1.5 border-b border-border/60">
+        <DialogContent className="sm:max-w-[36rem] 2xl:max-w-[42rem] w-[calc(100vw-2rem)] font-faruma apple-glass-dialog text-foreground border border-white/20 dark:border-white/10 text-right p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+          <DialogHeader className="pb-3 text-right space-y-1.5 border-b border-white/15 dark:border-white/10">
             <div className="flex items-center justify-between pl-8">
               <div className="text-right flex-1 min-w-0">
                 <DialogTitle className="text-xl md:text-2xl font-black text-foreground flex items-center gap-2.5">
@@ -2810,8 +2810,8 @@ const POS = () => {
       </Dialog>
 
       <Dialog open={isAwaitingTransferDialogOpen} onOpenChange={setIsAwaitingTransferDialogOpen}>
-        <DialogContent className="sm:max-w-[38rem] 2xl:max-w-[44rem] w-[calc(100vw-2rem)] max-h-[92vh] overflow-y-auto font-faruma bg-card text-foreground border border-border text-right p-6 sm:p-7 shadow-2xl rounded-3xl box-border custom-scrollbar [&>button]:left-4 [&>button]:right-auto" dir="rtl">
-          <DialogHeader className="pb-4 text-right space-y-1.5 border-b border-border/60">
+        <DialogContent className="sm:max-w-[38rem] 2xl:max-w-[44rem] w-[calc(100vw-2rem)] max-h-[92vh] overflow-y-auto font-faruma apple-glass-dialog text-foreground border border-white/20 dark:border-white/10 text-right p-6 sm:p-7 shadow-2xl rounded-3xl box-border custom-scrollbar [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+          <DialogHeader className="pb-4 text-right space-y-1.5 border-b border-white/15 dark:border-white/10">
             <div className="flex items-center justify-between pl-8">
               <div className="text-right flex-1 min-w-0">
                 <DialogTitle className="text-xl md:text-2xl font-black text-foreground flex items-center gap-2.5">
@@ -2829,7 +2829,7 @@ const POS = () => {
             {/* Grand Total & Transfer Amount Side-by-Side 2-Column Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               {/* Grand Total Card */}
-              <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20 flex flex-col justify-between text-right">
+              <div className="p-4 apple-glass-card bg-primary/10 rounded-2xl border border-primary/25 flex flex-col justify-between text-right">
                 <span className="text-[11px] font-bold text-muted-foreground block mb-1">
                   {renderBoth('grand_total')}
                 </span>
@@ -2839,7 +2839,7 @@ const POS = () => {
               </div>
 
               {/* Transfer Amount Input Card */}
-              <div className="p-4 bg-muted/50 rounded-2xl border border-border flex flex-col justify-between text-right">
+              <div className="p-4 apple-glass-card rounded-2xl border border-white/20 dark:border-white/10 flex flex-col justify-between text-right">
                 <Label className="text-[11px] font-bold text-muted-foreground block mb-1">
                   {renderBoth('transfer_amount')}
                 </Label>
@@ -2852,7 +2852,7 @@ const POS = () => {
                     value={transferAmount}
                     onChange={(e) => setTransferAmount(parseFloat(e.target.value) || 0)}
                     onFocus={handleFocus}
-                    className="bg-background border-border h-10 rounded-xl pl-10 pr-3 text-lg font-mono font-black text-foreground text-right focus:border-primary"
+                    className="apple-glass-input h-10 rounded-xl pl-10 pr-3 text-lg font-mono font-black text-foreground text-right"
                     autoFocus
                   />
                 </div>
@@ -2860,7 +2860,7 @@ const POS = () => {
             </div>
 
             {/* Shop Account Info Banner */}
-            <div className="flex items-center justify-between px-4 py-2.5 bg-muted/60 rounded-xl border border-border text-xs">
+            <div className="flex items-center justify-between px-4 py-2.5 apple-glass-card rounded-xl border border-white/20 dark:border-white/10 text-xs">
               <span className="font-mono font-black text-primary text-sm tracking-wide" dir="ltr">7730000442060 (B BACK)</span>
               <span className="font-bold text-muted-foreground flex items-center gap-1.5">
                 <span>ބީއެމްއެލް އެކައުންޓް (BML Account):</span>
@@ -2984,12 +2984,12 @@ const POS = () => {
       />
 
       <Dialog open={isPendingTransfersDialogOpen} onOpenChange={setIsPendingTransfersDialogOpen}>
-        <DialogContent className="sm:max-w-[40rem] 2xl:max-w-[46rem] w-[calc(100vw-2rem)] font-faruma bg-card border border-border text-foreground text-right p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
-          <DialogHeader className="pb-3 text-right space-y-1.5 border-b border-border/60">
+        <DialogContent className="sm:max-w-[40rem] 2xl:max-w-[46rem] w-[calc(100vw-2rem)] font-faruma apple-glass-dialog border border-white/20 dark:border-white/10 text-foreground text-right p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+          <DialogHeader className="pb-3 text-right space-y-1.5 border-b border-white/15 dark:border-white/10">
             <div className="flex items-center justify-between pl-8">
               <div className="text-right flex-1 min-w-0">
                 <DialogTitle className="text-xl md:text-2xl font-black text-foreground flex items-center gap-2.5">
-                  <ArrowRightLeft className="h-6 w-6 text-yellow-500 shrink-0" />
+                  <ArrowRightLeft className="h-6 w-6 text-amber-500 shrink-0" />
                   <span>{renderBoth('pending_transfers')}</span>
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground mt-1 text-right">
@@ -2997,15 +2997,15 @@ const POS = () => {
                 </DialogDescription>
               </div>
             </div>
-            <div className="bg-yellow-500/10 border border-yellow-500/25 rounded-2xl p-3 text-right flex flex-col sm:flex-row items-center justify-between gap-3 mt-2">
-              <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium text-right flex-1">
+            <div className="apple-glass-card bg-amber-500/10 border border-amber-500/25 rounded-2xl p-3 text-right flex flex-col sm:flex-row items-center justify-between gap-3 mt-2">
+              <p className="text-xs text-amber-600 dark:text-amber-400 font-bold text-right flex-1">
                 {renderBoth('auto_convert_notice')}
               </p>
               {pendingTransfers.length > 0 && (
                 <Button
                   size="sm"
                   onClick={() => convertAllPendingToCredit()}
-                  className="bg-primary hover:bg-primary/90 text-white text-xs font-black h-8 px-3 rounded-xl shrink-0"
+                  className="bg-primary hover:bg-primary/90 text-white text-xs font-black h-8 px-3 rounded-xl shrink-0 apple-glass-pill"
                 >
                   {renderBoth('convert_all_to_credit')}
                 </Button>
@@ -3016,13 +3016,13 @@ const POS = () => {
           <ScrollArea className="h-[360px] pr-2 custom-scrollbar mt-3">
             <div className="space-y-3">
               {pendingTransfers.length === 0 ? (
-                <div className="h-44 flex flex-col items-center justify-center gap-2 text-muted-foreground/50 bg-muted/20 rounded-2xl border border-dashed border-border/80 font-bold text-sm">
+                <div className="h-44 flex flex-col items-center justify-center gap-2 text-muted-foreground/60 apple-glass-card rounded-2xl border border-dashed border-white/20 font-bold text-sm">
                   <ArrowRightLeft className="h-8 w-8 opacity-40" />
                   <p>{renderBoth('no_pending_transfers')}</p>
                 </div>
               ) : (
                 pendingTransfers.map((transfer) => (
-                  <div key={transfer.id} className="p-4 rounded-2xl bg-card border border-border flex items-center justify-between gap-4 hover:border-primary/40 transition-all shadow-sm">
+                  <div key={transfer.id} className="p-4 rounded-2xl apple-glass-card border border-white/20 dark:border-white/10 flex items-center justify-between gap-4 hover:border-primary/40 transition-all shadow-sm">
                     <div className="flex items-center gap-2 shrink-0">
                       <Button
                         size="sm"

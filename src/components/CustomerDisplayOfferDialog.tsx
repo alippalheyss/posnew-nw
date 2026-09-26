@@ -92,20 +92,20 @@ export default function CustomerDisplayOfferDialog({ open, onOpenChange, onSave 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] font-faruma bg-card text-foreground border-border shadow-2xl" dir="rtl">
-        <DialogHeader>
-          <DialogTitle className="text-right text-2xl font-black">Add Custom Offer</DialogTitle>
-          <DialogDescription className="text-right text-muted-foreground">Create a promotional offer for the customer display.</DialogDescription>
+      <DialogContent className="sm:max-w-[500px] font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground shadow-2xl rounded-3xl p-6 sm:p-7" dir="rtl">
+        <DialogHeader className="text-right pb-3 border-b border-white/10">
+          <DialogTitle className="text-right text-2xl font-black text-foreground">Add Custom Offer</DialogTitle>
+          <DialogDescription className="text-right text-muted-foreground text-xs font-bold">Create a promotional offer for the customer display.</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4 text-right">
-          <div className="space-y-2">
+        <div className="space-y-5 py-4 text-right">
+          <div className="space-y-1.5">
             <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Offer Type</Label>
             <Select value={type} onValueChange={(v: 'image' | 'text') => setType(v)}>
-              <SelectTrigger className="bg-muted border-border h-12 rounded-xl text-right font-bold" dir="rtl">
+              <SelectTrigger className="apple-glass-input h-12 rounded-2xl text-right font-bold" dir="rtl">
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
-              <SelectContent className="bg-card border-border text-foreground" dir="rtl">
+              <SelectContent className="apple-glass-dialog border border-white/20 text-foreground" dir="rtl">
                 <SelectItem value="image" className="text-right"><span className="flex items-center justify-end gap-2"><ImageIcon className="h-4 w-4"/> Image Graphic</span></SelectItem>
                 <SelectItem value="text" className="text-right"><span className="flex items-center justify-end gap-2"><Type className="h-4 w-4"/> Custom Text</span></SelectItem>
               </SelectContent>
@@ -113,10 +113,10 @@ export default function CustomerDisplayOfferDialog({ open, onOpenChange, onSave 
           </div>
 
           {type === 'image' ? (
-            <div className="space-y-4">
+            <div className="space-y-3">
               <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right">Upload Graphic</Label>
               <div 
-                className="border-2 border-dashed border-border rounded-2xl p-8 flex flex-col items-center justify-center gap-4 cursor-pointer hover:bg-muted hover:border-primary/50 transition-all text-center"
+                className="border-2 border-dashed border-white/20 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 cursor-pointer bg-white/5 dark:bg-black/20 hover:bg-white/10 hover:border-primary/50 transition-all text-center backdrop-blur-md"
                 onClick={() => fileInputRef.current?.click()}
               >
                 {image ? (
@@ -135,40 +135,40 @@ export default function CustomerDisplayOfferDialog({ open, onOpenChange, onSave 
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right">Headline Title</Label>
                 <Input 
                   value={title} 
                   onChange={e => setTitle(e.target.value)} 
                   placeholder="e.g. Weekend Special!"
-                  className="bg-muted border-border h-12 rounded-xl text-right font-bold"
+                  className="apple-glass-input h-12 rounded-2xl text-right font-bold"
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right">Subtitle (Optional)</Label>
                 <Input 
                   value={subtitle} 
                   onChange={e => setSubtitle(e.target.value)} 
                   placeholder="e.g. 50% off all soft drinks"
-                  className="bg-muted border-border h-12 rounded-xl text-right font-bold"
+                  className="apple-glass-input h-12 rounded-2xl text-right font-bold"
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right">Price Tag / Badge Text (Optional)</Label>
                 <Input 
                   value={priceText} 
                   onChange={e => setPriceText(e.target.value)} 
                   placeholder="e.g. Only $5.00!"
-                  className="bg-muted border-border h-12 rounded-xl text-right font-bold"
+                  className="apple-glass-input h-12 rounded-2xl text-right font-bold"
                 />
               </div>
             </div>
           )}
         </div>
 
-        <DialogFooter className="gap-2 border-t border-border pt-4">
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-xl">Cancel</Button>
-          <Button onClick={handleSave} className="rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold">
+        <DialogFooter className="gap-2.5 border-t border-white/10 pt-4 flex flex-row">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1 h-11 border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold text-xs rounded-2xl">Cancel</Button>
+          <Button onClick={handleSave} className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs rounded-2xl shadow-lg shadow-primary/25 uppercase">
             Add Offer
           </Button>
         </DialogFooter>

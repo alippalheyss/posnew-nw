@@ -189,15 +189,15 @@ export const TelegramConnectDialog: React.FC<TelegramConnectDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[480px] font-faruma bg-card text-foreground border border-border p-6 shadow-2xl rounded-3xl overflow-hidden box-border" dir="rtl">
-        <DialogHeader className="text-right pb-3 border-b border-border/60">
+      <DialogContent className="sm:max-w-[480px] font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground p-6 sm:p-7 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+        <DialogHeader className="text-right pb-3 border-b border-white/10">
           <div className="flex items-center justify-between">
             <Badge
               variant="outline"
               className={
                 isLinked
-                  ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30 gap-1.5 text-xs py-1"
-                  : "bg-blue-500/10 text-blue-400 border-blue-500/30 gap-1.5 text-xs py-1"
+                  ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 gap-1.5 text-xs py-1"
+                  : "bg-blue-500/15 text-blue-400 border-blue-500/30 gap-1.5 text-xs py-1"
               }
             >
               {isLinked ? (
@@ -220,7 +220,7 @@ export const TelegramConnectDialog: React.FC<TelegramConnectDialogProps> = ({
               </DialogTitle>
             </div>
           </div>
-          <DialogDescription className="text-right text-xs text-muted-foreground mt-1">
+          <DialogDescription className="text-right text-xs text-muted-foreground mt-1 font-bold">
             {customer.name_dv} ({customer.name_en}) • {customer.code}
           </DialogDescription>
         </DialogHeader>
@@ -228,21 +228,21 @@ export const TelegramConnectDialog: React.FC<TelegramConnectDialogProps> = ({
         <div className="py-4 space-y-5 text-right">
           {/* Linked State Banner */}
           {isLinked ? (
-            <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl space-y-3">
+            <div className="bg-emerald-500/15 border border-emerald-500/30 p-4 rounded-2xl space-y-3 backdrop-blur-md">
               <div className="flex items-center justify-between">
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={handleDisconnect}
                   disabled={isSaving}
-                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 px-2 text-xs font-bold gap-1.5"
+                  className="text-red-400 hover:text-red-300 hover:bg-red-500/15 h-8 px-2 text-xs font-bold gap-1.5 rounded-xl"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   <span>Disconnect</span>
                 </Button>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-emerald-400">Telegram Chat ID:</span>
-                  <code className="bg-background/80 px-2.5 py-0.5 rounded text-xs font-mono font-black text-foreground">
+                  <code className="bg-black/30 border border-white/10 px-2.5 py-0.5 rounded-lg text-xs font-mono font-black text-foreground">
                     {customer.telegram_chat_id}
                   </code>
                 </div>
@@ -255,7 +255,7 @@ export const TelegramConnectDialog: React.FC<TelegramConnectDialogProps> = ({
               <Button
                 onClick={handleSendTestMessage}
                 disabled={isSendingTest}
-                className="w-full bg-[#229ED9] hover:bg-[#229ED9]/90 text-white font-bold h-10 rounded-xl gap-2 text-xs"
+                className="w-full bg-[#229ED9] hover:bg-[#229ED9]/90 text-white font-bold h-10 rounded-2xl gap-2 text-xs shadow-lg shadow-[#229ED9]/25"
               >
                 {isSendingTest ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 <span>Send Test Notification (ޓެސްޓް މެސެޖެއް ފޮނުވާ)</span>
@@ -264,8 +264,8 @@ export const TelegramConnectDialog: React.FC<TelegramConnectDialogProps> = ({
           ) : (
             <>
               {/* QR Code Section */}
-              <div className="flex flex-col items-center justify-center p-4 bg-muted/40 border border-border rounded-2xl">
-                <div className="p-3 bg-white rounded-2xl shadow-md">
+              <div className="flex flex-col items-center justify-center p-4 bg-white/5 dark:bg-black/20 border border-white/10 rounded-2xl backdrop-blur-md">
+                <div className="p-3 bg-white rounded-2xl shadow-xl">
                   <QRCodeSVG
                     value={deepLink}
                     size={190}
@@ -283,13 +283,13 @@ export const TelegramConnectDialog: React.FC<TelegramConnectDialogProps> = ({
                 </div>
 
                 {/* Live Link Auto-Detection Status */}
-                <div className="mt-3 flex items-center justify-between w-full px-3 py-2 bg-blue-500/10 border border-blue-500/20 rounded-xl text-xs">
+                <div className="mt-3 flex items-center justify-between w-full px-3 py-2 bg-blue-500/10 border border-blue-500/20 rounded-xl text-xs backdrop-blur-md">
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={checkLiveActivation}
                     disabled={isCheckingLive}
-                    className="h-7 px-2.5 text-xs font-bold text-blue-400 hover:bg-blue-500/20 gap-1.5"
+                    className="h-7 px-2.5 text-xs font-bold text-blue-400 hover:bg-blue-500/20 gap-1.5 rounded-lg"
                   >
                     <RefreshCw className={cn("h-3.5 w-3.5", isCheckingLive && "animate-spin")} />
                     <span>Check Status</span>
@@ -310,7 +310,7 @@ export const TelegramConnectDialog: React.FC<TelegramConnectDialogProps> = ({
               <div className="grid grid-cols-2 gap-2">
                 <Button
                   onClick={handleOpenTelegram}
-                  className="bg-[#229ED9] hover:bg-[#229ED9]/90 text-white font-bold h-10 rounded-xl gap-2 text-xs"
+                  className="bg-[#229ED9] hover:bg-[#229ED9]/90 text-white font-bold h-11 rounded-2xl gap-2 text-xs shadow-lg shadow-[#229ED9]/25"
                 >
                   <ExternalLink className="h-4 w-4" />
                   <span>Open Telegram</span>
@@ -318,7 +318,7 @@ export const TelegramConnectDialog: React.FC<TelegramConnectDialogProps> = ({
                 <Button
                   variant="outline"
                   onClick={handleCopyLink}
-                  className="border-border hover:bg-muted font-bold h-10 rounded-xl gap-2 text-xs"
+                  className="border-white/20 dark:border-white/10 hover:bg-white/10 font-bold h-11 rounded-2xl gap-2 text-xs"
                 >
                   <Copy className="h-4 w-4" />
                   <span>Copy Link</span>
@@ -326,7 +326,7 @@ export const TelegramConnectDialog: React.FC<TelegramConnectDialogProps> = ({
               </div>
 
               {/* Instructions */}
-              <div className="bg-muted/30 border border-border/60 p-3 rounded-xl space-y-1.5 text-xs text-muted-foreground">
+              <div className="bg-white/5 dark:bg-black/20 border border-white/10 p-3 rounded-2xl space-y-1.5 text-xs text-muted-foreground backdrop-blur-md">
                 <p className="font-bold text-foreground flex items-center gap-1.5 justify-end">
                   <span>How it works</span>
                   <Info className="h-3.5 w-3.5 text-primary" />
@@ -339,7 +339,7 @@ export const TelegramConnectDialog: React.FC<TelegramConnectDialogProps> = ({
               </div>
 
               {/* Manual Input Alternative */}
-              <div className="pt-2 border-t border-border/50 space-y-2">
+              <div className="pt-2 border-t border-white/10 space-y-2">
                 <Label className="text-[11px] font-bold text-muted-foreground block text-right">
                   Or enter numeric Chat ID manually (އަތުން Chat ID ޖައްސަވާ):
                 </Label>
@@ -347,7 +347,7 @@ export const TelegramConnectDialog: React.FC<TelegramConnectDialogProps> = ({
                   <Button
                     onClick={handleSaveManualChatId}
                     disabled={isSaving || !manualChatId.trim()}
-                    className="bg-primary text-foreground font-bold h-9 px-4 text-xs rounded-xl"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 px-4 text-xs rounded-xl shadow-md"
                   >
                     {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save'}
                   </Button>
@@ -355,7 +355,7 @@ export const TelegramConnectDialog: React.FC<TelegramConnectDialogProps> = ({
                     placeholder="e.g. 123456789"
                     value={manualChatId}
                     onChange={(e) => setManualChatId(e.target.value)}
-                    className="h-9 text-xs font-mono text-left bg-muted border-border rounded-xl flex-1"
+                    className="apple-glass-input h-10 text-xs font-mono text-left rounded-xl flex-1"
                     dir="ltr"
                   />
                 </div>
@@ -364,11 +364,11 @@ export const TelegramConnectDialog: React.FC<TelegramConnectDialogProps> = ({
           )}
         </div>
 
-        <DialogFooter className="sm:justify-start pt-2 border-t border-border/50">
+        <DialogFooter className="sm:justify-start pt-2 border-t border-white/10">
           <Button
             variant="ghost"
             onClick={onClose}
-            className="w-full sm:w-auto text-xs font-bold text-muted-foreground hover:text-foreground"
+            className="w-full sm:w-auto text-xs font-bold text-muted-foreground hover:text-foreground rounded-xl"
           >
             Close (ލައްޕާލާ)
           </Button>

@@ -271,15 +271,15 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
-            <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto font-faruma bg-card border border-border text-foreground shadow-2xl rounded-3xl p-6 sm:p-7 box-border" dir="rtl">
-                <DialogHeader className="text-right pb-3 border-b border-border/60">
+            <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground shadow-2xl rounded-3xl p-6 sm:p-7 box-border" dir="rtl">
+                <DialogHeader className="text-right pb-3 border-b border-white/10">
                     <div className="flex items-center justify-between">
                         <Button
                             type="button"
                             variant="outline"
                             size="sm"
                             onClick={handleDownloadTemplate}
-                            className="rounded-xl border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs gap-1.5 h-9"
+                            className="rounded-2xl border-emerald-500/30 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 font-bold text-xs gap-1.5 h-9 backdrop-blur-md"
                         >
                             <Download className="h-4 w-4" />
                             <span>Download Excel Template (ސާމްޕަލް ފޯމެޓް)</span>
@@ -289,7 +289,7 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
                             <FileSpreadsheet className="h-6 w-6 text-primary" />
                         </DialogTitle>
                     </div>
-                    <DialogDescription className="text-xs text-muted-foreground text-right mt-1">
+                    <DialogDescription className="text-xs text-muted-foreground text-right mt-1 font-bold">
                         Easily upload and import large inventory catalogs. The system preserves your exact Item Code and Barcode values without alteration.
                     </DialogDescription>
                 </DialogHeader>
@@ -307,12 +307,12 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
                                 accept=".xlsx,.xls,.csv"
                                 onChange={handleFileChange}
                                 disabled={isProcessing || isImporting}
-                                className="flex-1 bg-muted border-border font-mono h-11 rounded-xl cursor-pointer file:cursor-pointer file:font-black file:text-xs file:bg-primary/20 file:text-primary file:border-none file:rounded-lg file:mr-3"
+                                className="flex-1 apple-glass-input font-mono h-12 rounded-2xl cursor-pointer file:cursor-pointer file:font-black file:text-xs file:bg-primary/20 file:text-primary file:border-none file:rounded-xl file:mr-3"
                             />
                             <Button
                                 onClick={parseExcelFile}
                                 disabled={!file || isProcessing || isImporting}
-                                className="bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs h-11 px-6 rounded-xl shadow-md gap-2"
+                                className="bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs h-12 px-6 rounded-2xl shadow-lg shadow-primary/25 gap-2"
                             >
                                 {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                                 <span>{isProcessing ? 'Reading File...' : 'Parse & Validate (ޗެކްކުރޭ)'}</span>
@@ -327,12 +327,12 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
 
                     {/* Progress Bar for Large 10,000+ Imports */}
                     {isImporting && importProgress && (
-                        <div className="p-4 bg-primary/10 border border-primary/30 rounded-2xl space-y-2.5 animate-in fade-in">
+                        <div className="p-4 bg-primary/15 border border-primary/30 rounded-2xl space-y-2.5 animate-in fade-in backdrop-blur-md">
                             <div className="flex justify-between items-center text-xs font-black text-primary">
                                 <span>{importProgress.percent}%</span>
                                 <span>Importing {importProgress.count.toLocaleString()} of {importProgress.total.toLocaleString()} products...</span>
                             </div>
-                            <Progress value={importProgress.percent} className="h-2.5 bg-background" />
+                            <Progress value={importProgress.percent} className="h-2.5 bg-black/40" />
                             <p className="text-[11px] text-muted-foreground text-center">
                                 Database batch syncing in progress. Please do not close this window.
                             </p>
@@ -341,7 +341,7 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
 
                     {/* Expected Format Guide */}
                     {!parsedProducts.length && !isProcessing && (
-                        <div className="bg-muted/60 p-4 rounded-2xl border border-border text-right space-y-3">
+                        <div className="bg-white/5 dark:bg-black/20 p-4 rounded-2xl border border-white/10 text-right space-y-3 backdrop-blur-md">
                             <div className="flex items-center justify-between">
                                 <Button
                                     type="button"
@@ -360,16 +360,16 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
                             </div>
 
                             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px] font-mono text-center">
-                                <div className="p-2 rounded-lg bg-card border border-border font-bold">Item Code</div>
-                                <div className="p-2 rounded-lg bg-card border border-border font-bold">Barcode</div>
-                                <div className="p-2 rounded-lg bg-card border border-border font-bold">Product Name (English)</div>
-                                <div className="p-2 rounded-lg bg-card border border-border font-bold">Product Name (Dhivehi)</div>
-                                <div className="p-2 rounded-lg bg-card border border-border font-bold">Category</div>
-                                <div className="p-2 rounded-lg bg-card border border-border font-bold">Selling Price</div>
-                                <div className="p-2 rounded-lg bg-card border border-border font-bold">Cost Price</div>
-                                <div className="p-2 rounded-lg bg-card border border-border font-bold">Shop Stock</div>
-                                <div className="p-2 rounded-lg bg-card border border-border font-bold">Godown Stock</div>
-                                <div className="p-2 rounded-lg bg-card border border-border font-bold">Is Tax Exempt</div>
+                                <div className="p-2 rounded-xl bg-white/5 border border-white/10 font-bold">Item Code</div>
+                                <div className="p-2 rounded-xl bg-white/5 border border-white/10 font-bold">Barcode</div>
+                                <div className="p-2 rounded-xl bg-white/5 border border-white/10 font-bold">Product Name (English)</div>
+                                <div className="p-2 rounded-xl bg-white/5 border border-white/10 font-bold">Product Name (Dhivehi)</div>
+                                <div className="p-2 rounded-xl bg-white/5 border border-white/10 font-bold">Category</div>
+                                <div className="p-2 rounded-xl bg-white/5 border border-white/10 font-bold">Selling Price</div>
+                                <div className="p-2 rounded-xl bg-white/5 border border-white/10 font-bold">Cost Price</div>
+                                <div className="p-2 rounded-xl bg-white/5 border border-white/10 font-bold">Shop Stock</div>
+                                <div className="p-2 rounded-xl bg-white/5 border border-white/10 font-bold">Godown Stock</div>
+                                <div className="p-2 rounded-xl bg-white/5 border border-white/10 font-bold">Is Tax Exempt</div>
                             </div>
 
                             <p className="text-[10px] text-muted-foreground/80">
@@ -381,14 +381,14 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
                     {/* Parsed Summary & Preview Table */}
                     {parsedProducts.length > 0 && (
                         <div className="space-y-3">
-                            <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-muted/60 rounded-xl border border-border text-xs">
+                            <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/10 text-xs backdrop-blur-md">
                                 <div className="flex items-center gap-4">
-                                    <div className="flex items-center gap-1.5 text-emerald-500 font-bold">
+                                    <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
                                         <CheckCircle className="h-4 w-4" />
                                         <span>{validCount.toLocaleString()} Valid (ރަނގަޅު)</span>
                                     </div>
                                     {errorCount > 0 && (
-                                        <div className="flex items-center gap-1.5 text-red-500 font-bold">
+                                        <div className="flex items-center gap-1.5 text-red-400 font-bold">
                                             <XCircle className="h-4 w-4" />
                                             <span>{errorCount.toLocaleString()} Issues (މައްސަލަ ހުރި)</span>
                                         </div>
@@ -399,10 +399,10 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
                                 </span>
                             </div>
 
-                            <div className="border border-border rounded-2xl overflow-hidden max-h-72 overflow-y-auto">
+                            <div className="border border-white/10 rounded-2xl overflow-hidden max-h-72 overflow-y-auto bg-white/5 dark:bg-black/20 backdrop-blur-md">
                                 <Table className="text-right text-xs">
-                                    <TableHeader className="bg-muted/80 sticky top-0 z-10">
-                                        <TableRow>
+                                    <TableHeader className="bg-white/10 dark:bg-black/40 sticky top-0 z-10 backdrop-blur-md">
+                                        <TableRow className="border-b border-white/10">
                                             <TableHead className="w-12 text-center">Status</TableHead>
                                             <TableHead className="text-right">Dhivehi Name</TableHead>
                                             <TableHead className="text-right">English Name</TableHead>
@@ -413,23 +413,23 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
                                             <TableHead className="text-right">Shop Stock</TableHead>
                                         </TableRow>
                                     </TableHeader>
-                                    <TableBody className="divide-y divide-border/60">
+                                    <TableBody className="divide-y divide-white/5">
                                         {previewList.map((item, index) => (
-                                            <TableRow key={index} className={!item.isValid ? 'bg-red-500/10' : ''}>
+                                            <TableRow key={index} className={!item.isValid ? 'bg-red-500/15' : 'hover:bg-white/5'}>
                                                 <TableCell className="text-center">
                                                     {item.isValid ? (
-                                                        <CheckCircle className="h-4 w-4 text-emerald-500 mx-auto" />
+                                                        <CheckCircle className="h-4 w-4 text-emerald-400 mx-auto" />
                                                     ) : (
-                                                        <XCircle className="h-4 w-4 text-red-500 mx-auto" title={item.errors.join(', ')} />
+                                                        <XCircle className="h-4 w-4 text-red-400 mx-auto" title={item.errors.join(', ')} />
                                                     )}
                                                 </TableCell>
-                                                <TableCell className="font-black">{item.product.name_dv}</TableCell>
+                                                <TableCell className="font-black text-foreground">{item.product.name_dv}</TableCell>
                                                 <TableCell className="font-mono text-muted-foreground">{item.product.name_en}</TableCell>
                                                 <TableCell className="font-mono font-bold text-foreground">{item.product.item_code}</TableCell>
                                                 <TableCell className="font-mono font-bold text-foreground">{item.product.barcode}</TableCell>
                                                 <TableCell className="font-mono font-bold text-primary">{item.product.price}</TableCell>
-                                                <TableCell className="font-mono">{item.product.cost_price || '-'}</TableCell>
-                                                <TableCell className="font-mono">{item.product.stock_shop}</TableCell>
+                                                <TableCell className="font-mono text-muted-foreground">{item.product.cost_price || '-'}</TableCell>
+                                                <TableCell className="font-mono text-foreground">{item.product.stock_shop}</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
@@ -445,11 +445,11 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
                     )}
                 </div>
 
-                <DialogFooter className="flex sm:flex-row flex-row-reverse gap-3 mt-4 pt-3 border-t border-border space-x-0 sm:space-x-0 w-full">
+                <DialogFooter className="flex sm:flex-row flex-row-reverse gap-3 mt-4 pt-3 border-t border-white/10 space-x-0 sm:space-x-0 w-full">
                     <Button
                         onClick={handleImport}
                         disabled={validCount === 0 || isProcessing || isImporting}
-                        className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs h-11 rounded-xl shadow-lg shadow-primary/20 uppercase gap-2"
+                        className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs h-12 rounded-2xl shadow-lg shadow-primary/25 uppercase gap-2"
                     >
                         {isImporting && <Loader2 className="h-4 w-4 animate-spin" />}
                         <span>
@@ -462,7 +462,7 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
                         variant="outline" 
                         onClick={handleClose}
                         disabled={isImporting}
-                        className="flex-1 h-11 rounded-xl border-border text-xs font-bold"
+                        className="flex-1 h-12 rounded-2xl border-white/20 dark:border-white/10 hover:bg-white/10 text-xs font-bold text-foreground"
                     >
                         {t('cancel') || 'Cancel'}
                     </Button>

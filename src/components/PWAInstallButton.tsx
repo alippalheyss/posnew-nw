@@ -149,20 +149,20 @@ const InstallGuideDialog: React.FC<{
 }> = ({ isOpen, onClose, platform }) => {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md bg-card border-border text-foreground font-faruma" dir="rtl">
-        <DialogHeader className="text-right">
+      <DialogContent className="max-w-md font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground shadow-2xl rounded-3xl p-6 sm:p-7" dir="rtl">
+        <DialogHeader className="text-right pb-3 border-b border-white/10">
           <DialogTitle className="text-xl font-black text-foreground flex items-center justify-end gap-2">
             <span>Install MVPOS App</span>
             <Laptop className="h-5 w-5 text-primary" />
           </DialogTitle>
-          <DialogDescription className="text-right text-xs text-muted-foreground mt-1">
+          <DialogDescription className="text-right text-xs text-muted-foreground mt-1 font-bold">
             Install MVPOS as a standalone desktop or mobile application for instant offline access and seamless printing.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-3 text-right">
+        <div className="space-y-3 py-3 text-right">
           {/* Desktop instructions */}
-          <div className="p-4 rounded-2xl bg-muted/60 border border-border space-y-3">
+          <div className="p-4 rounded-2xl bg-white/5 dark:bg-black/20 border border-white/10 space-y-2.5 backdrop-blur-md">
             <div className="flex items-center justify-end gap-2 text-sm font-black text-orange-400">
               <span>Google Chrome / Microsoft Edge (Windows & Mac)</span>
               <Monitor className="h-4 w-4" />
@@ -170,24 +170,24 @@ const InstallGuideDialog: React.FC<{
             <ol className="list-decimal list-inside text-xs space-y-2 text-foreground/90 font-medium pr-1">
               <li>Look at the right side of the browser's <strong>address bar (URL bar)</strong> at the top.</li>
               <li>Click the <strong>Install App icon (⊕ or 💻)</strong>.</li>
-              <li>Or click the 3 dots menu <strong className="px-1.5 py-0.5 bg-muted rounded border">⋮</strong> in the top right ➔ click <strong>"Install MVPOS..."</strong> or <strong>"Save and share" ➔ "Install page as app"</strong>.</li>
+              <li>Or click the 3 dots menu <strong className="px-1.5 py-0.5 bg-white/10 rounded border border-white/10">⋮</strong> in the top right ➔ click <strong>"Install MVPOS..."</strong>.</li>
             </ol>
           </div>
 
           {/* Android instructions */}
-          <div className="p-4 rounded-2xl bg-muted/60 border border-border space-y-3">
+          <div className="p-4 rounded-2xl bg-white/5 dark:bg-black/20 border border-white/10 space-y-2.5 backdrop-blur-md">
             <div className="flex items-center justify-end gap-2 text-sm font-black text-emerald-400">
               <span>Android (Chrome)</span>
               <Smartphone className="h-4 w-4" />
             </div>
             <ol className="list-decimal list-inside text-xs space-y-2 text-foreground/90 font-medium pr-1">
-              <li>Tap the three dots menu <strong className="px-1.5 py-0.5 bg-muted rounded border">⋮</strong> in the top right corner of Chrome.</li>
+              <li>Tap the three dots menu <strong className="px-1.5 py-0.5 bg-white/10 rounded border border-white/10">⋮</strong> in the top right corner of Chrome.</li>
               <li>Select <strong>"Install app"</strong> or <strong>"Add to Home screen"</strong>.</li>
             </ol>
           </div>
 
           {/* iOS / Safari instructions */}
-          <div className="p-4 rounded-2xl bg-muted/60 border border-border space-y-3">
+          <div className="p-4 rounded-2xl bg-white/5 dark:bg-black/20 border border-white/10 space-y-2.5 backdrop-blur-md">
             <div className="flex items-center justify-end gap-2 text-sm font-black text-blue-400">
               <span>iPhone / iPad (Safari)</span>
               <Apple className="h-4 w-4" />
@@ -199,8 +199,8 @@ const InstallGuideDialog: React.FC<{
           </div>
         </div>
 
-        <div className="flex justify-end pt-2">
-          <Button onClick={onClose} className="w-full bg-primary text-foreground font-bold h-10 rounded-xl">
+        <div className="flex justify-end pt-3 border-t border-white/10">
+          <Button onClick={onClose} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs h-11 rounded-2xl shadow-lg shadow-primary/25 uppercase">
             Got it
           </Button>
         </div>

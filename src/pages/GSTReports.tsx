@@ -352,24 +352,24 @@ const GSTReports = () => {
 
             {/* Delete Purchase Confirmation Dialog */}
             <Dialog open={!!purchaseToDelete} onOpenChange={(open) => !open && setPurchaseToDelete(null)}>
-                <DialogContent className="font-faruma bg-card border-border text-foreground max-w-sm" dir="rtl">
-                    <DialogHeader className="text-right">
+                <DialogContent className="font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground max-w-sm p-6 sm:p-7 shadow-2xl rounded-3xl" dir="rtl">
+                    <DialogHeader className="text-right pb-2 border-b border-white/10 dark:border-white/5">
                         <DialogTitle className="text-base font-black flex items-center justify-end gap-2 text-red-500">
                             <span>ބިލް ޑިލީޓް ކުރަންވީތަ؟</span>
                             <Trash2 className="h-5 w-5" />
                         </DialogTitle>
                         <DialogDescription className="text-xs text-muted-foreground text-right mt-2 space-y-1">
                             {purchaseToDelete && (
-                                <>
+                                <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 backdrop-blur-md space-y-1 mt-2 text-right">
                                     <div>ބިލް ނަންބަރު: <strong className="text-foreground">{purchaseToDelete.billNumber || '-'}</strong> ({purchaseToDelete.vendorName || purchaseToDelete.vendor})</div>
                                     <div>ތާރީޚް: <strong className="text-foreground">{formatDate(purchaseToDelete.date)}</strong></div>
-                                    <div>ޖުމްލަ އަގު: <strong className="text-primary">{settings.shop.currency} {(purchaseToDelete.amount + purchaseToDelete.gstAmount).toFixed(2)}</strong></div>
-                                </>
+                                    <div>ޖުމްލަ އަގު: <strong className="text-primary font-mono">{settings.shop.currency} {(purchaseToDelete.amount + purchaseToDelete.gstAmount).toFixed(2)}</strong></div>
+                                </div>
                             )}
                         </DialogDescription>
                     </DialogHeader>
-                    <DialogFooter className="flex gap-2 mt-4">
-                        <Button variant="ghost" onClick={() => setPurchaseToDelete(null)} className="flex-1 h-10 text-xs font-bold">
+                    <DialogFooter className="flex flex-row gap-2.5 mt-4 pt-2">
+                        <Button variant="outline" onClick={() => setPurchaseToDelete(null)} className="flex-1 h-11 text-xs font-bold rounded-2xl border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground active:scale-[0.98] transition-all">
                             Cancel
                         </Button>
                         <Button
@@ -380,7 +380,7 @@ const GSTReports = () => {
                                     setPurchaseToDelete(null);
                                 }
                             }}
-                            className="flex-1 h-10 text-xs font-black bg-red-600 hover:bg-red-700"
+                            className="flex-1 h-11 text-xs font-black bg-red-600 hover:bg-red-500 text-white rounded-2xl shadow-lg shadow-red-600/25 active:scale-[0.98] transition-all"
                         >
                             Delete Bill
                         </Button>

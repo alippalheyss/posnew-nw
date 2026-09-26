@@ -931,7 +931,7 @@ const Expenses: React.FC = () => {
                           size="icon"
                           onClick={() => handleOpenDeleteDialog(expense)}
                           title="Delete Expense"
-                          className="h-10 w-10 rounded-xl bg-muted border border-border hover:bg-red-500 hover:text-foreground transition-all text-muted-foreground"
+                          className="h-10 w-10 rounded-xl apple-glass-card border-white/20 hover:bg-red-500 hover:text-white transition-all text-muted-foreground active:scale-95"
                         >
                           <Trash className="h-4 w-4" />
                         </Button>
@@ -947,28 +947,28 @@ const Expenses: React.FC = () => {
 
       {/* Add Expense Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-[550px] bg-card border-border text-foreground font-faruma" dir="rtl">
-          <DialogHeader className="text-right">
+        <DialogContent className="sm:max-w-[550px] apple-glass-dialog border-white/20 dark:border-white/10 text-foreground font-faruma shadow-2xl rounded-3xl p-6 sm:p-7" dir="rtl">
+          <DialogHeader className="text-right pb-3 border-b border-white/10">
             <DialogTitle className="text-xl font-black flex items-center justify-end gap-2 text-primary">
               <PlusCircle className="h-5 w-5" /> {t('record_expense') || 'Record Operational Expense'}
             </DialogTitle>
-            <DialogDescription className="text-right text-xs text-muted-foreground">
+            <DialogDescription className="text-right text-xs text-muted-foreground font-bold mt-1">
               Record electricity bills, zakat al mal disbursements, boat naalu (freight), disposal charges, and other overheads.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-3">
             {/* Category selection */}
-            <div>
-              <Label className="text-xs font-bold mb-1.5 block text-right">ޚަރަދުގެ ބާވަތް (Expense Category)</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground block text-right">ޚަރަދުގެ ބާވަތް (Expense Category)</Label>
               <Select
                 value={formData.category}
                 onValueChange={(val: ExpenseCategory) => setFormData(prev => ({ ...prev, category: val }))}
               >
-                <SelectTrigger className="w-full bg-muted border-border rounded-xl h-11 text-right font-bold">
+                <SelectTrigger className="w-full apple-glass-input rounded-2xl h-11 text-right font-bold">
                   <SelectValue placeholder="Select Category" />
                 </SelectTrigger>
-                <SelectContent className="bg-card border-border text-foreground font-faruma" align="end">
+                <SelectContent className="apple-glass-dialog border border-white/20 text-foreground font-faruma" align="end">
                   {(['electricity', 'zakat_al_mal', 'naalu', 'disposal_charge', 'other'] as ExpenseCategory[]).map(catKey => {
                     const cfg = CATEGORY_CONFIG[catKey];
                     const Icon = cfg.icon;
@@ -986,53 +986,53 @@ const Expenses: React.FC = () => {
             </div>
 
             {/* Description / Title */}
-            <div>
-              <Label className="text-xs font-bold mb-1.5 block text-right">ތަފްސީލް / ނަން (Title / Description) *</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground block text-right">ތަފްސީލް / ނަން (Title / Description) *</Label>
               <Input
                 placeholder="e.g. STELCO Electricity Bill, Boat Naalu, WAMCO Waste Disposal..."
                 value={formData.title}
                 onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                className="bg-muted border-border rounded-xl h-11 text-right font-bold"
+                className="apple-glass-input rounded-2xl h-11 text-right font-bold"
               />
             </div>
 
             {/* Amount & Date in 2 columns */}
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs font-bold mb-1.5 block text-right">ޚަރަދުވި އަދަދު (Amount in {settings.shop.currency}) *</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground block text-right">ޚަރަދުވި އަދަދު (Amount in {settings.shop.currency}) *</Label>
                 <Input
                   type="number"
                   step="0.01"
                   placeholder="0.00"
                   value={formData.amount}
                   onChange={e => setFormData(prev => ({ ...prev, amount: e.target.value }))}
-                  className="bg-muted border-border rounded-xl h-11 text-right font-black text-lg"
+                  className="apple-glass-input rounded-2xl h-11 text-right font-black text-lg font-mono"
                 />
               </div>
 
-              <div>
-                <Label className="text-xs font-bold mb-1.5 block text-right">ތާރީޚް (Date)</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground block text-right">ތާރީޚް (Date)</Label>
                 <Input
                   type="date"
                   value={formData.date}
                   onChange={e => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                  className="bg-muted border-border rounded-xl h-11 text-right font-bold"
+                  className="apple-glass-input rounded-2xl h-11 text-right font-bold font-mono"
                 />
               </div>
             </div>
 
             {/* Payment Method & Reference # */}
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs font-bold mb-1.5 block text-right">ދެއްކި ގޮތް (Payment Method)</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground block text-right">ދެއްކި ގޮތް (Payment Method)</Label>
                 <Select
                   value={formData.paymentMethod}
                   onValueChange={(val: any) => setFormData(prev => ({ ...prev, paymentMethod: val }))}
                 >
-                  <SelectTrigger className="w-full bg-muted border-border rounded-xl h-11 text-right font-bold">
+                  <SelectTrigger className="w-full apple-glass-input rounded-2xl h-11 text-right font-bold">
                     <SelectValue placeholder="Payment Method" />
                   </SelectTrigger>
-                  <SelectContent className="bg-card border-border text-foreground font-faruma" align="end">
+                  <SelectContent className="apple-glass-dialog border border-white/20 text-foreground font-faruma" align="end">
                     <SelectItem value="cash" className="text-right">Cash (ފައިސާ)</SelectItem>
                     <SelectItem value="transfer" className="text-right">Bank Transfer (ޓްރާންސްފަރ)</SelectItem>
                     <SelectItem value="card" className="text-right">Card (ކާޑު)</SelectItem>
@@ -1041,40 +1041,40 @@ const Expenses: React.FC = () => {
                 </Select>
               </div>
 
-              <div>
-                <Label className="text-xs font-bold mb-1.5 block text-right">ބިލް / ރިފަރެންސް ނަންބަރު (Bill / Ref #)</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground block text-right">ބިލް / ރިފަރެންސް ނަންބަރު (Bill / Ref #)</Label>
                 <Input
                   placeholder="Optional bill or invoice no."
                   value={formData.referenceNumber}
                   onChange={e => setFormData(prev => ({ ...prev, referenceNumber: e.target.value }))}
-                  className="bg-muted border-border rounded-xl h-11 text-right font-bold"
+                  className="apple-glass-input rounded-2xl h-11 text-right font-bold font-mono"
                 />
               </div>
             </div>
 
             {/* Remarks / Notes */}
-            <div>
-              <Label className="text-xs font-bold mb-1.5 block text-right">ނޯޓް / އިތުރު މަޢުލޫމާތު (Notes / Remarks)</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground block text-right">ނޯޓް / އިތުރު މަޢުލޫމާތު (Notes / Remarks)</Label>
               <Textarea
                 placeholder="Additional notes, meter readings, boat name, recipient details..."
                 value={formData.notes}
                 onChange={e => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                className="bg-muted border-border rounded-xl min-h-[70px] text-right font-medium"
+                className="apple-glass-input rounded-2xl min-h-[70px] text-right font-medium"
               />
             </div>
           </div>
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2.5 pt-3 border-t border-white/10 flex flex-row">
             <Button
-              variant="ghost"
+              variant="outline"
               onClick={() => setIsAddDialogOpen(false)}
-              className="rounded-xl h-11 px-5"
+              className="flex-1 rounded-2xl h-11 px-5 border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold text-xs"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSaveAdd}
-              className="bg-primary hover:bg-primary/90 text-foreground font-black rounded-xl h-11 px-6 shadow-md"
+              className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-black rounded-2xl h-11 px-6 shadow-lg shadow-primary/25 text-xs uppercase"
             >
               Save Expense
             </Button>
@@ -1084,24 +1084,24 @@ const Expenses: React.FC = () => {
 
       {/* Edit Expense Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[550px] bg-card border-border text-foreground font-faruma" dir="rtl">
-          <DialogHeader className="text-right">
-            <DialogTitle className="text-xl font-black flex items-center justify-end gap-2 text-blue-500">
+        <DialogContent className="sm:max-w-[550px] apple-glass-dialog border-white/20 dark:border-white/10 text-foreground font-faruma shadow-2xl rounded-3xl p-6 sm:p-7" dir="rtl">
+          <DialogHeader className="text-right pb-3 border-b border-white/10">
+            <DialogTitle className="text-xl font-black flex items-center justify-end gap-2 text-blue-400">
               <PencilLine className="h-5 w-5" /> {t('edit_expense') || 'Edit Expense Record'}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-3">
-            <div>
-              <Label className="text-xs font-bold mb-1.5 block text-right">ޚަރަދުގެ ބާވަތް (Expense Category)</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground block text-right">ޚަރަދުގެ ބާވަތް (Expense Category)</Label>
               <Select
                 value={formData.category}
                 onValueChange={(val: ExpenseCategory) => setFormData(prev => ({ ...prev, category: val }))}
               >
-                <SelectTrigger className="w-full bg-muted border-border rounded-xl h-11 text-right font-bold">
+                <SelectTrigger className="w-full apple-glass-input rounded-2xl h-11 text-right font-bold">
                   <SelectValue placeholder="Select Category" />
                 </SelectTrigger>
-                <SelectContent className="bg-card border-border text-foreground font-faruma" align="end">
+                <SelectContent className="apple-glass-dialog border border-white/20 text-foreground font-faruma" align="end">
                   {(['electricity', 'zakat_al_mal', 'naalu', 'disposal_charge', 'other'] as ExpenseCategory[]).map(catKey => {
                     const cfg = CATEGORY_CONFIG[catKey];
                     const Icon = cfg.icon;
@@ -1118,49 +1118,49 @@ const Expenses: React.FC = () => {
               </Select>
             </div>
 
-            <div>
-              <Label className="text-xs font-bold mb-1.5 block text-right">ތަފްސީލް / ނަން (Title / Description) *</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground block text-right">ތަފްސީލް / ނަން (Title / Description) *</Label>
               <Input
                 value={formData.title}
                 onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                className="bg-muted border-border rounded-xl h-11 text-right font-bold"
+                className="apple-glass-input rounded-2xl h-11 text-right font-bold"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs font-bold mb-1.5 block text-right">ޚަރަދުވި އަދަދު (Amount) *</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground block text-right">ޚަރަދުވި އަދަދު (Amount) *</Label>
                 <Input
                   type="number"
                   step="0.01"
                   value={formData.amount}
                   onChange={e => setFormData(prev => ({ ...prev, amount: e.target.value }))}
-                  className="bg-muted border-border rounded-xl h-11 text-right font-black text-lg"
+                  className="apple-glass-input rounded-2xl h-11 text-right font-black text-lg font-mono"
                 />
               </div>
 
-              <div>
-                <Label className="text-xs font-bold mb-1.5 block text-right">ތާރީޚް (Date)</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground block text-right">ތާރީޚް (Date)</Label>
                 <Input
                   type="date"
                   value={formData.date}
                   onChange={e => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                  className="bg-muted border-border rounded-xl h-11 text-right font-bold"
+                  className="apple-glass-input rounded-2xl h-11 text-right font-bold font-mono"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs font-bold mb-1.5 block text-right">ދެއްކި ގޮތް (Payment Method)</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground block text-right">ދެއްކި ގޮތް (Payment Method)</Label>
                 <Select
                   value={formData.paymentMethod}
                   onValueChange={(val: any) => setFormData(prev => ({ ...prev, paymentMethod: val }))}
                 >
-                  <SelectTrigger className="w-full bg-muted border-border rounded-xl h-11 text-right font-bold">
+                  <SelectTrigger className="w-full apple-glass-input rounded-2xl h-11 text-right font-bold">
                     <SelectValue placeholder="Payment Method" />
                   </SelectTrigger>
-                  <SelectContent className="bg-card border-border text-foreground font-faruma" align="end">
+                  <SelectContent className="apple-glass-dialog border border-white/20 text-foreground font-faruma" align="end">
                     <SelectItem value="cash" className="text-right">Cash (ފައިސާ)</SelectItem>
                     <SelectItem value="transfer" className="text-right">Bank Transfer (ޓްރާންސްފަރ)</SelectItem>
                     <SelectItem value="card" className="text-right">Card (ކާޑު)</SelectItem>
@@ -1169,37 +1169,37 @@ const Expenses: React.FC = () => {
                 </Select>
               </div>
 
-              <div>
-                <Label className="text-xs font-bold mb-1.5 block text-right">ބިލް / ރިފަރެންސް ނަންބަރު</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground block text-right">ބިލް / ރިފަރެންސް ނަންބަރު</Label>
                 <Input
                   value={formData.referenceNumber}
                   onChange={e => setFormData(prev => ({ ...prev, referenceNumber: e.target.value }))}
-                  className="bg-muted border-border rounded-xl h-11 text-right font-bold"
+                  className="apple-glass-input rounded-2xl h-11 text-right font-bold font-mono"
                 />
               </div>
             </div>
 
-            <div>
-              <Label className="text-xs font-bold mb-1.5 block text-right">ނޯޓް / އިތުރު މަޢުލޫމާތު</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground block text-right">ނޯޓް / އިތުރު މަޢުލޫމާތު</Label>
               <Textarea
                 value={formData.notes}
                 onChange={e => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                className="bg-muted border-border rounded-xl min-h-[70px] text-right font-medium"
+                className="apple-glass-input rounded-2xl min-h-[70px] text-right font-medium"
               />
             </div>
           </div>
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2.5 pt-3 border-t border-white/10 flex flex-row">
             <Button
-              variant="ghost"
+              variant="outline"
               onClick={() => setIsEditDialogOpen(false)}
-              className="rounded-xl h-11 px-5"
+              className="flex-1 rounded-2xl h-11 px-5 border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold text-xs"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSaveEdit}
-              className="bg-blue-600 hover:bg-blue-700 text-foreground font-black rounded-xl h-11 px-6 shadow-md"
+              className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl h-11 px-6 shadow-lg shadow-blue-600/25 text-xs uppercase"
             >
               Update Record
             </Button>
@@ -1209,27 +1209,27 @@ const Expenses: React.FC = () => {
 
       {/* Delete Expense Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[420px] bg-card border-border text-foreground font-faruma" dir="rtl">
-          <DialogHeader className="text-right">
+        <DialogContent className="sm:max-w-[420px] apple-glass-dialog border-white/20 dark:border-white/10 text-foreground font-faruma shadow-2xl rounded-3xl p-6" dir="rtl">
+          <DialogHeader className="text-right pb-3 border-b border-white/10">
             <DialogTitle className="text-lg font-black text-red-500 flex items-center justify-end gap-2">
               <Trash className="h-5 w-5" /> ޚަރަދު ފޮހެލަންވީތަ؟
             </DialogTitle>
-            <DialogDescription className="text-right text-sm text-muted-foreground mt-2">
+            <DialogDescription className="text-right text-xs text-muted-foreground mt-2 font-bold leading-relaxed">
               Are you sure you want to delete this expense record: <strong className="text-foreground">{selectedExpense?.title}</strong> ({settings.shop.currency} {selectedExpense?.amount.toFixed(2)})? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
 
-          <DialogFooter className="gap-2 mt-4">
+          <DialogFooter className="gap-2.5 mt-4 flex flex-row">
             <Button
-              variant="ghost"
+              variant="outline"
               onClick={() => setIsDeleteDialogOpen(false)}
-              className="rounded-xl h-10 px-4"
+              className="flex-1 rounded-2xl h-11 px-4 border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold text-xs"
             >
               Cancel
             </Button>
             <Button
               onClick={handleConfirmDelete}
-              className="bg-red-600 hover:bg-red-700 text-foreground font-black rounded-xl h-10 px-5"
+              className="flex-1 bg-red-600 hover:bg-red-500 text-white font-black rounded-2xl h-11 px-5 shadow-lg shadow-red-600/25 text-xs uppercase"
             >
               Delete Record
             </Button>

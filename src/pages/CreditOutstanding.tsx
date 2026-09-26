@@ -818,12 +818,12 @@ const CreditOutstanding = () => {
         </div>
       </ScrollArea>
 
-      {/* Dialogs updated with dark theme styling... (Settle Payment, Settlement History, Credit Purchases) */}
+      {/* Dialogs updated with Apple Liquid Glass styling (Settle Payment, Settlement History, Credit Purchases) */}
       <Dialog open={isSettlePaymentDialogOpen} onOpenChange={setIsSettlePaymentDialogOpen}>
-        <DialogContent className="sm:max-w-[32rem] 2xl:max-w-[38rem] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
-          <DialogHeader className="text-right pb-3 border-b border-border/60">
+        <DialogContent className="sm:max-w-[32rem] 2xl:max-w-[38rem] w-[calc(100vw-2rem)] font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground p-6 sm:p-7 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+          <DialogHeader className="text-right pb-3 border-b border-white/10 dark:border-white/5">
             <div className="flex items-start justify-between gap-3 pl-8">
-              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[11px] font-mono font-bold mt-1">
+              <Badge variant="outline" className="bg-primary/15 text-primary border-primary/30 text-[11px] font-mono font-bold mt-1 rounded-xl px-2.5 py-0.5">
                 {selectedCustomerForAction?.code}
               </Badge>
               <div className="text-right flex-1 min-w-0">
@@ -841,7 +841,7 @@ const CreditOutstanding = () => {
           <div className="py-3 space-y-4 text-right">
             {/* Balance Overview Cards */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 text-right space-y-1">
+              <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 backdrop-blur-md text-right space-y-1">
                 <p className="text-[9px] font-black uppercase tracking-wider text-red-600 dark:text-red-400">
                   {renderBoth('current_outstanding')}
                 </p>
@@ -851,7 +851,7 @@ const CreditOutstanding = () => {
               </div>
 
               <div className={cn(
-                "p-3.5 rounded-2xl border text-right space-y-1 transition-all",
+                "p-3.5 rounded-2xl border text-right space-y-1 transition-all backdrop-blur-md",
                 currentOutstandingAfterPayment > 0 
                   ? "bg-orange-500/10 border-orange-500/20 text-orange-600 dark:text-orange-400" 
                   : "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
@@ -866,7 +866,7 @@ const CreditOutstanding = () => {
             </div>
 
             {/* Payment Input */}
-            <div className="space-y-2 bg-muted/50 p-4 rounded-2xl border border-border">
+            <div className="space-y-2.5 bg-black/10 dark:bg-white/5 p-4 rounded-2xl border border-white/15 dark:border-white/10 backdrop-blur-md">
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold text-muted-foreground uppercase font-mono">
                   Enter Amount
@@ -885,11 +885,11 @@ const CreditOutstanding = () => {
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(e.target.value === '' ? '' : (parseFloat(e.target.value) || 0))}
                   onFocus={(e) => e.target.select()}
-                  className="text-right h-12 bg-background border-border text-2xl font-black text-foreground font-mono pl-14 pr-4 rounded-xl focus:border-primary transition-all w-full"
+                  className="text-right h-12 apple-glass-input text-2xl font-black text-foreground font-mono pl-14 pr-4 rounded-2xl w-full"
                   autoFocus
                   placeholder="0.00"
                 />
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black text-primary font-mono">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-black text-primary font-mono">
                   {settings.shop.currency}
                 </span>
               </div>
@@ -904,7 +904,7 @@ const CreditOutstanding = () => {
                     const bal = selectedCustomerForAction?.outstanding_balance || 0;
                     setPaymentAmount(Math.round((bal * 0.25) * 100) / 100);
                   }}
-                  className="text-[10px] font-black h-8 rounded-lg border-border hover:bg-muted font-mono"
+                  className="text-[10px] font-black h-8 rounded-xl border-white/20 dark:border-white/10 hover:bg-white/10 font-mono active:scale-95 transition-all"
                 >
                   25%
                 </Button>
@@ -916,7 +916,7 @@ const CreditOutstanding = () => {
                     const bal = selectedCustomerForAction?.outstanding_balance || 0;
                     setPaymentAmount(Math.round((bal * 0.5) * 100) / 100);
                   }}
-                  className="text-[10px] font-black h-8 rounded-lg border-border hover:bg-muted font-mono"
+                  className="text-[10px] font-black h-8 rounded-xl border-white/20 dark:border-white/10 hover:bg-white/10 font-mono active:scale-95 transition-all"
                 >
                   50%
                 </Button>
@@ -925,7 +925,7 @@ const CreditOutstanding = () => {
                   variant="outline" 
                   size="sm" 
                   onClick={() => setPaymentAmount(selectedCustomerForAction?.outstanding_balance || 0)}
-                  className="text-[10px] font-black h-8 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border-primary/30"
+                  className="text-[10px] font-black h-8 rounded-xl bg-primary/15 hover:bg-primary/25 text-primary border-primary/30 active:scale-95 transition-all"
                 >
                   {renderBoth('pay_all_outstanding')}
                 </Button>
@@ -933,18 +933,18 @@ const CreditOutstanding = () => {
             </div>
           </div>
 
-          <DialogFooter className="flex sm:flex-row flex-row-reverse gap-3 pt-3 border-t border-border space-x-0 sm:space-x-0 w-full">
+          <DialogFooter className="flex sm:flex-row flex-row-reverse gap-2.5 pt-4 border-t border-white/10 dark:border-white/5 space-x-0 sm:space-x-0 w-full">
             <Button 
               onClick={processSettlement} 
               disabled={!paymentAmount || paymentAmount <= 0} 
-              className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs uppercase rounded-xl shadow-lg shadow-primary/25 transition-all"
+              className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs uppercase rounded-2xl shadow-lg shadow-primary/25 active:scale-[0.98] transition-all"
             >
               {renderBoth('confirm_settlement')}
             </Button>
             <Button 
               variant="outline" 
               onClick={() => setIsSettlePaymentDialogOpen(false)} 
-              className="flex-1 h-12 border-border hover:bg-muted text-foreground text-xs font-bold rounded-xl"
+              className="flex-1 h-11 border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground text-xs font-bold rounded-2xl active:scale-[0.98] transition-all"
             >
               {renderBoth('cancel')}
             </Button>
@@ -954,8 +954,8 @@ const CreditOutstanding = () => {
 
       {/* Settlement History Dialog */}
       <Dialog open={isSettlementHistoryDialogOpen} onOpenChange={setIsSettlementHistoryDialogOpen}>
-        <DialogContent className="sm:max-w-[36rem] 2xl:max-w-[42rem] w-[calc(100vw-2rem)] font-faruma bg-card border border-border text-foreground p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
-          <DialogHeader className="text-right pb-3 border-b border-border/60">
+        <DialogContent className="sm:max-w-[36rem] 2xl:max-w-[42rem] w-[calc(100vw-2rem)] font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground p-6 sm:p-7 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+          <DialogHeader className="text-right pb-3 border-b border-white/10 dark:border-white/5">
             <div className="pl-8">
               <DialogTitle className="text-xl font-black flex items-center justify-end gap-2">
                 <span>{renderBoth('settlement_history')}</span>
@@ -966,15 +966,15 @@ const CreditOutstanding = () => {
               </DialogDescription>
             </div>
           </DialogHeader>
-          <ScrollArea className="h-[400px] mt-4 pr-2">
+          <ScrollArea className="h-[400px] mt-4 pr-2 custom-scrollbar">
             <div className="space-y-3">
               {selectedCustomerForAction?.settlement_history && selectedCustomerForAction.settlement_history.length > 0 ? (
                 [...selectedCustomerForAction.settlement_history]
                   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                   .map((settlement, idx) => (
-                  <div key={settlement.id || idx} className="p-4 rounded-2xl bg-muted/60 border border-border text-right relative overflow-hidden group">
+                  <div key={settlement.id || idx} className="p-4 rounded-2xl apple-glass-card border border-white/20 dark:border-white/10 text-right relative overflow-hidden group">
                     <div className="flex justify-between items-center mb-2">
-                       <span className="text-[10px] font-mono text-muted-foreground/60">{formatDate(settlement.date)} {formatTime(settlement.date)}</span>
+                       <span className="text-[10px] font-mono text-muted-foreground/80">{formatDate(settlement.date)} {formatTime(settlement.date)}</span>
                        <span className="text-sm font-black text-green-500 font-mono">+{settings.shop.currency} {settlement.amount_paid.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center text-[10px] font-bold text-muted-foreground font-mono">
@@ -984,15 +984,15 @@ const CreditOutstanding = () => {
                   </div>
                 ))
               ) : (
-                <div className="flex flex-col items-center justify-center h-40 opacity-20">
+                <div className="flex flex-col items-center justify-center h-40 opacity-30">
                   <Clock className="h-10 w-10 mb-2" />
                   <p className="font-black uppercase tracking-widest">{renderBothString('no_settlement_history')}</p>
                 </div>
               )}
             </div>
           </ScrollArea>
-          <DialogFooter className="pt-3 border-t border-border">
-            <Button onClick={() => setIsSettlementHistoryDialogOpen(false)} className="w-full h-11 bg-muted hover:bg-muted/80 text-foreground border border-border font-black rounded-xl">
+          <DialogFooter className="pt-4 border-t border-white/10 dark:border-white/5">
+            <Button onClick={() => setIsSettlementHistoryDialogOpen(false)} className="w-full h-11 rounded-2xl border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold active:scale-[0.98] transition-all" variant="outline">
               {renderBoth('close')}
             </Button>
           </DialogFooter>
@@ -1001,8 +1001,8 @@ const CreditOutstanding = () => {
 
       {/* Credit Purchases (Details) Dialog */}
       <Dialog open={isCreditPurchasesDialogOpen} onOpenChange={setIsCreditPurchasesDialogOpen}>
-        <DialogContent className="sm:max-w-[42rem] 2xl:max-w-[50rem] w-[calc(100vw-2rem)] font-faruma bg-card border border-border text-foreground p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
-          <DialogHeader className="text-right pb-3 border-b border-border/60">
+        <DialogContent className="sm:max-w-[42rem] 2xl:max-w-[50rem] w-[calc(100vw-2rem)] font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground p-6 sm:p-7 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+          <DialogHeader className="text-right pb-3 border-b border-white/10 dark:border-white/5">
             <div className="pl-8">
               <DialogTitle className="text-xl font-black flex items-center justify-end gap-2">
                 <span>{renderBoth('credit_purchases')}</span>
@@ -1013,8 +1013,8 @@ const CreditOutstanding = () => {
               </DialogDescription>
             </div>
           </DialogHeader>
-          <ScrollArea className="h-[450px] mt-4 pr-4">
-            <div className="space-y-4">
+          <ScrollArea className="h-[450px] mt-4 pr-3 custom-scrollbar">
+            <div className="space-y-3">
               {selectedCustomerCreditSales.length > 0 ? (
                 [...selectedCustomerCreditSales]
                   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -1024,16 +1024,16 @@ const CreditOutstanding = () => {
                   const displayAmount = isSplit ? splitEntry.amount : sale.grandTotal;
 
                   return (
-                    <div key={sale.id} className="p-4 rounded-2xl bg-muted border border-border text-right relative overflow-hidden group">
+                    <div key={sale.id} className="p-4 rounded-2xl apple-glass-card border border-white/20 dark:border-white/10 text-right relative overflow-hidden group">
                       {isSplit && (
-                        <div className="absolute top-0 left-0 bg-blue-500/20 text-blue-500 text-[8px] font-black px-3 py-1 rounded-br-xl uppercase tracking-widest z-10">
+                        <div className="absolute top-0 left-0 bg-blue-500/20 text-blue-500 text-[8px] font-black px-3 py-1 rounded-br-xl uppercase tracking-widest z-10 backdrop-blur-md">
                           Split Bill
                         </div>
                       )}
                       <div className="flex justify-between items-center mb-3">
                          <div className="flex items-center gap-2">
-                           <Badge variant="outline" className="border-orange-500/30 text-orange-500 text-[8px] font-black">{sale.invoiceNumber || sale.id}</Badge>
-                           <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-full" onClick={(e) => { e.stopPropagation(); handleEditSale(sale); }}>
+                           <Badge variant="outline" className="border-orange-500/30 text-orange-500 text-[8px] font-black rounded-lg">{sale.invoiceNumber || sale.id}</Badge>
+                           <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-white/10 rounded-full" onClick={(e) => { e.stopPropagation(); handleEditSale(sale); }}>
                              <Edit className="h-3 w-3" />
                            </Button>
                          </div>
@@ -1042,14 +1042,14 @@ const CreditOutstanding = () => {
                       <div className="space-y-2 mb-3">
                         {sale.items.map((item: any, i: number) => (
                           <div key={i} className="flex justify-between items-center text-xs">
-                            <span className="text-muted-foreground">{item.qty} x {item.price.toFixed(2)}</span>
+                            <span className="text-muted-foreground font-mono">{item.qty} x {item.price.toFixed(2)}</span>
                             <span className="font-bold">{item.name_dv}</span>
                           </div>
                         ))}
                       </div>
-                      <div className="pt-3 border-t border-border flex justify-between items-center">
-                         <span className="text-sm font-black text-foreground">{settings.shop.currency} {displayAmount.toFixed(2)}</span>
-                         <span className="text-[10px] font-black text-muted-foreground/50 uppercase">
+                      <div className="pt-3 border-t border-white/10 dark:border-white/5 flex justify-between items-center">
+                         <span className="text-sm font-black text-foreground font-mono">{settings.shop.currency} {displayAmount.toFixed(2)}</span>
+                         <span className="text-[10px] font-black text-muted-foreground/70 uppercase">
                            {isSplit ? 'Your Portion' : 'Total Invoice'}
                          </span>
                       </div>
@@ -1057,15 +1057,15 @@ const CreditOutstanding = () => {
                   );
                 })
               ) : (
-                <div className="flex flex-col items-center justify-center h-40 opacity-20">
+                <div className="flex flex-col items-center justify-center h-40 opacity-30">
                   <FileText className="h-10 w-10 mb-2" />
                   <p className="font-black uppercase tracking-widest">No credit purchases found</p>
                 </div>
               )}
             </div>
           </ScrollArea>
-          <DialogFooter className="pt-4 border-t border-border">
-            <Button onClick={() => setIsCreditPurchasesDialogOpen(false)} className="w-full h-12 bg-muted hover:bg-muted/80 text-foreground border border-border font-black">
+          <DialogFooter className="pt-4 border-t border-white/10 dark:border-white/5">
+            <Button onClick={() => setIsCreditPurchasesDialogOpen(false)} variant="outline" className="w-full h-11 rounded-2xl border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold active:scale-[0.98] transition-all">
               {renderBoth('close')}
             </Button>
           </DialogFooter>
@@ -1099,10 +1099,10 @@ const CreditOutstanding = () => {
 
       {/* Batch Automated Overdue Reminders Dialog */}
       <Dialog open={isBatchRemindersDialogOpen} onOpenChange={setIsBatchRemindersDialogOpen}>
-        <DialogContent className="sm:max-w-[44rem] 2xl:max-w-[52rem] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto max-h-[90vh] flex flex-col" dir="rtl">
-          <DialogHeader className="text-right pb-4 border-b border-border/60">
+        <DialogContent className="sm:max-w-[44rem] 2xl:max-w-[52rem] w-[calc(100vw-2rem)] font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground p-6 sm:p-7 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto max-h-[90vh] flex flex-col" dir="rtl">
+          <DialogHeader className="text-right pb-4 border-b border-white/10 dark:border-white/5">
             <div className="flex items-center justify-between pl-8">
-              <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-xs font-mono font-bold">
+              <Badge className="bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 text-xs font-mono font-bold rounded-xl px-2.5 py-1 backdrop-blur-md">
                 {linkedCustomersWithDue.length} Connected
               </Badge>
               <div className="text-right">
@@ -1117,12 +1117,12 @@ const CreditOutstanding = () => {
             </div>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto py-4 space-y-5 text-right custom-scrollbar">
+          <div className="flex-1 overflow-y-auto py-4 space-y-4 text-right custom-scrollbar">
             {/* Summary Banner */}
-            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
+            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-md flex items-center justify-between">
               <div className="text-left">
                 <p className="text-[10px] uppercase font-black tracking-wider text-muted-foreground">Selected Total Due</p>
-                <p className="text-xl font-black text-emerald-500">
+                <p className="text-xl font-black text-emerald-500 font-mono">
                   {settings.shop.currency} {linkedCustomersWithDue
                     .filter(c => selectedCustomerIdsForReminder.includes(c.id))
                     .reduce((sum, c) => sum + (c.outstanding_balance || 0), 0)
@@ -1160,7 +1160,7 @@ const CreditOutstanding = () => {
               </Label>
               <div className="max-h-[220px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
                 {linkedCustomersWithDue.length === 0 ? (
-                  <div className="p-6 text-center text-muted-foreground text-xs font-bold bg-muted/40 rounded-2xl border border-dashed border-border">
+                  <div className="p-6 text-center text-muted-foreground text-xs font-bold bg-white/5 rounded-2xl border border-dashed border-white/10">
                     No customers with outstanding balances are currently linked to Telegram.
                   </div>
                 ) : (
@@ -1177,16 +1177,16 @@ const CreditOutstanding = () => {
                           );
                         }}
                         className={cn(
-                          "p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3",
-                          isSelected ? "bg-emerald-500/10 border-emerald-500/30" : "bg-muted/40 border-border hover:bg-muted/70"
+                          "p-3 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between gap-3 active:scale-[0.99]",
+                          isSelected ? "apple-glass-card bg-emerald-500/10 border-emerald-500/30" : "apple-glass-card border-white/15 dark:border-white/10 hover:bg-white/10"
                         )}
                       >
-                        <div className="text-left">
-                          <p className="text-sm font-black text-foreground">
+                        <div className="text-left font-mono">
+                          <p className="text-sm font-black text-red-500">
                             {settings.shop.currency} {Number(c.outstanding_balance || 0).toFixed(2)}
                           </p>
                           {isThreshold && (
-                            <Badge className="bg-red-500/15 text-red-500 border-none text-[8px] font-black px-1.5 py-0">
+                            <Badge className="bg-red-500/15 text-red-500 border-none text-[8px] font-black px-1.5 py-0 rounded-md">
                               {pct}% LIMIT
                             </Badge>
                           )}
@@ -1211,9 +1211,9 @@ const CreditOutstanding = () => {
             </div>
 
             {/* Message Preview */}
-            <div className="p-4 rounded-2xl bg-muted/50 border border-border text-right space-y-2">
-              <div className="flex items-center justify-between text-xs font-black text-muted-foreground pb-2 border-b border-border/50">
-                <span className="text-[10px] font-mono text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+            <div className="p-4 rounded-2xl bg-black/10 dark:bg-white/5 border border-white/15 dark:border-white/10 text-right space-y-2 backdrop-blur-md">
+              <div className="flex items-center justify-between text-xs font-black text-muted-foreground pb-2 border-b border-white/10 dark:border-white/5">
+                <span className="text-[10px] font-mono text-emerald-500 bg-emerald-500/15 px-2 py-0.5 rounded-lg border border-emerald-500/30">
                   Interactive Telegram Template
                 </span>
                 <span className="flex items-center gap-1">
@@ -1221,7 +1221,7 @@ const CreditOutstanding = () => {
                   Message Draft Preview
                 </span>
               </div>
-              <div className="text-xs font-mono leading-relaxed text-foreground/80 whitespace-pre-line text-left bg-background/50 p-3 rounded-xl border border-border" dir="ltr">
+              <div className="text-xs font-mono leading-relaxed text-foreground/80 whitespace-pre-line text-left bg-background/40 backdrop-blur-sm p-3 rounded-xl border border-white/10" dir="ltr">
                 {`🌙 As-salamu alaykum [Customer Name],
 
 🏪 ${settings.shop.shopName || 'B BACK'} — (Automated Reminder)
@@ -1241,13 +1241,13 @@ Once transferred, tap the button below to submit your payment slip directly in t
             </div>
           </div>
 
-          <DialogFooter className="pt-4 border-t border-border flex gap-3">
+          <DialogFooter className="pt-4 border-t border-white/10 dark:border-white/5 flex gap-3">
             <Button
               type="button"
               variant="outline"
               onClick={() => setIsBatchRemindersDialogOpen(false)}
               disabled={isSendingBatch}
-              className="flex-1 h-12 rounded-xl font-bold"
+              className="flex-1 h-12 rounded-2xl border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold active:scale-[0.98] transition-all"
             >
               Cancel
             </Button>
@@ -1255,7 +1255,7 @@ Once transferred, tap the button below to submit your payment slip directly in t
               type="button"
               onClick={handleSendBatchReminders}
               disabled={isSendingBatch || selectedCustomerIdsForReminder.length === 0}
-              className="flex-[2] h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs gap-2 shadow-lg shadow-emerald-500/20"
+              className="flex-[2] h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs gap-2 shadow-lg shadow-emerald-500/25 active:scale-[0.98] transition-all"
             >
               {isSendingBatch ? (
                 <>

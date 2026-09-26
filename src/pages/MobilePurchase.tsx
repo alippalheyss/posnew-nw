@@ -847,41 +847,41 @@ const MobilePurchase: React.FC = () => {
 
       {/* Quick Add Vendor Dialog */}
       <Dialog open={isNewVendorOpen} onOpenChange={setIsNewVendorOpen}>
-        <DialogContent className="sm:max-w-[380px] font-faruma bg-card border-border text-foreground" dir="rtl">
-          <DialogHeader className="text-right">
-            <DialogTitle className="text-lg font-black flex items-center justify-end gap-2">
+        <DialogContent className="sm:max-w-[380px] font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground p-6 sm:p-7 shadow-2xl rounded-3xl" dir="rtl">
+          <DialogHeader className="text-right pb-2 border-b border-white/10 dark:border-white/5">
+            <DialogTitle className="text-lg font-black flex items-center justify-end gap-2 text-foreground">
               <span>އާ ވެންޑަރެއް އިތުރުކުރުން</span>
               <Building2 className="h-5 w-5 text-primary" />
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-3 py-2 text-right">
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-muted-foreground">Vendor Name (ސަޕްލަޔަރުގެ ނަން)*</Label>
+          <div className="space-y-3.5 py-3 text-right">
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Vendor Name (ސަޕްލަޔަރުގެ ނަން)*</Label>
               <Input
                 value={newVendorName}
                 onChange={(e) => setNewVendorName(e.target.value)}
                 placeholder="e.g. Lotus, Lily, Seagull"
-                className="h-10 bg-muted border-border text-right font-bold text-xs"
+                className="h-11 apple-glass-input text-right font-bold text-xs rounded-2xl"
               />
             </div>
 
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-muted-foreground">Phone Number (ފޯނު ނަންބަރު)</Label>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Phone Number (ފޯނު ނަންބަރު)</Label>
               <Input
                 value={newVendorPhone}
                 onChange={(e) => setNewVendorPhone(e.target.value)}
                 placeholder="7xxxxxx"
-                className="h-10 bg-muted border-border text-right font-mono text-xs"
+                className="h-11 apple-glass-input text-right font-mono text-xs rounded-2xl"
               />
             </div>
           </div>
 
-          <DialogFooter className="flex gap-2">
-            <Button variant="ghost" onClick={() => setIsNewVendorOpen(false)} className="flex-1 h-10 text-xs font-bold">
+          <DialogFooter className="flex flex-row gap-2.5 pt-3 border-t border-white/10 dark:border-white/5">
+            <Button variant="outline" onClick={() => setIsNewVendorOpen(false)} className="flex-1 h-11 text-xs font-bold rounded-2xl border-white/20 dark:border-white/10 hover:bg-white/10 active:scale-[0.98] transition-all">
               Cancel
             </Button>
-            <Button onClick={handleQuickAddVendor} className="flex-1 h-10 bg-primary text-xs font-black">
+            <Button onClick={handleQuickAddVendor} className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black rounded-2xl shadow-lg shadow-primary/25 active:scale-[0.98] transition-all">
               Save Vendor
             </Button>
           </DialogFooter>
@@ -890,19 +890,19 @@ const MobilePurchase: React.FC = () => {
 
       {/* Full Size Image Preview Modal */}
       <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
-        <DialogContent className="sm:max-w-[480px] bg-card border-border p-2" dir="rtl">
+        <DialogContent className="sm:max-w-[480px] apple-glass-dialog border-white/20 dark:border-white/10 p-4 rounded-3xl shadow-2xl" dir="rtl">
           <div className="p-2">
-            <div className="flex justify-between items-center mb-2">
-              <Button variant="ghost" size="icon" onClick={() => setIsPreviewModalOpen(false)} className="h-8 w-8">
+            <div className="flex justify-between items-center mb-3">
+              <Button variant="ghost" size="icon" onClick={() => setIsPreviewModalOpen(false)} className="h-8 w-8 rounded-full hover:bg-white/10">
                 <X className="h-4 w-4" />
               </Button>
-              <span className="text-xs font-bold text-foreground">Attached Bill Photo</span>
+              <span className="text-xs font-black text-foreground">Attached Bill Photo</span>
             </div>
             {billImage && (
               <img 
                 src={billImage} 
                 alt="Full Bill" 
-                className="w-full max-h-[75vh] object-contain rounded-xl border border-border"
+                className="w-full max-h-[75vh] object-contain rounded-2xl border border-white/20 dark:border-white/10 shadow-lg"
               />
             )}
           </div>

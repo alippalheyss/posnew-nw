@@ -817,18 +817,18 @@ const Products = () => {
 
       {/* Main Admin Bulk Delete Confirmation Modal */}
       <Dialog open={isBulkDeleteDialogOpen} onOpenChange={setIsBulkDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[480px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto font-faruma bg-card text-foreground border border-border text-right p-6 sm:p-7 shadow-2xl rounded-3xl box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
-          <DialogHeader className="pb-3 text-right space-y-2 border-b border-border/60 pl-10">
+        <DialogContent className="sm:max-w-[480px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground text-right p-6 sm:p-7 shadow-2xl rounded-3xl box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+          <DialogHeader className="pb-3 text-right space-y-2 border-b border-white/10 dark:border-white/5 pl-10">
             <DialogTitle className="text-xl font-black text-red-500 flex items-center justify-end gap-2.5">
               <span>Bulk Delete Confirmation (ޑިލީޓް ކުރުމުގެ ހުއްދަ)</span>
               <ShieldAlert className="h-6 w-6 text-red-500 shrink-0" />
             </DialogTitle>
             <DialogDescription className="text-muted-foreground text-xs leading-relaxed text-right pt-1">
-              You are about to permanently delete <strong className="text-foreground">{selectedProductIds.length}</strong> selected products from the inventory database. This action cannot be undone.
+              You are about to permanently delete <strong className="text-foreground font-black">{selectedProductIds.length}</strong> selected products from the inventory database. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="p-4 bg-red-500/10 border border-red-500/25 rounded-2xl my-2 text-right space-y-2">
+          <div className="p-4 bg-red-500/10 border border-red-500/25 rounded-2xl my-2 text-right space-y-2 backdrop-blur-md">
             <div className="flex items-center justify-between text-xs font-black text-red-500">
               <span className="font-mono">{selectedProductIds.length} Products</span>
               <span>Total To Delete:</span>
@@ -838,13 +838,13 @@ const Products = () => {
             </p>
           </div>
 
-          <DialogFooter className="flex sm:flex-row flex-row-reverse gap-3 mt-3 pt-3 border-t border-border space-x-0 sm:space-x-0 w-full">
+          <DialogFooter className="flex sm:flex-row flex-row-reverse gap-2.5 mt-3 pt-3 border-t border-white/10 dark:border-white/5 space-x-0 sm:space-x-0 w-full">
             <Button
               type="button"
               variant="destructive"
               onClick={handleExecuteBulkDelete}
               disabled={isBulkDeleting}
-              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-black h-11 rounded-xl shadow-lg shadow-red-600/20 text-xs uppercase gap-2"
+              className="flex-1 bg-red-600 hover:bg-red-500 text-white font-black h-11 rounded-2xl shadow-lg shadow-red-600/25 text-xs uppercase gap-2 active:scale-[0.98] transition-all"
             >
               <Trash2 className="h-4 w-4" />
               <span>{isBulkDeleting ? 'Deleting Products...' : `Yes, Delete ${selectedProductIds.length} Products`}</span>
@@ -853,7 +853,7 @@ const Products = () => {
               type="button"
               variant="outline"
               onClick={() => setIsBulkDeleteDialogOpen(false)}
-              className="flex-1 text-muted-foreground hover:text-foreground h-11 rounded-xl border-border text-xs font-bold"
+              className="flex-1 text-foreground hover:bg-white/10 h-11 rounded-2xl border-white/20 dark:border-white/10 text-xs font-bold active:scale-[0.98] transition-all"
             >
               Cancel (ކެންސަލް)
             </Button>

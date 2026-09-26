@@ -60,8 +60,8 @@ const StockTransferDialog: React.FC<StockTransferDialogProps> = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[500px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto font-faruma bg-card border-border text-foreground shadow-2xl rounded-3xl p-6 sm:p-7 box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
-                <DialogHeader className="text-right pb-3 space-y-1 border-b border-border/60 pl-10">
+            <DialogContent className="sm:max-w-[500px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground shadow-2xl rounded-3xl p-6 sm:p-7 box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+                <DialogHeader className="text-right pb-3 space-y-1 border-b border-white/10 pl-10">
                     <DialogTitle className="text-xl font-black flex items-center justify-end gap-2.5">
                         <span>{renderBoth('transfer_stock')}</span>
                         <ArrowRightLeft className="h-5 w-5 text-primary" />
@@ -73,15 +73,15 @@ const StockTransferDialog: React.FC<StockTransferDialogProps> = ({
 
                 <div className="py-3 space-y-4">
                     {/* Direction Toggle */}
-                    <div className="grid grid-cols-2 gap-2 bg-muted p-1.5 rounded-2xl border border-border">
+                    <div className="grid grid-cols-2 gap-2 bg-white/5 dark:bg-black/20 p-1.5 rounded-2xl border border-white/10 backdrop-blur-md">
                         <button
                             type="button"
                             onClick={() => setDirection('to_godown')}
                             className={cn(
-                                "flex items-center justify-center gap-2 h-11 rounded-xl text-xs font-black transition-all",
+                                "flex items-center justify-center gap-2 h-11 rounded-xl text-xs font-black transition-all duration-200",
                                 direction === 'to_godown' 
-                                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" 
-                                    : "text-muted-foreground hover:text-foreground hover:bg-card/50"
+                                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25" 
+                                    : "text-muted-foreground hover:text-foreground hover:bg-white/10"
                             )}
                         >
                             <Store className="h-4 w-4" />
@@ -91,10 +91,10 @@ const StockTransferDialog: React.FC<StockTransferDialogProps> = ({
                             type="button"
                             onClick={() => setDirection('to_shop')}
                             className={cn(
-                                "flex items-center justify-center gap-2 h-11 rounded-xl text-xs font-black transition-all",
+                                "flex items-center justify-center gap-2 h-11 rounded-xl text-xs font-black transition-all duration-200",
                                 direction === 'to_shop' 
-                                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20" 
-                                    : "text-muted-foreground hover:text-foreground hover:bg-card/50"
+                                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25" 
+                                    : "text-muted-foreground hover:text-foreground hover:bg-white/10"
                             )}
                         >
                             <Warehouse className="h-4 w-4" />
@@ -105,10 +105,10 @@ const StockTransferDialog: React.FC<StockTransferDialogProps> = ({
                     {/* Stock Info Cards */}
                     <div className="grid grid-cols-2 gap-3 items-center">
                         <div className={cn(
-                            "p-3.5 rounded-2xl border transition-all text-center",
+                            "p-3.5 rounded-2xl border transition-all duration-300 text-center",
                             direction === 'to_godown' 
-                                ? "bg-primary/10 border-primary/40 shadow-sm" 
-                                : "bg-muted/60 border-border opacity-70"
+                                ? "bg-primary/15 border-primary/50 shadow-lg shadow-primary/10 backdrop-blur-md" 
+                                : "bg-white/5 dark:bg-black/20 border-white/10 opacity-70"
                         )}>
                             <div className="flex items-center justify-center gap-1.5 mb-1">
                                 <Store className="h-3.5 w-3.5 text-muted-foreground" />
@@ -123,10 +123,10 @@ const StockTransferDialog: React.FC<StockTransferDialogProps> = ({
                         </div>
 
                         <div className={cn(
-                            "p-3.5 rounded-2xl border transition-all text-center",
+                            "p-3.5 rounded-2xl border transition-all duration-300 text-center",
                             direction === 'to_shop' 
-                                ? "bg-primary/10 border-primary/40 shadow-sm" 
-                                : "bg-muted/60 border-border opacity-70"
+                                ? "bg-primary/15 border-primary/50 shadow-lg shadow-primary/10 backdrop-blur-md" 
+                                : "bg-white/5 dark:bg-black/20 border-white/10 opacity-70"
                         )}>
                             <div className="flex items-center justify-center gap-1.5 mb-1">
                                 <Warehouse className="h-3.5 w-3.5 text-muted-foreground" />
@@ -144,7 +144,7 @@ const StockTransferDialog: React.FC<StockTransferDialogProps> = ({
                     {/* Transfer Amount Input */}
                     <div className="space-y-1.5">
                         <div className="flex justify-between items-center px-1">
-                            <span className="text-[10px] font-black font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
+                            <span className="text-[10px] font-black font-mono text-muted-foreground bg-white/10 px-2 py-0.5 rounded-md border border-white/10">
                                 Max: {maxAmount}
                             </span>
                             <Label className="text-right block text-xs font-black uppercase text-foreground">
@@ -160,8 +160,8 @@ const StockTransferDialog: React.FC<StockTransferDialogProps> = ({
                                 value={transferAmount}
                                 onChange={(e) => setTransferAmount(e.target.value)}
                                 className={cn(
-                                    "bg-muted h-13 rounded-xl pr-12 text-2xl font-black text-foreground focus:border-primary text-right font-mono transition-all",
-                                    !isValid && currentAmount > 0 ? "border-red-500/50" : "border-border"
+                                    "apple-glass-input h-13 rounded-2xl pr-12 text-2xl font-black text-foreground text-right font-mono transition-all",
+                                    !isValid && currentAmount > 0 ? "border-red-500/50" : ""
                                 )}
                                 placeholder="0"
                                 autoFocus
@@ -175,14 +175,14 @@ const StockTransferDialog: React.FC<StockTransferDialogProps> = ({
                     </div>
                 </div>
 
-                <DialogFooter className="gap-2.5 pt-3 border-t border-border flex flex-row">
-                    <Button variant="outline" onClick={onClose} className="flex-1 h-11 border-border hover:bg-muted text-foreground font-bold text-xs rounded-xl">
+                <DialogFooter className="gap-2.5 pt-3 border-t border-white/10 flex flex-row">
+                    <Button variant="outline" onClick={onClose} className="flex-1 h-11 border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold text-xs rounded-2xl">
                         {renderBoth('cancel')}
                     </Button>
                     <Button 
                         onClick={handleTransfer} 
                         disabled={!isValid}
-                        className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs rounded-xl shadow-lg shadow-primary/20 uppercase"
+                        className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs rounded-2xl shadow-lg shadow-primary/25 uppercase"
                     >
                         {renderBoth('confirm_transfer')}
                     </Button>

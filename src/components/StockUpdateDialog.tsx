@@ -57,8 +57,8 @@ const StockUpdateDialog: React.FC<StockUpdateDialogProps> = ({ isOpen, onClose, 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto font-faruma bg-card border-border text-foreground shadow-2xl rounded-3xl p-6 sm:p-7 box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
-        <DialogHeader className="text-right pb-3 space-y-1 border-b border-border/60 pl-10">
+      <DialogContent className="sm:max-w-[500px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground shadow-2xl rounded-3xl p-6 sm:p-7 box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+        <DialogHeader className="text-right pb-3 space-y-1 border-b border-white/10 pl-10">
           <DialogTitle className="text-xl font-black flex items-center justify-end gap-2.5">
              <span>{renderBoth('update_stock')}</span>
              <Edit3 className="h-5 w-5 text-primary" />
@@ -73,10 +73,10 @@ const StockUpdateDialog: React.FC<StockUpdateDialogProps> = ({ isOpen, onClose, 
               <div 
                 onClick={() => setTarget('shop')}
                 className={cn(
-                  "p-3.5 rounded-2xl border cursor-pointer transition-all text-center",
+                  "p-3.5 rounded-2xl border cursor-pointer transition-all duration-300 text-center",
                   target === 'shop' 
-                    ? "bg-primary/10 border-primary shadow-sm ring-1 ring-primary/30" 
-                    : "bg-muted/60 border-border opacity-70 hover:opacity-100"
+                    ? "bg-primary/15 border-primary/50 shadow-lg shadow-primary/10 ring-1 ring-primary/40 backdrop-blur-md" 
+                    : "bg-white/5 dark:bg-black/20 border-white/10 opacity-70 hover:opacity-100 hover:bg-white/10"
                 )}
               >
                  <div className="flex items-center justify-center gap-1.5 mb-1">
@@ -93,10 +93,10 @@ const StockUpdateDialog: React.FC<StockUpdateDialogProps> = ({ isOpen, onClose, 
               <div 
                 onClick={() => setTarget('godown')}
                 className={cn(
-                  "p-3.5 rounded-2xl border cursor-pointer transition-all text-center",
+                  "p-3.5 rounded-2xl border cursor-pointer transition-all duration-300 text-center",
                   target === 'godown' 
-                    ? "bg-primary/10 border-primary shadow-sm ring-1 ring-primary/30" 
-                    : "bg-muted/60 border-border opacity-70 hover:opacity-100"
+                    ? "bg-primary/15 border-primary/50 shadow-lg shadow-primary/10 ring-1 ring-primary/40 backdrop-blur-md" 
+                    : "bg-white/5 dark:bg-black/20 border-white/10 opacity-70 hover:opacity-100 hover:bg-white/10"
                 )}
               >
                  <div className="flex items-center justify-center gap-1.5 mb-1">
@@ -125,7 +125,7 @@ const StockUpdateDialog: React.FC<StockUpdateDialogProps> = ({ isOpen, onClose, 
                    value={editedStock}
                    onChange={(e) => setEditedStock(parseFloat(e.target.value) || '')} 
                    onFocus={handleFocus}
-                   className="bg-muted border-border focus:border-primary h-13 rounded-xl pr-12 text-2xl font-black text-foreground font-mono text-right"
+                   className="apple-glass-input h-13 rounded-2xl pr-12 text-2xl font-black text-foreground font-mono text-right"
                    autoFocus
                    placeholder="0"
                  />
@@ -136,14 +136,14 @@ const StockUpdateDialog: React.FC<StockUpdateDialogProps> = ({ isOpen, onClose, 
            </div>
         </div>
 
-        <DialogFooter className="gap-2.5 pt-3 border-t border-border flex flex-row">
-          <Button variant="outline" onClick={onClose} className="flex-1 h-11 border-border hover:bg-muted text-foreground font-bold text-xs rounded-xl">
+        <DialogFooter className="gap-2.5 pt-3 border-t border-white/10 flex flex-row">
+          <Button variant="outline" onClick={onClose} className="flex-1 h-11 border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold text-xs rounded-2xl">
             {renderBoth('cancel')}
           </Button>
           <Button 
             onClick={handleSave} 
             disabled={typeof editedStock !== 'number' || editedStock < 0} 
-            className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs rounded-xl shadow-lg shadow-primary/20 uppercase"
+            className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs rounded-2xl shadow-lg shadow-primary/25 uppercase"
           >
             {renderBoth('save_changes')}
           </Button>

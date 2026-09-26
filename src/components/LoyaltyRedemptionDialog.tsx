@@ -63,19 +63,19 @@ const LoyaltyRedemptionDialog: React.FC<LoyaltyRedemptionDialogProps> = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[30rem] 2xl:max-w-[36rem] w-[calc(100vw-2rem)] font-faruma bg-card text-foreground border border-border p-6 shadow-2xl rounded-3xl" dir="rtl">
-                <DialogHeader className="text-right pb-3 border-b border-border/60">
+            <DialogContent className="sm:max-w-[30rem] 2xl:max-w-[36rem] w-[calc(100vw-2rem)] font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground p-6 sm:p-7 shadow-2xl rounded-3xl" dir="rtl">
+                <DialogHeader className="text-right pb-3 border-b border-white/10">
                     <DialogTitle className="text-xl font-black flex items-center justify-end gap-2 text-foreground">
                         <span>{renderBoth('redeem_loyalty_points')}</span>
                         <Gift className="h-5 w-5 text-amber-500 shrink-0" />
                     </DialogTitle>
-                    <DialogDescription className="text-right text-xs text-muted-foreground mt-0.5">
+                    <DialogDescription className="text-right text-xs text-muted-foreground mt-0.5 font-bold">
                         {renderBoth('enter_points_to_redeem')}
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="py-4 space-y-4">
-                    <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl text-center">
+                    <div className="bg-amber-500/15 border border-amber-500/30 p-5 rounded-2xl text-center backdrop-blur-md shadow-lg shadow-amber-500/10">
                         <p className="text-xs font-bold text-muted-foreground mb-1">{renderBoth('available_points')}</p>
                         <p className="text-3xl font-black text-amber-500 font-mono">{availablePoints} <span className="text-sm font-normal">PTS</span></p>
                         <p className="text-xs font-bold text-muted-foreground/80 mt-1">
@@ -98,17 +98,17 @@ const LoyaltyRedemptionDialog: React.FC<LoyaltyRedemptionDialogProps> = ({
                                 max={availablePoints}
                                 value={redeemAmount}
                                 onChange={(e) => setRedeemAmount(e.target.value)}
-                                className="text-right text-lg font-mono font-black h-12 rounded-xl bg-muted/60 border-border"
+                                className="apple-glass-input text-right text-lg font-mono font-black h-12 rounded-2xl"
                                 placeholder={Math.min(loyaltyMinRedeemPoints, availablePoints).toString()}
                                 autoFocus
                             />
-                            <Button onClick={handleMaxClick} variant="outline" className="font-black h-12 px-4 rounded-xl border-border hover:bg-muted shrink-0">
+                            <Button onClick={handleMaxClick} variant="outline" className="font-black h-12 px-5 rounded-2xl border-white/20 dark:border-white/10 hover:bg-white/10 shrink-0">
                                 {renderBoth('all')}
                             </Button>
                         </div>
                         <div className="space-y-1 mt-1">
                             {currentPoints > 0 && (
-                                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-between text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                <div className="p-3 bg-emerald-500/15 border border-emerald-500/30 rounded-2xl flex items-center justify-between text-xs font-bold text-emerald-400 backdrop-blur-md">
                                     <span>Discount Amount:</span>
                                     <span className="text-base font-black font-mono">- {currency} {currentDiscountValue.toFixed(2)}</span>
                                 </div>
@@ -127,14 +127,14 @@ const LoyaltyRedemptionDialog: React.FC<LoyaltyRedemptionDialogProps> = ({
                     </div>
                 </div>
 
-                <DialogFooter className="flex flex-row justify-between gap-3 pt-3 border-t border-border">
-                    <Button variant="outline" onClick={onClose} className="flex-1 h-11 rounded-xl font-bold border-border">
+                <DialogFooter className="flex flex-row justify-between gap-3 pt-3 border-t border-white/10">
+                    <Button variant="outline" onClick={onClose} className="flex-1 h-11 rounded-2xl font-bold border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground">
                         {renderBoth('cancel')}
                     </Button>
                     <Button
                         onClick={handleRedeem}
                         disabled={!isValid}
-                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black h-11 rounded-xl shadow-md transition-all disabled:opacity-50"
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black h-11 rounded-2xl shadow-lg shadow-emerald-600/25 transition-all disabled:opacity-50"
                     >
                         {renderBoth('apply_discount')}
                     </Button>

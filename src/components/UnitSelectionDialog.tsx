@@ -49,8 +49,8 @@ const UnitSelectionDialog: React.FC<UnitSelectionDialogProps> = ({ isOpen, onClo
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[440px] font-faruma bg-card border-border text-foreground shadow-2xl rounded-3xl" dir="rtl">
-                <DialogHeader className="text-right pb-2 border-b border-border">
+            <DialogContent className="sm:max-w-[440px] font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground shadow-2xl rounded-3xl p-6" dir="rtl">
+                <DialogHeader className="text-right pb-3 border-b border-white/10">
                     <DialogTitle className="text-xl font-black flex items-center justify-end gap-2 text-foreground">
                         {renderBoth('select_unit')}
                         <Boxes className="h-5 w-5 text-primary" />
@@ -70,7 +70,7 @@ const UnitSelectionDialog: React.FC<UnitSelectionDialogProps> = ({ isOpen, onClo
                             <button
                                 key={index}
                                 type="button"
-                                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-muted/50 hover:bg-primary/10 border border-border hover:border-primary/40 transition-all text-right group cursor-pointer"
+                                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-white/5 dark:bg-black/20 hover:bg-primary/15 border border-white/10 hover:border-primary/40 backdrop-blur-md transition-all duration-200 text-right group cursor-pointer active:scale-[0.98]"
                                 onClick={() => {
                                     onSelect({
                                         name: unit.name,
@@ -95,11 +95,11 @@ const UnitSelectionDialog: React.FC<UnitSelectionDialogProps> = ({ isOpen, onClo
                                     <div>
                                         <div className="flex items-center justify-end gap-1.5 mb-0.5">
                                             {unit.isBase ? (
-                                                <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider bg-muted text-muted-foreground">
+                                                <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider bg-white/10 text-muted-foreground border-white/10">
                                                     Base Unit
                                                 </Badge>
                                             ) : (
-                                                <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-primary/10 text-primary border-primary/30">
+                                                <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-primary/15 text-primary border-primary/30">
                                                     {unit.name}
                                                 </Badge>
                                             )}
@@ -111,7 +111,7 @@ const UnitSelectionDialog: React.FC<UnitSelectionDialogProps> = ({ isOpen, onClo
                                             {unit.isBase ? '1 pc (Single item)' : `Contains ${conv} pcs`}
                                         </span>
                                     </div>
-                                    <div className="h-10 w-10 rounded-xl bg-card border border-border flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:border-primary/40 transition-all">
+                                    <div className="h-10 w-10 rounded-xl bg-white/10 dark:bg-black/30 border border-white/10 flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:border-primary/40 transition-all">
                                         {unit.isBase ? <Package className="h-5 w-5" /> : <Boxes className="h-5 w-5" />}
                                     </div>
                                 </div>

@@ -304,22 +304,22 @@ const ShrinkageReport = () => {
 
       {/* Add Record Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] font-faruma bg-card border-border text-foreground" dir="rtl">
-          <DialogHeader>
-            <DialogTitle className="text-right text-2xl font-black">Record Inventory Loss</DialogTitle>
-            <DialogDescription className="text-right text-muted-foreground">Enter the details of the damaged or missing stock.</DialogDescription>
+        <DialogContent className="sm:max-w-[500px] font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground shadow-2xl rounded-3xl p-6 sm:p-7" dir="rtl">
+          <DialogHeader className="text-right pb-3 border-b border-white/10">
+            <DialogTitle className="text-right text-2xl font-black text-foreground">Record Inventory Loss</DialogTitle>
+            <DialogDescription className="text-right text-xs text-muted-foreground font-bold">Enter the details of the damaged or missing stock.</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-6 py-6">
-            <div className="space-y-2">
+          <div className="grid gap-4 py-4">
+            <div className="space-y-1.5">
               <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">Select Product*</Label>
               <Select value={newRecord.productId} onValueChange={(val) => setNewRecord({ ...newRecord, productId: val })}>
-                <SelectTrigger className="w-full bg-muted border-border text-right h-12 rounded-xl">
+                <SelectTrigger className="w-full apple-glass-input text-right h-12 rounded-2xl font-bold">
                   <SelectValue placeholder="Choose product..." />
                 </SelectTrigger>
-                <SelectContent className="bg-card border-border text-foreground">
+                <SelectContent className="apple-glass-dialog border border-white/20 text-foreground">
                   <ScrollArea className="h-40">
                     {products.map(p => (
-                      <SelectItem key={p.id} value={p.id} className="text-right hover:bg-muted">
+                      <SelectItem key={p.id} value={p.id} className="text-right hover:bg-white/10">
                         {p.name_dv} ({p.name_en})
                       </SelectItem>
                     ))}
@@ -329,34 +329,34 @@ const ShrinkageReport = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-               <div className="space-y-2">
+               <div className="space-y-1.5">
                  <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">Quantity*</Label>
                  <Input 
                    type="number" 
                    value={newRecord.qty || ''} 
                    onChange={(e) => setNewRecord({ ...newRecord, qty: parseFloat(e.target.value) || 0 })} 
-                   className="text-right h-12 bg-muted border-border rounded-xl"
+                   className="text-right h-12 apple-glass-input rounded-2xl font-mono font-bold"
                  />
                </div>
-               <div className="space-y-2">
+               <div className="space-y-1.5">
                  <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">Date</Label>
                  <Input 
                    type="date" 
                    value={newRecord.date} 
                    onChange={(e) => setNewRecord({ ...newRecord, date: e.target.value })} 
-                   className="text-right h-12 bg-muted border-border rounded-xl"
+                   className="text-right h-12 apple-glass-input rounded-2xl font-mono"
                  />
                </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-               <div className="space-y-2">
+               <div className="space-y-1.5">
                  <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">Reason*</Label>
                  <Select value={newRecord.reason} onValueChange={(val: any) => setNewRecord({ ...newRecord, reason: val })}>
-                    <SelectTrigger className="w-full bg-muted border-border text-right h-12 rounded-xl">
+                    <SelectTrigger className="w-full apple-glass-input text-right h-12 rounded-2xl font-bold">
                        <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-card border-border text-foreground">
+                    <SelectContent className="apple-glass-dialog border border-white/20 text-foreground">
                        <SelectItem value="damaged" className="text-right">Damaged</SelectItem>
                        <SelectItem value="expired" className="text-right">Expired</SelectItem>
                        <SelectItem value="stolen" className="text-right">Stolen / Lost</SelectItem>
@@ -364,13 +364,13 @@ const ShrinkageReport = () => {
                     </SelectContent>
                  </Select>
                </div>
-               <div className="space-y-2">
+               <div className="space-y-1.5">
                  <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">From Location*</Label>
                  <Select value={newRecord.location} onValueChange={(val: any) => setNewRecord({ ...newRecord, location: val })}>
-                    <SelectTrigger className="w-full bg-muted border-border text-right h-12 rounded-xl">
+                    <SelectTrigger className="w-full apple-glass-input text-right h-12 rounded-2xl font-bold">
                        <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-card border-border text-foreground">
+                    <SelectContent className="apple-glass-dialog border border-white/20 text-foreground">
                        <SelectItem value="shop" className="text-right">Shop Stock</SelectItem>
                        <SelectItem value="godown" className="text-right">Godown Stock</SelectItem>
                     </SelectContent>
@@ -378,21 +378,21 @@ const ShrinkageReport = () => {
                </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">Additional Notes</Label>
                <Input 
                  value={newRecord.notes} 
                  onChange={(e) => setNewRecord({ ...newRecord, notes: e.target.value })} 
-                 className="text-right h-12 bg-muted border-border rounded-xl"
+                 className="text-right h-12 apple-glass-input rounded-2xl"
                  placeholder="Enter details..."
                />
             </div>
           </div>
-          <DialogFooter className="gap-3 pt-4 border-t border-border">
-            <Button variant="ghost" onClick={() => setIsAddDialogOpen(false)} className="flex-1 h-12 border-border hover:bg-muted text-foreground">
+          <DialogFooter className="gap-2.5 pt-3 border-t border-white/10 flex flex-row">
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 h-11 border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold text-xs rounded-2xl">
               CANCEL
             </Button>
-            <Button onClick={handleAddRecord} className="flex-1 h-12 bg-red-600 hover:bg-red-700 font-black">
+            <Button onClick={handleAddRecord} className="flex-1 h-11 bg-red-600 hover:bg-red-500 font-black text-white text-xs rounded-2xl shadow-lg shadow-red-600/25 uppercase">
               RECORD LOSS
             </Button>
           </DialogFooter>

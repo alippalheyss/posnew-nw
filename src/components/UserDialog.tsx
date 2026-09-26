@@ -153,31 +153,31 @@ const UserDialog: React.FC<UserDialogProps> = ({ open, onOpenChange, user, onSav
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto font-faruma">
-                <DialogHeader>
-                    <DialogTitle>{user ? t('edit_user') : t('add_user')}</DialogTitle>
-                    <DialogDescription>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground shadow-2xl rounded-3xl p-6 sm:p-7" dir="rtl">
+                <DialogHeader className="text-right pb-3 border-b border-white/10">
+                    <DialogTitle className="text-xl font-black text-foreground">{user ? t('edit_user') : t('add_user')}</DialogTitle>
+                    <DialogDescription className="text-xs text-muted-foreground font-bold">
                         {user ? t('edit_user_description') : t('add_user_description')}
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-5 py-2">
                     {/* Username */}
-                    <div className="space-y-2">
-                        <Label htmlFor="username">{t('username')}</Label>
+                    <div className="space-y-1.5 text-right">
+                        <Label htmlFor="username" className="text-xs font-black uppercase text-foreground">{t('username')}</Label>
                         <Input
                             id="username"
                             value={formData.username}
                             onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
                             required
                             disabled={!!user}
-                            className="text-right"
+                            className="text-right apple-glass-input h-11 rounded-2xl font-bold"
                         />
                     </div>
 
                     {/* Password */}
-                    <div className="space-y-2">
-                        <Label htmlFor="password">
+                    <div className="space-y-1.5 text-right">
+                        <Label htmlFor="password" className="text-xs font-black uppercase text-foreground">
                             {t('password')} {user && `(${t('leave_blank_to_keep')})`}
                         </Label>
                         <Input
@@ -186,50 +186,51 @@ const UserDialog: React.FC<UserDialogProps> = ({ open, onOpenChange, user, onSav
                             value={formData.password}
                             onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
                             required={!user}
-                            className="text-right"
+                            className="text-right apple-glass-input h-11 rounded-2xl font-mono"
                         />
                     </div>
 
                     {/* Names */}
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="name_en">{t('name_english')}</Label>
+                        <div className="space-y-1.5 text-right">
+                            <Label htmlFor="name_en" className="text-xs font-black uppercase text-foreground">{t('name_english')}</Label>
                             <Input
                                 id="name_en"
                                 value={formData.name_en}
                                 onChange={(e) => setFormData(prev => ({ ...prev, name_en: e.target.value }))}
                                 required
+                                className="apple-glass-input h-11 rounded-2xl font-bold text-right"
                             />
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="name_dv">{t('name_dhivehi')}</Label>
+                        <div className="space-y-1.5 text-right">
+                            <Label htmlFor="name_dv" className="text-xs font-black uppercase text-foreground">{t('name_dhivehi')}</Label>
                             <Input
                                 id="name_dv"
                                 value={formData.name_dv}
                                 onChange={(e) => setFormData(prev => ({ ...prev, name_dv: e.target.value }))}
                                 required
-                                className="text-right"
+                                className="text-right apple-glass-input h-11 rounded-2xl font-bold"
                             />
                         </div>
                     </div>
 
                     {/* Role */}
-                    <div className="space-y-2">
-                        <Label htmlFor="role">{t('role')}</Label>
+                    <div className="space-y-1.5 text-right">
+                        <Label htmlFor="role" className="text-xs font-black uppercase text-foreground">{t('role')}</Label>
                         <Select value={formData.role} onValueChange={handleRoleChange}>
-                            <SelectTrigger className="text-right">
+                            <SelectTrigger className="text-right apple-glass-input h-11 rounded-2xl font-bold">
                                 <SelectValue />
                             </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="admin">{t('admin')}</SelectItem>
-                                <SelectItem value="cashier">{t('cashier')}</SelectItem>
+                            <SelectContent className="apple-glass-dialog border border-white/20 text-foreground">
+                                <SelectItem value="admin" className="text-right">{t('admin')}</SelectItem>
+                                <SelectItem value="cashier" className="text-right">{t('cashier')}</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
 
                     {/* Active Status */}
-                    <div className="flex items-center justify-end space-x-2 rtl:space-x-reverse">
-                        <Label htmlFor="isActive">{t('active')}</Label>
+                    <div className="flex items-center justify-end space-x-2 rtl:space-x-reverse bg-white/5 dark:bg-black/20 p-3 rounded-2xl border border-white/10 backdrop-blur-md">
+                        <Label htmlFor="isActive" className="text-xs font-bold text-foreground cursor-pointer">{t('active')}</Label>
                         <Checkbox
                             id="isActive"
                             checked={formData.isActive}
@@ -239,18 +240,18 @@ const UserDialog: React.FC<UserDialogProps> = ({ open, onOpenChange, user, onSav
 
                     {/* Permissions (only for cashier) */}
                     {formData.role === 'cashier' && (
-                        <div className="space-y-4 border-t pt-4">
-                            <h3 className="font-semibold text-lg">{t('permissions')}</h3>
+                        <div className="space-y-4 border-t border-white/10 pt-4">
+                            <h3 className="font-black text-sm text-foreground uppercase tracking-widest text-right">{t('permissions')}</h3>
 
                             {permissionGroups.map((group) => (
-                                <div key={group.title} className="space-y-3">
-                                    <h4 className="font-medium text-sm text-black dark:text-foreground dark:text-black dark:text-foreground ">
+                                <div key={group.title} className="space-y-3 bg-white/5 dark:bg-black/20 p-4 rounded-2xl border border-white/10 backdrop-blur-md">
+                                    <h4 className="font-bold text-xs text-primary text-right">
                                         {group.title}
                                     </h4>
                                     <div className="grid grid-cols-2 gap-3">
                                         {group.permissions.map((perm) => (
                                             <div key={perm.key} className="flex items-center justify-end space-x-2 rtl:space-x-reverse">
-                                                <Label htmlFor={perm.key} className="text-sm cursor-pointer">
+                                                <Label htmlFor={perm.key} className="text-xs text-foreground cursor-pointer font-medium">
                                                     {perm.label}
                                                 </Label>
                                                 <Checkbox
@@ -267,11 +268,11 @@ const UserDialog: React.FC<UserDialogProps> = ({ open, onOpenChange, user, onSav
                     )}
 
                     {/* Actions */}
-                    <div className="flex justify-end gap-3">
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                    <div className="flex justify-end gap-3 pt-3 border-t border-white/10">
+                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1 h-11 border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold text-xs rounded-2xl">
                             {t('cancel')}
                         </Button>
-                        <Button type="submit" disabled={isSaving}>
+                        <Button type="submit" disabled={isSaving} className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs rounded-2xl shadow-lg shadow-primary/25 uppercase">
                             {isSaving ? 'Saving...' : (user ? t('update') : t('add'))}
                         </Button>
                     </div>

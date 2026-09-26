@@ -186,24 +186,24 @@ export const NearExpiryBroadcastDialog: React.FC<NearExpiryBroadcastDialogProps>
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-[42rem] 2xl:max-w-[48rem] w-[calc(100vw-2rem)] max-h-[92vh] font-faruma bg-card text-foreground border border-border text-right p-5 sm:p-6 shadow-2xl rounded-3xl box-border overflow-hidden flex flex-col [&>button]:left-4 [&>button]:right-auto"
+        className="sm:max-w-[42rem] 2xl:max-w-[48rem] w-[calc(100vw-2rem)] max-h-[92vh] font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground text-right p-5 sm:p-7 shadow-2xl rounded-3xl box-border overflow-hidden flex flex-col [&>button]:left-4 [&>button]:right-auto"
         dir="rtl"
       >
-        <DialogHeader className="pb-3 text-right space-y-1.5 border-b border-border/60 shrink-0">
+        <DialogHeader className="pb-3 text-right space-y-1.5 border-b border-white/10 shrink-0">
           <div className="flex items-center justify-between pl-8">
             <div className="text-right flex-1 min-w-0">
-              <DialogTitle className="text-xl md:text-2xl font-black text-orange-600 dark:text-orange-400 flex items-center justify-end gap-2.5">
+              <DialogTitle className="text-xl md:text-2xl font-black text-orange-500 dark:text-orange-400 flex items-center justify-end gap-2.5">
                 <span>މުއްދަތު ހަމަވާ ތަކެތީގެ އަގު ތިރިކުރުމާއި ޓެލެގްރާމް އެލާޓް</span>
                 <Flame className="h-6 w-6 text-orange-500 shrink-0 fill-orange-500/20" />
               </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground mt-1 text-right">
+              <DialogDescription className="text-xs text-muted-foreground mt-1 text-right font-bold">
                 Drop near-expiry product prices & broadcast eye-catching clearance sale alerts to all Telegram customers
               </DialogDescription>
             </div>
           </div>
 
           {/* Connected Audience Banner */}
-          <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-orange-500/10 border border-orange-500/25 rounded-2xl text-xs font-bold mt-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-orange-500/15 border border-orange-500/30 rounded-2xl text-xs font-bold mt-2 backdrop-blur-md">
             <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
               <Users className="h-4 w-4" />
               <span>
@@ -211,7 +211,7 @@ export const NearExpiryBroadcastDialog: React.FC<NearExpiryBroadcastDialogProps>
               </span>
             </div>
             <div className="flex items-center gap-1.5">
-              <Badge variant="outline" className="bg-background/80 border-orange-500/30 text-[10px] font-mono">
+              <Badge variant="outline" className="bg-black/30 border-orange-500/30 text-[10px] font-mono text-orange-300">
                 {selectedItemIds.length} of {nearExpiryProducts.length} items selected
               </Badge>
             </div>
@@ -221,7 +221,7 @@ export const NearExpiryBroadcastDialog: React.FC<NearExpiryBroadcastDialogProps>
         {/* Product List */}
         <ScrollArea className="flex-1 pr-2 custom-scrollbar my-2 -mr-1">
           {nearExpiryProducts.length === 0 ? (
-            <div className="py-12 flex flex-col items-center justify-center gap-3 text-muted-foreground bg-muted/20 rounded-2xl border border-dashed border-border/80 my-4">
+            <div className="py-12 flex flex-col items-center justify-center gap-3 text-muted-foreground bg-white/5 dark:bg-black/20 rounded-2xl border border-dashed border-white/10 my-4 backdrop-blur-md">
               <CheckCircle2 className="h-10 w-10 text-emerald-500" />
               <p className="text-sm font-black text-foreground">މުއްދަތު ހަމަވާ އެއްވެސް މުދަލެއް ނެތް!</p>
               <p className="text-xs text-muted-foreground">All products in the shop have valid long-term expiry dates.</p>
@@ -242,10 +242,10 @@ export const NearExpiryBroadcastDialog: React.FC<NearExpiryBroadcastDialogProps>
                   <div
                     key={product.id}
                     className={cn(
-                      "p-4 rounded-2xl border transition-all shadow-sm space-y-3",
+                      "p-4 rounded-2xl border transition-all duration-200 shadow-sm space-y-3 backdrop-blur-md",
                       isSelected
-                        ? "bg-card border-orange-500/40 ring-1 ring-orange-500/30"
-                        : "bg-muted/40 border-border opacity-70"
+                        ? "bg-white/10 dark:bg-black/30 border-orange-500/50 ring-1 ring-orange-500/40"
+                        : "bg-white/5 dark:bg-black/20 border-white/10 opacity-70"
                     )}
                   >
                     {/* Item Row Top */}
@@ -257,8 +257,8 @@ export const NearExpiryBroadcastDialog: React.FC<NearExpiryBroadcastDialogProps>
                         className={cn(
                           "h-6 w-6 rounded-lg border flex items-center justify-center transition-all shrink-0 mt-0.5",
                           isSelected
-                            ? "bg-orange-500 border-orange-500 text-white"
-                            : "border-border bg-background text-transparent hover:border-orange-500/50"
+                            ? "bg-orange-500 border-orange-500 text-white shadow-md shadow-orange-500/30"
+                            : "border-white/20 bg-black/20 text-transparent hover:border-orange-500/50"
                         )}
                         title="Toggle inclusion in Telegram broadcast"
                       >
@@ -280,7 +280,7 @@ export const NearExpiryBroadcastDialog: React.FC<NearExpiryBroadcastDialogProps>
                       </Badge>
 
                       {/* Stock in shop */}
-                      <Badge variant="secondary" className="text-[10px] font-mono px-2 py-0.5 rounded-lg shrink-0">
+                      <Badge variant="secondary" className="text-[10px] font-mono px-2 py-0.5 rounded-lg shrink-0 bg-white/10 text-foreground border-white/10">
                         Stock: {product.stock_shop} pcs
                       </Badge>
 
@@ -292,7 +292,7 @@ export const NearExpiryBroadcastDialog: React.FC<NearExpiryBroadcastDialogProps>
                     </div>
 
                     {/* Price Adjustment & Clearance Control */}
-                    <div className="p-3 bg-muted/60 rounded-xl border border-border/70 flex flex-col sm:flex-row items-center justify-between gap-3 text-right">
+                    <div className="p-3 bg-black/20 dark:bg-black/30 rounded-xl border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-right">
                       {/* Before / After Pricing summary */}
                       <div className="flex items-center gap-3 text-xs">
                         <div className="text-right">
@@ -326,7 +326,7 @@ export const NearExpiryBroadcastDialog: React.FC<NearExpiryBroadcastDialogProps>
                             key={pct}
                             type="button"
                             onClick={() => handlePricePreset(product.id, pct)}
-                            className="px-2 py-1 rounded-lg text-[10px] font-mono font-bold bg-background border border-border hover:bg-orange-500/15 hover:text-orange-600 hover:border-orange-500/30 transition-all"
+                            className="px-2 py-1 rounded-lg text-[10px] font-mono font-bold bg-white/5 border border-white/10 hover:bg-orange-500/20 hover:text-orange-400 hover:border-orange-500/40 transition-all"
                             title={`Drop by ${pct}%`}
                           >
                             -{pct}%
@@ -341,7 +341,7 @@ export const NearExpiryBroadcastDialog: React.FC<NearExpiryBroadcastDialogProps>
                             onChange={(e) =>
                               setEditingPriceMap((prev) => ({ ...prev, [product.id]: e.target.value }))
                             }
-                            className="h-8 px-2 text-xs font-mono font-black text-foreground bg-background border-border rounded-lg text-left"
+                            className="h-8 px-2 text-xs font-mono font-black text-foreground apple-glass-input rounded-lg text-left"
                             placeholder="Price"
                           />
                         </div>
@@ -351,7 +351,7 @@ export const NearExpiryBroadcastDialog: React.FC<NearExpiryBroadcastDialogProps>
                           size="sm"
                           disabled={isSavingPriceId === product.id}
                           onClick={() => handleSavePrice(product)}
-                          className="h-8 px-2.5 bg-orange-600 hover:bg-orange-700 text-white text-[11px] font-black rounded-lg shrink-0 gap-1 shadow-xs"
+                          className="h-8 px-2.5 bg-orange-600 hover:bg-orange-500 text-white text-[11px] font-black rounded-lg shrink-0 gap-1 shadow-md shadow-orange-600/25"
                           title="Save new clearance drop price"
                         >
                           {isSavingPriceId === product.id ? (
@@ -368,7 +368,7 @@ export const NearExpiryBroadcastDialog: React.FC<NearExpiryBroadcastDialogProps>
                             variant="outline"
                             size="sm"
                             onClick={() => onAddToCart(product)}
-                            className="h-8 px-2 text-[10px] font-bold border-border rounded-lg shrink-0"
+                            className="h-8 px-2 text-[10px] font-bold border-white/20 dark:border-white/10 rounded-lg shrink-0 hover:bg-white/10"
                             title="Add to active POS cart"
                           >
                             <ShoppingCart className="h-3 w-3" />
@@ -384,12 +384,12 @@ export const NearExpiryBroadcastDialog: React.FC<NearExpiryBroadcastDialogProps>
         </ScrollArea>
 
         {/* Action Footer */}
-        <DialogFooter className="pt-3 border-t border-border flex flex-row items-center justify-between gap-3 shrink-0">
+        <DialogFooter className="pt-3 border-t border-white/10 flex flex-row items-center justify-between gap-3 shrink-0">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isBroadcasting}
-            className="flex-1 h-11 border-border hover:bg-muted text-foreground rounded-xl font-bold text-xs"
+            className="flex-1 h-11 border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground rounded-2xl font-bold text-xs"
           >
             ލައްޕާލާ (Close)
           </Button>
@@ -397,7 +397,7 @@ export const NearExpiryBroadcastDialog: React.FC<NearExpiryBroadcastDialogProps>
           <Button
             onClick={handleBroadcast}
             disabled={isBroadcasting || nearExpiryProducts.length === 0 || selectedItemIds.length === 0}
-            className="flex-[2] h-11 bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 hover:opacity-90 text-white font-black rounded-xl shadow-lg shadow-orange-600/25 text-xs uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50"
+            className="flex-[2] h-11 bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 hover:opacity-95 text-white font-black rounded-2xl shadow-lg shadow-orange-600/30 text-xs uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {isBroadcasting ? (
               <>

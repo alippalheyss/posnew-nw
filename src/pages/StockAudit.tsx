@@ -1532,12 +1532,12 @@ export default function StockAudit() {
 
       {/* ================= DIALOG 1: ENTER QUANTITY MODAL ================= */}
       <Dialog open={!!selectedProduct} onOpenChange={(open) => { if (!open) setSelectedProduct(null); }}>
-        <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-sm p-4 rounded-3xl font-faruma shadow-2xl" dir="rtl">
-          <DialogHeader className="text-right space-y-0.5">
-            <DialogTitle className="text-sm sm:text-base font-black text-slate-900">
+        <DialogContent className="apple-glass-dialog border-white/20 dark:border-white/10 text-foreground max-w-sm p-6 rounded-3xl font-faruma shadow-2xl" dir="rtl">
+          <DialogHeader className="text-right space-y-1 pb-2 border-b border-white/10">
+            <DialogTitle className="text-base font-black text-foreground">
               {selectedProduct?.name_dv}
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500 font-sans font-bold">
+            <DialogDescription className="text-xs text-muted-foreground font-mono font-bold">
               {selectedProduct?.name_en}
             </DialogDescription>
           </DialogHeader>
@@ -1545,16 +1545,16 @@ export default function StockAudit() {
           <div className="py-2 space-y-3 font-sans text-xs">
             {/* Location Selector */}
             <div className="space-y-1">
-              <label className="text-[11px] font-bold text-slate-600">Location / ތަން:</label>
-              <div className="grid grid-cols-2 gap-2">
+              <label className="text-[11px] font-bold text-muted-foreground block text-right">Location / ތަން:</label>
+              <div className="grid grid-cols-2 gap-2 bg-white/5 dark:bg-black/20 p-1 rounded-2xl border border-white/10 backdrop-blur-md">
                 <button
                   type="button"
                   onClick={() => setCountLocation('shop')}
                   className={cn(
-                    "p-2 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 transition-all",
+                    "p-2.5 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 transition-all",
                     countLocation === 'shop'
-                      ? "bg-primary text-white border-primary shadow-xs"
-                      : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                      ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:bg-white/10"
                   )}
                 >
                   <Store className="h-3.5 w-3.5" />
@@ -1564,10 +1564,10 @@ export default function StockAudit() {
                   type="button"
                   onClick={() => setCountLocation('godown')}
                   className={cn(
-                    "p-2 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 transition-all",
+                    "p-2.5 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 transition-all",
                     countLocation === 'godown'
-                      ? "bg-primary text-white border-primary shadow-xs"
-                      : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                      ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:bg-white/10"
                   )}
                 >
                   <Warehouse className="h-3.5 w-3.5" />
@@ -1578,14 +1578,14 @@ export default function StockAudit() {
 
             {/* Number Input & Quick presets */}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-slate-600">Quantity (Pieces) / އަދަދު:</label>
+              <label className="text-[11px] font-bold text-muted-foreground block text-right">Quantity (Pieces) / އަދަދު:</label>
               <Input
                 type="number"
                 min="1"
                 step="1"
                 value={countQuantity}
                 onChange={(e) => setCountQuantity(e.target.value)}
-                className="h-11 rounded-2xl bg-white border-slate-300 text-base font-black text-center font-sans focus-visible:ring-primary shadow-xs"
+                className="h-12 rounded-2xl apple-glass-input text-xl font-black text-center font-mono"
                 placeholder="Enter pieces"
                 autoFocus
               />
@@ -1601,7 +1601,7 @@ export default function StockAudit() {
                       const current = parseInt(countQuantity) || 0;
                       setCountQuantity(String(current + num));
                     }}
-                    className="h-8 rounded-xl bg-slate-100 hover:bg-primary hover:text-white text-slate-800 text-xs font-black border-slate-300 transition-colors"
+                    className="h-8 rounded-xl bg-white/5 hover:bg-primary hover:text-white text-foreground text-xs font-black border-white/10 transition-colors"
                   >
                     +{num}
                   </Button>
@@ -1610,19 +1610,19 @@ export default function StockAudit() {
             </div>
           </div>
 
-          <DialogFooter className="flex-row gap-2 pt-1">
+          <DialogFooter className="flex-row gap-2 pt-2 border-t border-white/10">
             <Button
               type="button"
               variant="outline"
               onClick={() => setSelectedProduct(null)}
-              className="flex-1 h-10 rounded-2xl bg-slate-100 border-slate-300 text-slate-700 text-xs font-bold"
+              className="flex-1 h-11 rounded-2xl border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground text-xs font-bold"
             >
               Cancel
             </Button>
             <Button
               type="button"
               onClick={handleSubmitCount}
-              className="flex-1 h-10 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-xs"
+              className="flex-1 h-11 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-lg shadow-emerald-600/25 uppercase"
             >
               Submit Count
             </Button>
@@ -1632,13 +1632,13 @@ export default function StockAudit() {
 
       {/* ================= DIALOG 2: EDIT COUNT ENTRY MODAL ================= */}
       <Dialog open={!!editingEntry} onOpenChange={(open) => { if (!open) setEditingEntry(null); }}>
-        <DialogContent className="bg-white border-slate-200 text-slate-900 max-w-sm p-4 rounded-3xl font-faruma shadow-2xl" dir="rtl">
-          <DialogHeader className="text-right space-y-0.5">
-            <DialogTitle className="text-sm sm:text-base font-black text-slate-900 flex items-center justify-end gap-1.5">
+        <DialogContent className="apple-glass-dialog border-white/20 dark:border-white/10 text-foreground max-w-sm p-6 rounded-3xl font-faruma shadow-2xl" dir="rtl">
+          <DialogHeader className="text-right space-y-1 pb-2 border-b border-white/10">
+            <DialogTitle className="text-base font-black text-foreground flex items-center justify-end gap-1.5">
               <Pencil className="h-4 w-4 text-primary" />
               <span>Edit Submitted Count</span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500 font-sans font-bold">
+            <DialogDescription className="text-xs text-muted-foreground font-mono font-bold">
               {editingEntry?.product?.name_en}
             </DialogDescription>
           </DialogHeader>
@@ -1646,16 +1646,16 @@ export default function StockAudit() {
           <div className="py-2 space-y-3 font-sans text-xs">
             {/* Location Selector */}
             <div className="space-y-1">
-              <label className="text-[11px] font-bold text-slate-600">Location:</label>
-              <div className="grid grid-cols-2 gap-2">
+              <label className="text-[11px] font-bold text-muted-foreground block text-right">Location:</label>
+              <div className="grid grid-cols-2 gap-2 bg-white/5 dark:bg-black/20 p-1 rounded-2xl border border-white/10 backdrop-blur-md">
                 <button
                   type="button"
                   onClick={() => setEditLocation('shop')}
                   className={cn(
-                    "p-2 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 transition-all",
+                    "p-2.5 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 transition-all",
                     editLocation === 'shop'
-                      ? "bg-primary text-white border-primary shadow-xs"
-                      : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                      ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:bg-white/10"
                   )}
                 >
                   <Store className="h-3.5 w-3.5" />
@@ -1665,10 +1665,10 @@ export default function StockAudit() {
                   type="button"
                   onClick={() => setEditLocation('godown')}
                   className={cn(
-                    "p-2 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 transition-all",
+                    "p-2.5 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 transition-all",
                     editLocation === 'godown'
-                      ? "bg-primary text-white border-primary shadow-xs"
-                      : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                      ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:bg-white/10"
                   )}
                 >
                   <Warehouse className="h-3.5 w-3.5" />
@@ -1679,31 +1679,31 @@ export default function StockAudit() {
 
             {/* Quantity */}
             <div className="space-y-1">
-              <label className="text-[11px] font-bold text-slate-600">Quantity (Pieces):</label>
+              <label className="text-[11px] font-bold text-muted-foreground block text-right">Quantity (Pieces):</label>
               <Input
                 type="number"
                 min="1"
                 step="1"
                 value={editQtyInput}
                 onChange={(e) => setEditQtyInput(e.target.value)}
-                className="h-11 rounded-2xl bg-white border-slate-300 text-base font-black text-center font-sans focus-visible:ring-primary shadow-xs"
+                className="h-12 rounded-2xl apple-glass-input text-xl font-black text-center font-mono"
               />
             </div>
           </div>
 
-          <DialogFooter className="flex-row gap-2 pt-1">
+          <DialogFooter className="flex-row gap-2 pt-2 border-t border-white/10">
             <Button
               type="button"
               variant="outline"
               onClick={() => setEditingEntry(null)}
-              className="flex-1 h-10 rounded-2xl bg-slate-100 border-slate-300 text-slate-700 text-xs font-bold"
+              className="flex-1 h-11 rounded-2xl border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground text-xs font-bold"
             >
               Cancel
             </Button>
             <Button
               type="button"
               onClick={handleSaveEditEntry}
-              className="flex-1 h-10 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-xs"
+              className="flex-1 h-11 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-lg shadow-emerald-600/25 uppercase"
             >
               Save Changes
             </Button>

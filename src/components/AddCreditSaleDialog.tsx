@@ -44,8 +44,16 @@ const AddCreditSaleDialog: React.FC<AddCreditSaleDialogProps> = ({ isOpen, onClo
       setSelectedCustomer(null);
       setCartItems([]);
       setSearchTerm('');
+      setOpenCombobox(false);
+      document.body.style.pointerEvents = '';
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    return () => {
+      document.body.style.pointerEvents = '';
+    };
+  }, []);
 
   const filteredProducts = products.filter(product =>
     product.name_dv.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -172,7 +180,7 @@ const AddCreditSaleDialog: React.FC<AddCreditSaleDialogProps> = ({ isOpen, onClo
               <Label htmlFor="customerSelect" className="text-right text-xs font-bold text-muted-foreground">
                 {renderBoth('customer')}
               </Label>
-              <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+              <Popover open={openCombobox} onOpenChange={setOpenCombobox} modal={false}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"

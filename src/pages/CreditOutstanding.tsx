@@ -1074,8 +1074,16 @@ const CreditOutstanding = () => {
 
       <AddCreditSaleDialog
         isOpen={isAddCreditSaleDialogOpen}
-        onClose={() => setIsAddCreditSaleDialogOpen(false)}
+        onClose={() => {
+          setIsAddCreditSaleDialogOpen(false);
+          document.body.style.pointerEvents = '';
+        }}
         onAdd={handleAddCreditSale}
+      />
+
+      <TransferSlipsDialog
+        open={isTransferSlipsDialogOpen}
+        onOpenChange={setIsTransferSlipsDialogOpen}
       />
 
       {editingSale && (

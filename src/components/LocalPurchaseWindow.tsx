@@ -38,37 +38,10 @@ interface DraftPurchaseItem {
   isZeroTax: boolean;
 }
 
-// Smart zero-tax detection helper
+// Zero-tax detection strictly respecting the product's actual configured tax status
 export const isProductZeroTax = (prod?: Product | null): boolean => {
   if (!prod) return false;
-  if (prod.is_zero_tax === true || (prod as any).is_zero_tax === 1 || (prod as any).is_zero_tax === 'true' || (prod as any).is_zero_tax === '1') {
-    return true;
-  }
-  const nameEn = (prod.name_en || '').toLowerCase();
-  const nameDv = (prod.name_dv || '').toLowerCase();
-  const category = (prod.category || '').toLowerCase();
-
-  if (category.includes('zero') || category.includes('exempt') || category.includes('essential')) {
-    return true;
-  }
-
-  // Common Maldivian zero-rated essential items (GST Act Schedule)
-  const zeroKeywords = [
-    'rice', 'sugar', 'flour', 'milk', 'egg', 'eggs', 'bread', 'onion', 'onions', 
-    'potato', 'potatoes', 'lentil', 'lentils', 'dhal', 'garlic', 'ginger',
-    'baby food', 'infant formula', 'medicine', 'diesel', 'petrol', 'cooking oil',
-    'vegetable oil', 'sanitary', 'salt', 'coconut', 'water 5l', 'mineral water',
-    'ހަނޑޫ', 'ހަކުރު', 'ފުށް', 'ކިރު', 'ބިސް', 'ޕާން', 'ފިޔާ', 'އަލުވި', 'މުގު',
-    'ތެޔޮ', 'ބޭސް', 'ލޮނުމެދު', 'އިނގުރު', 'ލޮނު'
-  ];
-
-  for (const kw of zeroKeywords) {
-    if (nameEn.includes(kw) || nameDv.includes(kw)) {
-      return true;
-    }
-  }
-
-  return false;
+  return prod.is_zero_tax === true || (prod as any).is_zero_tax === 1 || (prod as any).is_zero_tax === 'true' || (prod as any).is_zero_tax === '1';
 };
 
 const LocalPurchaseWindow = () => {

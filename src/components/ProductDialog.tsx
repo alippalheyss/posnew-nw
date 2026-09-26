@@ -18,6 +18,7 @@ import { format, parseISO } from "date-fns";
 import { cn } from '@/lib/utils';
 import { showSuccess, showError } from '@/utils/toast';
 import { generatePlaceholderImage } from '@/utils/imageUtils';
+import { translateEnglishToDhivehi } from '@/utils/dhivehiTranslator';
 
 interface ProductDialogProps {
     isOpen: boolean;
@@ -82,9 +83,21 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
             setEditingUnitIndex(null);
             setUnitForm({ name: 'Box', price: '', conversion_factor: '', barcode: '' });
         }
-    }, [product, isOpen, getNextProductCode]);
+    }, [isOpen, product?.id]);
 
     if (!editedProduct) return null;
+
+    const handleAutoTranslateName = () => {
+        if (!editedProduct?.name_en?.trim()) {
+            showError('Please enter an English product name first');
+            return;
+        }
+        const translated = translateEnglishToDhivehi(editedProduct.name_en);
+        if (translated) {
+            setEditedProduct(prev => prev ? ({ ...prev, name_dv: translated }) : null);
+            showSuccess('Product name translated to Dhivehi! ✨');
+        }
+    };
 
     const handleOpenAddUnit = () => {
         setUnitForm({ name: 'Box', price: '', conversion_factor: '', barcode: '' });
@@ -283,9 +296,23 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                 {/* Names */}
                                 <div className="flex-1 space-y-2.5 min-w-0">
                                     <div className="space-y-1">
-                                        <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                                            {renderBoth('product_name')} (ދިވެހި)*
-                                        </Label>
+                                        <div className="flex items-center justify-between">
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={handleAutoTranslateName}
+                                                disabled={!editedProduct.name_en?.trim()}
+                                                className="h-6 px-2 text-[10px] font-black text-primary hover:bg-primary/10 rounded-lg gap-1"
+                                                title="Auto-translate English name to Dhivehi"
+                                            >
+                                                <Sparkles className="h-3 w-3 text-primary animate-pulse" />
+                                                <span>Auto Translate (ދިވެހިކުރޭ)</span>
+                                            </Button>
+                                            <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                                                {renderBoth('product_name')} (ދިވެހި)*
+                                            </Label>
+                                        </div>
                                         <Input 
                                             value={editedProduct.name_dv} 
                                             onChange={(e) => updateField('name_dv', e.target.value)} 
@@ -300,6 +327,12 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                         <Input 
                                             value={editedProduct.name_en} 
                                             onChange={(e) => updateField('name_en', e.target.value)} 
+                                            onBlur={() => {
+                                                if (!editedProduct.name_dv?.trim() && editedProduct.name_en?.trim()) {
+                                                    const translated = translateEnglishToDhivehi(editedProduct.name_en);
+                                                    if (translated) updateField('name_dv', translated);
+                                                }
+                                            }}
                                             className="apple-glass-input h-10 rounded-xl text-right font-bold text-sm"
                                             placeholder="Product Name"
                                         />
@@ -516,6 +549,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                             <Input
                                                 value={unitForm.name}
                                                 onChange={(e) => setUnitForm(prev => ({ ...prev, name: e.target.value }))}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
                                                 placeholder="e.g. Box"
                                                 className="h-9 apple-glass-input rounded-xl text-right font-bold text-xs"
                                             />
@@ -529,6 +563,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                 type="number"
                                                 value={unitForm.conversion_factor}
                                                 onChange={(e) => setUnitForm(prev => ({ ...prev, conversion_factor: e.target.value }))}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
                                                 placeholder="12"
                                                 className="h-9 apple-glass-input rounded-xl text-right font-bold text-xs"
                                             />
@@ -545,6 +580,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                 step="0.01"
                                                 value={unitForm.price}
                                                 onChange={(e) => setUnitForm(prev => ({ ...prev, price: e.target.value }))}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
                                                 placeholder="0.00"
                                                 className="h-9 apple-glass-input rounded-xl text-right font-bold text-xs text-primary"
                                             />
@@ -557,6 +593,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                             <Input
                                                 value={unitForm.barcode}
                                                 onChange={(e) => setUnitForm(prev => ({ ...prev, barcode: e.target.value }))}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
                                                 placeholder="Optional"
                                                 className="h-9 apple-glass-input rounded-xl text-right font-mono text-[11px]"
                                             />

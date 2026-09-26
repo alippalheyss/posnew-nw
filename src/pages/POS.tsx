@@ -2561,7 +2561,7 @@ const POS = () => {
           setSplitSearchTerm('');
         }
       }}>
-        <DialogContent className="sm:max-w-[600px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto overflow-x-hidden font-faruma apple-glass-dialog text-foreground border-white/20 dark:border-white/10 text-right p-5 sm:p-6 shadow-2xl rounded-3xl box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+        <DialogContent className="sm:max-w-[700px] w-[calc(100vw-2rem)] max-h-[92vh] overflow-y-auto font-faruma apple-glass-dialog text-foreground border-white/20 dark:border-white/10 text-right p-5 sm:p-7 shadow-2xl rounded-3xl box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
           <DialogHeader className="pb-3.5 text-right space-y-1.5 border-b border-border/60">
             <div className="flex items-center justify-between pl-8">
               <div className="text-right flex-1 min-w-0">
@@ -2609,7 +2609,7 @@ const POS = () => {
                 </div>
 
                 {/* Customer List */}
-                <ScrollArea className="h-[320px] pr-2 custom-scrollbar">
+                <ScrollArea className="h-[320px] px-2 sm:px-3 py-1 custom-scrollbar">
                   {(() => {
                     const filtered = customers.filter(c =>
                       c.name_dv?.toLowerCase().includes(splitSearchTerm.toLowerCase()) ||
@@ -2646,7 +2646,7 @@ const POS = () => {
                                 <div className={cn(
                                   "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
                                   isSelected ? "bg-primary border-primary text-white" : "border-border/80 bg-muted/40 text-transparent"
-                                )}>
+                                  )}>
                                   <Check className="h-3.5 w-3.5 stroke-[3]" />
                                 </div>
                                 <Badge variant="outline" className="text-[10px] font-black px-2 py-0.5 rounded-md font-mono">
@@ -2708,54 +2708,64 @@ const POS = () => {
                     </span>
                   )}
                   <Button 
-                    type="button"
+                    type="button" 
                     variant="outline" 
                     size="sm" 
                     onClick={equalizeSplit} 
-                    className="h-7 text-[11px] font-bold border-primary/30 text-primary hover:bg-primary/10 rounded-lg"
+                    className="h-7 text-[11px] font-bold border-primary/30 text-primary hover:bg-primary/10 rounded-lg shrink-0"
                   >
                     {renderBoth('equal_split')}
                   </Button>
                 </div>
 
                 {/* Customer Allocation List */}
-                <ScrollArea className="h-[280px] pr-2 custom-scrollbar">
-                  <div className="space-y-2.5">
+                <ScrollArea className="h-[290px] px-2 sm:px-3 py-1 custom-scrollbar">
+                  <div className="space-y-3">
                     {splitEntries.map((entry) => {
                       const customer = customers.find(c => c.id === entry.customerId);
                       return (
-                        <div key={entry.id} className="p-3 sm:p-3.5 rounded-2xl bg-card border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-right hover:border-primary/40 transition-all shadow-sm">
-                          <div className="relative w-full sm:w-36 shrink-0 order-2 sm:order-1">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">{settings.shop.currency}</span>
-                            <Input
-                              type="number"
-                              value={entry.amount}
-                              onChange={(e) => updateSplitAmount(entry.id, parseFloat(e.target.value) || 0)}
-                              onFocus={handleFocus}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' && Math.abs(splitRemaining) <= 0.01 && splitEntries.length > 0) {
-                                  e.preventDefault();
-                                  processSplitPayment();
-                                }
-                              }}
-                              className="h-11 bg-muted/60 border-border rounded-xl pl-10 pr-3 text-right text-base font-black font-mono text-foreground focus:border-primary"
-                            />
+                        <div key={entry.id} className="p-3.5 sm:p-4 rounded-2xl bg-card border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-right hover:border-primary/40 transition-all shadow-sm">
+                          {/* Customer Info (Right side in RTL) */}
+                          <div className="flex-1 text-right min-w-0">
+                            <p className="font-black text-foreground text-sm truncate">{customer?.name_dv} {customer?.name_en ? `(${customer?.name_en})` : ''}</p>
+                            <div className="flex items-center justify-end gap-2 text-[11px] text-muted-foreground mt-0.5">
+                              {customer?.phone && <span dir="ltr">📞 {customer.phone}</span>}
+                              {customer?.code && <span className="font-mono opacity-70">#{customer.code}</span>}
+                            </div>
                           </div>
 
-                          <div className="flex-1 text-right min-w-0 order-1 sm:order-2">
-                            <p className="font-black text-foreground text-sm truncate">{customer?.name_dv} {customer?.name_en ? `(${customer?.name_en})` : ''}</p>
-                            <div className="flex items-center justify-end gap-2 mt-1">
-                              <Select value={entry.method} onValueChange={(val: any) => updateSplitMethod(entry.id, val)}>
-                                <SelectTrigger className="h-7 w-28 text-[10px] font-black rounded-lg bg-muted/80 border-border text-foreground">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent className="font-faruma bg-card border-border text-foreground" dir="rtl">
-                                  <SelectItem value="Credit">{renderBoth('credit')}</SelectItem>
-                                  <SelectItem value="Cash">{renderBoth('cash')}</SelectItem>
-                                  <SelectItem value="Card">{renderBoth('card')}</SelectItem>
-                                  <SelectItem value="Transfer">Transfer</SelectItem>
-                                </SelectContent>
-                              </Select>
+                          {/* Payment Controls: Method & Amount (Left side in RTL) */}
+                          <div className="flex items-center gap-2.5 shrink-0 justify-end sm:justify-start">
+                            <Select value={entry.method} onValueChange={(val: any) => updateSplitMethod(entry.id, val)}>
+                              <SelectTrigger className="h-10 w-28 text-xs font-black rounded-xl bg-muted/80 border-border text-foreground">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="font-faruma bg-card border-border text-foreground" dir="rtl">
+                                <SelectItem value="Credit">{renderBoth('credit')}</SelectItem>
+                                <SelectItem value="Cash">{renderBoth('cash')}</SelectItem>
+                                <SelectItem value="Card">{renderBoth('card')}</SelectItem>
+                                <SelectItem value="Transfer">Transfer</SelectItem>
+                              </SelectContent>
+                            </Select>
+
+                            <div className="relative w-36 sm:w-40 shrink-0">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground pointer-events-none">
+                                {settings.shop.currency}
+                              </span>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={entry.amount}
+                                onChange={(e) => updateSplitAmount(entry.id, parseFloat(e.target.value) || 0)}
+                                onFocus={handleFocus}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && Math.abs(splitRemaining) <= 0.01 && splitEntries.length > 0) {
+                                    e.preventDefault();
+                                    processSplitPayment();
+                                  }
+                                }}
+                                className="h-10 bg-muted/60 border-border rounded-xl pl-12 pr-3 text-right text-sm sm:text-base font-black font-mono text-foreground focus:border-primary"
+                              />
                             </div>
                           </div>
                         </div>

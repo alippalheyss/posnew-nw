@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Edit2, Trash2, Star, Upload, Package, Grid, List, MoreVertical, CheckSquare, Square, AlertTriangle, ShieldAlert, History, Clock, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal, X } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Star, Upload, Package, Grid, List, MoreVertical, CheckSquare, Square, AlertTriangle, ShieldAlert, History, Clock, ArrowUpDown, ArrowUp, ArrowDown, SlidersHorizontal, X, Percent, Languages, Sparkles } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { getAdaptedImageUrl } from '@/utils/imageUtils';
 import { formatDate } from '@/utils/formatters';
+import { translateEnglishToDhivehi } from '@/utils/dhivehiTranslator';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -63,11 +64,13 @@ const Products = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [inventoryFilter, setInventoryFilter] = useState<InventoryFilterType>('ALL');
+  const [taxFilter, setTaxFilter] = useState<'ALL' | 'STANDARD_GST' | 'ZERO_GST'>('ALL');
   const [sortKey, setSortKey] = useState<ProductSortKey>('DEFAULT');
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [visibleCount, setVisibleCount] = useState(30);
+  const [isTranslating, setIsTranslating] = useState(false);
 
   const availableCategories = useMemo(() => {
     const cats = new Set<string>(['ALL', 'DRINKS', 'FOOD', 'HARDWARE', 'COSMETICS', 'OTHER']);
@@ -81,6 +84,63 @@ const Products = () => {
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+  const handleBulkAutoTranslate = async (targetProductIds?: string[]) => {
+    const ids = targetProductIds || selectedProductIds;
+    const targets = products.filter(p => ids.includes(p.id) && p.name_en?.trim());
+    if (targets.length === 0) {
+      showError('No products with English names found to translate');
+      return;
+    }
+
+    setIsTranslating(true);
+    let count = 0;
+    try {
+      for (const prod of targets) {
+        const translated = translateEnglishToDhivehi(prod.name_en);
+        if (translated && translated !== prod.name_dv) {
+          await updateProduct({ ...prod, name_dv: translated });
+          count++;
+        }
+      }
+      showSuccess(`Successfully translated ${count} product(s) to Dhivehi! ✨`);
+    } catch (e) {
+      console.error('Translation error:', e);
+      showError('Failed during batch translation');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleTranslateAllMissingDhivehi = async () => {
+    const thaanaRegex = /[\u0780-\u07BF]/;
+    const targets = products.filter(p => 
+      p.name_en?.trim() && (!p.name_dv || p.name_dv.trim() === p.name_en.trim() || !thaanaRegex.test(p.name_dv))
+    );
+
+    if (targets.length === 0) {
+      showSuccess('All products already have Dhivehi names! ✨');
+      return;
+    }
+
+    setIsTranslating(true);
+    let count = 0;
+    try {
+      for (const prod of targets) {
+        const translated = translateEnglishToDhivehi(prod.name_en);
+        if (translated && translated !== prod.name_dv) {
+          await updateProduct({ ...prod, name_dv: translated });
+          count++;
+        }
+      }
+      showSuccess(`Successfully translated ${count} product(s) to Dhivehi! ✨`);
+    } catch (e) {
+      console.error('Translation error:', e);
+      showError('Failed during translation');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
 
   // Compute Product Sales Activity (Never Sold / Unsold in 30 Days)
   const productSalesMap = useMemo(() => {
@@ -140,7 +200,14 @@ const Products = () => {
       else if (inventoryFilter === 'UNSOLD_30_DAYS') matchesFilter = isUnsoldIn30Days(product.id);
       else if (inventoryFilter === 'NEVER_UPDATED_STOCK') matchesFilter = isNeverUpdatedStock(product);
 
-      return matchesSearch && matchesCategory && matchesFilter;
+      let matchesTax = true;
+      if (taxFilter === 'ZERO_GST') {
+        matchesTax = Boolean(product.is_zero_tax);
+      } else if (taxFilter === 'STANDARD_GST') {
+        matchesTax = !product.is_zero_tax;
+      }
+
+      return matchesSearch && matchesCategory && matchesFilter && matchesTax;
     });
 
     // Sorting logic
@@ -200,7 +267,7 @@ const Products = () => {
     });
 
     return list;
-  }, [products, searchTerm, selectedCategory, inventoryFilter, favoriteProductIds, productSalesMap, sortKey]);
+  }, [products, searchTerm, selectedCategory, inventoryFilter, taxFilter, favoriteProductIds, productSalesMap, sortKey]);
 
   const displayProducts = filteredProducts.slice(0, visibleCount);
 
@@ -339,6 +406,16 @@ const Products = () => {
         <div className="flex flex-wrap items-center gap-2.5">
            <Button 
              variant="outline" 
+             onClick={handleTranslateAllMissingDhivehi}
+             disabled={isTranslating}
+             className="gap-2 border-border hover:bg-muted h-11 px-3.5 sm:px-4 rounded-xl font-bold text-xs"
+             title="Automatically translate English product names into Dhivehi using smart supermarket dictionary"
+           >
+             <Sparkles className="h-4 w-4 text-amber-500" />
+             <span>{isTranslating ? 'Translating...' : 'Auto-Translate Dhivehi (ދިވެހިކުރޭ)'}</span>
+           </Button>
+           <Button 
+             variant="outline" 
              onClick={() => setIsImportDialogOpen(true)}
              className="gap-2 border-border hover:bg-muted h-11 px-4 sm:px-5 rounded-xl font-bold text-xs"
            >
@@ -428,7 +505,7 @@ const Products = () => {
           <div className="flex flex-wrap items-center gap-2 justify-between lg:justify-end">
             {/* Sort Dropdown */}
             <Select value={sortKey} onValueChange={(val) => { setSortKey(val as ProductSortKey); setVisibleCount(30); }}>
-              <SelectTrigger className="w-[210px] h-9 rounded-xl bg-card border-border text-xs font-black text-foreground flex gap-2">
+              <SelectTrigger className="w-[190px] h-9 rounded-xl bg-card border-border text-xs font-black text-foreground flex gap-2">
                 <ArrowUpDown className="h-3.5 w-3.5 text-primary" />
                 <SelectValue placeholder="Sort Order (ތަރުތީބު)" />
               </SelectTrigger>
@@ -448,6 +525,19 @@ const Products = () => {
                 <SelectItem value="ACTIVITY_NEVER">Status: Never Sold (ނުވިކޭ)</SelectItem>
                 <SelectItem value="ACTIVITY_UNSOLD">Status: Unsold &gt;30d (30 ދުވަސް ތެރޭ ނުވިކޭ)</SelectItem>
                 <SelectItem value="ACTIVITY_UNSTOCKED">Status: Never Stocked (ސްޓޮކް ނެތް)</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* GST Tax Filter */}
+            <Select value={taxFilter} onValueChange={(val: any) => { setTaxFilter(val); setVisibleCount(30); }}>
+              <SelectTrigger className="w-[170px] h-9 rounded-xl bg-card border-border text-xs font-black text-foreground flex gap-2">
+                <Percent className="h-3.5 w-3.5 text-primary" />
+                <SelectValue placeholder="GST Filter (ޖީއެސްޓީ)" />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border font-faruma text-foreground" dir="rtl">
+                <SelectItem value="ALL">All Tax Rates (ހުރިހާ ޓެކްސް)</SelectItem>
+                <SelectItem value="STANDARD_GST">{settings?.shop?.taxRate || 8}% Standard GST</SelectItem>
+                <SelectItem value="ZERO_GST">0% Zero-Rated GST</SelectItem>
               </SelectContent>
             </Select>
 
@@ -489,7 +579,7 @@ const Products = () => {
         </div>
       </div>
 
-      {/* Floating Bulk Action Bar (Admin Bulk Delete) */}
+      {/* Floating Bulk Action Bar (Admin Bulk Delete & Auto-Translate) */}
       {selectedProductIds.length > 0 && (
         <div className="sticky top-0 z-30 mb-4 bg-primary/15 border-2 border-primary/40 backdrop-blur-xl p-3 sm:p-4 rounded-2xl shadow-xl flex items-center justify-between gap-4 animate-in slide-in-from-top-3">
           <div className="flex items-center gap-3">
@@ -507,6 +597,15 @@ const Products = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              disabled={isTranslating}
+              onClick={() => handleBulkAutoTranslate()}
+              className="h-9 sm:h-10 px-3.5 bg-card hover:bg-muted border-border font-black text-xs rounded-xl gap-2 transition-all active:scale-95"
+            >
+              <Languages className="h-4 w-4 text-primary" />
+              <span>{isTranslating ? 'Translating...' : `Translate Selected (${selectedProductIds.length}) (ދިވެހިކުރޭ)`}</span>
+            </Button>
             <Button
               onClick={() => setIsBulkDeleteDialogOpen(true)}
               className="h-9 sm:h-10 px-4 bg-red-600 hover:bg-red-700 text-white font-black text-xs rounded-xl shadow-lg shadow-red-600/20 gap-2 uppercase transition-all active:scale-95"
@@ -591,6 +690,15 @@ const Products = () => {
 
                         {/* Status Badges Overlay */}
                         <div className="absolute bottom-2 right-2 flex flex-wrap gap-1 z-10 pointer-events-none">
+                          {product.is_zero_tax ? (
+                            <span className="bg-emerald-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm">
+                              0% GST
+                            </span>
+                          ) : (
+                            <span className="bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm">
+                              {settings.shop?.taxRate || 8}% GST
+                            </span>
+                          )}
                           {neverSold ? (
                             <span className="bg-purple-600/90 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm">
                               Never Sold
@@ -614,7 +722,18 @@ const Products = () => {
                          
                          <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-border/50">
                             <div className="text-right">
-                              <span className="text-xs sm:text-sm font-black text-primary font-mono">{settings.shop.currency} {product.price.toFixed(2)}</span>
+                              <div className="flex items-center gap-1.5 justify-end">
+                                <span className="text-xs sm:text-sm font-black text-primary font-mono">{settings.shop.currency} {product.price.toFixed(2)}</span>
+                                {product.is_zero_tax ? (
+                                  <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[9px] font-black px-1 py-0 h-4">
+                                    0% GST
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[9px] font-black px-1 py-0 h-4">
+                                    {settings.shop?.taxRate || 8}% GST
+                                  </Badge>
+                                )}
+                              </div>
                               {product.cost_price && product.cost_price > 0 ? (
                                 <span className="text-[9px] font-bold text-muted-foreground block font-mono">
                                   Cost: {settings.shop.currency} {product.cost_price.toFixed(2)}
@@ -766,8 +885,19 @@ const Products = () => {
                         </td>
                         <td className="p-3.5 font-mono text-xs text-muted-foreground">{product.item_code}</td>
                         <td className="p-3.5">
-                          <div className="font-black text-primary font-mono text-sm">
-                            {settings.shop.currency} {product.price.toFixed(2)}
+                          <div className="flex items-center gap-1.5 justify-end">
+                            <span className="font-black text-primary font-mono text-sm">
+                              {settings.shop.currency} {product.price.toFixed(2)}
+                            </span>
+                            {product.is_zero_tax ? (
+                              <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[9px] font-black px-1.5 py-0">
+                                0% GST
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[9px] font-black px-1.5 py-0">
+                                {settings.shop?.taxRate || 8}% GST
+                              </Badge>
+                            )}
                           </div>
                           {product.cost_price && product.cost_price > 0 && (
                             <div className="text-[10px] text-muted-foreground font-bold font-mono">

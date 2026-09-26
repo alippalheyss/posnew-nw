@@ -2438,7 +2438,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     return nextCode;
   };
 
-  const getNextProductCode = () => {
+  const getNextProductCode = useCallback(() => {
     const MIN_CODE = 3201; // Start from 03201 (stored as number, displayed with leading zero)
     const lastItemCode = products.reduce((maxCode, product) => {
       // Extract digits only from code
@@ -2449,7 +2449,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     const nextNum = Math.max(lastItemCode + 1, MIN_CODE);
     // Always pad to 5 digits to preserve leading zero (e.g. 03201)
     return String(nextNum).padStart(5, '0');
-  };
+  }, [products]);
 
   // Helper function to get top N products by sales count
   const getTopProducts = (limit: number): Product[] => {
@@ -2485,7 +2485,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         : '';
       
       // Clean data for Supabase update - convert undefined to null and ensure numbers
-      const cleanData = {
+      const cleanData: any = {
         name_dv: updatedProduct.name_dv,
         name_en: updatedProduct.name_en,
         price: Number(updatedProduct.price) || 0,
@@ -2507,11 +2507,24 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         return;
       }
 
-      const { data, error, count } = await supabase
+      let { data, error, count } = await supabase
         .from('products')
         .update(cleanData)
         .eq('id', updatedProduct.id)
         .select();
+
+      // Gracefully handle if units column does not exist in Supabase schema
+      if (error && (error.message?.includes('units') || error.message?.includes('column "units" does not exist'))) {
+        console.warn('Supabase products table does not have units column, retrying update without units column:', error.message);
+        const { units: _, ...dataWithoutUnits } = cleanData;
+        const retryResult = await supabase
+          .from('products')
+          .update(dataWithoutUnits)
+          .eq('id', updatedProduct.id)
+          .select();
+        data = retryResult.data;
+        error = retryResult.error;
+      }
 
       console.log('Update result:', { error, count, data });
 
@@ -2556,7 +2569,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         barcode: barcode
       };
 
-      const cleanData = {
+      const cleanData: any = {
         id: productToStore.id,
         name_dv: productToStore.name_dv,
         name_en: productToStore.name_en,
@@ -2574,9 +2587,19 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         units: productToStore.units || null
       };
 
-      const { error } = await supabase
+      let { error } = await supabase
         .from('products')
         .insert(cleanData);
+
+      // Gracefully handle if units column does not exist in Supabase schema
+      if (error && (error.message?.includes('units') || error.message?.includes('column "units" does not exist'))) {
+        console.warn('Supabase products table does not have units column, retrying insert without units column:', error.message);
+        const { units: _, ...dataWithoutUnits } = cleanData;
+        const retryResult = await supabase
+          .from('products')
+          .insert(dataWithoutUnits);
+        error = retryResult.error;
+      }
 
       if (error) throw error;
 

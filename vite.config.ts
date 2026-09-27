@@ -15,9 +15,11 @@ export default defineConfig(() => ({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.ico", "apple-touch-icon.png", "pwa-192x192.png", "pwa-512x512.png"],
+      injectRegister: "auto",
+      includeAssets: ["favicon.ico", "apple-touch-icon.png", "pwa-192x192.png", "pwa-512x512.png", "pwa-maskable-512x512.png"],
       devOptions: {
-        enabled: false,
+        enabled: true,
+        type: "module",
       },
       manifest: {
         id: "/",
@@ -27,9 +29,12 @@ export default defineConfig(() => ({
         theme_color: "#0f172a",
         background_color: "#0f172a",
         display: "standalone",
+        display_override: ["window-controls-overlay", "standalone", "minimal-ui"],
         orientation: "any",
         start_url: "/",
         scope: "/",
+        prefer_related_applications: false,
+        categories: ["business", "finance", "productivity"],
         icons: [
           {
             src: "/pwa-192x192.png",
@@ -48,6 +53,18 @@ export default defineConfig(() => ({
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable",
+          },
+        ],
+        shortcuts: [
+          {
+            name: "POS Terminal",
+            url: "/",
+            icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }],
+          },
+          {
+            name: "Sales Reports",
+            url: "/sales-reports",
+            icons: [{ src: "/pwa-192x192.png", sizes: "192x192" }],
           },
         ],
       },

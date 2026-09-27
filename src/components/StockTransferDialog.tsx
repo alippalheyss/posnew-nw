@@ -60,8 +60,8 @@ const StockTransferDialog: React.FC<StockTransferDialogProps> = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[500px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground shadow-2xl rounded-3xl p-6 sm:p-7 box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
-                <DialogHeader className="text-right pb-3 space-y-1 border-b border-white/10 pl-10">
+            <DialogContent className="sm:max-w-[540px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto overflow-x-hidden font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground shadow-2xl rounded-3xl p-4 sm:p-7 box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+                <DialogHeader className="text-right pb-3 space-y-1 border-b border-white/10 pl-12 pr-1">
                     <DialogTitle className="text-xl font-black flex items-center justify-end gap-2.5">
                         <span>{renderBoth('transfer_stock')}</span>
                         <ArrowRightLeft className="h-5 w-5 text-primary" />
@@ -72,86 +72,86 @@ const StockTransferDialog: React.FC<StockTransferDialogProps> = ({
                 </DialogHeader>
 
                 <div className="py-3 space-y-4">
-                    {/* Direction Toggle */}
+                    {/* Direction Toggle with Auto-Scale */}
                     <div className="grid grid-cols-2 gap-2 bg-white/5 dark:bg-black/20 p-1.5 rounded-2xl border border-white/10 backdrop-blur-md">
                         <button
                             type="button"
                             onClick={() => setDirection('to_godown')}
                             className={cn(
-                                "flex items-center justify-center gap-2 h-11 rounded-xl text-xs font-black transition-all duration-200",
+                                "flex items-center justify-center gap-1.5 sm:gap-2 h-11 px-2 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-200 min-w-0 truncate",
                                 direction === 'to_godown' 
                                     ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25" 
                                     : "text-muted-foreground hover:text-foreground hover:bg-white/10"
                             )}
                         >
-                            <Store className="h-4 w-4" />
-                            <span>{t('shop_to_godown')}</span>
+                            <Store className="h-4 w-4 shrink-0" />
+                            <span className="truncate">{t('shop_to_godown')}</span>
                         </button>
                         <button
                             type="button"
                             onClick={() => setDirection('to_shop')}
                             className={cn(
-                                "flex items-center justify-center gap-2 h-11 rounded-xl text-xs font-black transition-all duration-200",
+                                "flex items-center justify-center gap-1.5 sm:gap-2 h-11 px-2 rounded-xl text-[11px] sm:text-xs font-black transition-all duration-200 min-w-0 truncate",
                                 direction === 'to_shop' 
                                     ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25" 
                                     : "text-muted-foreground hover:text-foreground hover:bg-white/10"
                             )}
                         >
-                            <Warehouse className="h-4 w-4" />
-                            <span>{t('godown_to_shop')}</span>
+                            <Warehouse className="h-4 w-4 shrink-0" />
+                            <span className="truncate">{t('godown_to_shop')}</span>
                         </button>
                     </div>
 
-                    {/* Stock Info Cards */}
-                    <div className="grid grid-cols-2 gap-3 items-center">
+                    {/* Stock Info Cards with Auto-Scale */}
+                    <div className="grid grid-cols-2 gap-2.5 sm:gap-3 items-center">
                         <div className={cn(
-                            "p-3.5 rounded-2xl border transition-all duration-300 text-center",
+                            "p-3 sm:p-3.5 rounded-2xl border transition-all duration-300 text-center min-w-0 overflow-hidden box-border",
                             direction === 'to_godown' 
                                 ? "bg-primary/15 border-primary/50 shadow-lg shadow-primary/10 backdrop-blur-md" 
                                 : "bg-white/5 dark:bg-black/20 border-white/10 opacity-70"
                         )}>
                             <div className="flex items-center justify-center gap-1.5 mb-1">
-                                <Store className="h-3.5 w-3.5 text-muted-foreground" />
-                                <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">
+                                <Store className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider truncate">
                                     {renderBoth('shop_stock')}
                                 </span>
                             </div>
-                            <p className="text-2xl font-black text-foreground font-mono">{stockItem.stock_shop}</p>
+                            <p className="text-xl sm:text-2xl font-black text-foreground font-mono">{stockItem.stock_shop}</p>
                             {direction === 'to_godown' && (
-                                <span className="text-[9px] font-black text-primary uppercase tracking-widest mt-1 block">Source (މިތަނުން)</span>
+                                <span className="text-[9px] font-black text-primary uppercase tracking-widest mt-1 block truncate">Source (މިތަނުން)</span>
                             )}
                         </div>
 
                         <div className={cn(
-                            "p-3.5 rounded-2xl border transition-all duration-300 text-center",
+                            "p-3 sm:p-3.5 rounded-2xl border transition-all duration-300 text-center min-w-0 overflow-hidden box-border",
                             direction === 'to_shop' 
                                 ? "bg-primary/15 border-primary/50 shadow-lg shadow-primary/10 backdrop-blur-md" 
                                 : "bg-white/5 dark:bg-black/20 border-white/10 opacity-70"
                         )}>
                             <div className="flex items-center justify-center gap-1.5 mb-1">
-                                <Warehouse className="h-3.5 w-3.5 text-muted-foreground" />
-                                <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">
+                                <Warehouse className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider truncate">
                                     {renderBoth('godown_stock')}
                                 </span>
                             </div>
-                            <p className="text-2xl font-black text-foreground font-mono">{stockItem.stock_godown}</p>
+                            <p className="text-xl sm:text-2xl font-black text-foreground font-mono">{stockItem.stock_godown}</p>
                             {direction === 'to_shop' && (
-                                <span className="text-[9px] font-black text-primary uppercase tracking-widest mt-1 block">Source (މިތަނުން)</span>
+                                <span className="text-[9px] font-black text-primary uppercase tracking-widest mt-1 block truncate">Source (މިތަނުން)</span>
                             )}
                         </div>
                     </div>
 
-                    {/* Transfer Amount Input */}
+                    {/* Transfer Amount Input with Safe Left Margins */}
                     <div className="space-y-1.5">
                         <div className="flex justify-between items-center px-1">
-                            <span className="text-[10px] font-black font-mono text-muted-foreground bg-white/10 px-2 py-0.5 rounded-md border border-white/10">
+                            <span className="text-[10px] font-black font-mono text-muted-foreground bg-white/10 px-2 py-0.5 rounded-md border border-white/10 shrink-0">
                                 Max: {maxAmount}
                             </span>
                             <Label className="text-right block text-xs font-black uppercase text-foreground">
                                {renderBoth('transfer_amount')}*
                             </Label>
                         </div>
-                        <div className="relative">
+                        <div className="relative box-border">
                             <ArrowRightLeft className="absolute right-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/50" />
                             <Input
                                 type="number"
@@ -160,7 +160,7 @@ const StockTransferDialog: React.FC<StockTransferDialogProps> = ({
                                 value={transferAmount}
                                 onChange={(e) => setTransferAmount(e.target.value)}
                                 className={cn(
-                                    "apple-glass-input h-13 rounded-2xl pr-12 text-2xl font-black text-foreground text-right font-mono transition-all",
+                                    "apple-glass-input h-12 sm:h-13 rounded-2xl pr-12 pl-4 sm:pl-5 text-xl sm:text-2xl font-black text-foreground text-right font-mono transition-all",
                                     !isValid && currentAmount > 0 ? "border-red-500/50" : ""
                                 )}
                                 placeholder="0"
@@ -175,7 +175,7 @@ const StockTransferDialog: React.FC<StockTransferDialogProps> = ({
                     </div>
                 </div>
 
-                <DialogFooter className="gap-2.5 pt-3 border-t border-white/10 flex flex-row">
+                <DialogFooter className="gap-2 sm:gap-2.5 pt-3 border-t border-white/10 flex flex-row">
                     <Button variant="outline" onClick={onClose} className="flex-1 h-11 border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold text-xs rounded-2xl">
                         {renderBoth('cancel')}
                     </Button>

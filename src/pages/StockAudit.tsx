@@ -1201,26 +1201,26 @@ export default function StockAudit() {
                       )}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 text-right truncate">
+                        <div className="flex-1 text-right min-w-0">
                           <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                            <h3 className="text-xs sm:text-sm font-black text-slate-900 truncate">{product.name_dv}</h3>
+                            <h3 className="text-xs sm:text-sm font-black font-faruma text-foreground dark:text-white" dir="rtl">{product.name_dv || product.name_en}</h3>
                             {hasCount && (
                               isApproved ? (
-                                <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[9px] font-black px-1.5 py-0 rounded-md">
+                                <Badge className="bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border-emerald-300 text-[9px] font-black px-1.5 py-0 rounded-md">
                                   ✓ Live Stock Updated
                                 </Badge>
                               ) : (
-                                <Badge className="bg-amber-100 text-amber-900 border-amber-300 text-[9px] font-black px-1.5 py-0 rounded-md">
+                                <Badge className="bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300 border-amber-300 text-[9px] font-black px-1.5 py-0 rounded-md">
                                   Pending Approval ({auditItem.totalCounted} pcs)
                                 </Badge>
                               )
                             )}
                           </div>
-                          <p className="text-[11px] text-slate-600 font-sans font-bold truncate mt-0.5">{product.name_en}</p>
-                          <div className="flex items-center justify-end gap-2 text-[10px] text-slate-400 font-sans mt-0.5 flex-wrap">
-                            {product.barcode && <span>Barcode: <strong className="text-slate-600 font-mono">{product.barcode}</strong></span>}
-                            <span>Shop: <strong className="text-emerald-700 font-bold">{product.stock_shop || 0}</strong></span>
-                            <span>Godown: <strong className="text-slate-700 font-bold">{product.stock_godown || 0}</strong></span>
+                          <p className="text-[11px] text-muted-foreground font-sans font-bold truncate mt-0.5">{product.name_en}</p>
+                          <div className="flex items-center justify-end gap-2 text-[10px] text-muted-foreground font-sans mt-0.5 flex-wrap">
+                            {product.barcode && <span>Barcode: <strong className="text-foreground font-mono">{product.barcode}</strong></span>}
+                            <span>Shop: <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{product.stock_shop || 0}</strong></span>
+                            <span>Godown: <strong className="text-foreground font-bold">{product.stock_godown || 0}</strong></span>
                             <span>Total: <strong className="text-primary font-black">{(product.stock_shop || 0) + (product.stock_godown || 0)}</strong></span>
                           </div>
                         </div>
@@ -1364,20 +1364,20 @@ export default function StockAudit() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 text-right">
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                          <h3 className="text-xs sm:text-sm font-black text-slate-900">{product.name_dv}</h3>
+                          <h3 className="text-xs sm:text-sm font-black font-faruma text-foreground dark:text-white" dir="rtl">{product.name_dv || product.name_en}</h3>
                           {auditState.isApproved ? (
-                            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[9px] font-black px-1.5 py-0 rounded-full flex items-center gap-1 shadow-none">
+                            <Badge className="bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border-emerald-300 text-[9px] font-black px-1.5 py-0 rounded-full flex items-center gap-1 shadow-none">
                               <CheckCircle2 className="h-2.5 w-2.5 text-emerald-600" />
                               <span>Approved ({auditState.approvedBy || 'Admin'})</span>
                             </Badge>
                           ) : (
-                            <Badge className="bg-amber-100 text-amber-900 border-amber-300 text-[9px] font-black px-1.5 py-0 rounded-full flex items-center gap-1 shadow-none">
+                            <Badge className="bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300 border-amber-300 text-[9px] font-black px-1.5 py-0 rounded-full flex items-center gap-1 shadow-none">
                               <Clock className="h-2.5 w-2.5 text-amber-700" />
                               <span>Pending Admin Approval</span>
                             </Badge>
                           )}
                         </div>
-                        <p className="text-[11px] font-bold text-slate-600 font-sans mt-0.5 truncate">{product.name_en}</p>
+                        <p className="text-[11px] font-bold text-muted-foreground font-sans mt-0.5 truncate">{product.name_en}</p>
                       </div>
 
                       {/* Add more count button */}
@@ -1668,7 +1668,8 @@ export default function StockAudit() {
               <span>Edit Submitted Count</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground font-mono font-bold">
-              {editingEntry?.product?.name_en}
+              <span className="font-faruma text-sm font-black text-foreground block text-right" dir="rtl">{editingEntry?.product?.name_dv}</span>
+              <span className="block text-right">{editingEntry?.product?.name_en}</span>
             </DialogDescription>
           </DialogHeader>
 

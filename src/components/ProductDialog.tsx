@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Product, useAppContext } from '@/context/AppContext';
-import { Plus, Trash2, Save, Upload, CalendarIcon, Package, DollarSign, Barcode, Hash, ListTree, Image as ImageIcon, Boxes, Layers, Pencil, X, Sparkles, Check } from 'lucide-react';
+import { Plus, Trash2, Save, Upload, CalendarIcon, Package, DollarSign, Barcode, Hash, ListTree, Image as ImageIcon, Boxes, Layers, Pencil, X, Sparkles, Check, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -33,6 +33,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
     const { getNextProductCode, settings } = useAppContext();
     const [editedProduct, setEditedProduct] = useState<Product | null>(null);
     const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
     const [expiryDate, setExpiryDate] = useState<Date | undefined>(undefined);
 
     // Units / Packaging state
@@ -161,6 +162,11 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
     };
 
     const handleSave = () => {
+        if (isUploadingImage) {
+            showError('Please wait for product image upload to finish...');
+            return;
+        }
+
         if (!editedProduct.name_dv || !editedProduct.name_en || !editedProduct.barcode) {
             showError(t('fill_all_fields_error'));
             return;
@@ -211,19 +217,27 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
             try {
+                setIsUploadingImage(true);
                 // 1. Instantly generate optimized compact preview (max 400px, 0.65 quality)
                 const { dataUrl } = await optimizeImage(file, 400, 0.65);
                 setImagePreviewUrl(dataUrl);
 
-                // 2. Upload to Supabase Storage in the background for permanent CDN caching
-                const targetCode = numericCode || editedProduct?.item_code || 'prod';
-                uploadProductImage(file, targetCode).then((cdnUrl) => {
-                    if (cdnUrl) {
-                        setImagePreviewUrl(cdnUrl);
-                    }
-                }).catch(() => {});
-            } catch (err) {
+                // 2. Upload to Supabase Storage bucket for permanent CDN caching
+                const targetCode = (editedProduct?.item_code || '').replace(/\D/g, '') || 'prod';
+                const result = await uploadProductImage(file, targetCode);
+
+                if (result.url) {
+                    setImagePreviewUrl(result.url);
+                    showSuccess('Product photo uploaded to Supabase Storage! ☁️');
+                } else if (result.error) {
+                    console.error('[Supabase Storage Upload Error]:', result.error);
+                    showError(`Supabase Storage: ${result.error}. (Using local preview fallback)`);
+                }
+            } catch (err: any) {
                 console.error('Error handling product image:', err);
+                showError('Error processing image: ' + (err.message || 'Unknown error'));
+            } finally {
+                setIsUploadingImage(false);
             }
         }
     };
@@ -265,17 +279,24 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                         {renderBoth('product_image')}
                                     </Label>
                                     <div className="w-24 h-24 rounded-2xl bg-white/5 dark:bg-black/20 border-2 border-dashed border-white/20 flex flex-col items-center justify-center relative overflow-hidden group backdrop-blur-md">
-                                        {imagePreviewUrl ? (
+                                        {isUploadingImage ? (
+                                            <div className="flex flex-col items-center justify-center gap-1.5 text-primary p-2 text-center">
+                                                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                                <span className="text-[8px] font-black uppercase tracking-wider text-primary">Uploading...</span>
+                                            </div>
+                                        ) : imagePreviewUrl ? (
                                             <img src={imagePreviewUrl} alt="Preview" className="w-full h-full object-cover" />
                                         ) : (
                                             <ImageIcon className="h-8 w-8 text-foreground/20" />
                                         )}
-                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                            <Label htmlFor="image-upload" className="cursor-pointer bg-primary p-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white hover:bg-primary/90 transition-all flex items-center gap-1">
-                                                <Upload className="h-3 w-3" />
-                                            </Label>
-                                            <input id="image-upload" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
-                                        </div>
+                                        {!isUploadingImage && (
+                                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <Label htmlFor="image-upload" className="cursor-pointer bg-primary p-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white hover:bg-primary/90 transition-all flex items-center gap-1">
+                                                    <Upload className="h-3 w-3" />
+                                                </Label>
+                                                <input id="image-upload" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -694,8 +715,20 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                     <Button variant="outline" onClick={onClose} className="flex-1 h-11 text-foreground font-black uppercase tracking-wider text-xs apple-glass-pill">
                         {renderBoth('cancel')}
                     </Button>
-                    <Button onClick={handleSave} className="flex-1 h-11 bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-wider text-xs shadow-lg shadow-primary/30 apple-glass-pill">
-                        <Save className="ml-2 h-4 w-4" /> {renderBoth('save_product')}
+                    <Button 
+                        onClick={handleSave} 
+                        disabled={isUploadingImage}
+                        className="flex-1 h-11 bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-wider text-xs shadow-lg shadow-primary/30 apple-glass-pill disabled:opacity-50"
+                    >
+                        {isUploadingImage ? (
+                            <>
+                                <Loader2 className="ml-2 h-4 w-4 animate-spin" /> Uploading Image...
+                            </>
+                        ) : (
+                            <>
+                                <Save className="ml-2 h-4 w-4" /> {renderBoth('save_product')}
+                            </>
+                        )}
                     </Button>
                 </DialogFooter>
             </DialogContent>

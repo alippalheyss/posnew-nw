@@ -77,23 +77,30 @@ export async function optimizeImage(
   });
 }
 
+export interface ImageUploadResult {
+  url: string | null;
+  error?: string | null;
+}
+
 /**
  * Uploads an image to Supabase Storage bucket 'product-images'.
  * If the bucket exists and upload succeeds, returns the public URL with CDN caching (31536000s).
- * If storage upload fails (e.g. bucket doesn't exist yet or permission denied), returns null
- * so the caller can safely use the optimized compact dataUrl as fallback.
+ * If storage upload fails (e.g. bucket doesn't exist yet or permission denied), returns error details
+ * so the caller can alert the user and safely use the compact dataUrl as fallback.
  */
 export async function uploadProductImage(
   file: File | Blob,
   fileName: string
-): Promise<string | null> {
-  if (!supabase || !supabaseUrl) return null;
+): Promise<ImageUploadResult> {
+  if (!supabase || !supabaseUrl) {
+    return { url: null, error: 'Supabase client is not initialized' };
+  }
 
   try {
     const { blob } = await optimizeImage(file, 400, 0.65);
     const bucket = 'product-images';
-    const cleanFileName = fileName.replace(/[^a-zA-Z0-9_-]/g, '_');
-    const path = `items/${cleanFileName}_${Date.now()}.webp`;
+    const cleanFileName = fileName.replace(/[^a-zA-Z0-9_-]/g, '_') || 'prod';
+    const path = `${cleanFileName}_${Date.now()}.webp`;
 
     const { error: uploadError } = await supabase.storage
       .from(bucket)
@@ -104,18 +111,19 @@ export async function uploadProductImage(
       });
 
     if (uploadError) {
-      console.warn('[Storage] Supabase storage upload skipped (falling back to compact local image):', uploadError.message);
-      return null;
+      console.error('[Storage Error] Supabase storage upload failed:', uploadError);
+      return { url: null, error: uploadError.message };
     }
 
     const { data } = supabase.storage.from(bucket).getPublicUrl(path);
     if (data?.publicUrl) {
-      console.log('[Storage] Product image uploaded to CDN:', data.publicUrl);
-      return data.publicUrl;
+      console.log('[Storage Success] Product image uploaded to CDN:', data.publicUrl);
+      return { url: data.publicUrl };
     }
-  } catch (err) {
-    console.warn('[Storage] Exception uploading to Supabase storage, using fallback:', err);
-  }
 
-  return null;
+    return { url: null, error: 'Could not obtain public URL from Supabase storage' };
+  } catch (err: any) {
+    console.error('[Storage Error] Exception during upload:', err);
+    return { url: null, error: err.message || 'Unknown upload exception' };
+  }
 }

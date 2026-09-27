@@ -17,12 +17,15 @@ By putting **Cloudflare Free CDN** in front of your Supabase storage, Cloudflare
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    // Replace with your actual Supabase URL
+    // Supabase project URL
     const SUPABASE_ORIGIN = "https://zmbbgfpzgfcsoexybrle.supabase.co";
 
-    // Forward the request to Supabase Storage
-    const targetUrl = `${SUPABASE_ORIGIN}${url.pathname}${url.search}`;
+    // Forward the request to Supabase Storage (using string concatenation to prevent quote issues)
+    const targetUrl = SUPABASE_ORIGIN + url.pathname + url.search;
+
     const response = await fetch(targetUrl, {
+      method: request.method,
+      headers: request.headers,
       cf: {
         // Cache images at Cloudflare Edge for 1 year
         cacheEverything: true,
@@ -30,9 +33,10 @@ export default {
       }
     });
 
-    // Add browser cache headers
+    // Clone headers and add Edge/Browser caching + CORS
     const newHeaders = new Headers(response.headers);
     newHeaders.set("Cache-Control", "public, max-age=31536000, immutable");
+    newHeaders.set("Access-Control-Allow-Origin", "*");
 
     return new Response(response.body, {
       status: response.status,

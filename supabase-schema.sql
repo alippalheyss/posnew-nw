@@ -299,6 +299,32 @@ GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
 
+-- Storage Bucket Setup for CDN-Cached Product Images (Drastically reduces database egress)
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('product-images', 'product-images', true)
+ON CONFLICT (id) DO NOTHING;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'Public Access for Product Images'
+    ) THEN
+        CREATE POLICY "Public Access for Product Images" ON storage.objects FOR SELECT USING (bucket_id = 'product-images');
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'Allow Upload to Product Images'
+    ) THEN
+        CREATE POLICY "Allow Upload to Product Images" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'product-images');
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'Allow Update to Product Images'
+    ) THEN
+        CREATE POLICY "Allow Update to Product Images" ON storage.objects FOR UPDATE USING (bucket_id = 'product-images');
+    END IF;
+END $$;
+
 -- Success message
 DO $$
 BEGIN

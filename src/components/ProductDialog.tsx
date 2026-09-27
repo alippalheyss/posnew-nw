@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { showSuccess, showError } from '@/utils/toast';
 import { generatePlaceholderImage } from '@/utils/imageUtils';
 import { translateEnglishToDhivehi } from '@/utils/dhivehiTranslator';
+import { uploadProductImage, optimizeImage } from '@/utils/storageUtils';
 
 interface ProductDialogProps {
     isOpen: boolean;
@@ -206,39 +207,24 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
         setEditedProduct(prev => prev ? ({ ...prev, [field]: value }) : null);
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let width = img.width;
-                    let height = img.height;
-                    const max_size = 800;
+            try {
+                // 1. Instantly generate optimized compact preview (max 400px, 0.65 quality)
+                const { dataUrl } = await optimizeImage(file, 400, 0.65);
+                setImagePreviewUrl(dataUrl);
 
-                    if (width > height) {
-                        if (width > max_size) {
-                            height *= max_size / width;
-                            width = max_size;
-                        }
-                    } else {
-                        if (height > max_size) {
-                            width *= max_size / height;
-                            height = max_size;
-                        }
+                // 2. Upload to Supabase Storage in the background for permanent CDN caching
+                const targetCode = numericCode || editedProduct?.item_code || 'prod';
+                uploadProductImage(file, targetCode).then((cdnUrl) => {
+                    if (cdnUrl) {
+                        setImagePreviewUrl(cdnUrl);
                     }
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx?.drawImage(img, 0, 0, width, height);
-                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                    setImagePreviewUrl(compressedBase64);
-                };
-                img.src = reader.result as string;
-            };
-            reader.readAsDataURL(file);
+                }).catch(() => {});
+            } catch (err) {
+                console.error('Error handling product image:', err);
+            }
         }
     };
 

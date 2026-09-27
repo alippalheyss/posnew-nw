@@ -282,13 +282,26 @@ export default function StockAudit() {
     }
   }, [refreshProducts, setProducts]);
 
-  // Initial fresh stock sync and continuous background polling from Main App
+  // Initial fresh stock sync + gentle background fallback (Realtime broadcast handles instant updates)
   useEffect(() => {
     syncFreshStockFromDb(true);
     const stockInterval = setInterval(() => {
-      syncFreshStockFromDb(false);
-    }, 3500);
-    return () => clearInterval(stockInterval);
+      if (typeof document !== 'undefined' && !document.hidden) {
+        syncFreshStockFromDb(false);
+      }
+    }, 45000);
+
+    const handleFocus = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        syncFreshStockFromDb(false);
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(stockInterval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [syncFreshStockFromDb]);
 
   // 1. Load active audit session from Supabase cloud with automatic multi-device merge
@@ -320,8 +333,24 @@ export default function StockAudit() {
 
   useEffect(() => {
     fetchCloudSession();
-    const interval = setInterval(fetchCloudSession, 2500);
-    return () => clearInterval(interval);
+    // Gentle safety heartbeat (Realtime broadcast handles instantaneous updates between scanners)
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        fetchCloudSession();
+      }
+    }, 45000);
+
+    const handleFocus = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        fetchCloudSession();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [fetchCloudSession]);
 
   // 2. Realtime broadcast subscription for instant multi-device sync

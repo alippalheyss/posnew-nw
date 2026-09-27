@@ -362,6 +362,7 @@ interface AppContextType {
   confirmTransferSlip: (slipId: string, amountPaid: number) => Promise<boolean>;
   rejectTransferSlip: (slipId: string, reason: string) => Promise<boolean>;
   addTransferSlip: (slip: Partial<TransferSlip>) => Promise<TransferSlip | null>;
+  loadSalesForDateRange: (startDate: string, endDate: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -548,10 +549,14 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   const fetchTransferSlips = useCallback(async () => {
     try {
       if (!supabase) return;
+      // Optimize: Only fetch slips from the last 30 days or pending slips, avoiding full historical table transfer
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from('transfer_slips')
         .select('*')
-        .order('created_at', { ascending: false });
+        .or(`created_at.gte.${thirtyDaysAgo},status.eq.pending,status.eq.system_config`)
+        .order('created_at', { ascending: false })
+        .limit(100);
 
       if (!error && data) {
         // Extract group config if stored in transfer_slips
@@ -583,7 +588,19 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   useEffect(() => {
     fetchTransferSlips();
-    const interval = setInterval(fetchTransferSlips, 15000);
+    // Safety fallback every 5 minutes (Realtime postgres_changes pushes new slips instantly)
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        fetchTransferSlips();
+      }
+    }, 5 * 60 * 1000);
+
+    const handleFocus = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        fetchTransferSlips();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
 
     // Realtime subscription for transfer slips table
     let channel: any = null;
@@ -606,6 +623,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
     return () => {
       clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
       if (channel && supabase) {
         supabase.removeChannel(channel);
       }
@@ -651,8 +669,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       }
 
       if (data) {
-        // Fetch settlements separately
-        const { data: settlementsData } = await supabase.from('settlements').select('*');
+        // Fetch settlements for the last 90 days to avoid downloading years of settlements
+        const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+        const { data: settlementsData } = await supabase
+          .from('settlements')
+          .select('id, customer_id, amount_paid, date, previous_outstanding, new_outstanding, created_at')
+          .gte('date', ninetyDaysAgo);
         
         const formatted = data.map(c => ({
           ...c,
@@ -739,29 +761,140 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     return allRows;
   };
 
-  // Central data fetching from Supabase
+  // Smart Delta Sync helper: queries only modified or new rows based on latest timestamp
+  const fetchTableDelta = async (
+    tableName: string,
+    existingItems: any[],
+    timestampField = 'updated_at',
+    selectFields = '*',
+    orderByField = 'id'
+  ) => {
+    if (!supabase) return existingItems;
+
+    let latestTimestamp: string | null = null;
+    if (existingItems && existingItems.length > 0) {
+      for (const item of existingItems) {
+        const t = item[timestampField] || item.updated_at || item.created_at;
+        if (t && (!latestTimestamp || t > latestTimestamp)) {
+          latestTimestamp = t;
+        }
+      }
+    }
+
+    // Incremental fetch if we already have cached records
+    if (latestTimestamp) {
+      try {
+        const { data, error } = await supabase
+          .from(tableName)
+          .select(selectFields)
+          .gt(timestampField, latestTimestamp)
+          .order(timestampField, { ascending: true })
+          .limit(500);
+
+        if (!error && data) {
+          if (data.length === 0) {
+            // Egress saved: Zero bytes overhead for unchanged data!
+            return existingItems;
+          }
+          console.log(`[Delta Sync] Fetched ${data.length} new/updated rows for ${tableName}`);
+          const map = new Map(existingItems.map((i: any) => [i.id, i]));
+          data.forEach((i: any) => map.set(i.id, i));
+          return Array.from(map.values());
+        }
+      } catch (e) {
+        console.warn(`Delta sync fallback for ${tableName}:`, e);
+      }
+    }
+
+    // Cold start / first launch: load all records once
+    return await fetchAllFromTable(tableName, selectFields, { column: orderByField, ascending: true });
+  };
+
+  // Central data fetching from Supabase with Delta Caching & Egress Protection
   const fetchData = async () => {
     try {
+      // 1. Recover any existing cached items from memory or localStorage
+      const currentProducts = products.length > 0 ? products : (() => {
+        try {
+          const saved = localStorage.getItem('cached_pos_products');
+          return saved ? JSON.parse(saved) : [];
+        } catch { return []; }
+      })();
+
+      const currentCustomers = customers.length > 0 ? customers : (() => {
+        try {
+          const saved = localStorage.getItem('cached_pos_customers');
+          return saved ? JSON.parse(saved) : [];
+        } catch { return []; }
+      })();
+
+      const currentSales = sales.length > 0 ? sales : (() => {
+        try {
+          const saved = localStorage.getItem('cached_pos_sales');
+          return saved ? JSON.parse(saved) : [];
+        } catch { return []; }
+      })();
+
+      const currentVendors = vendors.length > 0 ? vendors : (() => {
+        try {
+          const saved = localStorage.getItem('cached_pos_vendors');
+          return saved ? JSON.parse(saved) : [];
+        } catch { return []; }
+      })();
+
+      const currentPurchases = purchases.length > 0 ? purchases : (() => {
+        try {
+          const saved = localStorage.getItem('cached_pos_purchases');
+          return saved ? JSON.parse(saved) : [];
+        } catch { return []; }
+      })();
+
+      // 2. Compute latest timestamps for sales and settlements
+      let latestSaleTime: string | null = null;
+      for (const s of currentSales) {
+        const t = s.created_at || s.date;
+        if (t && (!latestSaleTime || t > latestSaleTime)) {
+          latestSaleTime = t;
+        }
+      }
+
+      const existingSettlements = currentCustomers.flatMap((c: any) => c.settlement_history || []);
+      let latestSettlementTime: string | null = null;
+      for (const s of existingSettlements) {
+        const t = s.date || (s as any).created_at;
+        if (t && (!latestSettlementTime || t > latestSettlementTime)) {
+          latestSettlementTime = t;
+        }
+      }
+
+      // 3. Perform Delta & Bounded Queries simultaneously
+      const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+      const fortyFiveDaysAgo = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString();
+
       const [
-        productsData,
-        customersData,
-        { data: salesData },
-        vendorsData,
-        purchasesData,
-        settlementsData,
+        updatedProducts,
+        updatedCustomers,
+        { data: freshSalesData },
+        updatedVendors,
+        updatedPurchases,
+        { data: freshSettlementsData },
         { data: settingsData }
       ] = await Promise.all([
-        fetchAllFromTable('products'),
-        fetchAllFromTable('customers', '*', { column: 'name_en', ascending: true }),
-        supabase.from('sales').select('*').order('date', { ascending: false }).limit(2000),
-        fetchAllFromTable('vendors'),
-        fetchAllFromTable('purchases'),
-        fetchAllFromTable('settlements'),
+        fetchTableDelta('products', currentProducts, 'updated_at', '*', 'id'),
+        fetchTableDelta('customers', currentCustomers, 'updated_at', '*', 'name_en'),
+        latestSaleTime
+          ? supabase.from('sales').select('*').gt('created_at', latestSaleTime).order('date', { ascending: false }).limit(200)
+          : supabase.from('sales').select('*').gte('date', fortyFiveDaysAgo).order('date', { ascending: false }).limit(350),
+        fetchTableDelta('vendors', currentVendors, 'updated_at', '*', 'id'),
+        fetchTableDelta('purchases', currentPurchases, 'created_at', '*', 'date'),
+        latestSettlementTime
+          ? supabase.from('settlements').select('id, customer_id, amount_paid, date, previous_outstanding, new_outstanding, created_at').gt('created_at', latestSettlementTime).limit(200)
+          : supabase.from('settlements').select('id, customer_id, amount_paid, date, previous_outstanding, new_outstanding, created_at').gte('date', sixtyDaysAgo).limit(500),
         supabase.from('settings').select('*')
       ]);
 
-      if (productsData && productsData.length > 0) {
-        const sanitizedProducts = productsData.map(p => {
+      if (updatedProducts && updatedProducts.length > 0) {
+        const sanitizedProducts = updatedProducts.map((p: any) => {
           let units = p.units;
           if (typeof units === 'string') {
             try { units = JSON.parse(units); } catch (e) { units = []; }
@@ -774,66 +907,71 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           };
         });
         setProducts(sanitizedProducts);
-        console.log(`Successfully fetched all ${sanitizedProducts.length} products from Supabase!`);
       }
-      if (customersData && customersData.length > 0) {
-        const formattedCustomers = customersData.map(c => ({
+
+      if (updatedCustomers && updatedCustomers.length > 0) {
+        const allSettlements = [...existingSettlements, ...(freshSettlementsData || [])];
+        const settlementsMap = new Map<string, Settlement[]>();
+        allSettlements.forEach((s: any) => {
+          if (!s.customer_id) return;
+          const list = settlementsMap.get(s.customer_id) || [];
+          if (!list.some(existing => existing.id === s.id)) {
+            list.push({
+              id: s.id,
+              amount_paid: Number(s.amount_paid || 0),
+              date: s.date || s.created_at || '',
+              previous_outstanding: Number(s.previous_outstanding || 0),
+              new_outstanding: Number(s.new_outstanding || 0)
+            });
+          }
+          settlementsMap.set(s.customer_id, list);
+        });
+
+        const formattedCustomers = updatedCustomers.map((c: any) => ({
           ...c,
-          settlement_history: (settlementsData?.filter(s => s.customer_id === c.id) || []).map(s => {
-            const isMidnight = !s.date || !s.date.includes('T') || s.date.endsWith('T00:00:00.000Z') || s.date.endsWith('T00:00:00+00:00') || s.date.endsWith(' 00:00:00');
-            return {
-              ...s,
-              date: (isMidnight && s.created_at) ? s.created_at : (s.date || s.created_at || ''),
-            };
-          })
+          settlement_history: settlementsMap.get(c.id) || c.settlement_history || []
         }));
         setCustomers(formattedCustomers);
       }
-      if (salesData) {
-        console.log(`Successfully fetched ${salesData.length} sales from Supabase`);
-        const linkedSales = salesData.map(s => {
-          const saleDate = extractDateOnly(s.date);
-          
-          // Handle potentially stringified JSON fields
+
+      if (freshSalesData && freshSalesData.length > 0) {
+        const salesMap = new Map<string, Sale>(currentSales.map(s => [s.id, s]));
+
+        freshSalesData.forEach((s: any) => {
           let items = s.items;
           if (typeof items === 'string') {
             try { items = JSON.parse(items); } catch (e) { items = []; }
           }
-          
           let splitDetails = s.split_details;
           if (typeof splitDetails === 'string') {
             try { splitDetails = JSON.parse(splitDetails); } catch (e) { splitDetails = null; }
           }
+          const customer = updatedCustomers?.find((c: any) => c.id.toLowerCase() === s.customer_id?.toLowerCase()) || null;
 
-          const customer = customersData?.find(c => c.id.toLowerCase() === s.customer_id?.toLowerCase()) || null;
-          
-          return {
+          salesMap.set(s.id, {
             ...s,
             date: s.date,
             items: Array.isArray(items) ? items : [],
             customer: customer,
             grandTotal: Number(s.grand_total || 0),
-            paymentMethod: String(s.payment_method || 'cash').toLowerCase(),
+            paymentMethod: String(s.payment_method || 'cash').toLowerCase() as any,
             paidAmount: Number(s.paid_amount || 0),
             balance: Number(s.balance || 0),
-            invoiceNumber: s.invoice_number || `${String(s.payment_method || '').toLowerCase() === 'credit' ? 'CRINV' : 'INV'}/${new Date(s.date).getFullYear().toString().slice(-2)}/${(new Date(s.date).getMonth() + 1).toString().padStart(2, '0')}/${String(s.id).replace(/\D/g, '').slice(-3).padStart(3, '0') || '001'}`,
+            invoiceNumber: s.invoice_number || `INV-${String(s.id).slice(-6)}`,
             splitDetails: splitDetails
-          };
-        });
-        
-        if (linkedSales.length > 0) {
-          console.log('First linked sale sample:', {
-            id: linkedSales[0].id,
-            itemCount: linkedSales[0].items.length,
-            customerName: linkedSales[0].customer?.name_en
           });
-        }
-        
-        setSales(linkedSales);
+        });
+
+        const mergedSales = Array.from(salesMap.values()).sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+        setSales(mergedSales);
       }
-      if (vendorsData) setVendors(vendorsData);
-      if (purchasesData) {
-        const mappedPurchases: Purchase[] = purchasesData.map(p => ({
+
+      if (updatedVendors) setVendors(updatedVendors);
+
+      if (updatedPurchases) {
+        const mappedPurchases: Purchase[] = updatedPurchases.map((p: any) => ({
           id: p.id,
           date: p.date,
           vendor: p.vendor || p.vendor_name || '',
@@ -846,6 +984,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         }));
         setPurchases(mappedPurchases);
       }
+
       if (settingsData && settingsData.length > 0) {
         setSettings(prev => {
           const newSettings = { ...prev } as any;
@@ -1510,6 +1649,51 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     showSuccess(`Return processed: ${settings.shop?.currency || 'MVR'} ${returnTotal.toFixed(2)} refunded. Stock restored.`);
   };
 
+  const loadSalesForDateRange = async (startDate: string, endDate: string) => {
+    if (!supabase) return;
+    try {
+      const { data, error } = await supabase
+        .from('sales')
+        .select('*')
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('date', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        setSales(prev => {
+          const map = new Map(prev.map(s => [s.id, s]));
+          data.forEach((s: any) => {
+            let items = s.items;
+            if (typeof items === 'string') {
+              try { items = JSON.parse(items); } catch (e) { items = []; }
+            }
+            let splitDetails = s.split_details;
+            if (typeof splitDetails === 'string') {
+              try { splitDetails = JSON.parse(splitDetails); } catch (e) { splitDetails = null; }
+            }
+            map.set(s.id, {
+              ...s,
+              date: s.date,
+              items: Array.isArray(items) ? items : [],
+              customer: customers.find(c => c.id.toLowerCase() === s.customer_id?.toLowerCase()) || null,
+              grandTotal: Number(s.grand_total || 0),
+              paymentMethod: String(s.payment_method || 'cash').toLowerCase() as any,
+              paidAmount: Number(s.paid_amount || 0),
+              balance: Number(s.balance || 0),
+              invoiceNumber: s.invoice_number || `INV-${String(s.id).slice(-6)}`,
+              splitDetails: splitDetails
+            });
+          });
+          return Array.from(map.values()).sort(
+            (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+          );
+        });
+      }
+    } catch (e) {
+      console.warn('Error loading sales for range:', e);
+    }
+  };
+
   const addCustomer = async (customer: Customer) => {
     try {
       // Strip settlement_history as it's a relation, not a column
@@ -1631,6 +1815,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     let isChecking = false;
 
     const checkUpdates = async () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       if (!isMounted || isChecking) return;
       const currentSettings = settingsRef.current;
       if (currentSettings.telegram?.enabled === false) return;
@@ -1699,9 +1884,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       }
     };
 
-    // Initial check after 2 seconds, then poll steadily every 8 seconds
+    // Initial check after 2 seconds, then poll gently every 15 seconds when tab is active
     const initialTimer = setTimeout(checkUpdates, 2000);
-    const interval = setInterval(checkUpdates, 8000);
+    const interval = setInterval(checkUpdates, 15000);
 
     return () => {
       isMounted = false;
@@ -2499,7 +2684,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         image: updatedProduct.image || '',
         cost_price: updatedProduct.cost_price ? Number(updatedProduct.cost_price) : null,
         last_purchase_date: updatedProduct.last_purchase_date || null,
-        units: updatedProduct.units || null
+        units: updatedProduct.units || null,
+        updated_at: new Date().toISOString()
       };
 
       if (!supabase) {
@@ -2511,7 +2697,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         .from('products')
         .update(cleanData)
         .eq('id', updatedProduct.id)
-        .select();
+        .select('id');
 
       // Gracefully handle if units column does not exist in Supabase schema
       if (error && (error.message?.includes('units') || error.message?.includes('column "units" does not exist'))) {
@@ -2521,7 +2707,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           .from('products')
           .update(dataWithoutUnits)
           .eq('id', updatedProduct.id)
-          .select();
+          .select('id');
         data = retryResult.data;
         error = retryResult.error;
       }
@@ -3147,7 +3333,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       fetchTransferSlips,
       confirmTransferSlip,
       rejectTransferSlip,
-      addTransferSlip
+      addTransferSlip,
+      loadSalesForDateRange
     }}>
       {children}
     </AppContext.Provider>

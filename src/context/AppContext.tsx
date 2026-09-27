@@ -14,6 +14,7 @@ import {
   sendAutomatedCreditReminder,
   sendAutoTransferToCreditNotification,
 } from '@/services/telegramService';
+import { putStoreBatch, getStoreAll, STORES } from '@/lib/indexedDb';
 
 export interface Product {
   id: string;
@@ -455,35 +456,64 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   }, [expenses]);
 
+  // Dual-layer caching: fast localStorage sync + quota-free IndexedDB local-first persistence
   useEffect(() => {
     if (typeof window !== 'undefined' && products.length > 0) {
       try { localStorage.setItem('cached_pos_products', JSON.stringify(products)); } catch (e) {}
+      putStoreBatch(STORES.PRODUCTS, products).catch(() => {});
     }
   }, [products]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && customers.length > 0) {
       try { localStorage.setItem('cached_pos_customers', JSON.stringify(customers)); } catch (e) {}
+      putStoreBatch(STORES.CUSTOMERS, customers).catch(() => {});
     }
   }, [customers]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && sales.length > 0) {
       try { localStorage.setItem('cached_pos_sales', JSON.stringify(sales)); } catch (e) {}
+      putStoreBatch(STORES.SALES, sales).catch(() => {});
     }
   }, [sales]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && purchases.length > 0) {
       try { localStorage.setItem('cached_pos_purchases', JSON.stringify(purchases)); } catch (e) {}
+      putStoreBatch(STORES.PURCHASES, purchases).catch(() => {});
     }
   }, [purchases]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && vendors.length > 0) {
       try { localStorage.setItem('cached_pos_vendors', JSON.stringify(vendors)); } catch (e) {}
+      putStoreBatch(STORES.VENDORS, vendors).catch(() => {});
     }
   }, [vendors]);
+
+  // IndexedDB Initial Fallback Hydration (rescues cold boots if localStorage quota was reached)
+  useEffect(() => {
+    const hydrateFromIndexedDb = async () => {
+      try {
+        if (products.length === 0) {
+          const dbProds = await getStoreAll<Product>(STORES.PRODUCTS);
+          if (dbProds && dbProds.length > 0) setProducts(dbProds);
+        }
+        if (customers.length === 0) {
+          const dbCusts = await getStoreAll<Customer>(STORES.CUSTOMERS);
+          if (dbCusts && dbCusts.length > 0) setCustomers(dbCusts);
+        }
+        if (sales.length === 0) {
+          const dbSales = await getStoreAll<Sale>(STORES.SALES);
+          if (dbSales && dbSales.length > 0) setSales(dbSales);
+        }
+      } catch (e) {
+        console.warn('IndexedDB initial hydration note:', e);
+      }
+    };
+    hydrateFromIndexedDb();
+  }, []);
 
   // Offline Sync Queue Helper
   const queueOfflineAction = (type: string, payload: any) => {

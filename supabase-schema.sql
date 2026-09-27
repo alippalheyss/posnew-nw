@@ -325,6 +325,45 @@ BEGIN
     END IF;
 END $$;
 
+-- ==============================================================================
+-- Analytics & Reporting RPC Functions (Server-Side Aggregations)
+-- ==============================================================================
+
+CREATE OR REPLACE FUNCTION public.get_sales_summary(
+    p_start_date TIMESTAMP WITH TIME ZONE,
+    p_end_date TIMESTAMP WITH TIME ZONE
+)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    result JSON;
+BEGIN
+    SELECT json_build_object(
+        'total_gross_sales', COALESCE(ROUND(SUM(grand_total)::numeric, 2), 0),
+        'taxable_amount', COALESCE(ROUND(SUM(grand_total / 1.08)::numeric, 2), 0),
+        'gst_amount', COALESCE(ROUND(SUM(grand_total - (grand_total / 1.08))::numeric, 2), 0),
+        'transaction_count', COUNT(*),
+        'cash_total', COALESCE(ROUND(SUM(grand_total) FILTER (WHERE LOWER(payment_method) = 'cash')::numeric, 2), 0),
+        'card_total', COALESCE(ROUND(SUM(grand_total) FILTER (WHERE LOWER(payment_method) = 'card')::numeric, 2), 0),
+        'transfer_total', COALESCE(ROUND(SUM(grand_total) FILTER (WHERE LOWER(payment_method) = 'mobile' OR LOWER(payment_method) = 'transfer')::numeric, 2), 0),
+        'credit_total', COALESCE(ROUND(SUM(grand_total) FILTER (WHERE LOWER(payment_method) = 'credit')::numeric, 2), 0),
+        'average_transaction_value', CASE 
+            WHEN COUNT(*) > 0 THEN ROUND((SUM(grand_total) / COUNT(*))::numeric, 2) 
+            ELSE 0 
+        END
+    )
+    INTO result
+    FROM public.sales
+    WHERE date >= p_start_date AND date <= p_end_date;
+
+    RETURN result;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_sales_summary(TIMESTAMP WITH TIME ZONE, TIMESTAMP WITH TIME ZONE) TO anon, authenticated;
+
 -- Success message
 DO $$
 BEGIN

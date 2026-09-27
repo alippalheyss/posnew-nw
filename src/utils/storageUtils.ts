@@ -117,8 +117,13 @@ export async function uploadProductImage(
 
     const { data } = supabase.storage.from(bucket).getPublicUrl(path);
     if (data?.publicUrl) {
-      console.log('[Storage Success] Product image uploaded to CDN:', data.publicUrl);
-      return { url: data.publicUrl };
+      let publicUrl = data.publicUrl;
+      const cdnBase = import.meta.env.VITE_STORAGE_CDN_URL;
+      if (cdnBase && supabaseUrl) {
+        publicUrl = publicUrl.replace(supabaseUrl, cdnBase.replace(/\/$/, ''));
+      }
+      console.log('[Storage Success] Product image public URL:', publicUrl);
+      return { url: publicUrl };
     }
 
     return { url: null, error: 'Could not obtain public URL from Supabase storage' };
@@ -126,4 +131,16 @@ export async function uploadProductImage(
     console.error('[Storage Error] Exception during upload:', err);
     return { url: null, error: err.message || 'Unknown upload exception' };
   }
+}
+
+/**
+ * Transforms a Supabase Storage URL to use the Cloudflare CDN proxy if VITE_STORAGE_CDN_URL is configured.
+ */
+export function getStorageCdnUrl(url: string | null | undefined): string {
+  if (!url) return '';
+  const cdnBase = import.meta.env.VITE_STORAGE_CDN_URL;
+  if (cdnBase && supabaseUrl && url.startsWith(supabaseUrl)) {
+    return url.replace(supabaseUrl, cdnBase.replace(/\/$/, ''));
+  }
+  return url;
 }

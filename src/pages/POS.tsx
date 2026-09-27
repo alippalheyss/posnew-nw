@@ -185,7 +185,6 @@ const POS = () => {
   const [isConfirmRemoveCartDialogOpen, setIsConfirmRemoveCartDialogOpen] = useState(false);
   const [isConfirmClearCartDialogOpen, setIsConfirmClearCartDialogOpen] = useState(false);
   const [cartToRemoveId, setCartToRemoveId] = useState<string | null>(null);
-  const [isPrintConfirmDialogOpen, setIsPrintConfirmDialogOpen] = useState(false);
   const [lastSaleForPrint, setLastSaleForPrint] = useState<Sale | null>(null);
   const [customerSearchTerm, setCustomerSearchTerm] = useState('');
   const [isAddCustomerDialogOpen, setIsAddCustomerDialogOpen] = useState(false);
@@ -335,11 +334,28 @@ const POS = () => {
     };
   }, []);
 
+  // Listen for afterprint and custom pos-print-finished events to ensure app never hangs after cancel/confirm
+  useEffect(() => {
+    const handlePrintDone = () => {
+      setIsProcessing(false);
+      setTimeout(() => {
+        focusSearchBar();
+      }, 60);
+    };
+
+    window.addEventListener('afterprint', handlePrintDone);
+    window.addEventListener('pos-print-finished', handlePrintDone);
+    return () => {
+      window.removeEventListener('afterprint', handlePrintDone);
+      window.removeEventListener('pos-print-finished', handlePrintDone);
+    };
+  }, []);
+
   const isAnyModalOpen = isCashDialogOpen || isCreditDialogOpen || isSplitDialogOpen || 
                          isAwaitingTransferDialogOpen || isPendingTransfersDialogOpen || 
                          isExpiryDialogOpen || isConfirmRemoveCartDialogOpen || isConfirmClearCartDialogOpen ||
                          isLoyaltyRedemptionDialogOpen || isUnitSelectionDialogOpen || 
-                         isAddCustomerDialogOpen || isPrintConfirmDialogOpen;
+                         isAddCustomerDialogOpen;
   const isAnyModalOpenRef = useRef(isAnyModalOpen);
   useEffect(() => {
     isAnyModalOpenRef.current = isAnyModalOpen;
@@ -387,7 +403,6 @@ const POS = () => {
           setIsExpiryDialogOpen(false);
           setIsConfirmRemoveCartDialogOpen(false);
           setIsConfirmClearCartDialogOpen(false);
-          setIsPrintConfirmDialogOpen(false);
         }
         return;
       }
@@ -2627,7 +2642,7 @@ const POS = () => {
           setSplitSearchTerm('');
         }
       }}>
-        <DialogContent className="sm:max-w-[700px] w-[calc(100vw-2rem)] max-h-[92vh] overflow-y-auto font-faruma apple-glass-dialog text-foreground border-white/20 dark:border-white/10 text-right p-5 sm:p-7 shadow-2xl rounded-3xl box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+        <DialogContent className="sm:max-w-[780px] md:max-w-[860px] w-[calc(100vw-2rem)] max-h-[92vh] overflow-y-auto overflow-x-hidden font-faruma apple-glass-dialog text-foreground border-white/20 dark:border-white/10 text-right p-4 sm:p-7 shadow-2xl rounded-3xl box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
           <DialogHeader className="pb-3.5 text-right space-y-1.5 border-b border-border/60">
             <div className="flex items-center justify-between pl-8">
               <div className="text-right flex-1 min-w-0">
@@ -2784,15 +2799,15 @@ const POS = () => {
                   </Button>
                 </div>
 
-                {/* Customer Allocation List */}
-                <ScrollArea className="h-[290px] px-2 sm:px-3 py-1 custom-scrollbar">
+                {/* Customer Allocation List with Auto-Scaling & Safe Left Margins */}
+                <ScrollArea className="h-[310px] px-1 sm:px-2 py-1 custom-scrollbar">
                   <div className="space-y-3">
                     {splitEntries.map((entry) => {
                       const customer = customers.find(c => c.id === entry.customerId);
                       return (
-                        <div key={entry.id} className="p-3.5 sm:p-4 rounded-2xl bg-card border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-right hover:border-primary/40 transition-all shadow-sm">
+                        <div key={entry.id} className="p-3 sm:p-4 rounded-2xl bg-card border border-border flex flex-col md:flex-row md:items-center justify-between gap-3 text-right hover:border-primary/40 transition-all shadow-sm box-border overflow-hidden">
                           {/* Customer Info (Right side in RTL) */}
-                          <div className="flex-1 text-right min-w-0">
+                          <div className="flex-1 text-right min-w-0 pr-1">
                             <p className="font-black text-foreground text-sm truncate">{customer?.name_dv} {customer?.name_en ? `(${customer?.name_en})` : ''}</p>
                             <div className="flex items-center justify-end gap-2 text-[11px] text-muted-foreground mt-0.5">
                               {customer?.phone && <span dir="ltr">📞 {customer.phone}</span>}
@@ -2800,10 +2815,10 @@ const POS = () => {
                             </div>
                           </div>
 
-                          {/* Payment Controls: Method & Amount (Left side in RTL) */}
-                          <div className="flex items-center gap-2.5 shrink-0 justify-end sm:justify-start">
+                          {/* Payment Controls: Method & Amount (Left side in RTL) with Auto-Scale */}
+                          <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap sm:flex-nowrap shrink-0 justify-end sm:justify-start pl-2 sm:pl-3">
                             <Select value={entry.method} onValueChange={(val: any) => updateSplitMethod(entry.id, val)}>
-                              <SelectTrigger className="h-10 w-28 text-xs font-black rounded-xl bg-muted/80 border-border text-foreground">
+                              <SelectTrigger className="h-10 w-24 sm:w-28 text-xs font-black rounded-xl bg-muted/80 border-border text-foreground shrink-0">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent className="font-faruma bg-card border-border text-foreground" dir="rtl">
@@ -2814,8 +2829,8 @@ const POS = () => {
                               </SelectContent>
                             </Select>
 
-                            <div className="relative w-36 sm:w-40 shrink-0">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground pointer-events-none">
+                            <div className="relative w-32 sm:w-36 md:w-40 shrink-0">
+                              <span className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground pointer-events-none">
                                 {settings.shop.currency}
                               </span>
                               <Input
@@ -2830,7 +2845,7 @@ const POS = () => {
                                     processSplitPayment();
                                   }
                                 }}
-                                className="h-10 bg-muted/60 border-border rounded-xl pl-12 pr-3 text-right text-sm sm:text-base font-black font-mono text-foreground focus:border-primary"
+                                className="h-10 bg-muted/60 border-border rounded-xl pl-11 sm:pl-12 pr-2.5 sm:pr-3 text-right text-sm sm:text-base font-black font-mono text-foreground focus:border-primary"
                               />
                             </div>
                           </div>

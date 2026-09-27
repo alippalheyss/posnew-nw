@@ -283,6 +283,122 @@ const SalesReports = () => {
     showSuccess(`Quarterly/Sales report for ${periodLabel} downloaded!`);
   };
 
+  // --- MIRA GST Output Tax Statement Export ---
+  const handleExportGSTOutputTaxStatement = (salesToExport?: Sale[], customLabel?: string) => {
+    const list = salesToExport || (showCustomPreview ? customSales : sales);
+    const periodLabel = customLabel || (showCustomPreview ? getCustomPeriodLabel() : 'All_Sales');
+    const gstRate = settings.shop.taxRate || 8;
+    const rateDecimal = gstRate / 100;
+
+    const headers = [
+      "#",
+      "Customer TIN",
+      "Customer Name",
+      "Invoice / Receipt Number",
+      "Invoice Date",
+      "Value of Supply (excluding GST)",
+      "GST Charged at 6%",
+      "GST Charged at 8%",
+      "GST Charged at 12%",
+      "GST Charged at 16%",
+      "GST Charged at 17%",
+      "Zero-Rated Supplies",
+      "Your Taxable Activity Number"
+    ];
+
+    let totalTaxable = 0;
+    let totalGst8 = 0;
+    let totalZero = 0;
+
+    const rows = list.map((sale, index) => {
+      const customerTin = (sale.customer as any)?.tin_number || (sale.customer as any)?.tax_number || '';
+      const customerName = sale.customer 
+        ? (sale.customer.name_en || sale.customer.name_dv || '') 
+        : 'General Consumer';
+      const invoiceNumber = sale.invoiceNumber || sale.id;
+      const invoiceDate = extractDateOnly(sale.date) || (sale.date ? sale.date.split('T')[0] : '');
+
+      let taxable = 0;
+      let zeroRated = 0;
+
+      if (Array.isArray(sale.items) && sale.items.length > 0) {
+        sale.items.forEach(item => {
+          const itemTotal = Number(item.price || 0) * Number(item.qty || 0);
+          if (item.is_zero_tax) {
+            zeroRated += itemTotal;
+          } else {
+            taxable += itemTotal / (1 + rateDecimal);
+          }
+        });
+      } else {
+        const grand = num(sale.grandTotal);
+        taxable = grand / (1 + rateDecimal);
+      }
+
+      const gstCharged8 = taxable * rateDecimal;
+
+      totalTaxable += taxable;
+      totalGst8 += gstCharged8;
+      totalZero += zeroRated;
+
+      return [
+        index + 1,
+        customerTin,
+        customerName,
+        invoiceNumber,
+        invoiceDate,
+        Number(taxable.toFixed(2)),
+        0, // 6%
+        Number(gstCharged8.toFixed(2)), // 8%
+        0, // 12%
+        0, // 16%
+        0, // 17%
+        Number(zeroRated.toFixed(2)),
+        1 // Taxable Activity Number
+      ];
+    });
+
+    // Append summary totals row
+    rows.push([
+      "TOTAL",
+      "",
+      "",
+      "",
+      "",
+      Number(totalTaxable.toFixed(2)),
+      0,
+      Number(totalGst8.toFixed(2)),
+      0,
+      0,
+      0,
+      Number(totalZero.toFixed(2)),
+      ""
+    ]);
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws['!cols'] = [
+      { wch: 6 },  // #
+      { wch: 18 }, // Customer TIN
+      { wch: 30 }, // Customer Name
+      { wch: 26 }, // Invoice Number
+      { wch: 14 }, // Invoice Date
+      { wch: 30 }, // Value of Supply (excluding GST)
+      { wch: 18 }, // GST Charged at 6%
+      { wch: 18 }, // GST Charged at 8%
+      { wch: 18 }, // GST Charged at 12%
+      { wch: 18 }, // GST Charged at 16%
+      { wch: 18 }, // GST Charged at 17%
+      { wch: 20 }, // Zero-Rated Supplies
+      { wch: 28 }, // Your Taxable Activity Number
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Output Tax Statement');
+    const safeLabel = periodLabel.replace(/[^a-zA-Z0-9_-]/g, '_');
+    XLSX.writeFile(wb, `GST_Output_Tax_Statement_${safeLabel}.xlsx`);
+    showSuccess(`GST Output Tax Statement for ${periodLabel} downloaded successfully!`);
+  };
+
   // --- Excel Export Handlers ---
 
   // 1. Export Daily Sales
@@ -955,6 +1071,16 @@ const SalesReports = () => {
             <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
             <span>Yearly Sales Excel (މިއަހަރު)</span>
           </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleExportGSTOutputTaxStatement()}
+            className="rounded-xl border-border/80 bg-card hover:bg-blue-600 hover:text-white transition-all text-xs font-black gap-2 shadow-xs h-9 px-3.5"
+          >
+            <Download className="h-4 w-4 text-blue-500" />
+            <span>GST Output Tax Statement (އައުޓްޕުޓް ޓެކްސް ބަޔާން)</span>
+          </Button>
         </div>
       </div>
 
@@ -1078,15 +1204,26 @@ const SalesReports = () => {
                   ))}
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <Button
-                    onClick={handleExportCustomReport}
-                    size="sm"
-                    className="h-9 rounded-xl text-xs font-black gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
-                  >
-                    <FileSpreadsheet className="h-3.5 w-3.5" />
-                    Download Excel Report
-                  </Button>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      onClick={handleExportCustomReport}
+                      size="sm"
+                      className="h-9 rounded-xl text-xs font-black gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                    >
+                      <FileSpreadsheet className="h-3.5 w-3.5" />
+                      Download Excel Report
+                    </Button>
+                    <Button
+                      onClick={() => handleExportGSTOutputTaxStatement(customSales, getCustomPeriodLabel())}
+                      size="sm"
+                      variant="outline"
+                      className="h-9 rounded-xl text-xs font-black gap-1.5 border-blue-500/40 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Download GST Output Tax Statement
+                    </Button>
+                  </div>
                   <p className="text-xs text-muted-foreground font-bold">
                     {customSales.length} transaction{customSales.length !== 1 ? 's' : ''} for <span className="text-foreground">{getCustomPeriodLabel()}</span>
                   </p>

@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Product, useAppContext } from '@/context/AppContext';
-import { Plus, Trash2, Save, Upload, CalendarIcon, Package, DollarSign, Barcode, Hash, ListTree, Image as ImageIcon, Boxes, Layers, Pencil, X, Sparkles, Check, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Save, Upload, CalendarIcon, Package, DollarSign, Barcode, Hash, ListTree, Image as ImageIcon, Boxes, Layers, Pencil, X, Sparkles, Check, Loader2, Printer } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -20,6 +20,8 @@ import { showSuccess, showError } from '@/utils/toast';
 import { generatePlaceholderImage } from '@/utils/imageUtils';
 import { translateEnglishToDhivehi } from '@/utils/dhivehiTranslator';
 import { uploadProductImage, optimizeImage } from '@/utils/storageUtils';
+import JsBarcode from 'jsbarcode';
+import { printContent } from '@/utils/printHelper';
 
 interface ProductDialogProps {
     isOpen: boolean;
@@ -30,7 +32,7 @@ interface ProductDialogProps {
 
 const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product, onSave }) => {
     const { t } = useTranslation();
-    const { getNextProductCode, settings } = useAppContext();
+    const { getNextProductCode, settings, products } = useAppContext();
     const [editedProduct, setEditedProduct] = useState<Product | null>(null);
     const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
     const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -159,6 +161,147 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
         setIsUnitFormOpen(false);
         setEditingUnitIndex(null);
         setUnitForm({ name: 'Box', price: '', conversion_factor: '', barcode: '' });
+    };
+
+    const generateBarcodeSvgString = (barcodeValue: string) => {
+        try {
+            const svgNode = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            JsBarcode(svgNode, barcodeValue, {
+                format: "CODE128",
+                width: 2,
+                height: 44,
+                displayValue: true,
+                font: "monospace",
+                fontSize: 13,
+                textMargin: 3,
+                margin: 4
+            });
+            const serializer = new XMLSerializer();
+            return serializer.serializeToString(svgNode);
+        } catch (e) {
+            console.error('Failed to generate barcode SVG:', e);
+            return '';
+        }
+    };
+
+    const generateUniqueBarcode = () => {
+        // Generate an in-store 12-digit barcode starting with 200 (standard in-store prefix)
+        let code = '';
+        let attempts = 0;
+        do {
+            const randomPart = Math.floor(100000000 + Math.random() * 900000000).toString();
+            code = `200${randomPart}`;
+            attempts++;
+        } while (products.some(p => p.barcode === code) && attempts < 100);
+
+        updateField('barcode', code);
+        showSuccess(`Generated unique barcode: ${code}`);
+    };
+
+    const handlePrintBarcodeLabel = () => {
+        if (!editedProduct?.barcode) {
+            showError('Please enter or generate a barcode first');
+            return;
+        }
+
+        const barcodeSvg = generateBarcodeSvgString(editedProduct.barcode);
+        if (!barcodeSvg) {
+            showError('Could not generate barcode image. Please check the barcode format.');
+            return;
+        }
+
+        const currency = settings.shop.currency || 'MVR';
+        const priceFormatted = Number(editedProduct.price || 0).toFixed(2);
+        const shopName = settings.shop.shopName || '';
+        const nameDv = editedProduct.name_dv || '';
+        const nameEn = editedProduct.name_en || '';
+
+        const labelHtml = `
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="utf-8" />
+              <title>Barcode Label - ${editedProduct.barcode}</title>
+              <style>
+                @media print {
+                  @page {
+                    size: 50mm 30mm auto;
+                    margin: 0;
+                  }
+                  body {
+                    margin: 0;
+                    padding: 2mm;
+                  }
+                }
+                body {
+                  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                  text-align: center;
+                  padding: 4px;
+                  margin: 0 auto;
+                  width: 50mm;
+                  box-sizing: border-box;
+                  background: #fff;
+                  color: #000;
+                }
+                .shop {
+                  font-size: 8px;
+                  font-weight: 800;
+                  text-transform: uppercase;
+                  letter-spacing: 0.5px;
+                  color: #444;
+                  margin-bottom: 2px;
+                }
+                .name-dv {
+                  font-size: 11px;
+                  font-weight: bold;
+                  direction: rtl;
+                  line-height: 1.2;
+                  white-space: nowrap;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                }
+                .name-en {
+                  font-size: 10px;
+                  font-weight: 600;
+                  color: #111;
+                  line-height: 1.2;
+                  white-space: nowrap;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  margin-bottom: 2px;
+                }
+                .price {
+                  font-size: 15px;
+                  font-weight: 900;
+                  color: #000;
+                  margin: 2px 0;
+                }
+                .barcode-wrap {
+                  width: 100%;
+                  display: flex;
+                  justify-content: center;
+                  align-items: center;
+                }
+                .barcode-wrap svg {
+                  max-width: 100%;
+                  height: auto;
+                  max-height: 48px;
+                }
+              </style>
+            </head>
+            <body>
+              ${shopName ? '<div class="shop">' + shopName + '</div>' : ''}
+              ${nameDv ? '<div class="name-dv">' + nameDv + '</div>' : ''}
+              ${nameEn ? '<div class="name-en">' + nameEn + '</div>' : ''}
+              <div class="price">' + currency + ' ' + priceFormatted + '</div>
+              <div class="barcode-wrap">
+                ' + barcodeSvg + '
+              </div>
+            </body>
+          </html>
+        `;
+
+        printContent(labelHtml, settings);
     };
 
     const handleSave = () => {
@@ -419,19 +562,72 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                 </div>
 
                                 <div className="space-y-1">
-                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                                        {renderBoth('barcode')}*
-                                    </Label>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1.5">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={generateUniqueBarcode}
+                                                className="h-6 px-2 text-[10px] font-black text-primary border-primary/30 hover:bg-primary/10 rounded-lg gap-1 shadow-xs"
+                                                title="Generate in-store barcode for non-barcode item"
+                                            >
+                                                <Sparkles className="h-3 w-3" />
+                                                <span>Generate</span>
+                                            </Button>
+                                            {editedProduct.barcode && (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={handlePrintBarcodeLabel}
+                                                    className="h-6 px-2 text-[10px] font-black text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 rounded-lg gap-1 shadow-xs"
+                                                    title="Print Barcode Label with Name & Price"
+                                                >
+                                                    <Printer className="h-3 w-3" />
+                                                    <span>Print Label</span>
+                                                </Button>
+                                            )}
+                                        </div>
+                                        <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                                            {renderBoth('barcode')}*
+                                        </Label>
+                                    </div>
                                     <div className="relative">
                                         <Barcode className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
                                         <Input 
                                             value={editedProduct.barcode} 
                                             onChange={(e) => updateField('barcode', e.target.value)} 
+                                            placeholder="Scan barcode or click Generate"
                                             className="apple-glass-input h-11 rounded-xl text-right pr-8 font-mono text-xs" 
                                         />
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Barcode Label Live Preview Badge */}
+                            {editedProduct.barcode && (
+                                <div className="p-3 bg-muted/40 rounded-2xl border border-border/80 flex items-center justify-between gap-3 text-right">
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        onClick={handlePrintBarcodeLabel}
+                                        className="h-8 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs gap-1.5 shadow-sm"
+                                    >
+                                        <Printer className="h-3.5 w-3.5" />
+                                        <span>Print Sticker (50x30mm)</span>
+                                    </Button>
+                                    <div className="flex-1 text-right min-w-0">
+                                        <div className="flex items-center justify-end gap-2 text-xs font-black">
+                                            <span className="font-mono text-primary font-bold">{settings.shop.currency} {Number(editedProduct.price || 0).toFixed(2)}</span>
+                                            <span className="truncate">{editedProduct.name_dv || editedProduct.name_en || 'Product'}</span>
+                                        </div>
+                                        <p className="text-[10px] font-mono text-muted-foreground mt-0.5">
+                                            Scannable Barcode: {editedProduct.barcode}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Row 3: Category, Expiry Date, Zero Tax */}
                             <div className="grid grid-cols-3 gap-3 items-end">

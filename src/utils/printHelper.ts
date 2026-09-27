@@ -8,14 +8,25 @@
  * if the browser is launched in Kiosk Mode (--kiosk-printing).
  */
 export const printViaIframe = (htmlContent: string) => {
+  // Remove any stale print iframes
+  const existingIframe = document.getElementById('print-iframe');
+  if (existingIframe && document.body.contains(existingIframe)) {
+    try {
+      document.body.removeChild(existingIframe);
+    } catch (e) {
+      // ignore
+    }
+  }
+
   const iframe = document.createElement('iframe');
   
-  // Hide the iframe
+  // Hide the iframe securely without breaking rendering
   iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
+  iframe.style.top = '-9999px';
+  iframe.style.left = '-9999px';
+  iframe.style.width = '1px';
+  iframe.style.height = '1px';
+  iframe.style.opacity = '0';
   iframe.style.border = '0';
   iframe.setAttribute('id', 'print-iframe');
   
@@ -24,32 +35,62 @@ export const printViaIframe = (htmlContent: string) => {
   const doc = iframe.contentWindow?.document || iframe.contentDocument;
   if (!doc) {
     console.error('Could not access iframe document');
+    window.focus();
+    window.dispatchEvent(new CustomEvent('pos-print-finished'));
     return;
   }
 
+  doc.open();
   doc.write(htmlContent);
   doc.close();
 
-  // Wait for resources to load if any
   let printed = false;
-  const print = () => {
-    if (printed) return;
-    printed = true;
-    iframe.contentWindow?.focus();
-    iframe.contentWindow?.print();
-    
-    // Remove the iframe after some time to allow printing to start
-    setTimeout(() => {
+  let cleanedUp = false;
+
+  const cleanupAndRestoreFocus = () => {
+    if (cleanedUp) return;
+    cleanedUp = true;
+
+    try {
       if (document.body.contains(iframe)) {
         document.body.removeChild(iframe);
       }
-    }, 1000);
+    } catch (e) {
+      // ignore
+    }
+
+    // Force focus back to main window so keyboard and inputs stay responsive
+    window.focus();
+    window.dispatchEvent(new CustomEvent('pos-print-finished'));
+  };
+
+  const print = () => {
+    if (printed) return;
+    printed = true;
+
+    try {
+      if (iframe.contentWindow) {
+        // Listen to afterprint on iframe content window
+        iframe.contentWindow.addEventListener('afterprint', cleanupAndRestoreFocus, { once: true });
+      }
+      // Also listen on main window as standard fallback
+      window.addEventListener('afterprint', cleanupAndRestoreFocus, { once: true });
+
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    } catch (error) {
+      console.error('Print trigger error:', error);
+      cleanupAndRestoreFocus();
+    }
+
+    // Safety fallback: if afterprint doesn't fire in the environment, clean up after timeout
+    setTimeout(cleanupAndRestoreFocus, 10000);
   };
 
   if (iframe.contentWindow) {
-    iframe.contentWindow.onload = print;
+    iframe.contentWindow.onload = () => setTimeout(print, 100);
     // Fallback if onload doesn't fire
-    setTimeout(print, 500);
+    setTimeout(print, 350);
   } else {
     print();
   }

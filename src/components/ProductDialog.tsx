@@ -290,12 +290,12 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
               </style>
             </head>
             <body>
-              ${shopName ? '<div class="shop">' + shopName + '</div>' : ''}
-              ${nameDv ? '<div class="name-dv">' + nameDv + '</div>' : ''}
-              ${nameEn ? '<div class="name-en">' + nameEn + '</div>' : ''}
-              <div class="price">' + currency + ' ' + priceFormatted + '</div>
+              ${shopName ? `<div class="shop">${shopName}</div>` : ''}
+              ${nameDv ? `<div class="name-dv">${nameDv}</div>` : ''}
+              ${nameEn ? `<div class="name-en">${nameEn}</div>` : ''}
+              <div class="price">${currency} ${priceFormatted}</div>
               <div class="barcode-wrap">
-                ' + barcodeSvg + '
+                ${barcodeSvg}
               </div>
             </body>
           </html>

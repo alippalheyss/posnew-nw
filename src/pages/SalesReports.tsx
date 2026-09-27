@@ -283,40 +283,86 @@ const SalesReports = () => {
     showSuccess(`Quarterly/Sales report for ${periodLabel} downloaded!`);
   };
 
-  // --- MIRA GST Output Tax Statement Export ---
+  // --- MIRA GST Output Tax Statement Export (Version 23.1) ---
   const handleExportGSTOutputTaxStatement = (salesToExport?: Sale[], customLabel?: string) => {
     const list = salesToExport || (showCustomPreview ? customSales : sales);
     const periodLabel = customLabel || (showCustomPreview ? getCustomPeriodLabel() : 'All_Sales');
     const gstRate = settings.shop.taxRate || 8;
     const rateDecimal = gstRate / 100;
 
-    const headers = [
-      "#",
-      "Customer TIN",
-      "Customer Name",
-      "Invoice / Receipt Number",
-      "Invoice Date",
-      "Value of Supply (excluding GST)",
-      "GST Charged at 6%",
-      "GST Charged at 8%",
-      "GST Charged at 12%",
-      "GST Charged at 16%",
-      "GST Charged at 17%",
-      "Zero-Rated Supplies",
-      "Your Taxable Activity Number"
-    ];
+    const formatDDMMYYYY = (d: Date | string | undefined): string => {
+      if (!d) return '';
+      const dateObj = typeof d === 'string' ? new Date(d) : d;
+      if (isNaN(dateObj.getTime())) {
+        if (typeof d === 'string') {
+          const match = d.match(/^(\d{4})-(\d{2})-(\d{2})/);
+          if (match) return `${match[3]}/${match[2]}/${match[1]}`;
+        }
+        return '';
+      }
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const year = dateObj.getFullYear();
+      return `${day}/${month}/${year}`;
+    };
+
+    let startDateStr = '';
+    let endDateStr = '';
+
+    if (showCustomPreview) {
+      if (customPeriodType === 'date') {
+        startDateStr = formatDDMMYYYY(customDate);
+        endDateStr = formatDDMMYYYY(customDate);
+      } else if (customPeriodType === 'month') {
+        const [yr, mo] = customMonth.split('-').map(Number);
+        const start = new Date(yr, mo - 1, 1);
+        const lastDay = new Date(yr, mo, 0).getDate();
+        const end = new Date(yr, mo - 1, lastDay);
+        startDateStr = formatDDMMYYYY(start);
+        endDateStr = formatDDMMYYYY(end);
+      } else if (customPeriodType === 'quarter') {
+        const qNum = Number(customQuarter);
+        const startMonth = (qNum - 1) * 3;
+        const start = new Date(Number(customYear), startMonth, 1);
+        const endMonth = startMonth + 2;
+        const lastDay = new Date(Number(customYear), endMonth + 1, 0).getDate();
+        const end = new Date(Number(customYear), endMonth, lastDay);
+        startDateStr = formatDDMMYYYY(start);
+        const now = new Date();
+        if (now >= start && now <= end) {
+          endDateStr = formatDDMMYYYY(now);
+        } else {
+          endDateStr = formatDDMMYYYY(end);
+        }
+      } else {
+        startDateStr = `01/01/${customYear}`;
+        endDateStr = `31/12/${customYear}`;
+      }
+    } else if (list.length > 0) {
+      const timestamps = list.map(s => new Date(s.date).getTime()).filter(t => !isNaN(t));
+      if (timestamps.length > 0) {
+        const minD = new Date(Math.min(...timestamps));
+        const maxD = new Date(Math.max(...timestamps));
+        startDateStr = formatDDMMYYYY(minD);
+        endDateStr = formatDDMMYYYY(maxD);
+      }
+    }
+    if (!startDateStr) startDateStr = formatDDMMYYYY(new Date());
+    if (!endDateStr) endDateStr = formatDDMMYYYY(new Date());
+
+    const tinNumber = (settings.shop as any)?.tin || (settings.shop as any)?.tin_number || (settings.shop as any)?.tinNumber || (settings.shop as any)?.taxNumber || '1021550GST501';
+    const taxpayerName = (settings.shop as any)?.taxpayerName || settings.shop.shopName || 'BBACK';
 
     let totalTaxable = 0;
-    let totalGst8 = 0;
     let totalZero = 0;
 
-    const rows = list.map((sale, index) => {
-      const customerTin = (sale.customer as any)?.tin_number || (sale.customer as any)?.tax_number || '';
+    const rows = list.map((sale) => {
+      const customerTin = (sale.customer as any)?.tin_number || (sale.customer as any)?.tax_number || (sale.customer as any)?.tin || '';
       const customerName = sale.customer 
         ? (sale.customer.name_en || sale.customer.name_dv || '') 
         : 'General Consumer';
       const invoiceNumber = sale.invoiceNumber || sale.id;
-      const invoiceDate = extractDateOnly(sale.date) || (sale.date ? sale.date.split('T')[0] : '');
+      const invoiceDate = formatDDMMYYYY(sale.date);
 
       let taxable = 0;
       let zeroRated = 0;
@@ -335,61 +381,70 @@ const SalesReports = () => {
         taxable = grand / (1 + rateDecimal);
       }
 
-      const gstCharged8 = taxable * rateDecimal;
-
       totalTaxable += taxable;
-      totalGst8 += gstCharged8;
       totalZero += zeroRated;
 
       return [
-        index + 1,
         customerTin,
         customerName,
         invoiceNumber,
         invoiceDate,
-        Number(taxable.toFixed(2)),
-        0, // 6%
-        Number(gstCharged8.toFixed(2)), // 8%
-        0, // 12%
-        0, // 16%
-        0, // 17%
-        Number(zeroRated.toFixed(2)),
-        1 // Taxable Activity Number
+        taxable > 0 ? Number(taxable.toFixed(2)) : '',
+        zeroRated > 0 ? Number(zeroRated.toFixed(2)) : '',
+        '', // Value of Exempt
+        '', // Value of Out-of-Scope
+        1   // Your Taxable Activity No.
       ];
     });
 
-    // Append summary totals row
-    rows.push([
-      "TOTAL",
-      "",
-      "",
-      "",
-      "",
-      Number(totalTaxable.toFixed(2)),
-      0,
-      Number(totalGst8.toFixed(2)),
-      0,
-      0,
-      0,
-      Number(totalZero.toFixed(2)),
-      ""
-    ]);
+    // MIRA Output Tax Statement Version 23.1 Template Construction
+    const sheetData: any[][] = [
+      ['', '', '', 'Output Tax Statement', '', '', '', '', 'Version 23.1'],
+      ['TIN:', tinNumber],
+      ['Taxpayer Name:', taxpayerName],
+      ['Taxable Period', startDateStr, '', 'Taxable Period', endDateStr],
+      [],
+      [
+        'Customer TIN',
+        'Customer Name',
+        'Invoice No.',
+        'Invoice Date',
+        'Value of Supplies Subject to GST at 8% or 16% (excluding GST)',
+        'Value of Zero-Rated Supplies',
+        'Value of Exempt',
+        'Value of Out-of-Scope',
+        'Your Taxable Activity No.'
+      ],
+      ...rows,
+      [],
+      [],
+      [
+        'Your Taxable Activity No.',
+        'Value of Supplies Subject to GST at 8% or 16% (excluding GST)',
+        'Value of Zero-Rated Supplies',
+        'Value of Exempt Supplies',
+        'Value of Out-of-Scope'
+      ],
+      [
+        1,
+        Number(totalTaxable.toFixed(2)),
+        totalZero > 0 ? Number(totalZero.toFixed(2)) : '',
+        '',
+        ''
+      ]
+    ];
 
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
     ws['!cols'] = [
-      { wch: 6 },  // #
-      { wch: 18 }, // Customer TIN
-      { wch: 30 }, // Customer Name
-      { wch: 26 }, // Invoice Number
-      { wch: 14 }, // Invoice Date
-      { wch: 30 }, // Value of Supply (excluding GST)
-      { wch: 18 }, // GST Charged at 6%
-      { wch: 18 }, // GST Charged at 8%
-      { wch: 18 }, // GST Charged at 12%
-      { wch: 18 }, // GST Charged at 16%
-      { wch: 18 }, // GST Charged at 17%
-      { wch: 20 }, // Zero-Rated Supplies
-      { wch: 28 }, // Your Taxable Activity Number
+      { wch: 20 }, // Customer TIN / Your Taxable Activity No.
+      { wch: 32 }, // Customer Name / Value of Supplies Subject to GST...
+      { wch: 22 }, // Invoice No. / Value of Zero-Rated Supplies
+      { wch: 16 }, // Invoice Date / Value of Exempt Supplies
+      { wch: 36 }, // Value of Supplies Subject to GST at 8% or 16% (excluding GST) / Value of Out-of-Scope
+      { wch: 26 }, // Value of Zero-Rated Supplies
+      { wch: 18 }, // Value of Exempt
+      { wch: 20 }, // Value of Out-of-Scope
+      { wch: 24 }, // Your Taxable Activity No.
     ];
 
     const wb = XLSX.utils.book_new();

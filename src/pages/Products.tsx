@@ -450,16 +450,21 @@ const Products = () => {
 
       {/* Filter Tabs & Controls Bar */}
       <div className="space-y-3 mb-4">
-        {/* Status Filters: All, Never Sold, Unsold >30d, Low Stock, Out of Stock, Never Stocked */}
+        {/* Status Filters: All, Favorites, Low Stock, Out of Stock, Never Sold, Unsold >30d, Never Stocked */}
         <div className="flex flex-wrap items-center gap-2">
           {[
             { id: 'ALL', label: 'All Products (ހުރިހާ)', count: products.length },
+            { 
+              id: 'FAVORITES', 
+              label: 'Favorites (ފޭވަރިޓްސް)', 
+              count: favoriteProductIds.length, 
+              hasStar: true
+            },
+            { id: 'LOW_STOCK', label: 'Low Stock (<10)', badgeColor: 'bg-orange-500/15 text-orange-400' },
+            { id: 'OUT_OF_STOCK', label: 'Out of Stock (ހުސްވެފައި)', badgeColor: 'bg-red-500/15 text-red-400' },
             { id: 'NEVER_SOLD', label: 'Never Sold (އަދި ނުވިކޭ)', badgeColor: 'bg-purple-500/15 text-purple-400' },
             { id: 'UNSOLD_30_DAYS', label: 'Unsold >30d (30 ދުވަސް ތެރޭ ނުވިކޭ)', badgeColor: 'bg-amber-500/15 text-amber-400' },
             { id: 'NEVER_UPDATED_STOCK', label: 'Never Updated Stock (ސްޓޮކް އަޕްޑޭޓް ނުކުރާ)', badgeColor: 'bg-zinc-500/20 text-zinc-300' },
-            { id: 'LOW_STOCK', label: 'Low Stock (<10)', badgeColor: 'bg-orange-500/15 text-orange-400' },
-            { id: 'OUT_OF_STOCK', label: 'Out of Stock (ހުސްވެފައި)', badgeColor: 'bg-red-500/15 text-red-400' },
-            { id: 'FAVORITES', label: 'Favorites (ތަރި)', badgeColor: 'bg-yellow-500/15 text-yellow-400' },
           ].map((tab) => (
             <Button
               key={tab.id}
@@ -467,13 +472,30 @@ const Products = () => {
               size="sm"
               onClick={() => { setInventoryFilter(tab.id as InventoryFilterType); setVisibleCount(30); }}
               className={cn(
-                "h-9 px-3.5 rounded-xl text-xs font-black transition-all",
+                "h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5",
                 inventoryFilter === tab.id 
-                  ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30" 
-                  : "bg-muted/60 border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                  ? (tab.id === 'FAVORITES' 
+                      ? "bg-yellow-500 text-black shadow-sm shadow-yellow-500/30 hover:bg-yellow-400" 
+                      : "bg-primary text-primary-foreground shadow-sm shadow-primary/30")
+                  : (tab.id === 'FAVORITES'
+                      ? "bg-yellow-500/10 border-yellow-500/40 text-yellow-500 dark:text-yellow-400 hover:bg-yellow-500/20"
+                      : "bg-muted/60 border-border text-muted-foreground hover:text-foreground hover:bg-muted")
               )}
             >
+              {tab.hasStar && (
+                <Star className={cn("h-3.5 w-3.5", inventoryFilter === tab.id ? "fill-black text-black" : "fill-yellow-400 text-yellow-400")} />
+              )}
               <span>{tab.label}</span>
+              {tab.count !== undefined && (
+                <span className={cn(
+                  "text-[10px] px-1.5 py-0.2 rounded-full font-mono font-black ml-1",
+                  inventoryFilter === tab.id 
+                    ? (tab.id === 'FAVORITES' ? "bg-black/25 text-black" : "bg-black/20 text-white") 
+                    : (tab.id === 'FAVORITES' ? "bg-yellow-500/25 text-yellow-600 dark:text-yellow-400" : "bg-muted text-muted-foreground")
+                )}>
+                  {tab.count}
+                </span>
+              )}
             </Button>
           ))}
         </div>
@@ -482,6 +504,26 @@ const Products = () => {
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-muted/40 p-2.5 rounded-2xl border border-border">
           {/* Categories bar */}
           <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 lg:pb-0">
+            {/* Quick Favorites Toggle */}
+            <Button 
+              variant={inventoryFilter === 'FAVORITES' ? "default" : "outline"} 
+              size="sm" 
+              onClick={() => {
+                setInventoryFilter(inventoryFilter === 'FAVORITES' ? 'ALL' : 'FAVORITES');
+                setVisibleCount(30);
+              }}
+              className={cn(
+                "px-3 h-8 rounded-lg text-xs font-black transition-all shrink-0 flex items-center gap-1.5",
+                inventoryFilter === 'FAVORITES' 
+                  ? "bg-yellow-500 text-black hover:bg-yellow-400 shadow-sm" 
+                  : "bg-card border-border text-yellow-500 hover:bg-yellow-500/10"
+              )}
+              title="Filter by Favorites (ތަރި ފިލްޓަރ)"
+            >
+              <Star className={cn("h-3.5 w-3.5", inventoryFilter === 'FAVORITES' ? "fill-black text-black" : "fill-yellow-400 text-yellow-400")} />
+              <span>Favorites ({favoriteProductIds.length})</span>
+            </Button>
+
             {availableCategories.map((cat) => (
               <Button 
                 key={cat}

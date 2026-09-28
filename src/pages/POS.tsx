@@ -1428,22 +1428,6 @@ const POS = () => {
                         🔥 HOT
                       </Badge>
                     )}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavoriteProduct(product.id);
-                      }}
-                      className={cn(
-                        "absolute bottom-2 right-2 z-10 p-1.5 rounded-lg backdrop-blur-md border transition-all duration-200",
-                        favoriteProductIds.includes(product.id)
-                          ? "bg-black/60 border-yellow-500/50 text-yellow-400 opacity-100 shadow-md"
-                          : "bg-black/40 border-white/20 text-white/60 hover:text-yellow-400 opacity-0 group-hover:opacity-100"
-                      )}
-                      title={favoriteProductIds.includes(product.id) ? "Remove from Favorites" : "Add to Favorites"}
-                    >
-                      <Star className={cn("h-3.5 w-3.5", favoriteProductIds.includes(product.id) && "fill-yellow-400 text-yellow-400")} />
-                    </button>
                   </div>
 
                   <div className="text-center px-1">

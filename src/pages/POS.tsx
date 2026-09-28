@@ -28,7 +28,7 @@ import CustomerAddDialog from '@/components/CustomerAddDialog';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from "@/components/ui/progress";
 import { printContent } from '@/utils/printHelper';
-import { getAdaptedImageUrl } from '@/utils/imageUtils';
+import { getAdaptedImageUrl, generatePlaceholderImage } from '@/utils/imageUtils';
 import { TelegramConnectDialog } from '@/components/TelegramConnectDialog';
 import { TransferSlipsDialog } from '@/components/TransferSlipsDialog';
 import { sendTelegramSaleReceipt } from '@/services/telegramService';
@@ -1405,7 +1405,14 @@ const POS = () => {
                     product.image ? "bg-muted/30" : colorClass
                   )}>
                     {product.image ? (
-                      <img src={adaptedImage} alt={product.name_dv} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 dark:opacity-100 opacity-95" />
+                      <img 
+                        src={adaptedImage} 
+                        alt={product.name_dv} 
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 dark:opacity-100 opacity-95" 
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = generatePlaceholderImage(product.name_en || product.name_dv, product.item_code);
+                        }}
+                      />
                     ) : (
                       <div className="font-black text-lg uppercase tracking-tighter text-center px-2 leading-tight drop-shadow-sm">
                         {product.name_en}

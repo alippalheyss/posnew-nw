@@ -15,7 +15,7 @@ import ExcelImportDialog from '@/components/ExcelImportDialog';
 import { useAppContext, Product } from '@/context/AppContext';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
-import { getAdaptedImageUrl } from '@/utils/imageUtils';
+import { getAdaptedImageUrl, generatePlaceholderImage } from '@/utils/imageUtils';
 import { formatDate } from '@/utils/formatters';
 import { translateEnglishToDhivehi } from '@/utils/dhivehiTranslator';
 import { 
@@ -645,7 +645,13 @@ const Products = () => {
                    <CardContent className="p-0">
                       <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
                         {product.image ? (
-                          <img src={getAdaptedImageUrl(product.image, product.name_en || product.name_dv, product.item_code)} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                          <img 
+                            src={getAdaptedImageUrl(product.image, product.name_en || product.name_dv, product.item_code)} 
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = generatePlaceholderImage(product.name_en || product.name_dv, product.item_code);
+                            }}
+                          />
                         ) : (
                           <Package className="h-12 w-12 text-muted-foreground/40" />
                         )}
@@ -853,7 +859,17 @@ const Products = () => {
                               <p className="text-xs font-bold text-muted-foreground font-mono">{product.name_en}</p>
                             </div>
                             <div className="h-10 w-10 rounded-xl bg-muted border border-border flex items-center justify-center overflow-hidden shrink-0">
-                               {product.image ? <img src={getAdaptedImageUrl(product.image, product.name_en || product.name_dv, product.item_code)} className="w-full h-full object-cover" /> : <Package className="h-4 w-4 text-muted-foreground/50" />}
+                               {product.image ? (
+                                 <img 
+                                   src={getAdaptedImageUrl(product.image, product.name_en || product.name_dv, product.item_code)} 
+                                   className="w-full h-full object-cover" 
+                                   onError={(e) => {
+                                     (e.target as HTMLImageElement).src = generatePlaceholderImage(product.name_en || product.name_dv, product.item_code);
+                                   }}
+                                 />
+                               ) : (
+                                 <Package className="h-4 w-4 text-muted-foreground/50" />
+                               )}
                             </div>
                           </div>
                         </td>

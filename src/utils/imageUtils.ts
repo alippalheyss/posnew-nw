@@ -1,3 +1,5 @@
+import { supabaseUrl } from '@/lib/supabase';
+
 /**
  * Generates and adapts placeholder image URLs for products.
  * Uses soft, low-contrast pastel tones in light mode to avoid harsh/screaming colors.
@@ -78,6 +80,15 @@ export const getAdaptedImageUrl = (
         const textParam = textMatch ? `?text=${textMatch[1]}` : `?text=${encodeURIComponent(productName.substring(0, 12))}`;
 
         return `https://placehold.co/100x100/${color.bg}/${color.fg}${textParam}`;
+    }
+
+    // Auto-fix any dummy, template, or broken worker domain left in the URL
+    if (typeof image === 'string' && (image.includes('<') || image.includes('>') || image.includes('your-subdomain') || image.includes('pos-image-cdn'))) {
+        const origin = supabaseUrl || 'https://zmbbgfpzgfcsoexybrle.supabase.co';
+        if (image.includes('/storage/v1/object/public/')) {
+            const pathPart = image.substring(image.indexOf('/storage/v1/object/public/'));
+            return `${origin}${pathPart}`;
+        }
     }
 
     return image;

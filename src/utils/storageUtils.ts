@@ -82,11 +82,28 @@ export interface ImageUploadResult {
   error?: string | null;
 }
 
+export function isValidCdnUrl(url?: string | null): boolean {
+  if (!url || typeof url !== 'string') return false;
+  const trimmed = url.trim();
+  if (
+    trimmed.includes('<') ||
+    trimmed.includes('>') ||
+    trimmed.includes('your-subdomain') ||
+    trimmed.includes('example.com')
+  ) {
+    return false;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Uploads an image to Supabase Storage bucket 'product-images'.
- * If the bucket exists and upload succeeds, returns the public URL with CDN caching (31536000s).
- * If storage upload fails (e.g. bucket doesn't exist yet or permission denied), returns error details
- * so the caller can alert the user and safely use the compact dataUrl as fallback.
+ * Always returns the canonical Supabase public URL to ensure persistent cross-device availability.
  */
 export async function uploadProductImage(
   file: File | Blob,
@@ -117,11 +134,7 @@ export async function uploadProductImage(
 
     const { data } = supabase.storage.from(bucket).getPublicUrl(path);
     if (data?.publicUrl) {
-      let publicUrl = data.publicUrl;
-      const cdnBase = import.meta.env.VITE_STORAGE_CDN_URL;
-      if (cdnBase && supabaseUrl) {
-        publicUrl = publicUrl.replace(supabaseUrl, cdnBase.replace(/\/$/, ''));
-      }
+      const publicUrl = data.publicUrl;
       console.log('[Storage Success] Product image public URL:', publicUrl);
       return { url: publicUrl };
     }
@@ -134,12 +147,12 @@ export async function uploadProductImage(
 }
 
 /**
- * Transforms a Supabase Storage URL to use the Cloudflare CDN proxy if VITE_STORAGE_CDN_URL is configured.
+ * Transforms a Supabase Storage URL to use the Cloudflare CDN proxy only if VITE_STORAGE_CDN_URL is configured and valid.
  */
 export function getStorageCdnUrl(url: string | null | undefined): string {
   if (!url) return '';
   const cdnBase = import.meta.env.VITE_STORAGE_CDN_URL;
-  if (cdnBase && supabaseUrl && url.startsWith(supabaseUrl)) {
+  if (cdnBase && isValidCdnUrl(cdnBase) && supabaseUrl && url.startsWith(supabaseUrl)) {
     return url.replace(supabaseUrl, cdnBase.replace(/\/$/, ''));
   }
   return url;

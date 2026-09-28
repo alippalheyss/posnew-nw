@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO } from "date-fns";
 import { cn } from '@/lib/utils';
 import { showSuccess, showError } from '@/utils/toast';
-import { generatePlaceholderImage } from '@/utils/imageUtils';
+import { generatePlaceholderImage, getAdaptedImageUrl } from '@/utils/imageUtils';
 import { translateEnglishToDhivehi } from '@/utils/dhivehiTranslator';
 import { uploadProductImage, optimizeImage } from '@/utils/storageUtils';
 import JsBarcode from 'jsbarcode';
@@ -38,6 +38,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
     const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
     const [isUploadingImage, setIsUploadingImage] = useState(false);
     const [expiryDate, setExpiryDate] = useState<Date | undefined>(undefined);
+    const localDataUrlRef = useRef<string | null>(null);
 
     // Units / Packaging state
     const [units, setUnits] = useState<Array<{ name: string; price: number; conversion_factor: number; barcode: string }>>([]);
@@ -60,6 +61,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
             if (product) {
                 const cloned = JSON.parse(JSON.stringify(product));
                 setEditedProduct(cloned);
+                localDataUrlRef.current = null;
                 setImagePreviewUrl(cloned.image);
                 setExpiryDate(cloned.expiry_date ? parseISO(cloned.expiry_date) : undefined);
                 setUnits(cloned.units && Array.isArray(cloned.units) ? cloned.units : []);
@@ -80,6 +82,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                     is_zero_tax: false,
                     units: []
                 });
+                localDataUrlRef.current = null;
                 setImagePreviewUrl(null);
                 setExpiryDate(undefined);
                 setUnits([]);
@@ -364,6 +367,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                 setIsUploadingImage(true);
                 // 1. Instantly generate optimized compact preview (max 400px, 0.65 quality)
                 const { dataUrl } = await optimizeImage(file, 400, 0.65);
+                localDataUrlRef.current = dataUrl;
                 setImagePreviewUrl(dataUrl);
 
                 // 2. Upload to Supabase Storage bucket for permanent CDN caching
@@ -429,7 +433,18 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                 <span className="text-[8px] font-black uppercase tracking-wider text-primary">Uploading...</span>
                                             </div>
                                         ) : imagePreviewUrl ? (
-                                            <img src={imagePreviewUrl} alt="Preview" className="w-full h-full object-cover" />
+                                            <img 
+                                                src={getAdaptedImageUrl(imagePreviewUrl, editedProduct.name_en || editedProduct.name_dv, editedProduct.item_code)} 
+                                                alt="Preview" 
+                                                className="w-full h-full object-cover" 
+                                                onError={(e) => {
+                                                    if (localDataUrlRef.current && (e.target as HTMLImageElement).src !== localDataUrlRef.current) {
+                                                        (e.target as HTMLImageElement).src = localDataUrlRef.current;
+                                                    } else {
+                                                        (e.target as HTMLImageElement).src = generatePlaceholderImage(editedProduct.name_en || editedProduct.name_dv, editedProduct.item_code);
+                                                    }
+                                                }}
+                                            />
                                         ) : (
                                             <ImageIcon className="h-8 w-8 text-foreground/20" />
                                         )}

@@ -51,7 +51,7 @@ const Products = () => {
     setProducts, 
     sales,
     favoriteProductIds, 
-    setFavoriteProductIds, 
+    toggleFavoriteProduct, 
     settings, 
     calculateProfitMargin, 
     deleteProduct, 
@@ -366,11 +366,7 @@ const Products = () => {
 
   const handleToggleFavorite = (productId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (favoriteProductIds.includes(productId)) {
-      setFavoriteProductIds(favoriteProductIds.filter(id => id !== productId));
-    } else {
-      setFavoriteProductIds([...favoriteProductIds, productId]);
-    }
+    toggleFavoriteProduct(productId);
   };
 
   const renderBoth = (key: string) => {

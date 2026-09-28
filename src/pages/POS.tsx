@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ShoppingCart, PlusCircle, Minus, Trash2, MonitorPlay, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, ArrowLeft, Plus, ChevronDown, Boxes, X, CheckCircle2, Package, Loader2, Check, Printer, Gift, Flame, TrendingDown, Clock } from 'lucide-react';
+import { ShoppingCart, PlusCircle, Minus, Trash2, MonitorPlay, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, Star, ArrowLeft, Plus, ChevronDown, Boxes, X, CheckCircle2, Package, Loader2, Check, Printer, Gift, Flame, TrendingDown, Clock } from 'lucide-react';
 import { formatDate, toISODate, toISODatetime, formatTime, formatDateTime } from '@/utils/formatters';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
@@ -153,6 +153,7 @@ const POS = () => {
     sales,
     setSales,
     favoriteProductIds,
+    toggleFavoriteProduct,
     getTopProducts,
     settings,
     openCarts,
@@ -1420,6 +1421,22 @@ const POS = () => {
                         🔥 HOT
                       </Badge>
                     )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavoriteProduct(product.id);
+                      }}
+                      className={cn(
+                        "absolute bottom-2 right-2 z-10 p-1.5 rounded-lg backdrop-blur-md border transition-all duration-200",
+                        favoriteProductIds.includes(product.id)
+                          ? "bg-black/60 border-yellow-500/50 text-yellow-400 opacity-100 shadow-md"
+                          : "bg-black/40 border-white/20 text-white/60 hover:text-yellow-400 opacity-0 group-hover:opacity-100"
+                      )}
+                      title={favoriteProductIds.includes(product.id) ? "Remove from Favorites" : "Add to Favorites"}
+                    >
+                      <Star className={cn("h-3.5 w-3.5", favoriteProductIds.includes(product.id) && "fill-yellow-400 text-yellow-400")} />
+                    </button>
                   </div>
 
                   <div className="text-center px-1">

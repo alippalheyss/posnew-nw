@@ -298,10 +298,11 @@ interface AppContextType {
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
   customers: Customer[];
   setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
-  sales: Sale[];
-  setSales: React.Dispatch<React.SetStateAction<Sale[]>>;
   favoriteProductIds: string[];
   setFavoriteProductIds: React.Dispatch<React.SetStateAction<string[]>>;
+  toggleFavoriteProduct: (productId: string) => Promise<void>;
+  isFavoriteProduct: (productId: string) => boolean;
+  syncFavoritesToCloud: (newIds: string[]) => Promise<void>;
   getTopProducts: (limit: number) => Product[];
   settings: AppSettings;
   updateSettings: (category: keyof AppSettings, settings: any) => void;
@@ -527,6 +528,88 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
+  // Cross-device Favorite Products State & Cloud Synchronization
+  const [favoriteProductIds, setFavoriteProductIds] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('favorite_products');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error('Error parsing favorite_products', e);
+        }
+      }
+    }
+    return [];
+  });
+
+  const favoriteProductIdsRef = useRef<string[]>(favoriteProductIds);
+  useEffect(() => {
+    favoriteProductIdsRef.current = favoriteProductIds;
+  }, [favoriteProductIds]);
+
+  const syncFavoritesToCloud = useCallback(async (newIds: string[]) => {
+    if (!supabase) return;
+    try {
+      // 1. Instant Realtime broadcast to other open devices
+      try {
+        supabase.channel('settings_realtime_sync_channel').send({
+          type: 'broadcast',
+          event: 'favorites_updated',
+          payload: { productIds: newIds }
+        });
+      } catch (bcErr) {
+        console.warn('Realtime broadcast warning for favorites:', bcErr);
+      }
+
+      // 2. Persist to public.settings in Supabase
+      const { data: existingRows } = await supabase
+        .from('settings')
+        .select('id, settings')
+        .eq('category', 'favorites')
+        .limit(1);
+
+      const existing = existingRows && existingRows.length > 0 ? existingRows[0] : null;
+      const payload = {
+        category: 'favorites',
+        settings: { product_ids: newIds, updated_at: new Date().toISOString() },
+        updated_at: new Date().toISOString()
+      };
+
+      if (existing?.id) {
+        await supabase.from('settings').update(payload).eq('id', existing.id);
+      } else {
+        const authUser = (await supabase.auth.getUser())?.data?.user;
+        await supabase.from('settings').insert({
+          ...payload,
+          id: crypto.randomUUID(),
+          user_id: authUser?.id || DEFAULT_SETTINGS_USER_ID
+        });
+      }
+    } catch (err) {
+      console.error('Error syncing favorites to Supabase:', err);
+      queueOfflineAction('sync_favorites', newIds);
+    }
+  }, []);
+
+  const toggleFavoriteProduct = useCallback(async (productId: string) => {
+    const current = favoriteProductIdsRef.current;
+    const next = current.includes(productId)
+      ? current.filter(id => id !== productId)
+      : [...current, productId];
+
+    favoriteProductIdsRef.current = next;
+    setFavoriteProductIds(next);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('favorite_products', JSON.stringify(next));
+    }
+    await syncFavoritesToCloud(next);
+  }, [syncFavoritesToCloud]);
+
+  const isFavoriteProduct = useCallback((productId: string) => {
+    return favoriteProductIdsRef.current.includes(productId);
+  }, []);
+
   const processOfflineQueue = useCallback(async () => {
     if (typeof window === 'undefined' || !navigator.onLine || !supabase) return;
     try {
@@ -546,6 +629,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
             await supabase.from('customers').update({ outstanding_balance: item.payload.newBalance }).eq('id', item.payload.customerId);
           } else if (item.type === 'add_settlement') {
             await supabase.from('settlements').insert([item.payload]);
+          } else if (item.type === 'sync_favorites') {
+            await syncFavoritesToCloud(item.payload);
           }
         } catch (err) {
           console.error('[Offline Sync] Failed to sync item:', item, err);
@@ -560,7 +645,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     } catch (e) {
       console.error('[Offline Sync] Error processing offline queue:', e);
     }
-  }, []);
+  }, [syncFavoritesToCloud]);
 
   const [transferSlips, setTransferSlips] = useState<TransferSlip[]>(() => {
     if (typeof window !== 'undefined') {
@@ -1016,6 +1101,32 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       }
 
       if (settingsData && settingsData.length > 0) {
+        // Sync cloud favorites across devices
+        const favRow = settingsData.find((r: any) => r.category === 'favorites' || r.category === 'favorite_products');
+        if (favRow && favRow.settings) {
+          const cloudFavs = favRow.settings.product_ids || favRow.settings.productIds;
+          if (Array.isArray(cloudFavs)) {
+            favoriteProductIdsRef.current = cloudFavs;
+            setFavoriteProductIds(cloudFavs);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('favorite_products', JSON.stringify(cloudFavs));
+            }
+          }
+        } else {
+          // If no cloud entry exists yet, seed current local favorites into Supabase
+          const savedLocal = typeof window !== 'undefined' ? localStorage.getItem('favorite_products') : null;
+          if (savedLocal) {
+            try {
+              const parsed = JSON.parse(savedLocal);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                syncFavoritesToCloud(parsed);
+              }
+            } catch (e) {
+              console.error('Error parsing local favorites for cloud seed:', e);
+            }
+          }
+        }
+
         setSettings(prev => {
           const newSettings = { ...prev } as any;
           settingsData.forEach(row => {
@@ -1135,6 +1246,18 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, (payload) => {
         const row = payload.new as any;
         if (row && row.category && row.settings) {
+          if (row.category === 'favorites' || row.category === 'favorite_products') {
+            const ids = row.settings.product_ids || row.settings.productIds;
+            if (Array.isArray(ids)) {
+              console.log(`[Cloud Favorites] Realtime update from postgres: ${ids.length} items`);
+              favoriteProductIdsRef.current = ids;
+              setFavoriteProductIds(ids);
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('favorite_products', JSON.stringify(ids));
+              }
+            }
+            return;
+          }
           console.log(`[Cloud Settings] Received realtime update for category: ${row.category}`);
           setSettings(prev => {
             const currentCat = prev[row.category as keyof AppSettings] || {};
@@ -1161,30 +1284,22 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           });
         }
       })
+      .on('broadcast', { event: 'favorites_updated' }, ({ payload }) => {
+        if (payload?.productIds && Array.isArray(payload.productIds)) {
+          console.log(`[Cloud Favorites] Realtime broadcast received: ${payload.productIds.length} items`);
+          favoriteProductIdsRef.current = payload.productIds;
+          setFavoriteProductIds(payload.productIds);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('favorite_products', JSON.stringify(payload.productIds));
+          }
+        }
+      })
       .subscribe();
 
     return () => {
       supabase.removeChannel(settingsChannel);
     };
   }, []);
-
-  const [favoriteProductIds, setFavoriteProductIds] = useState<string[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('favorite_products');
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {
-          console.error('Error parsing favorite_products', e);
-        }
-      }
-    }
-    return [];
-  });
-
-  useEffect(() => {
-    localStorage.setItem('favorite_products', JSON.stringify(favoriteProductIds));
-  }, [favoriteProductIds]);
 
   const [openCarts, setOpenCarts] = useState<Map<string, Cart>>(() => {
     if (typeof window !== 'undefined') {
@@ -3303,6 +3418,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       setSales,
       favoriteProductIds,
       setFavoriteProductIds,
+      toggleFavoriteProduct,
+      isFavoriteProduct,
+      syncFavoritesToCloud,
       getTopProducts,
       settings,
       updateSettings,

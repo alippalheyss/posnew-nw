@@ -12,6 +12,7 @@ import { showError } from '@/utils/toast';
 import { Lock, User as UserIcon, ShieldCheck, Activity, Globe, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import PulsatingDots from '@/components/PulsatingDots';
+import AmbientBackground from '@/components/AmbientBackground';
 
 const Login = () => {
     const { t } = useTranslation();
@@ -43,11 +44,8 @@ const Login = () => {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden font-faruma">
-            {/* Animated Background Elements */}
-            <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-               <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px] animate-pulse" />
-               <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[120px] animate-pulse delay-700" />
-            </div>
+            {/* Animated Moving Dots & Lines Dynamic Background */}
+            <AmbientBackground />
 
             <div className="w-full max-w-[1000px] grid grid-cols-1 md:grid-cols-2 gap-0 bg-card/80 backdrop-blur-2xl border border-border rounded-[2.5rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] m-4 glass3d">
                 

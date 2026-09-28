@@ -298,6 +298,8 @@ interface AppContextType {
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
   customers: Customer[];
   setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
+  sales: Sale[];
+  setSales: React.Dispatch<React.SetStateAction<Sale[]>>;
   favoriteProductIds: string[];
   setFavoriteProductIds: React.Dispatch<React.SetStateAction<string[]>>;
   toggleFavoriteProduct: (productId: string) => Promise<void>;

@@ -36,6 +36,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
     const { getNextProductCode, settings, products } = useAppContext();
     const [editedProduct, setEditedProduct] = useState<Product | null>(null);
     const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+    const [uploadedBucketPath, setUploadedBucketPath] = useState<string | null>(null);
     const [isUploadingImage, setIsUploadingImage] = useState(false);
     const [expiryDate, setExpiryDate] = useState<Date | undefined>(undefined);
     const localDataUrlRef = useRef<string | null>(null);
@@ -62,6 +63,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                 const cloned = JSON.parse(JSON.stringify(product));
                 setEditedProduct(cloned);
                 localDataUrlRef.current = null;
+                setUploadedBucketPath(null);
                 setImagePreviewUrl(cloned.image);
                 setExpiryDate(cloned.expiry_date ? parseISO(cloned.expiry_date) : undefined);
                 setUnits(cloned.units && Array.isArray(cloned.units) ? cloned.units : []);
@@ -83,6 +85,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                     units: []
                 });
                 localDataUrlRef.current = null;
+                setUploadedBucketPath(null);
                 setImagePreviewUrl(null);
                 setExpiryDate(undefined);
                 setUnits([]);
@@ -347,7 +350,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                 ? Number(editedProduct.cost_price)
                 : undefined,
             item_code: numericCode,
-            image: imagePreviewUrl || generatePlaceholderImage(editedProduct.name_en || editedProduct.name_dv, numericCode),
+            image: uploadedBucketPath || editedProduct.image || imagePreviewUrl || generatePlaceholderImage(editedProduct.name_en || editedProduct.name_dv, numericCode),
             expiry_date: expiryDate ? format(expiryDate, 'yyyy-MM-dd') : undefined,
             units: finalUnits.length > 0 ? finalUnits : []
         };
@@ -374,9 +377,12 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                 const targetCode = (editedProduct?.item_code || '').replace(/\D/g, '') || 'prod';
                 const result = await uploadProductImage(file, targetCode);
 
+                if (result.bucketPath) {
+                    setUploadedBucketPath(result.bucketPath);
+                }
                 if (result.url) {
                     setImagePreviewUrl(result.url);
-                    showSuccess('Product photo uploaded to Supabase Storage! ☁️');
+                    showSuccess('Product photo uploaded to Supabase Storage bucket! ☁️');
                 } else if (result.error) {
                     console.error('[Supabase Storage Upload Error]:', result.error);
                     showError(`Supabase Storage: ${result.error}. (Using local preview fallback)`);

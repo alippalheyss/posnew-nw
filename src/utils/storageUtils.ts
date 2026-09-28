@@ -79,6 +79,7 @@ export async function optimizeImage(
 
 export interface ImageUploadResult {
   url: string | null;
+  bucketPath?: string | null;
   error?: string | null;
 }
 
@@ -103,7 +104,7 @@ export function isValidCdnUrl(url?: string | null): boolean {
 
 /**
  * Uploads an image to Supabase Storage bucket 'product-images'.
- * Always returns the canonical Supabase public URL to ensure persistent cross-device availability.
+ * Returns both the direct Supabase public URL and the bucket relative path (e.g. 'product-images/prod_123.webp').
  */
 export async function uploadProductImage(
   file: File | Blob,
@@ -135,8 +136,9 @@ export async function uploadProductImage(
     const { data } = supabase.storage.from(bucket).getPublicUrl(path);
     if (data?.publicUrl) {
       const publicUrl = data.publicUrl;
-      console.log('[Storage Success] Product image public URL:', publicUrl);
-      return { url: publicUrl };
+      const bucketPath = `product-images/${path}`;
+      console.log('[Storage Success] Product image uploaded to bucket:', bucketPath);
+      return { url: publicUrl, bucketPath };
     }
 
     return { url: null, error: 'Could not obtain public URL from Supabase storage' };

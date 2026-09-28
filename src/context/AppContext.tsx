@@ -207,6 +207,7 @@ interface SoftwareSettings {
   dataRetentionPeriod: number;
   enableAnalytics: boolean;
   enableNotifications: boolean;
+  storageCdnUrl?: string;
 }
 
 interface GeneralSettings {
@@ -1365,6 +1366,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         dataRetentionPeriod: 365,
         enableAnalytics: true,
         enableNotifications: true,
+        storageCdnUrl: '',
       },
       general: {
         appName: 'Retail POS System',
@@ -2718,6 +2720,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       setTheme(settings.software.theme as any);
     }
   }, [settings?.software?.theme, setTheme]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).__STORAGE_CDN_URL__ = settings?.software?.storageCdnUrl || '';
+    }
+  }, [settings?.software?.storageCdnUrl]);
 
   const updateSettings = async (category: keyof AppSettings, newSettings: any) => {
     setSettings(prev => ({

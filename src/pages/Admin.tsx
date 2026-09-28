@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { ChevronDown, ChevronUp, Upload, Image as ImageIcon, Trash2, Settings, Landmark, Monitor, Layout, FileText, Printer, Building2, X, Edit, UserPlus, Shield, Database, Languages, Palette, Globe, CreditCard, Receipt, Percent, LogOut, Gift, Clock, Users, CheckCircle2, Copy, ExternalLink, RefreshCw, Loader2, Send, Moon, BellRing } from 'lucide-react';
+import { ChevronDown, ChevronUp, Upload, Image as ImageIcon, Trash2, Settings, Landmark, Monitor, Layout, FileText, Printer, Building2, X, Edit, UserPlus, Shield, Database, Languages, Palette, Globe, CreditCard, Receipt, Percent, LogOut, Gift, Clock, Users, CheckCircle2, Copy, ExternalLink, RefreshCw, Loader2, Send, Moon, BellRing, Cloud } from 'lucide-react';
 import { testTelegramBot, setTelegramWebhook, getTelegramWebhookInfo, deleteTelegramWebhook, setBotCommands, BOT_COMMANDS, TelegramBotInfo, DEFAULT_TELEGRAM_BOT_TOKEN, DEFAULT_TELEGRAM_BOT_USERNAME, sendTelegramMessage, sendNightlyExecutiveBriefing } from '@/services/telegramService';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
@@ -55,6 +55,67 @@ const Admin = () => {
   const [isSendingTestBriefing, setIsSendingTestBriefing] = useState(false);
   const [webhookUrlInput, setWebhookUrlInput] = useState(telegramSettings.webhookUrl || 'https://zmbbgfpzgfcsoexybrle.supabase.co/functions/v1/telegram-webhook');
   const [isRegisteringWebhook, setIsRegisteringWebhook] = useState(false);
+
+  // Cloudflare CDN State & Helper
+  const [testingCdn, setTestingCdn] = useState(false);
+  const [cdnTestResult, setCdnTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const CLOUDFLARE_WORKER_CODE = `export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    const SUPABASE_ORIGIN = "https://zmbbgfpzgfcsoexybrle.supabase.co";
+    const targetUrl = SUPABASE_ORIGIN + url.pathname + url.search;
+
+    const response = await fetch(targetUrl, {
+      method: request.method,
+      headers: request.headers,
+      cf: {
+        cacheEverything: true,
+        cacheTtl: 31536000,
+      }
+    });
+
+    const newHeaders = new Headers(response.headers);
+    newHeaders.set("Cache-Control", "public, max-age=31536000, immutable");
+    newHeaders.set("Access-Control-Allow-Origin", "*");
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: newHeaders,
+    });
+  }
+};`;
+
+  const handleTestCloudflareCdn = async () => {
+    const rawUrl = softwareSettings.storageCdnUrl?.trim();
+    if (!rawUrl) {
+      showError('Please enter your Cloudflare Worker URL first');
+      return;
+    }
+    if (rawUrl.includes('<') || rawUrl.includes('>') || rawUrl.includes('your-subdomain')) {
+      showError('Please replace <your-subdomain> with your actual Cloudflare subdomain');
+      return;
+    }
+    try {
+      setTestingCdn(true);
+      setCdnTestResult(null);
+      const cleanUrl = rawUrl.replace(/\/$/, '');
+      const testEndpoint = `${cleanUrl}/storage/v1/object/public/product-images/`;
+      const res = await fetch(testEndpoint, { method: 'HEAD', mode: 'cors' });
+      if (res.ok || res.status === 200 || res.status === 400 || res.status === 404) {
+        setCdnTestResult({ success: true, message: 'Cloudflare Worker is online and routing to Supabase Storage!' });
+        showSuccess('Cloudflare CDN connected successfully! ☁️');
+      } else {
+        setCdnTestResult({ success: false, message: `Worker responded with HTTP status ${res.status}` });
+      }
+    } catch (err: any) {
+      setCdnTestResult({ success: false, message: `Could not connect: ${err.message || 'Network error'}` });
+      showError('Could not reach Cloudflare Worker. Please check the URL.');
+    } finally {
+      setTestingCdn(false);
+    }
+  };
 
   const TelegramIcon = ({ className }: { className?: string }) => (
     <svg viewBox="0 0 24 24" className={className} fill="currentColor">
@@ -550,6 +611,82 @@ const Admin = () => {
                                 Once installed, MVPOS service worker precaches all core assets, icons, fonts, and UI scripts for lightning-fast loading even with slow connectivity.
                               </p>
                            </div>
+                        </div>
+                     </div>
+
+                     {/* Cloudflare Storage CDN Card */}
+                     <div className="p-6 bg-muted/40 border border-border rounded-3xl space-y-6">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                           <div className="flex items-center gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleTestCloudflareCdn}
+                                disabled={testingCdn}
+                                className="h-10 px-4 rounded-xl gap-2 font-bold"
+                              >
+                                {testingCdn ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4 text-primary" />}
+                                Test Connection
+                              </Button>
+                           </div>
+                           <div className="text-right">
+                              <h3 className="text-lg font-black text-foreground flex items-center justify-end gap-2">
+                                <span>Cloudflare CDN for Product Images (Zero-Cost Storage)</span>
+                                <Cloud className="h-5 w-5 text-sky-400" />
+                              </h3>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Serve all product catalogue images globally via Cloudflare Edge Cache. Reduces Supabase database egress to 0 MB.
+                              </p>
+                           </div>
+                        </div>
+
+                        <div className="space-y-2">
+                           <div className="flex items-center justify-between">
+                             <span className="text-[10px] text-muted-foreground font-mono">Example: https://pos-image-cdn.yourname.workers.dev</span>
+                             <Label className="text-xs font-bold text-foreground">Cloudflare Worker URL</Label>
+                           </div>
+                           <Input 
+                             type="url"
+                             value={softwareSettings.storageCdnUrl || ''} 
+                             onChange={(e) => handleSettingsChange('software', 'storageCdnUrl', e.target.value.trim())}
+                             placeholder="https://pos-image-cdn.yourname.workers.dev"
+                             className="bg-muted border-border h-12 rounded-xl text-left font-mono text-sm"
+                             dir="ltr"
+                           />
+                        </div>
+
+                        {cdnTestResult && (
+                          <div className={cn(
+                            "p-3 rounded-xl border text-xs font-bold flex items-center gap-2",
+                            cdnTestResult.success ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-red-500/10 border-red-500/30 text-red-400"
+                          )}>
+                            {cdnTestResult.success ? <CheckCircle2 className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                            <span>{cdnTestResult.message}</span>
+                          </div>
+                        )}
+
+                        <div className="p-4 bg-muted rounded-2xl border border-border space-y-3 text-right">
+                           <div className="flex items-center justify-between">
+                             <Button
+                               size="sm"
+                               variant="ghost"
+                               onClick={() => {
+                                 navigator.clipboard.writeText(CLOUDFLARE_WORKER_CODE);
+                                 showSuccess('Cloudflare Worker code copied to clipboard!');
+                               }}
+                               className="h-7 text-xs font-bold gap-1 text-primary hover:bg-primary/10"
+                             >
+                               <Copy className="h-3.5 w-3.5" />
+                               Copy Worker Code
+                             </Button>
+                             <h4 className="text-sm font-black text-foreground">How to Deploy in 2 Minutes:</h4>
+                           </div>
+                           <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside" dir="rtl">
+                             <li>ދައްކާފައިވާ ކްލައުޑްފްލެއަރ ޑޭޝްބޯޑަށް ވަޑައިގަންނަވާ (<a href="https://dash.cloudflare.com" target="_blank" rel="noreferrer" className="text-primary underline">dash.cloudflare.com</a>) &rarr; <strong>Workers &amp; Pages</strong> &rarr; <strong>Create Worker</strong> (ނަން: <code className="font-mono text-foreground">pos-image-cdn</code>).</li>
+                             <li><strong>Deploy</strong> ފިއްތަވާ، އެއަށްފަހު <strong>Edit code</strong> އަށް ފިއްތަވާ.</li>
+                             <li>މަތީގައިވާ <strong>Copy Worker Code</strong> ބަޓަނުން ކޯޑު ކޮޕީކޮށް ޕޭސްޓްކުރެއްވުމަށްފަހު <strong>Deploy</strong> ފިއްތަވާ.</li>
+                             <li>ލިބުނު Worker URL (e.g. <code className="font-mono text-foreground">https://pos-image-cdn.yourname.workers.dev</code>) މި ސެޓިންގްސްއަށް ޕޭސްޓްކުރައްވާ.</li>
+                           </ol>
                         </div>
                      </div>
                   </div>

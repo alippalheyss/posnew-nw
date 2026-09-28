@@ -1,4 +1,5 @@
 import { supabaseUrl } from '@/lib/supabase';
+import { isValidCdnUrl } from '@/utils/storageUtils';
 
 /**
  * Generates and adapts placeholder image URLs for products.
@@ -82,7 +83,39 @@ export const getAdaptedImageUrl = (
         return `https://placehold.co/100x100/${color.bg}/${color.fg}${textParam}`;
     }
 
-    // Auto-fix any dummy, template, or broken worker domain left in the URL
+    // 3. Resolve Supabase storage bucket references (e.g. 'product-images/prod_123.webp', 'prod_123.webp', or full Supabase storage URL)
+    const isSupabaseOrBucket = 
+        typeof image === 'string' && (
+            image.startsWith('product-images/') ||
+            image.includes('/storage/v1/object/public/product-images/') ||
+            image.includes('/product-images/') ||
+            (image.endsWith('.webp') && !image.startsWith('http'))
+        );
+
+    if (isSupabaseOrBucket && typeof image === 'string') {
+        // Extract the clean filename within the product-images bucket
+        let fileName = image;
+        if (fileName.includes('/product-images/')) {
+            fileName = fileName.substring(fileName.indexOf('/product-images/') + '/product-images/'.length);
+        } else if (fileName.startsWith('product-images/')) {
+            fileName = fileName.substring('product-images/'.length);
+        }
+        fileName = fileName.split('?')[0];
+
+        // Determine active CDN URL (from runtime software settings or VITE_STORAGE_CDN_URL)
+        const cdnUrl = (typeof window !== 'undefined' ? (window as any).__STORAGE_CDN_URL__ : null) || import.meta.env.VITE_STORAGE_CDN_URL;
+        const validCdn = isValidCdnUrl(cdnUrl) ? cdnUrl.trim().replace(/\/$/, '') : null;
+
+        if (validCdn) {
+            return `${validCdn}/storage/v1/object/public/product-images/${fileName}`;
+        }
+
+        // Direct Supabase Storage fallback
+        const baseOrigin = supabaseUrl || 'https://zmbbgfpzgfcsoexybrle.supabase.co';
+        return `${baseOrigin}/storage/v1/object/public/product-images/${fileName}`;
+    }
+
+    // Auto-fix any dummy, template, or broken worker domain left in old URLs
     if (typeof image === 'string' && (image.includes('<') || image.includes('>') || image.includes('your-subdomain') || image.includes('pos-image-cdn'))) {
         const origin = supabaseUrl || 'https://zmbbgfpzgfcsoexybrle.supabase.co';
         if (image.includes('/storage/v1/object/public/')) {

@@ -32,6 +32,7 @@ import { getAdaptedImageUrl } from '@/utils/imageUtils';
 import { TelegramConnectDialog } from '@/components/TelegramConnectDialog';
 import { TransferSlipsDialog } from '@/components/TransferSlipsDialog';
 import { sendTelegramSaleReceipt } from '@/services/telegramService';
+import PulsatingDots from '@/components/PulsatingDots';
 
 interface Cart {
   id: string;
@@ -1457,7 +1458,7 @@ const POS = () => {
         </ScrollArea>
       </div>
 
-      <div className="w-[32rem] xl:w-[36rem] 2xl:w-[40rem] max-w-[45vw] flex flex-col apple-liquid-glass border-l border-white/20 dark:border-white/10 shadow-2xl z-20">
+      <div className="w-[32rem] xl:w-[36rem] 2xl:w-[40rem] max-w-[45vw] flex flex-col apple-liquid-glass glass3d border-l border-white/20 dark:border-white/10 shadow-2xl z-20">
         <div className="p-6 pb-2">
           <div className="flex items-center gap-1 bg-muted p-1 rounded-2xl border border-border mb-6">
             <div className="flex items-center gap-3 px-4 py-1.5 bg-primary/20 rounded-xl text-primary border border-primary/20">
@@ -2350,10 +2351,10 @@ const POS = () => {
                   className="flex-1 h-11 bg-primary hover:bg-primary/90 text-white font-black rounded-xl shadow-lg transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2"
                 >
                   {isProcessing ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                    <div className="flex items-center justify-center gap-2">
+                      <PulsatingDots dotClassName="h-2 w-2 rounded-full bg-white" />
                       <span>{t('processing')}</span>
-                    </>
+                    </div>
                   ) : (
                     <>
                       <CheckCircle2 className="h-4 w-4" />
@@ -2621,7 +2622,7 @@ const POS = () => {
                     className="flex-1 w-full sm:w-auto h-11 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-xl shadow-lg shadow-orange-600/20 text-xs uppercase tracking-wider flex items-center justify-center gap-2"
                   >
                     {isUpdatingProductPrice ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <PulsatingDots dotClassName="h-2 w-2 rounded-full bg-white" />
                     ) : (
                       <TrendingDown className="h-4 w-4" />
                     )}

@@ -6,6 +6,14 @@ import { AppProviderWithPriceDialog } from "./context/AppProviderWithPriceDialog
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { registerSW } from "virtual:pwa-register";
 
+// Inject theme-color meta tag dynamically for supported mobile browsers
+if (!document.querySelector('meta[name="theme-color"]')) {
+  const meta = document.createElement('meta');
+  meta.name = 'theme-color';
+  meta.content = '#0f172a';
+  document.head.appendChild(meta);
+}
+
 // Auto-recover from stale dynamic module/chunk errors during new deployments
 window.addEventListener("vite:preloadError", () => {
   const lastReload = sessionStorage.getItem("vite_preload_error_reload");

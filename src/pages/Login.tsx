@@ -11,6 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { showError } from '@/utils/toast';
 import { Lock, User as UserIcon, ShieldCheck, Activity, Globe, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import PulsatingDots from '@/components/PulsatingDots';
 
 const Login = () => {
     const { t } = useTranslation();
@@ -48,7 +49,7 @@ const Login = () => {
                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[120px] animate-pulse delay-700" />
             </div>
 
-            <div className="w-full max-w-[1000px] grid grid-cols-1 md:grid-cols-2 gap-0 bg-card/80 backdrop-blur-2xl border border-border rounded-[2.5rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] m-4">
+            <div className="w-full max-w-[1000px] grid grid-cols-1 md:grid-cols-2 gap-0 bg-card/80 backdrop-blur-2xl border border-border rounded-[2.5rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] m-4 glass3d">
                 
                 {/* Left Side: Branding & Info */}
                 <div className="p-12 flex flex-col justify-between bg-primary/5 relative overflow-hidden hidden md:flex border-r border-border">
@@ -153,9 +154,9 @@ const Login = () => {
                             className="w-full bg-primary hover:bg-primary/90 h-14 rounded-2xl text-lg font-black text-foreground shadow-[0_0_30px_rgba(0,132,255,0.2)] group transition-all"
                         >
                             {isLoading ? (
-                               <div className="flex items-center gap-2">
-                                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                  <span>AUTHENTICATING...</span>
+                               <div className="flex items-center justify-center gap-3">
+                                  <PulsatingDots dotClassName="h-2.5 w-2.5 rounded-full bg-white" />
+                                  <span className="text-sm font-black tracking-wider">AUTHENTICATING...</span>
                                </div>
                             ) : (
                                <div className="flex items-center justify-center gap-2">

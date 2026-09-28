@@ -160,7 +160,7 @@ const Sidebar = () => {
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="p-0 w-80 apple-liquid-glass border-white/15">
+          <SheetContent side="right" className="p-0 w-80 apple-liquid-glass glass3d border-white/15">
             {renderNavContent(true)}
           </SheetContent>
         </Sheet>
@@ -185,7 +185,7 @@ const Sidebar = () => {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         className={cn(
-          "hidden md:flex flex-col font-faruma overflow-hidden z-[100] transition-all duration-300 group/sidebar fixed right-3 top-3 bottom-3 rounded-[2.5rem] apple-liquid-glass shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35)] border border-white/25 dark:border-white/10",
+          "hidden md:flex flex-col font-faruma overflow-hidden z-[100] transition-all duration-300 group/sidebar fixed right-3 top-3 bottom-3 rounded-[2.5rem] apple-liquid-glass glass3d shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35)] border border-white/25 dark:border-white/10",
           isExpanded 
             ? "w-72 xl:w-80 2xl:w-88 opacity-100 pointer-events-auto translate-x-0" 
             : "w-0 opacity-0 pointer-events-none translate-x-12 border-none shadow-none"

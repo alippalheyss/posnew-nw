@@ -22,6 +22,7 @@ import { translateEnglishToDhivehi } from '@/utils/dhivehiTranslator';
 import { uploadProductImage, optimizeImage } from '@/utils/storageUtils';
 import JsBarcode from 'jsbarcode';
 import { printContent } from '@/utils/printHelper';
+import PulsatingDots from '@/components/PulsatingDots';
 
 interface ProductDialogProps {
     isOpen: boolean;
@@ -397,7 +398,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[65rem] 2xl:max-w-[78rem] w-[95vw] max-h-[92vh] overflow-hidden flex flex-col font-faruma apple-glass-dialog text-foreground border border-white/20 dark:border-white/10 p-0 shadow-2xl rounded-3xl" dir="rtl">
+            <DialogContent className="sm:max-w-[65rem] 2xl:max-w-[78rem] w-[95vw] max-h-[92vh] overflow-hidden flex flex-col font-faruma apple-glass-dialog glass3d text-foreground border border-white/20 dark:border-white/10 p-0 shadow-2xl rounded-3xl" dir="rtl">
                 {/* Header */}
                 <DialogHeader className="text-right px-6 pt-5 pb-3 border-b border-white/15 dark:border-white/10 bg-white/20 dark:bg-white/5 backdrop-blur-md">
                     <DialogTitle className="text-xl font-black flex items-center justify-end gap-2.5 text-foreground">
@@ -423,8 +424,8 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                     </Label>
                                     <div className="w-24 h-24 rounded-2xl bg-white/5 dark:bg-black/20 border-2 border-dashed border-white/20 flex flex-col items-center justify-center relative overflow-hidden group backdrop-blur-md">
                                         {isUploadingImage ? (
-                                            <div className="flex flex-col items-center justify-center gap-1.5 text-primary p-2 text-center">
-                                                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                            <div className="flex flex-col items-center justify-center gap-2 text-primary p-2 text-center">
+                                                <PulsatingDots dotClassName="h-2.5 w-2.5 rounded-full bg-primary" />
                                                 <span className="text-[8px] font-black uppercase tracking-wider text-primary">Uploading...</span>
                                             </div>
                                         ) : imagePreviewUrl ? (
@@ -917,9 +918,10 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                         className="flex-1 h-11 bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-wider text-xs shadow-lg shadow-primary/30 apple-glass-pill disabled:opacity-50"
                     >
                         {isUploadingImage ? (
-                            <>
-                                <Loader2 className="ml-2 h-4 w-4 animate-spin" /> Uploading Image...
-                            </>
+                            <div className="flex items-center justify-center gap-2">
+                                <PulsatingDots dotClassName="h-2 w-2 rounded-full bg-white" />
+                                <span>Uploading Image...</span>
+                            </div>
                         ) : (
                             <>
                                 <Save className="ml-2 h-4 w-4" /> {renderBoth('save_product')}

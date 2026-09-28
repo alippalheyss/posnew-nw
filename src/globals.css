@@ -341,7 +341,7 @@
     --noise-glass3d: none; 
 
     position: relative; 
-    z-index: 4; 
+    isolation: isolate;
     box-shadow:  
       0 0 0.75px hsl(205 20% 10% / 0.2), 
       0.7px 0.8px 1.2px -0.4px hsl(205 20% 10% / 0.1), 
@@ -359,7 +359,7 @@
     pointer-events: none; 
     border-radius: inherit; 
     overflow: hidden; 
-    z-index: 3; 
+    z-index: 1; 
     
     -webkit-backdrop-filter: var(--filter-glass3d); 
     backdrop-filter: var(--filter-glass3d); 
@@ -376,7 +376,7 @@
     pointer-events: none; 
     border-radius: inherit; 
     overflow: hidden; 
-    z-index: 5; 
+    z-index: 2; 
     
     box-shadow: 
       inset 2px 2px 1px -3px hsl(205 20% 90% / 0.8), 
@@ -388,7 +388,7 @@
 
   .glass3d > * { 
     position: relative; 
-    z-index: 6; 
+    z-index: 3; 
   }
 }
 

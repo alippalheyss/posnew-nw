@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, PlusCircle, PencilLine, Users, Phone, Mail, DollarSign, Award, MoreVertical, RefreshCcw } from 'lucide-react';
+import { Search, PlusCircle, PencilLine, Users, User, Hash, Phone, Mail, DollarSign, Award, MoreVertical, RefreshCcw, X, ArrowUpDown } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import CustomerAddDialog from '@/components/CustomerAddDialog';
@@ -29,6 +30,8 @@ const Customers = () => {
   const { t } = useTranslation();
   const { customers, setCustomers, settings, addCustomer, updateCustomer, refreshCustomers, sales } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<'ALL' | 'BY_NAME' | 'BY_CODE'>('ALL');
+  const [sortBy, setSortBy] = useState<'DEFAULT' | 'NAME_ASC' | 'CODE_ASC' | 'BALANCE_DESC'>('DEFAULT');
   const [isEditCustomerDialogOpen, setIsEditCustomerDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [isAddCustomerDialogOpen, setIsAddCustomerDialogOpen] = useState(false);
@@ -37,12 +40,40 @@ const Customers = () => {
   const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false);
   const [isSendingTelegram, setIsSendingTelegram] = useState<string | null>(null);
 
-  const filteredCustomers = customers.filter(customer =>
-    customer.name_dv.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.phone.includes(searchTerm)
-  );
+  const filteredCustomers = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+
+    let list = customers.filter(customer => {
+      if (!term) return true;
+      if (filterType === 'BY_NAME') {
+        return (
+          (customer.name_dv || '').toLowerCase().includes(term) ||
+          (customer.name_en || '').toLowerCase().includes(term)
+        );
+      }
+      if (filterType === 'BY_CODE') {
+        return (customer.code || '').toLowerCase().includes(term);
+      }
+      return (
+        (customer.name_dv || '').toLowerCase().includes(term) ||
+        (customer.name_en || '').toLowerCase().includes(term) ||
+        (customer.code || '').toLowerCase().includes(term) ||
+        (customer.phone || '').includes(term)
+      );
+    });
+
+    if (sortBy === 'NAME_ASC') {
+      return [...list].sort((a, b) => (a.name_dv || a.name_en || '').localeCompare(b.name_dv || b.name_en || ''));
+    }
+    if (sortBy === 'CODE_ASC') {
+      return [...list].sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true }));
+    }
+    if (sortBy === 'BALANCE_DESC') {
+      return [...list].sort((a, b) => (b.outstanding_balance || 0) - (a.outstanding_balance || 0));
+    }
+
+    return list;
+  }, [customers, searchTerm, filterType, sortBy]);
 
   const handleEditClick = (customer: Customer) => {
     setEditingCustomer({ ...customer });
@@ -198,15 +229,136 @@ const Customers = () => {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative mb-8">
-         <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-         <Input 
-           placeholder={renderBothString('search_customers')}
-           value={searchTerm}
-           onChange={(e) => setSearchTerm(e.target.value)}
-           className="w-full apple-glass-input rounded-2xl pr-12 h-14 text-right font-bold transition-all text-lg shadow-sm"
-         />
+      {/* Filter and Search Controls */}
+      <div className="space-y-3 mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-muted/30 p-2 rounded-2xl border border-white/10 dark:border-white/5 backdrop-blur-md">
+          {/* Filter Type Tabs: All, By Name, By Code */}
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={filterType === 'ALL' ? "default" : "outline"}
+              onClick={() => setFilterType('ALL')}
+              className={cn(
+                "h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5",
+                filterType === 'ALL'
+                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
+                  : "bg-card/70 border-border text-muted-foreground hover:text-foreground hover:bg-card"
+              )}
+            >
+              <Users className="h-3.5 w-3.5" />
+              <span>All (ހުރިހާ)</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-black ml-1 bg-black/20 text-white">
+                {customers.length}
+              </span>
+            </Button>
+
+            <Button
+              type="button"
+              size="sm"
+              variant={filterType === 'BY_NAME' ? "default" : "outline"}
+              onClick={() => setFilterType('BY_NAME')}
+              className={cn(
+                "h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5",
+                filterType === 'BY_NAME'
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/25 hover:bg-blue-500"
+                  : "bg-card/70 border-border text-muted-foreground hover:text-foreground hover:bg-card"
+              )}
+            >
+              <User className="h-3.5 w-3.5" />
+              <span>By Name (ނަމުން)</span>
+            </Button>
+
+            <Button
+              type="button"
+              size="sm"
+              variant={filterType === 'BY_CODE' ? "default" : "outline"}
+              onClick={() => setFilterType('BY_CODE')}
+              className={cn(
+                "h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5",
+                filterType === 'BY_CODE'
+                  ? "bg-amber-600 text-white shadow-md shadow-amber-600/25 hover:bg-amber-500"
+                  : "bg-card/70 border-border text-muted-foreground hover:text-foreground hover:bg-card"
+              )}
+            >
+              <Hash className="h-3.5 w-3.5" />
+              <span>By Code (ކޯޑުން)</span>
+            </Button>
+          </div>
+
+          {/* Quick Sort Options */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold text-muted-foreground flex items-center gap-1">
+              <ArrowUpDown className="h-3 w-3" /> ތަރުތީބު:
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant={sortBy === 'NAME_ASC' ? 'secondary' : 'ghost'}
+              onClick={() => setSortBy(prev => prev === 'NAME_ASC' ? 'DEFAULT' : 'NAME_ASC')}
+              className={cn(
+                "h-8 px-2.5 text-xs font-bold rounded-xl border transition-all",
+                sortBy === 'NAME_ASC' ? "border-blue-500/50 bg-blue-500/15 text-blue-400 font-black" : "border-border/60 text-muted-foreground"
+              )}
+              title="Sort Alphabetically by Name"
+            >
+              ނަމުން (A-Z)
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={sortBy === 'CODE_ASC' ? 'secondary' : 'ghost'}
+              onClick={() => setSortBy(prev => prev === 'CODE_ASC' ? 'DEFAULT' : 'CODE_ASC')}
+              className={cn(
+                "h-8 px-2.5 text-xs font-bold rounded-xl border transition-all",
+                sortBy === 'CODE_ASC' ? "border-amber-500/50 bg-amber-500/15 text-amber-400 font-black" : "border-border/60 text-muted-foreground"
+              )}
+              title="Sort Numerically by Code"
+            >
+              ކޯޑުން (1-9)
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={sortBy === 'BALANCE_DESC' ? 'secondary' : 'ghost'}
+              onClick={() => setSortBy(prev => prev === 'BALANCE_DESC' ? 'DEFAULT' : 'BALANCE_DESC')}
+              className={cn(
+                "h-8 px-2.5 text-xs font-bold rounded-xl border transition-all",
+                sortBy === 'BALANCE_DESC' ? "border-red-500/50 bg-red-500/15 text-red-400 font-black" : "border-border/60 text-muted-foreground"
+              )}
+              title="Sort by Outstanding Balance (Highest First)"
+            >
+              ދަރަނި
+            </Button>
+          </div>
+        </div>
+
+        {/* Search Bar with Dynamic Placeholder */}
+        <div className="relative">
+          <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+          <Input 
+            placeholder={
+              filterType === 'BY_NAME'
+                ? "ނަމުން ކަސްޓަމަރު ހޯދާ / Search customer by name..."
+                : filterType === 'BY_CODE'
+                  ? "ކޯޑުން ކަސްޓަމަރު ހޯދާ (e.g. CUST-001) / Search customer by code..."
+                  : renderBothString('search_customers')
+            }
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full apple-glass-input rounded-2xl pr-12 pl-12 h-14 text-right font-bold transition-all text-base shadow-sm"
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1.5 rounded-full hover:bg-muted-foreground/10 transition-colors"
+              title="Clear search"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Customers Grid */}
@@ -262,7 +414,16 @@ const Customers = () => {
                     <div className="text-right mb-6">
                        <h3 className="text-xl font-black text-foreground leading-tight mb-1">{customer.name_dv}</h3>
                        <p className="text-xs sm:text-[13px] font-bold text-muted-foreground uppercase tracking-wider">{customer.name_en}</p>
-                       <p className="text-xs font-mono text-primary font-bold mt-2">ID: {customer.code}</p>
+                       <div className="mt-2 flex items-center justify-end">
+                         <span className={cn(
+                           "text-xs font-mono font-bold px-2.5 py-0.5 rounded-lg border",
+                           filterType === 'BY_CODE'
+                             ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
+                             : "bg-primary/10 text-primary border-primary/20"
+                         )}>
+                           ID: {customer.code}
+                         </span>
+                       </div>
                     </div>
 
                     <div className="space-y-3 mb-6">

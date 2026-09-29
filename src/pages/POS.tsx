@@ -33,6 +33,7 @@ import { TelegramConnectDialog } from '@/components/TelegramConnectDialog';
 import { TransferSlipsDialog } from '@/components/TransferSlipsDialog';
 import { sendTelegramSaleReceipt } from '@/services/telegramService';
 import PulsatingDots from '@/components/PulsatingDots';
+import { playScanSuccessSound, playScanErrorSound } from '@/utils/soundEffects';
 
 interface Cart {
   id: string;
@@ -416,6 +417,18 @@ const POS = () => {
           searchInputRef.current?.blur();
         }
         return;
+      }
+
+      // If cashier starts typing or scanner scans when search bar is not focused, auto-focus search bar
+      if (
+        !e.ctrlKey &&
+        !e.altKey &&
+        !e.metaKey &&
+        e.key.length === 1 &&
+        document.activeElement?.tagName !== 'INPUT' &&
+        document.activeElement?.tagName !== 'TEXTAREA'
+      ) {
+        searchInputRef.current?.focus();
       }
 
       if (e.key === 'Enter') {
@@ -867,10 +880,12 @@ const POS = () => {
       } else {
         handleProductSelection(exactMatch);
       }
+      playScanSuccessSound();
       setSearchTerm('');
       showSuccess(t('product_added_via_barcode', { name: exactMatch.name_dv }));
       focusSearchBar();
     } else {
+      playScanErrorSound();
       showError(`ނުފެނުނު: ${rawTerm} (Product not found)`);
     }
   };

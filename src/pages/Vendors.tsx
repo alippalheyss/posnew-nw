@@ -62,10 +62,21 @@ const Vendors = () => {
             return;
         }
 
+        const tin = (vendorForm.tin_number || '').trim();
+        if (!tin) {
+            showError(t('tin_required_13_chars') || 'GST TIN number is required and must be exactly 13 characters (e.g. 1021550GST501)');
+            return;
+        }
+        if (tin.length !== 13) {
+            showError(t('tin_must_be_13_chars') || `GST TIN number must include exactly 13 characters (currently ${tin.length}/13 characters)`);
+            return;
+        }
+
         const newVendor: Vendor = {
             id: crypto.randomUUID(),
             code: getNextVendorCode(),
-            ...vendorForm
+            ...vendorForm,
+            tin_number: tin.toUpperCase()
         };
 
         try {
@@ -85,9 +96,20 @@ const Vendors = () => {
             return;
         }
 
+        const tin = (vendorForm.tin_number || '').trim();
+        if (!tin) {
+            showError(t('tin_required_13_chars') || 'GST TIN number is required and must be exactly 13 characters (e.g. 1021550GST501)');
+            return;
+        }
+        if (tin.length !== 13) {
+            showError(t('tin_must_be_13_chars') || `GST TIN number must include exactly 13 characters (currently ${tin.length}/13 characters)`);
+            return;
+        }
+
         const updatedVendor: Vendor = {
             ...selectedVendor,
-            ...vendorForm
+            ...vendorForm,
+            tin_number: tin.toUpperCase()
         };
 
         try {
@@ -292,8 +314,29 @@ const Vendors = () => {
                                 <Input type="email" value={vendorForm.email} onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-mono" />
                             </div>
                             <div className="space-y-1.5">
-                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('tin_number')}</Label>
-                                <Input value={vendorForm.tin_number} onChange={(e) => setVendorForm({ ...vendorForm, tin_number: e.target.value })} className="text-right h-11 font-mono apple-glass-input rounded-2xl" />
+                                <div className="flex justify-between items-center">
+                                    <span className={cn(
+                                        "text-[9px] font-mono font-black px-2 py-0.5 rounded-full transition-all",
+                                        vendorForm.tin_number.trim().length === 13
+                                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                                            : vendorForm.tin_number.trim().length > 0
+                                                ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                                                : "bg-red-500/15 text-red-400 border border-red-500/30"
+                                    )}>
+                                        {vendorForm.tin_number.trim().length === 13 ? '✓ 13/13 Chars' : `${vendorForm.tin_number.trim().length}/13 Chars`}
+                                    </span>
+                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('tin_number')}*</Label>
+                                </div>
+                                <Input 
+                                    maxLength={13} 
+                                    placeholder="e.g. 1021550GST501" 
+                                    value={vendorForm.tin_number} 
+                                    onChange={(e) => setVendorForm({ ...vendorForm, tin_number: e.target.value.toUpperCase().replace(/\s+/g, '') })} 
+                                    className={cn(
+                                        "text-right h-11 font-mono apple-glass-input rounded-2xl tracking-wider transition-all",
+                                        vendorForm.tin_number.trim().length === 13 ? "border-emerald-500/50" : ""
+                                    )} 
+                                />
                             </div>
                         </div>
                         <div className="space-y-1.5">
@@ -347,8 +390,29 @@ const Vendors = () => {
                                 <Input type="email" value={vendorForm.email} onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-mono" />
                             </div>
                             <div className="space-y-1.5">
-                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('tin_number')}</Label>
-                                <Input value={vendorForm.tin_number} onChange={(e) => setVendorForm({ ...vendorForm, tin_number: e.target.value })} className="text-right h-11 font-mono apple-glass-input rounded-2xl" />
+                                <div className="flex justify-between items-center">
+                                    <span className={cn(
+                                        "text-[9px] font-mono font-black px-2 py-0.5 rounded-full transition-all",
+                                        vendorForm.tin_number.trim().length === 13
+                                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                                            : vendorForm.tin_number.trim().length > 0
+                                                ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                                                : "bg-red-500/15 text-red-400 border border-red-500/30"
+                                    )}>
+                                        {vendorForm.tin_number.trim().length === 13 ? '✓ 13/13 Chars' : `${vendorForm.tin_number.trim().length}/13 Chars`}
+                                    </span>
+                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('tin_number')}*</Label>
+                                </div>
+                                <Input 
+                                    maxLength={13} 
+                                    placeholder="e.g. 1021550GST501" 
+                                    value={vendorForm.tin_number} 
+                                    onChange={(e) => setVendorForm({ ...vendorForm, tin_number: e.target.value.toUpperCase().replace(/\s+/g, '') })} 
+                                    className={cn(
+                                        "text-right h-11 font-mono apple-glass-input rounded-2xl tracking-wider transition-all",
+                                        vendorForm.tin_number.trim().length === 13 ? "border-emerald-500/50" : ""
+                                    )} 
+                                />
                             </div>
                         </div>
                         <div className="space-y-1.5">

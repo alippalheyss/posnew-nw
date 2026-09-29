@@ -31,6 +31,7 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase, DEFAULT_SETTINGS_USER_ID } from '@/lib/supabase';
 import { showSuccess, showError, showInfo } from '@/utils/toast';
 import { cn } from '@/lib/utils';
+import { playScanSuccessSound, playScanErrorSound } from '@/utils/soundEffects';
 
 export interface AuditEntry {
   id: string;
@@ -979,7 +980,6 @@ export default function StockAudit() {
   // Barcode scanned callback
   const handleScannedBarcode = useCallback((code: string) => {
     stopCameraScanner();
-    playBeep(1050, 'sine', 0.15);
 
     setTimeout(() => {
       const cleanCode = code.trim().toLowerCase();
@@ -989,11 +989,13 @@ export default function StockAudit() {
       );
 
       if (matchedProduct) {
+        playScanSuccessSound();
         setSelectedProduct(matchedProduct);
         setCountQuantity('1');
         setCountLocation('shop');
         showSuccess(`Scanned: ${matchedProduct.name_en}`);
       } else {
+        playScanErrorSound();
         showError(`No product found matching barcode: ${code}`);
         setSearchQuery(code);
       }

@@ -290,6 +290,12 @@ const LocalPurchaseWindow = () => {
       return;
     }
 
+    const trimmedTin = quickVendorTin.trim().toUpperCase().replace(/\s+/g, '');
+    if (trimmedTin && trimmedTin.length !== 13) {
+      showError('GST TIN number must be exactly 13 characters (e.g. 1021550GST501)');
+      return;
+    }
+
     setIsAddingVendor(true);
     const newV: Vendor = {
       id: crypto.randomUUID(),
@@ -299,7 +305,7 @@ const LocalPurchaseWindow = () => {
       phone: quickVendorPhone.trim(),
       email: '',
       contact_person: '',
-      tin_number: quickVendorTin.trim(),
+      tin_number: trimmedTin,
       address: '',
       notes: 'Added from Local Purchase'
     };
@@ -1223,10 +1229,11 @@ const LocalPurchaseWindow = () => {
               <div className="space-y-1.5 text-right">
                 <Label className="text-xs font-bold text-muted-foreground">{t('tin_number') || 'TIN Number'}</Label>
                 <Input
+                  maxLength={13}
                   value={quickVendorTin}
-                  onChange={(e) => setQuickVendorTin(e.target.value)}
-                  placeholder="TIN number (Optional)"
-                  className="text-right bg-muted border-border h-11 rounded-xl"
+                  onChange={(e) => setQuickVendorTin(e.target.value.toUpperCase().replace(/\s+/g, ''))}
+                  placeholder="e.g. 1021550GST501 (13 chars)"
+                  className="text-right bg-muted border-border h-11 rounded-xl font-mono"
                 />
               </div>
               <div className="pt-2 flex gap-3">

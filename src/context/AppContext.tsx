@@ -815,49 +815,6 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   }, []);
 
-  // Multi-device active polling & window focus re-synchronization
-  useEffect(() => {
-    fetchTransferSlips();
-    syncRecentSales();
-    syncRecentVendors();
-
-    const handleFocus = () => {
-      if (typeof document !== 'undefined' && !document.hidden && navigator.onLine) {
-        fetchTransferSlips();
-        syncRecentSales();
-        syncRecentVendors();
-      }
-    };
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleFocus);
-
-    // Active background heartbeat every 20 seconds (ensures devices without WebSocket still stay live)
-    const interval = setInterval(() => {
-      if (typeof document !== 'undefined' && !document.hidden && navigator.onLine) {
-        fetchTransferSlips();
-        syncRecentSales();
-        syncRecentVendors();
-      }
-    }, 20 * 1000);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleFocus);
-    };
-  }, [fetchTransferSlips, syncRecentSales, syncRecentVendors]);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('sidebar_collapsed');
-      return saved === 'true';
-    }
-    return false;
-  });
-
-  useEffect(() => {
-    localStorage.setItem('sidebar_collapsed', String(sidebarCollapsed));
-  }, [sidebarCollapsed]);
-
   const isAutoResolvingRef = React.useRef(false);
 
   const [pendingTransfers, setPendingTransfers] = useState<any[]>(() => {
@@ -872,6 +829,130 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
     return [];
   });
+
+  const syncPendingTransfersToCloud = useCallback(async (list: any[]) => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('pending_transfers', JSON.stringify(list));
+      }
+      if (supabase) {
+        const { data: existing } = await supabase
+          .from('settings')
+          .select('id')
+          .eq('category', 'pending_transfers')
+          .maybeSingle();
+
+        const payload = {
+          category: 'pending_transfers',
+          settings: { pending_transfers: list },
+          updated_at: new Date().toISOString()
+        };
+
+        if (existing?.id) {
+          await supabase.from('settings').update(payload).eq('id', existing.id);
+        } else {
+          await supabase.from('settings').insert({
+            ...payload,
+            id: crypto.randomUUID(),
+            user_id: DEFAULT_SETTINGS_USER_ID
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('Error saving pending transfers to cloud:', err);
+    }
+  }, []);
+
+  const syncPendingTransfers = useCallback(async () => {
+    try {
+      if (!supabase) return;
+      const { data } = await supabase
+        .from('settings')
+        .select('settings')
+        .eq('category', 'pending_transfers')
+        .maybeSingle();
+
+      if (data?.settings) {
+        const list = data.settings.pending_transfers || data.settings.pendingTransfers;
+        if (Array.isArray(list)) {
+          setPendingTransfers(list);
+          if (typeof window !== 'undefined') {
+            try { localStorage.setItem('pending_transfers', JSON.stringify(list)); } catch {}
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Error syncing pending transfers delta:', e);
+    }
+  }, []);
+
+  // Multi-device active polling & window focus re-synchronization
+  useEffect(() => {
+    fetchTransferSlips();
+    syncRecentSales();
+    syncRecentVendors();
+    syncPendingTransfers();
+
+    const handleFocus = () => {
+      if (typeof document !== 'undefined' && !document.hidden && navigator.onLine) {
+        fetchTransferSlips();
+        syncRecentSales();
+        syncRecentVendors();
+        syncPendingTransfers();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
+
+    // Active background heartbeat every 20 seconds (ensures devices without WebSocket still stay live)
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && !document.hidden && navigator.onLine) {
+        fetchTransferSlips();
+        syncRecentSales();
+        syncRecentVendors();
+        syncPendingTransfers();
+      }
+    }, 20 * 1000);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
+  }, [fetchTransferSlips, syncRecentSales, syncRecentVendors, syncPendingTransfers]);
+
+  // Automatically enrich cached purchases with vendor names once vendors list is loaded
+  useEffect(() => {
+    if (vendors.length > 0) {
+      setPurchases(prevPurchases => {
+        let changed = false;
+        const next = prevPurchases.map(p => {
+          if (!p.vendor && (p.vendorId || (p as any).vendor_id)) {
+            const vId = p.vendorId || (p as any).vendor_id;
+            const matched = vendors.find(v => v.id === vId);
+            if (matched) {
+              changed = true;
+              return { ...p, vendor: matched.name_en || matched.name_dv || '' };
+            }
+          }
+          return p;
+        });
+        return changed ? next : prevPurchases;
+      });
+    }
+  }, [vendors]);
+
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sidebar_collapsed');
+      return saved === 'true';
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('sidebar_collapsed', String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
 
   const refreshCustomers = async () => {
     try {
@@ -1188,21 +1269,42 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       if (updatedVendors) setVendors(updatedVendors);
 
       if (updatedPurchases) {
-        const mappedPurchases: Purchase[] = updatedPurchases.map((p: any) => ({
-          id: p.id,
-          date: p.date,
-          vendor: p.vendor || p.vendor_name || '',
-          vendorId: p.vendor_id || undefined,
-          billNumber: p.bill_number || '',
-          amount: Number(p.amount || 0),
-          gstAmount: Number(p.gst_amount || 0),
-          description: p.description || '',
-          items: p.items || []
-        }));
+        const allVendorsList = updatedVendors || currentVendors || [];
+        const mappedPurchases: Purchase[] = updatedPurchases.map((p: any) => {
+          const matchedVendor = allVendorsList.find((v: any) => v.id === p.vendor_id || v.id === p.vendorId);
+          const cachedMatch = currentPurchases.find((cp: any) => cp.id === p.id);
+          const vendorName = p.vendor || p.vendor_name || matchedVendor?.name_en || matchedVendor?.name_dv || cachedMatch?.vendor || '';
+          return {
+            id: p.id,
+            date: p.date,
+            vendor: vendorName,
+            vendorId: p.vendor_id || p.vendorId || matchedVendor?.id || undefined,
+            billNumber: p.bill_number || '',
+            amount: Number(p.amount || 0),
+            gstAmount: Number(p.gst_amount || 0),
+            description: p.description || '',
+            items: p.items || []
+          };
+        });
         setPurchases(mappedPurchases);
       }
 
       if (settingsData && settingsData.length > 0) {
+        // Sync cloud pending transfers across devices
+        const pendingRow = settingsData.find((r: any) => r.category === 'pending_transfers');
+        if (pendingRow && pendingRow.settings) {
+          const cloudPending = pendingRow.settings.pending_transfers || pendingRow.settings.pendingTransfers;
+          if (Array.isArray(cloudPending)) {
+            console.log(`[Cloud Pending Transfers] Initialized ${cloudPending.length} pending transfers from cloud`);
+            setPendingTransfers(cloudPending);
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.setItem('pending_transfers', JSON.stringify(cloudPending));
+              } catch {}
+            }
+          }
+        }
+
         // Sync cloud favorites across devices
         const favRow = settingsData.find((r: any) => r.category === 'favorites' || r.category === 'favorite_products');
         if (favRow && favRow.settings) {
@@ -1484,6 +1586,19 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         }
       })
 
+      // --- PENDING TRANSFERS BROADCAST ---
+      .on('broadcast', { event: 'pending_transfers_sync' }, ({ payload }) => {
+        if (payload?.pendingTransfers && Array.isArray(payload.pendingTransfers)) {
+          console.log('[Live Mesh] Pending transfers live sync received:', payload.pendingTransfers.length);
+          setPendingTransfers(payload.pendingTransfers);
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('pending_transfers', JSON.stringify(payload.pendingTransfers));
+            } catch {}
+          }
+        }
+      })
+
       // --- DATABASE POSTGRES_CHANGES FALLBACK ---
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sales' }, (payload) => {
         const row = payload.new as any;
@@ -1525,10 +1640,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         if (!row) return;
         setPurchases(prev => {
           if (prev.some(p => p.id === row.id)) return prev;
+          const matchedVendor = vendors.find(v => v.id === row.vendor_id);
+          const vendorName = row.vendor || row.vendor_name || matchedVendor?.name_en || matchedVendor?.name_dv || '';
           return [{
             id: row.id,
             date: row.date,
-            vendor: row.vendor || '',
+            vendor: vendorName,
             vendorId: row.vendor_id,
             billNumber: row.bill_number || '',
             amount: Number(row.amount || 0),
@@ -2578,7 +2695,16 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   }, [isInitialDataLoaded, sales, customers, settings.telegram, settings.shop]);
 
   const addPendingTransfer = (transfer: any) => {
-    setPendingTransfers(prev => [...prev, { ...transfer, id: `transfer-${Date.now()}` }]);
+    const newTransfer = {
+      ...transfer,
+      id: transfer.id || `transfer-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    };
+    setPendingTransfers(prev => {
+      const next = [...prev, newTransfer];
+      syncPendingTransfersToCloud(next);
+      broadcastLiveSync('pending_transfers_sync', { pendingTransfers: next });
+      return next;
+    });
   };
 
   const resolvePendingTransfer = async (
@@ -2684,7 +2810,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       }
     }
 
-    setPendingTransfers(prev => prev.filter(t => t.id !== id));
+    setPendingTransfers(prev => {
+      const next = prev.filter(t => t.id !== id);
+      syncPendingTransfersToCloud(next);
+      broadcastLiveSync('pending_transfers_sync', { pendingTransfers: next });
+      return next;
+    });
     if (!silent) {
       showSuccess(`Transfer resolved as ${action} sale`);
     }
@@ -2730,7 +2861,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       }
 
       if (resolvedCount > 0) {
-        setPendingTransfers(prev => prev.filter(t => !resolvedIds.has(t.id)));
+        setPendingTransfers(prev => {
+          const next = prev.filter(t => !resolvedIds.has(t.id));
+          syncPendingTransfersToCloud(next);
+          broadcastLiveSync('pending_transfers_sync', { pendingTransfers: next });
+          return next;
+        });
         showSuccess(`${resolvedCount} unconfirmed awaiting transfer(s) from previous day automatically converted to credit`);
       }
     } finally {
@@ -2755,7 +2891,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
 
     if (resolvedIds.size > 0) {
-      setPendingTransfers(prev => prev.filter(t => !resolvedIds.has(t.id)));
+      setPendingTransfers(prev => {
+        const next = prev.filter(t => !resolvedIds.has(t.id));
+        syncPendingTransfersToCloud(next);
+        broadcastLiveSync('pending_transfers_sync', { pendingTransfers: next });
+        return next;
+      });
       showSuccess(`Successfully converted ${resolvedIds.size} pending transfer(s) to credit`);
     }
   };
@@ -3391,15 +3532,19 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const addPurchase = async (purchase: Purchase) => {
     try {
-      // 1. Sanitize IDs (Postgres UUID validation)
+      // 1. Sanitize IDs (Postgres UUID validation) & Resolve Vendor Name
       const isUuid = (val?: string) => Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));
       const validPurchaseId = isUuid(purchase.id) ? purchase.id : crypto.randomUUID();
-      const validVendorId = isUuid(purchase.vendorId) ? purchase.vendorId : null;
+      const matchedVendor = vendors.find(v => v.id === purchase.vendorId || (v.name_en && purchase.vendor && v.name_en.toLowerCase() === purchase.vendor.toLowerCase()) || (v.name_dv && purchase.vendor && v.name_dv === purchase.vendor));
+      const vendorId = matchedVendor?.id || purchase.vendorId;
+      const validVendorId = isUuid(vendorId) ? vendorId : null;
+      const resolvedVendorName = purchase.vendor || matchedVendor?.name_en || matchedVendor?.name_dv || '';
 
       const fullPurchase: Purchase = {
         ...purchase,
         id: validPurchaseId,
-        vendorId: validVendorId || undefined
+        vendor: resolvedVendorName,
+        vendorId: validVendorId || vendorId || undefined
       };
 
       // 2. Immediately persist to local state & storage (optimistic offline-resilient UI)

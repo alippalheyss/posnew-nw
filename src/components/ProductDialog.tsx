@@ -501,11 +501,11 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                         size="sm"
                                         variant="outline"
                                         onClick={() => setIsOnlineSearchOpen(true)}
-                                        className="h-6 w-24 px-1 text-[9px] font-black border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 rounded-lg gap-1 shadow-xs"
-                                        title="Find matching product packaging online"
+                                        className="h-6 w-24 px-1 text-[8.5px] font-black border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 rounded-lg gap-1 shadow-xs"
+                                        title="Find product image on Google or online"
                                     >
                                         <Sparkles className="h-2.5 w-2.5 text-amber-500" />
-                                        <span>Find Image</span>
+                                        <span>Google Image</span>
                                     </Button>
                                 </div>
 

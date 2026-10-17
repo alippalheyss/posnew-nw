@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ProductDialog from '@/components/ProductDialog';
 import ExcelImportDialog from '@/components/ExcelImportDialog';
+import OnlineImageSearchDialog from '@/components/OnlineImageSearchDialog';
+import { saveOnlineImageToBucket } from '@/services/productImageService';
 import { useAppContext, Product } from '@/context/AppContext';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
@@ -71,6 +73,24 @@ const Products = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [visibleCount, setVisibleCount] = useState(30);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [onlineImageProduct, setOnlineImageProduct] = useState<Product | null>(null);
+
+  const handleOnlineImageSelectForProduct = async (url: string) => {
+    if (!onlineImageProduct) return;
+    const prod = onlineImageProduct;
+    await updateProduct({ ...prod, image: url });
+    showSuccess(`Image updated for ${prod.name_dv || prod.name_en}! ✨`);
+    setOnlineImageProduct(null);
+
+    try {
+      const saved = await saveOnlineImageToBucket(url, prod.item_code || prod.barcode || 'prod');
+      if (saved && saved !== url) {
+        await updateProduct({ ...prod, image: saved });
+      }
+    } catch (err) {
+      console.warn('Could not cache online image to bucket:', err);
+    }
+  };
 
   const availableCategories = useMemo(() => {
     const cats = new Set<string>(['ALL', 'DRINKS', 'FOOD', 'HARDWARE', 'COSMETICS', 'OTHER']);
@@ -725,11 +745,24 @@ const Products = () => {
                                <DropdownMenuItem onClick={() => handleEditClick(product)} className="gap-2 text-right justify-end hover:bg-muted cursor-pointer font-bold text-xs">
                                  {renderBoth('edit')} <Edit2 className="h-4 w-4 text-blue-400" />
                                </DropdownMenuItem>
+                               <DropdownMenuItem onClick={() => setOnlineImageProduct(product)} className="gap-2 text-right justify-end hover:bg-amber-500/10 text-amber-500 cursor-pointer font-bold text-xs">
+                                 <span>Find Image (ފޮޓޯ ހޯދާ)</span> <Sparkles className="h-4 w-4 text-amber-400" />
+                               </DropdownMenuItem>
                                <DropdownMenuItem onClick={() => handleDeleteProduct(product.id)} className="gap-2 text-right justify-end hover:bg-red-500/10 text-red-500 cursor-pointer font-bold text-xs">
                                  {renderBoth('delete')} <Trash2 className="h-4 w-4" />
                                </DropdownMenuItem>
                              </DropdownMenuContent>
                            </DropdownMenu>
+
+                           <Button 
+                             variant="ghost" 
+                             size="icon" 
+                             title="Find Image Online (ފޮޓޯ ހޯދާ)" 
+                             onClick={(e) => { e.stopPropagation(); setOnlineImageProduct(product); }}
+                             className="h-7 w-7 bg-black/30 text-white hover:bg-amber-500 hover:text-white backdrop-blur-md border border-white/20 rounded-lg transition-colors"
+                           >
+                             <Sparkles className="h-3.5 w-3.5 text-amber-400 hover:text-white" />
+                           </Button>
                         </div>
 
                         {/* Status Badges Overlay */}
@@ -973,6 +1006,9 @@ const Products = () => {
                         </td>
                         <td className="p-3.5">
                           <div className="flex justify-center gap-1.5">
+                             <Button variant="ghost" size="icon" title="Find Image Online (ފޮޓޯ ހޯދާ)" onClick={() => setOnlineImageProduct(product)} className="h-8 w-8 text-amber-400 hover:bg-amber-500/10 rounded-lg">
+                               <Sparkles className="h-4 w-4" />
+                             </Button>
                              <Button variant="ghost" size="icon" onClick={() => handleEditClick(product)} className="h-8 w-8 text-blue-400 hover:bg-blue-500/10 rounded-lg"><Edit2 className="h-4 w-4" /></Button>
                              <Button variant="ghost" size="icon" onClick={() => handleDeleteProduct(product.id)} className="h-8 w-8 text-red-400 hover:bg-red-500/10 rounded-lg"><Trash2 className="h-4 w-4" /></Button>
                           </div>
@@ -1056,6 +1092,16 @@ const Products = () => {
         isOpen={isImportDialogOpen}
         onClose={() => setIsImportDialogOpen(false)}
       />
+
+      {onlineImageProduct && (
+        <OnlineImageSearchDialog
+          isOpen={!!onlineImageProduct}
+          onClose={() => setOnlineImageProduct(null)}
+          productName={onlineImageProduct.name_en || onlineImageProduct.name_dv || ''}
+          barcode={onlineImageProduct.barcode || onlineImageProduct.item_code || ''}
+          onSelectImage={handleOnlineImageSelectForProduct}
+        />
+      )}
     </div>
   );
 };

@@ -23,6 +23,8 @@ import { uploadProductImage, optimizeImage } from '@/utils/storageUtils';
 import JsBarcode from 'jsbarcode';
 import { printContent } from '@/utils/printHelper';
 import PulsatingDots from '@/components/PulsatingDots';
+import OnlineImageSearchDialog from '@/components/OnlineImageSearchDialog';
+import { saveOnlineImageToBucket } from '@/services/productImageService';
 
 interface ProductDialogProps {
     isOpen: boolean;
@@ -39,7 +41,27 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
     const [uploadedBucketPath, setUploadedBucketPath] = useState<string | null>(null);
     const [isUploadingImage, setIsUploadingImage] = useState(false);
     const [expiryDate, setExpiryDate] = useState<Date | undefined>(undefined);
+    const [isOnlineSearchOpen, setIsOnlineSearchOpen] = useState(false);
     const localDataUrlRef = useRef<string | null>(null);
+
+    const handleOnlineImageSelect = async (url: string) => {
+        setImagePreviewUrl(url);
+        localDataUrlRef.current = url;
+        if (editedProduct) {
+            setEditedProduct(prev => prev ? ({ ...prev, image: url }) : null);
+        }
+        // Save to Supabase Storage bucket in background if possible
+        try {
+            const saved = await saveOnlineImageToBucket(url, editedProduct?.item_code || editedProduct?.barcode || 'prod');
+            if (saved && saved !== url) {
+                setUploadedBucketPath(saved);
+                setImagePreviewUrl(saved);
+                if (editedProduct) {
+                    setEditedProduct(prev => prev ? ({ ...prev, image: saved }) : null);
+                }
+            }
+        } catch {}
+    };
 
     // Units / Packaging state
     const [units, setUnits] = useState<Array<{ name: string; price: number; conversion_factor: number; barcode: string }>>([]);
@@ -407,6 +429,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
     };
 
     return (
+        <>
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[65rem] 2xl:max-w-[78rem] w-[95vw] max-h-[92vh] overflow-hidden flex flex-col font-faruma apple-glass-dialog glass3d text-foreground border border-white/20 dark:border-white/10 p-0 shadow-2xl rounded-3xl" dir="rtl">
                 {/* Header */}
@@ -428,8 +451,8 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                             {/* Row 1: Image + Names */}
                             <div className="flex gap-4 items-start">
                                 {/* Compact Image Upload */}
-                                <div className="space-y-1 shrink-0">
-                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                                <div className="space-y-1.5 shrink-0 flex flex-col items-center">
+                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest self-start">
                                         {renderBoth('product_image')}
                                     </Label>
                                     <div className="w-24 h-24 rounded-2xl bg-white/5 dark:bg-black/20 border-2 border-dashed border-white/20 flex flex-col items-center justify-center relative overflow-hidden group backdrop-blur-md">
@@ -455,14 +478,35 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                             <ImageIcon className="h-8 w-8 text-foreground/20" />
                                         )}
                                         {!isUploadingImage && (
-                                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                <Label htmlFor="image-upload" className="cursor-pointer bg-primary p-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white hover:bg-primary/90 transition-all flex items-center gap-1">
+                                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+                                                <Label htmlFor="image-upload" className="cursor-pointer bg-primary p-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white hover:bg-primary/90 transition-all flex items-center gap-1" title="Upload local file">
                                                     <Upload className="h-3 w-3" />
                                                 </Label>
                                                 <input id="image-upload" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsOnlineSearchOpen(true)}
+                                                    className="bg-amber-500 p-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white hover:bg-amber-600 transition-all flex items-center gap-1"
+                                                    title="Find Image Online by Name"
+                                                >
+                                                    <Sparkles className="h-3 w-3" />
+                                                </button>
                                             </div>
                                         )}
                                     </div>
+
+                                    {/* Dedicated 1-Click Online Image Search Button */}
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => setIsOnlineSearchOpen(true)}
+                                        className="h-6 w-24 px-1 text-[9px] font-black border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 rounded-lg gap-1 shadow-xs"
+                                        title="Find matching product packaging online"
+                                    >
+                                        <Sparkles className="h-2.5 w-2.5 text-amber-500" />
+                                        <span>Find Image</span>
+                                    </Button>
                                 </div>
 
                                 {/* Names */}
@@ -952,6 +996,18 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+
+        {/* Online Image Finder Dialog */}
+        {editedProduct && (
+            <OnlineImageSearchDialog
+                isOpen={isOnlineSearchOpen}
+                onClose={() => setIsOnlineSearchOpen(false)}
+                productName={editedProduct.name_en || editedProduct.name_dv || ''}
+                barcode={editedProduct.barcode || ''}
+                onSelectImage={handleOnlineImageSelect}
+            />
+        )}
+        </>
     );
 };
 

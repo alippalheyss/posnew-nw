@@ -10,7 +10,7 @@ import { printContent } from '@/utils/printHelper';
 import { useAppContext, Sale } from '@/context/AppContext';
 import { formatDate, formatTime, formatDateTime, extractDateOnly } from '@/utils/formatters';
 import SaleEditDialog from '@/components/SaleEditDialog';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
@@ -24,7 +24,7 @@ import autoTable from 'jspdf-autotable';
 
 const CreditInvoices = () => {
   const { t } = useTranslation();
-  const { sales, setSales, settings } = useAppContext();
+  const { sales, setSales, updateSale, settings } = useAppContext();
   const [isEditSaleDialogOpen, setIsEditSaleDialogOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,12 +39,16 @@ const CreditInvoices = () => {
     setIsEditSaleDialogOpen(true);
   };
 
-  const handleSaveSale = (updatedSale: Sale) => {
-    setSales(prevSales =>
-      prevSales.map(s => (s.id === updatedSale.id ? updatedSale : s))
-    );
-    setIsEditSaleDialogOpen(false);
-    setEditingSale(null);
+  const handleSaveSale = async (updatedSale: Sale) => {
+    try {
+      await updateSale(updatedSale);
+      setIsEditSaleDialogOpen(false);
+      setEditingSale(null);
+      showSuccess(t('sale_updated_successfully') || 'Invoice updated successfully');
+    } catch (err) {
+      console.error('Error updating invoice:', err);
+      showError('Failed to update invoice');
+    }
   };
 
   const handlePrintInvoice = (sale: Sale) => {

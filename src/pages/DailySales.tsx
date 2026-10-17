@@ -26,7 +26,7 @@ import { calculateExecutiveBriefingData, sendNightlyExecutiveBriefing } from '@/
 
 const DailySales = () => {
   const { t } = useTranslation();
-  const { sales, setSales, settings, customers } = useAppContext();
+  const { sales, setSales, updateSale, settings, customers } = useAppContext();
   const [isEditSaleDialogOpen, setIsEditSaleDialogOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [isBriefingDialogOpen, setIsBriefingDialogOpen] = useState(false);
@@ -252,10 +252,15 @@ const DailySales = () => {
     setIsEditSaleDialogOpen(true);
   };
 
-  const handleSaveSaleUpdate = (updatedSale: Sale) => {
-    setSales(prevSales => prevSales.map(s => s.id === updatedSale.id ? updatedSale : s));
-    setIsEditSaleDialogOpen(false);
-    showSuccess(t('sale_updated_successfully'));
+  const handleSaveSaleUpdate = async (updatedSale: Sale) => {
+    try {
+      await updateSale(updatedSale);
+      setIsEditSaleDialogOpen(false);
+      showSuccess(t('sale_updated_successfully'));
+    } catch (err) {
+      console.error('Error updating sale:', err);
+      showError('Failed to save sale update');
+    }
   };
 
   const totalSalesAmount = filteredSales.reduce((acc, sale) => acc + sale.grandTotal, 0);

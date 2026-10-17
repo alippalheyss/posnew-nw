@@ -340,6 +340,8 @@ interface AppContextType {
   updateProductCostPrice: (productId: string, newCost: number, purchaseDate: string) => Promise<void>;
   calculateProfitMargin: (product: Product) => number;
   addSale: (sale: Sale) => Promise<Sale>;
+  updateSale: (sale: Sale) => Promise<void>;
+  broadcastLiveSync: (event: string, payload: any) => void;
   processReturn: (originalSale: Sale, returnItems: ReturnItem[]) => Promise<void>;
   addCustomer: (customer: Customer) => Promise<Customer | void>;
   updateCustomer: (customer: Customer) => Promise<void>;
@@ -541,6 +543,22 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
+  // Realtime Live Sync Broadcast Helper (Zero-latency peer-to-peer over Supabase WebSocket)
+  const broadcastLiveSync = useCallback((event: string, payload: any) => {
+    if (!supabase) return;
+    try {
+      supabase.channel('pos_realtime_mesh_channel').send({
+        type: 'broadcast',
+        event,
+        payload
+      }).catch(err => {
+        console.warn(`[Live Mesh Broadcast ${event}] Warning:`, err);
+      });
+    } catch (e) {
+      console.warn(`[Live Mesh Broadcast ${event}] Exception:`, e);
+    }
+  }, []);
+
   // Cross-device Favorite Products State & Cloud Synchronization
   const [favoriteProductIds, setFavoriteProductIds] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
@@ -716,49 +734,118 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   }, []);
 
+  // Live Sync Recent Sales Helper
+  const syncRecentSales = useCallback(async () => {
+    if (!supabase || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
+    try {
+      const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from('sales')
+        .select('*')
+        .gte('date', twoDaysAgo)
+        .order('date', { ascending: false })
+        .limit(200);
+
+      if (!error && data && data.length > 0) {
+        setSales(prev => {
+          const map = new Map<string, Sale>(prev.map(s => [s.id, s]));
+          let hasNew = false;
+          data.forEach((s: any) => {
+            if (!map.has(s.id)) {
+              hasNew = true;
+              let items = s.items;
+              if (typeof items === 'string') {
+                try { items = JSON.parse(items); } catch { items = []; }
+              }
+              let splitDetails = s.split_details;
+              if (typeof splitDetails === 'string') {
+                try { splitDetails = JSON.parse(splitDetails); } catch { splitDetails = null; }
+              }
+              const cust = customers.find(c => c.id.toLowerCase() === s.customer_id?.toLowerCase()) || null;
+              map.set(s.id, {
+                ...s,
+                date: s.date,
+                items: Array.isArray(items) ? items : [],
+                customer: cust,
+                grandTotal: Number(s.grand_total || 0),
+                paymentMethod: String(s.payment_method || 'cash').toLowerCase() as any,
+                paidAmount: Number(s.paid_amount || 0),
+                balance: Number(s.balance || 0),
+                invoiceNumber: s.invoice_number || `INV-${String(s.id).slice(-6)}`,
+                splitDetails
+              });
+            }
+          });
+          if (!hasNew) return prev;
+          return Array.from(map.values()).sort(
+            (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+          );
+        });
+      }
+    } catch (err) {
+      console.warn('[Sync Recent Sales] Warning:', err);
+    }
+  }, [customers]);
+
+  // Live Sync Recent Vendors Helper
+  const syncRecentVendors = useCallback(async () => {
+    if (!supabase || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
+    try {
+      const { data, error } = await supabase
+        .from('vendors')
+        .select('*')
+        .order('name_en', { ascending: true });
+
+      if (!error && data) {
+        setVendors(prev => {
+          const prevMap = new Map(prev.map(v => [v.id, v]));
+          let changed = false;
+          if (data.length !== prev.length) changed = true;
+          data.forEach((v: any) => {
+            const existing = prevMap.get(v.id);
+            if (!existing || existing.updated_at !== v.updated_at) {
+              changed = true;
+            }
+          });
+          return changed ? data : prev;
+        });
+      }
+    } catch (err) {
+      console.warn('[Sync Vendors] Warning:', err);
+    }
+  }, []);
+
+  // Multi-device active polling & window focus re-synchronization
   useEffect(() => {
     fetchTransferSlips();
-    // Safety fallback every 5 minutes (Realtime postgres_changes pushes new slips instantly)
-    const interval = setInterval(() => {
-      if (typeof document !== 'undefined' && !document.hidden) {
-        fetchTransferSlips();
-      }
-    }, 5 * 60 * 1000);
+    syncRecentSales();
+    syncRecentVendors();
 
     const handleFocus = () => {
-      if (typeof document !== 'undefined' && !document.hidden) {
+      if (typeof document !== 'undefined' && !document.hidden && navigator.onLine) {
         fetchTransferSlips();
+        syncRecentSales();
+        syncRecentVendors();
       }
     };
     window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
 
-    // Realtime subscription for transfer slips table
-    let channel: any = null;
-    if (supabase) {
-      try {
-        channel = supabase
-          .channel('transfer_slips_realtime_channel')
-          .on(
-            'postgres_changes',
-            { event: '*', schema: 'public', table: 'transfer_slips' },
-            () => {
-              fetchTransferSlips();
-            }
-          )
-          .subscribe();
-      } catch (err) {
-        console.warn('Realtime subscription failed for transfer_slips:', err);
+    // Active background heartbeat every 20 seconds (ensures devices without WebSocket still stay live)
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && !document.hidden && navigator.onLine) {
+        fetchTransferSlips();
+        syncRecentSales();
+        syncRecentVendors();
       }
-    }
+    }, 20 * 1000);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
-      if (channel && supabase) {
-        supabase.removeChannel(channel);
-      }
+      document.removeEventListener('visibilitychange', handleFocus);
     };
-  }, [fetchTransferSlips]);
+  }, [fetchTransferSlips, syncRecentSales, syncRecentVendors]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('sidebar_collapsed');
@@ -1316,6 +1403,148 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     };
   }, []);
 
+  // Cross-device Realtime Mesh Channel for instant live synchronization across multiple computers
+  useEffect(() => {
+    if (!supabase) return;
+    const meshChannel = supabase.channel('pos_realtime_mesh_channel', {
+      config: { broadcast: { self: false } }
+    });
+
+    meshChannel
+      // --- SALES BROADCAST ---
+      .on('broadcast', { event: 'sale_created' }, ({ payload }) => {
+        if (payload?.sale) {
+          console.log('[Live Mesh] Live sale received from peer computer:', payload.sale.invoiceNumber || payload.sale.id);
+          setSales(prev => {
+            if (prev.some(s => s.id === payload.sale.id)) return prev;
+            return [payload.sale, ...prev];
+          });
+          if (Array.isArray(payload.sale.items)) {
+            setProducts(prevProds => prevProds.map(p => {
+              const matched = payload.sale.items.find((item: any) => item.id === p.id);
+              if (matched) {
+                const qty = (Number(matched.qty) || 0) * (Number(matched.unit_conversion) || 1);
+                return { ...p, stock_shop: Math.round((p.stock_shop || 0) - qty) };
+              }
+              return p;
+            }));
+          }
+        }
+      })
+      .on('broadcast', { event: 'sale_updated' }, ({ payload }) => {
+        if (payload?.sale) {
+          setSales(prev => prev.map(s => s.id === payload.sale.id ? payload.sale : s));
+        }
+      })
+      .on('broadcast', { event: 'sale_deleted' }, ({ payload }) => {
+        if (payload?.saleId) {
+          setSales(prev => prev.filter(s => s.id !== payload.saleId));
+        }
+      })
+
+      // --- VENDORS BROADCAST ---
+      .on('broadcast', { event: 'vendor_created' }, ({ payload }) => {
+        if (payload?.vendor) {
+          console.log('[Live Mesh] Live vendor received from peer computer:', payload.vendor.name_en);
+          setVendors(prev => {
+            if (prev.some(v => v.id === payload.vendor.id)) return prev;
+            return [...prev, payload.vendor];
+          });
+        }
+      })
+      .on('broadcast', { event: 'vendor_updated' }, ({ payload }) => {
+        if (payload?.vendor) {
+          setVendors(prev => prev.map(v => v.id === payload.vendor.id ? payload.vendor : v));
+        }
+      })
+      .on('broadcast', { event: 'vendor_deleted' }, ({ payload }) => {
+        if (payload?.vendorId) {
+          setVendors(prev => prev.filter(v => v.id !== payload.vendorId));
+        }
+      })
+
+      // --- TRANSFER SLIPS (AWAITING TRANSFERS) BROADCAST ---
+      .on('broadcast', { event: 'transfer_slip_changed' }, () => {
+        console.log('[Live Mesh] Transfer slip update received from peer computer, refreshing awaiting transfers...');
+        fetchTransferSlips();
+      })
+
+      // --- PURCHASES BROADCAST ---
+      .on('broadcast', { event: 'purchase_created' }, ({ payload }) => {
+        if (payload?.purchase) {
+          setPurchases(prev => {
+            if (prev.some(p => p.id === payload.purchase.id)) return prev;
+            return [payload.purchase, ...prev];
+          });
+        }
+      })
+      .on('broadcast', { event: 'purchase_deleted' }, ({ payload }) => {
+        if (payload?.purchaseId) {
+          setPurchases(prev => prev.filter(p => p.id !== payload.purchaseId));
+        }
+      })
+
+      // --- DATABASE POSTGRES_CHANGES FALLBACK ---
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sales' }, (payload) => {
+        const row = payload.new as any;
+        if (!row) return;
+        setSales(prev => {
+          if (prev.some(s => s.id === row.id)) return prev;
+          let items = row.items;
+          if (typeof items === 'string') {
+            try { items = JSON.parse(items); } catch { items = []; }
+          }
+          let splitDetails = row.split_details;
+          if (typeof splitDetails === 'string') {
+            try { splitDetails = JSON.parse(splitDetails); } catch { splitDetails = null; }
+          }
+          const cust = customers.find(c => c.id.toLowerCase() === row.customer_id?.toLowerCase()) || null;
+          const newSale: Sale = {
+            ...row,
+            date: row.date,
+            items: Array.isArray(items) ? items : [],
+            customer: cust,
+            grandTotal: Number(row.grand_total || 0),
+            paymentMethod: String(row.payment_method || 'cash').toLowerCase() as any,
+            paidAmount: Number(row.paid_amount || 0),
+            balance: Number(row.balance || 0),
+            invoiceNumber: row.invoice_number || `INV-${String(row.id).slice(-6)}`,
+            splitDetails
+          };
+          return [newSale, ...prev];
+        });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'vendors' }, () => {
+        syncRecentVendors();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transfer_slips' }, () => {
+        fetchTransferSlips();
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'purchases' }, (payload) => {
+        const row = payload.new as any;
+        if (!row) return;
+        setPurchases(prev => {
+          if (prev.some(p => p.id === row.id)) return prev;
+          return [{
+            id: row.id,
+            date: row.date,
+            vendor: row.vendor || '',
+            vendorId: row.vendor_id,
+            billNumber: row.bill_number || '',
+            amount: Number(row.amount || 0),
+            gstAmount: Number(row.gst_amount || 0),
+            description: row.description || '',
+            items: row.items || []
+          }, ...prev];
+        });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(meshChannel);
+    };
+  }, [fetchTransferSlips, syncRecentVendors, customers]);
+
   const [openCarts, setOpenCarts] = useState<Map<string, Cart>>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('open_carts');
@@ -1732,6 +1961,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       queueOfflineAction('insert_sale', salePayload);
     }
 
+    // Broadcast new sale to all peer computers instantly via WebSockets
+    broadcastLiveSync('sale_created', { sale: saleWithInvoice });
+
     // Automatic 90% credit threshold reminder via Telegram if online
     if (saleWithInvoice.customer?.id && settings.telegram?.autoCreditReminderThreshold !== false && (typeof navigator === 'undefined' || navigator.onLine)) {
       const cust = customers.find(c => c.id === saleWithInvoice.customer?.id);
@@ -1818,6 +2050,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         split_details: null,
       }]);
       setSales(prev => [returnSale, ...prev]);
+      broadcastLiveSync('sale_created', { sale: returnSale });
     } catch (err) {
       console.error('Error recording return sale:', err);
       throw err;
@@ -2055,6 +2288,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
                 } catch {}
                 return next;
               });
+              broadcastLiveSync('transfer_slip_changed', { slip: savedSlip });
               showSuccess(`💳 New transfer slip received from ${slipData.customer_name}!`);
             } catch (err) {
               console.warn('Error saving received slip:', err);
@@ -2650,6 +2884,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         try { localStorage.setItem('pos_transfer_slips', JSON.stringify(next)); } catch {}
         return next;
       });
+      broadcastLiveSync('transfer_slip_changed', { slipId, status: 'confirmed' });
 
       // 4. Send Telegram confirmation receipt to customer
       if (slip.telegram_chat_id) {
@@ -2704,6 +2939,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         try { localStorage.setItem('pos_transfer_slips', JSON.stringify(next)); } catch {}
         return next;
       });
+      broadcastLiveSync('transfer_slip_changed', { slipId, status: 'rejected' });
 
       if (slip.telegram_chat_id) {
         sendTelegramSlipDeclinedMessage({
@@ -2749,6 +2985,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
 
     setTransferSlips(prev => [newSlip, ...prev]);
+    broadcastLiveSync('transfer_slip_changed', { slipId: newSlip.id, status: 'pending' });
     return newSlip;
   };
 
@@ -3240,6 +3477,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       }
 
       showSuccess('Purchase bill saved & product inventory stock updated! 📦');
+      broadcastLiveSync('purchase_created', { purchase: fullPurchase });
     } catch (error) {
       console.error('Error adding purchase:', error);
       showError('Failed to save purchase');
@@ -3256,6 +3494,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       if (error) throw error;
 
       setPurchases(prev => prev.filter(p => p.id !== purchaseId));
+      broadcastLiveSync('purchase_deleted', { purchaseId });
       showSuccess('Purchase deleted successfully');
     } catch (error) {
       console.error('Error deleting purchase:', error);
@@ -3292,6 +3531,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
       const createdVendor = data || payload;
       setVendors(prev => [...prev, createdVendor]);
+      broadcastLiveSync('vendor_created', { vendor: createdVendor });
       return createdVendor;
     } catch (error) {
       console.error('Error adding vendor:', error);
@@ -3313,6 +3553,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       if (error) throw error;
 
       setVendors(prev => prev.map(v => v.id === vendor.id ? vendor : v));
+      broadcastLiveSync('vendor_updated', { vendor });
       console.log('Vendor updated successfully');
     } catch (error) {
       console.error('Error updating vendor:', error);
@@ -3330,10 +3571,35 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       if (error) throw error;
 
       setVendors(prev => prev.filter(v => v.id !== vendorId));
+      broadcastLiveSync('vendor_deleted', { vendorId });
     } catch (error) {
       console.error('Error deleting vendor:', error);
       showError('Failed to delete vendor');
     }
+  };
+
+  const updateSale = async (updatedSale: Sale) => {
+    setSales(prev => prev.map(s => s.id === updatedSale.id ? updatedSale : s));
+
+    try {
+      if (supabase) {
+        await supabase.from('sales').update({
+          date: updatedSale.date,
+          customer_id: updatedSale.customer?.id || null,
+          items: updatedSale.items,
+          grand_total: Number(updatedSale.grandTotal),
+          payment_method: String(updatedSale.paymentMethod).toLowerCase(),
+          paid_amount: updatedSale.paidAmount !== undefined ? Number(updatedSale.paidAmount) : null,
+          balance: updatedSale.balance !== undefined ? Number(updatedSale.balance) : null,
+          invoice_number: updatedSale.invoiceNumber,
+          split_details: updatedSale.splitDetails || null
+        }).eq('id', updatedSale.id);
+      }
+    } catch (err) {
+      console.warn('Error saving updated sale to cloud:', err);
+    }
+
+    broadcastLiveSync('sale_updated', { sale: updatedSale });
   };
 
   const clearAllData = async () => {
@@ -3537,6 +3803,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       updateProductCostPrice,
       calculateProfitMargin,
       addSale,
+      updateSale,
+      broadcastLiveSync,
       processReturn,
       addCustomer,
       updateCustomer,

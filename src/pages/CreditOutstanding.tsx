@@ -43,7 +43,7 @@ interface Settlement {
 
 const CreditOutstanding = () => {
   const { t } = useTranslation();
-  const { customers, sales, setSales, settings, addSettlement, updateCustomerBalance, addSale, pendingSlipsCount } = useAppContext();
+  const { customers, sales, setSales, updateSale, settings, addSettlement, updateCustomerBalance, addSale, pendingSlipsCount } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [isOutstandingVisible, setIsOutstandingVisible] = useState(false);
   const [isTransferSlipsDialogOpen, setIsTransferSlipsDialogOpen] = useState(false);
@@ -92,21 +92,7 @@ const CreditOutstanding = () => {
 
   const handleSaveSaleUpdate = async (updatedSale: Sale) => {
     try {
-      const { error } = await supabase
-        .from('sales')
-        .update({
-          items: updatedSale.items,
-          grand_total: updatedSale.grandTotal,
-          payment_method: updatedSale.paymentMethod,
-          paid_amount: updatedSale.paidAmount,
-          balance: updatedSale.balance,
-          invoice_number: updatedSale.invoiceNumber
-        })
-        .eq('id', updatedSale.id);
-
-      if (error) throw error;
-
-      setSales(prevSales => prevSales.map(s => s.id === updatedSale.id ? updatedSale : s));
+      await updateSale(updatedSale);
       showSuccess(t('sale_updated_successfully') || 'Sale updated successfully');
       setIsEditSaleDialogOpen(false);
       setEditingSale(null);

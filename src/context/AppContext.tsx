@@ -460,40 +460,50 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   }, [expenses]);
 
-  // Dual-layer caching: fast localStorage sync + quota-free IndexedDB local-first persistence
+  // Dual-layer caching: debounced fast localStorage sync + quota-free IndexedDB local-first persistence
   useEffect(() => {
-    if (typeof window !== 'undefined' && products.length > 0) {
+    if (typeof window === 'undefined' || products.length === 0) return;
+    const timer = setTimeout(() => {
       try { localStorage.setItem('cached_pos_products', JSON.stringify(products)); } catch (e) {}
       putStoreBatch(STORES.PRODUCTS, products).catch(() => {});
-    }
+    }, 400);
+    return () => clearTimeout(timer);
   }, [products]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && customers.length > 0) {
+    if (typeof window === 'undefined' || customers.length === 0) return;
+    const timer = setTimeout(() => {
       try { localStorage.setItem('cached_pos_customers', JSON.stringify(customers)); } catch (e) {}
       putStoreBatch(STORES.CUSTOMERS, customers).catch(() => {});
-    }
+    }, 400);
+    return () => clearTimeout(timer);
   }, [customers]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && sales.length > 0) {
+    if (typeof window === 'undefined' || sales.length === 0) return;
+    const timer = setTimeout(() => {
       try { localStorage.setItem('cached_pos_sales', JSON.stringify(sales)); } catch (e) {}
       putStoreBatch(STORES.SALES, sales).catch(() => {});
-    }
+    }, 400);
+    return () => clearTimeout(timer);
   }, [sales]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && purchases.length > 0) {
+    if (typeof window === 'undefined' || purchases.length === 0) return;
+    const timer = setTimeout(() => {
       try { localStorage.setItem('cached_pos_purchases', JSON.stringify(purchases)); } catch (e) {}
       putStoreBatch(STORES.PURCHASES, purchases).catch(() => {});
-    }
+    }, 400);
+    return () => clearTimeout(timer);
   }, [purchases]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && vendors.length > 0) {
+    if (typeof window === 'undefined' || vendors.length === 0) return;
+    const timer = setTimeout(() => {
       try { localStorage.setItem('cached_pos_vendors', JSON.stringify(vendors)); } catch (e) {}
       putStoreBatch(STORES.VENDORS, vendors).catch(() => {});
-    }
+    }, 400);
+    return () => clearTimeout(timer);
   }, [vendors]);
 
   // IndexedDB Initial Fallback Hydration (rescues cold boots if localStorage quota was reached)
@@ -1657,14 +1667,39 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     // 1. Immediately add to local state
     setSales(prev => [saleWithInvoice, ...prev]);
 
-    // 2. Update local product stock
+    // 2. Batch update local product stock ONCE instead of calling setProducts in loop
+    const stockDeductions = new Map<string, number>();
     sale.items.forEach((item) => {
-      const product = products.find(p => p.id === item.id);
-      if (product) {
-        const qtyToDeduct = item.qty * (item.unit_conversion || 1);
-        updateStock(product.id, product.stock_shop - qtyToDeduct);
-      }
+      const qtyToDeduct = item.qty * (item.unit_conversion || 1);
+      stockDeductions.set(item.id, (stockDeductions.get(item.id) || 0) + qtyToDeduct);
     });
+
+    if (stockDeductions.size > 0) {
+      setProducts(prev => prev.map(p => {
+        const deduct = stockDeductions.get(p.id);
+        if (deduct !== undefined) {
+          return { ...p, stock_shop: Math.round(p.stock_shop - deduct) };
+        }
+        return p;
+      }));
+
+      // Asynchronously update cloud database in background
+      Promise.all(Array.from(stockDeductions.entries()).map(async ([productId, deduct]) => {
+        const prod = products.find(p => p.id === productId);
+        if (prod) {
+          const intStock = Math.round(prod.stock_shop - deduct);
+          const nowIso = new Date().toISOString();
+          await supabase.from('products').update({ stock_shop: intStock, updated_at: nowIso }).eq('id', productId).catch(() => {});
+          try {
+            supabase.channel('stock_audit_realtime_channel').send({
+              type: 'broadcast',
+              event: 'audit_stock_committed',
+              payload: { productId, stock_shop: intStock }
+            });
+          } catch (e) {}
+        }
+      })).catch(() => {});
+    }
 
     const salePayload = {
       id: saleWithInvoice.id,
@@ -2511,7 +2546,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       clearInterval(intervalId);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [customers]);
+  }, []);
 
   const addSettlement = async (customerId: string, settlement: Settlement) => {
     try {

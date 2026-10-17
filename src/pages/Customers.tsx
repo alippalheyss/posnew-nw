@@ -43,6 +43,23 @@ const Customers = () => {
   const filteredCustomers = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
 
+    const matchesCustomerCode = (c: Customer, query: string) => {
+      if (!c.code || !query) return false;
+      const cleanQ = query.trim().toLowerCase().replace(/^#/, '');
+      const cleanCode = c.code.trim().toLowerCase().replace(/^#/, '');
+      if (cleanCode === cleanQ || cleanCode.includes(cleanQ)) return true;
+      const qDigits = cleanQ.replace(/\D/g, '');
+      const codeDigits = cleanCode.replace(/\D/g, '');
+      if (qDigits && codeDigits) {
+        if (qDigits === codeDigits) return true;
+        if (codeDigits.padStart(3, '0') === qDigits.padStart(3, '0')) return true;
+        if (parseInt(codeDigits, 10) === parseInt(qDigits, 10)) return true;
+      }
+      return false;
+    };
+
+    const termMatchesAnyCode = term.length > 0 && customers.some(c => matchesCustomerCode(c, term));
+
     let list = customers.filter(customer => {
       if (!term) return true;
       if (filterType === 'BY_NAME') {
@@ -52,14 +69,14 @@ const Customers = () => {
         );
       }
       if (filterType === 'BY_CODE') {
-        return (customer.code || '').toLowerCase().includes(term);
+        return matchesCustomerCode(customer, term);
       }
-      return (
-        (customer.name_dv || '').toLowerCase().includes(term) ||
-        (customer.name_en || '').toLowerCase().includes(term) ||
-        (customer.code || '').toLowerCase().includes(term) ||
-        (customer.phone || '').includes(term)
-      );
+      const matchesCode = matchesCustomerCode(customer, term);
+      const matchesName = (customer.name_dv || '').toLowerCase().includes(term) ||
+                          (customer.name_en || '').toLowerCase().includes(term);
+      const matchesPhone = !termMatchesAnyCode && term.length >= 6 && (customer.phone || '').includes(term);
+
+      return matchesCode || matchesName || matchesPhone;
     });
 
     if (sortBy === 'NAME_ASC') {

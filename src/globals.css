@@ -214,46 +214,38 @@
 
   .bg-card {
     background: var(--glass-light-bg) !important;
-    -webkit-backdrop-filter: var(--glass-light-filter) !important;
-    backdrop-filter: var(--glass-light-filter) !important;
     border: var(--glass-light-border) !important;
-    box-shadow: var(--glass-light-shadow-3d) !important;
+    box-shadow: 0 1px 3px rgba(0, 30, 80, 0.05), 0 4px 12px -2px rgba(0, 30, 80, 0.06) !important;
   }
 
   .dark .bg-card {
     background: var(--glass-dark-bg) !important;
-    -webkit-backdrop-filter: var(--glass-dark-filter) !important;
-    backdrop-filter: var(--glass-dark-filter) !important;
     border: var(--glass-dark-border) !important;
-    box-shadow: var(--glass-dark-shadow-3d) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35), 0 4px 14px -2px rgba(0, 0, 0, 0.45) !important;
   }
 
   .bg-popover {
     background: linear-gradient(145deg, rgba(255, 255, 255, 0.88) 0%, rgba(240, 246, 255, 0.70) 100%) !important;
-    -webkit-backdrop-filter: blur(35px) saturate(220%) !important;
-    backdrop-filter: blur(35px) saturate(220%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    backdrop-filter: blur(20px) saturate(200%) !important;
     border: 1px solid rgba(255, 255, 255, 0.9) !important;
-    box-shadow: var(--glass-light-shadow-3d) !important;
+    box-shadow: 0 4px 20px -2px rgba(0, 30, 80, 0.12) !important;
   }
 
   .dark .bg-popover {
     background: linear-gradient(145deg, rgba(30, 41, 59, 0.82) 0%, rgba(15, 23, 42, 0.70) 100%) !important;
-    -webkit-backdrop-filter: blur(35px) saturate(220%) !important;
-    backdrop-filter: blur(35px) saturate(220%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    backdrop-filter: blur(20px) saturate(200%) !important;
     border: 1px solid rgba(255, 255, 255, 0.18) !important;
-    box-shadow: var(--glass-dark-shadow-3d) !important;
+    box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.6) !important;
   }
 
   .bg-muted {
     background-color: rgba(0, 40, 100, 0.05) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
-    backdrop-filter: blur(12px) !important;
   }
 
   .dark .bg-muted {
     background-color: rgba(255, 255, 255, 0.06) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
-    backdrop-filter: blur(12px) !important;
   }
 
   /* 3D Liquid Glass - Panels & Sidebars */
@@ -276,18 +268,18 @@
   /* 3D Liquid Glass - Cards */
   .apple-glass-card {
     background: var(--glass-light-bg) !important;
-    -webkit-backdrop-filter: var(--glass-light-filter) !important;
-    backdrop-filter: var(--glass-light-filter) !important;
+    -webkit-backdrop-filter: blur(10px) saturate(180%) !important;
+    backdrop-filter: blur(10px) saturate(180%) !important;
     border: var(--glass-light-border) !important;
-    box-shadow: var(--glass-light-shadow-3d) !important;
+    box-shadow: 0 1px 3px rgba(0, 30, 80, 0.06), 0 6px 16px -3px rgba(0, 30, 80, 0.08) !important;
   }
 
   .dark .apple-glass-card {
     background: var(--glass-dark-bg) !important;
-    -webkit-backdrop-filter: var(--glass-dark-filter) !important;
-    backdrop-filter: var(--glass-dark-filter) !important;
+    -webkit-backdrop-filter: blur(10px) saturate(180%) !important;
+    backdrop-filter: blur(10px) saturate(180%) !important;
     border: var(--glass-dark-border) !important;
-    box-shadow: var(--glass-dark-shadow-3d) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 6px 20px -3px rgba(0, 0, 0, 0.5) !important;
   }
 
   /* 3D Liquid Glass - Dialogs & Modals */
@@ -416,74 +408,54 @@
   }
 
   /* Ambient Moving Dots & Lines Dynamic Grid (Light & Dark Mode) */
-  @keyframes ambient-dots-drift {
-    0% {
-      background-position: 0 0;
-    }
-    100% {
-      background-position: 280px 280px;
-    }
-  }
-
-  @keyframes ambient-lines-drift {
-    0% {
-      background-position: 0 0, 0 0;
-    }
-    100% {
-      background-position: 560px 0, 0 560px;
-    }
-  }
-
   @keyframes ambient-orbs-float {
     0%, 100% {
-      transform: translate(0, 0) scale(1);
+      transform: translate3d(0, 0, 0) scale(1);
     }
-    33% {
-      transform: translate(35px, -45px) scale(1.06);
-    }
-    66% {
-      transform: translate(-30px, 35px) scale(0.96);
+    50% {
+      transform: translate3d(20px, -20px, 0) scale(1.03);
     }
   }
 
   .ambient-animated-dots {
-    background-image: radial-gradient(circle, rgba(0, 45, 120, 0.13) 1.5px, transparent 1.5px);
+    background-image: radial-gradient(circle, rgba(0, 45, 120, 0.10) 1.5px, transparent 1.5px);
     background-size: 28px 28px;
-    animation: ambient-dots-drift 90s linear infinite;
-    will-change: background-position;
+    contain: strict;
   }
 
   .dark .ambient-animated-dots {
-    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.14) 1.5px, transparent 1.5px);
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.10) 1.5px, transparent 1.5px);
     background-size: 28px 28px;
-    animation: ambient-dots-drift 90s linear infinite;
+    contain: strict;
   }
 
   .ambient-animated-lines {
     background-image: 
-      linear-gradient(to right, rgba(0, 45, 120, 0.05) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(0, 45, 120, 0.05) 1px, transparent 1px);
+      linear-gradient(to right, rgba(0, 45, 120, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0, 45, 120, 0.04) 1px, transparent 1px);
     background-size: 56px 56px;
-    animation: ambient-lines-drift 140s linear infinite;
-    will-change: background-position;
+    contain: strict;
   }
 
   .dark .ambient-animated-lines {
     background-image: 
-      linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
     background-size: 56px 56px;
-    animation: ambient-lines-drift 140s linear infinite;
+    contain: strict;
   }
 
   .ambient-orb-1 {
-    animation: ambient-orbs-float 50s ease-in-out infinite;
+    animation: ambient-orbs-float 45s ease-in-out infinite;
+    will-change: transform;
   }
   .ambient-orb-2 {
-    animation: ambient-orbs-float 65s ease-in-out infinite reverse;
+    animation: ambient-orbs-float 55s ease-in-out infinite reverse;
+    will-change: transform;
   }
   .ambient-orb-3 {
-    animation: ambient-orbs-float 60s ease-in-out infinite 5s;
+    animation: ambient-orbs-float 50s ease-in-out infinite 3s;
+    will-change: transform;
   }
 }
 

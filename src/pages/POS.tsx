@@ -272,6 +272,7 @@ const POS = () => {
   const balance = typeof paidAmount === 'number' ? paidAmount - grandTotal : -grandTotal;
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const creditCustomerSearchInputRef = useRef<HTMLInputElement>(null);
   const lastQtyInputRef = useRef<HTMLInputElement>(null);
   const focusQuantityInputRef = useRef<() => void>(() => {});
 
@@ -327,6 +328,15 @@ const POS = () => {
       setPaidAmount(grandTotal);
     }
   }, [isCashDialogOpen, grandTotal]);
+
+  useEffect(() => {
+    if (isCreditDialogOpen && creditDialogStep === 1) {
+      setTimeout(() => {
+        creditCustomerSearchInputRef.current?.focus();
+        creditCustomerSearchInputRef.current?.select();
+      }, 60);
+    }
+  }, [isCreditDialogOpen, creditDialogStep]);
 
   useEffect(() => {
     localStorage.setItem('pos_active', 'true');
@@ -798,6 +808,38 @@ const POS = () => {
     });
     return map;
   }, [sales]);
+
+  // Frequency ranking of customers who often take credit
+  const customerCreditSalesCountMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    (sales || []).forEach(s => {
+      const isCredit = s.paymentMethod?.toLowerCase() === 'credit' ||
+        (Array.isArray(s.splitDetails) && s.splitDetails.some((d: any) => d.method?.toLowerCase() === 'credit'));
+      if (isCredit && s.customer?.id) {
+        map[s.customer.id] = (map[s.customer.id] || 0) + 1;
+      }
+    });
+    return map;
+  }, [sales]);
+
+  // Precise customer code matcher (matches "003" with "CUST003", "003", "3", etc.)
+  const matchesCustomerCode = (c: Customer, query: string) => {
+    if (!c.code || !query) return false;
+    const cleanQ = query.trim().toLowerCase().replace(/^#/, '');
+    const cleanCode = c.code.trim().toLowerCase().replace(/^#/, '');
+
+    if (cleanCode === cleanQ) return true;
+    if (cleanCode.includes(cleanQ)) return true;
+
+    const qDigits = cleanQ.replace(/\D/g, '');
+    const codeDigits = cleanCode.replace(/\D/g, '');
+    if (qDigits && codeDigits) {
+      if (qDigits === codeDigits) return true;
+      if (codeDigits.padStart(3, '0') === qDigits.padStart(3, '0')) return true;
+      if (parseInt(codeDigits, 10) === parseInt(qDigits, 10)) return true;
+    }
+    return false;
+  };
 
   const filteredCatalogueProducts = useMemo(() => {
     const list = products.filter(product => {
@@ -2113,102 +2155,178 @@ const POS = () => {
           <div className="py-3">
             {creditDialogStep === 1 ? (
               <div className="space-y-3">
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-                    <Input
-                      placeholder={renderBothString('search_customers')}
-                      value={customerSearchTerm}
-                      onChange={(e) => setCustomerSearchTerm(e.target.value)}
-                      className="w-full text-right bg-muted/60 border-border text-foreground h-11 pr-10 rounded-xl font-bold placeholder:text-muted-foreground/60"
-                    />
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setIsAddCustomerDialogOpen(true)}
-                    className="h-11 w-11 rounded-xl border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary shrink-0"
-                    title={renderBothString('add_new_customer')}
-                  >
-                    <UserPlus className="h-5 w-5" />
-                  </Button>
-                </div>
+                {(() => {
+                  const term = customerSearchTerm.trim();
+                  const termMatchesAnyCode = term.length > 0 && customers.some(c => matchesCustomerCode(c, term));
 
-                <ScrollArea className="h-[340px] pr-2 custom-scrollbar">
-                  {(() => {
-                    const filteredCustomers = customers.filter(c =>
-                      c.name_dv?.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
-                      c.name_en?.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
-                      c.phone?.includes(customerSearchTerm) ||
-                      c.code?.toLowerCase().includes(customerSearchTerm.toLowerCase())
-                    );
+                  // Filter customers: if searching by code, DO NOT match phone numbers!
+                  const filteredCustomers = customers.filter(c => {
+                    if (!term) return true;
+                    const matchesCode = matchesCustomerCode(c, term);
+                    const matchesName = (c.name_dv || '').toLowerCase().includes(term.toLowerCase()) ||
+                                        (c.name_en || '').toLowerCase().includes(term.toLowerCase());
+                    // Only match phone number if not a customer code search and term has at least 6 digits
+                    const matchesPhone = !termMatchesAnyCode && term.length >= 6 && (c.phone || '').includes(term);
 
-                    if (filteredCustomers.length === 0) {
-                      return (
-                        <div className="p-8 text-center text-muted-foreground bg-muted/20 rounded-2xl border border-dashed border-border/80 flex flex-col items-center justify-center gap-2 mt-4">
-                          <Users className="h-8 w-8 text-muted-foreground/40" />
-                          <p className="text-sm font-bold">{renderBoth('no_customers_found')}</p>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setIsAddCustomerDialogOpen(true)}
-                            className="mt-2 text-xs font-bold gap-1 rounded-xl border-primary/30 text-primary hover:bg-primary/10"
-                          >
-                            <UserPlus className="h-3.5 w-3.5" />
-                            {renderBoth('add_new_customer')}
-                          </Button>
-                        </div>
-                      );
+                    return matchesCode || matchesName || matchesPhone;
+                  });
+
+                  // Sort customers:
+                  // 1. Exact/best code match if searching
+                  // 2. Customers who often take credit first!
+                  filteredCustomers.sort((a, b) => {
+                    if (term) {
+                      const aCode = matchesCustomerCode(a, term);
+                      const bCode = matchesCustomerCode(b, term);
+                      if (aCode && !bCode) return -1;
+                      if (!aCode && bCode) return 1;
+                      if (aCode && bCode) {
+                        const qDigits = term.replace(/\D/g, '');
+                        const aDigits = (a.code || '').replace(/\D/g, '');
+                        const bDigits = (b.code || '').replace(/\D/g, '');
+                        const aExact = aDigits === qDigits || (a.code || '').toLowerCase() === term.toLowerCase();
+                        const bExact = bDigits === qDigits || (b.code || '').toLowerCase() === term.toLowerCase();
+                        if (aExact && !bExact) return -1;
+                        if (!aExact && bExact) return 1;
+                      }
                     }
 
-                    return (
-                      <div className="space-y-2.5">
-                        {filteredCustomers.map((customer) => {
-                          const outstanding = customer.outstanding_balance || 0;
-                          const limit = customer.credit_limit || 0;
-                          const isOverLimit = limit > 0 && (outstanding + grandTotal > limit);
-                          return (
-                            <div
-                              key={customer.id}
-                              onClick={() => {
-                                updateActiveCart(prev => ({ ...prev, customer }));
-                                setCreditDialogStep(2);
-                              }}
-                              className="p-3.5 rounded-2xl cursor-pointer transition-all border border-border bg-card hover:bg-muted/60 hover:border-primary/50 text-right group shadow-sm hover:shadow-md"
+                    // Score based on credit usage frequency and outstanding balance
+                    const aCount = customerCreditSalesCountMap[a.id] || 0;
+                    const bCount = customerCreditSalesCountMap[b.id] || 0;
+                    const aOutstanding = (a.outstanding_balance || 0) > 0 ? 1 : 0;
+                    const bOutstanding = (b.outstanding_balance || 0) > 0 ? 1 : 0;
+                    const aSettlements = (a.settlement_history?.length || 0) > 0 ? 1 : 0;
+                    const bSettlements = (b.settlement_history?.length || 0) > 0 ? 1 : 0;
+
+                    const aScore = (aCount * 1000) + (aOutstanding * 500) + (aSettlements * 100);
+                    const bScore = (bCount * 1000) + (bOutstanding * 500) + (bSettlements * 100);
+
+                    if (bScore !== aScore) {
+                      return bScore - aScore;
+                    }
+
+                    if ((b.outstanding_balance || 0) !== (a.outstanding_balance || 0)) {
+                      return (b.outstanding_balance || 0) - (a.outstanding_balance || 0);
+                    }
+
+                    return (a.name_dv || a.name_en || '').localeCompare(b.name_dv || b.name_en || '');
+                  });
+
+                  const selectCustomer = (customer: Customer) => {
+                    updateActiveCart(prev => ({ ...prev, customer }));
+                    setCreditDialogStep(2);
+                    playScanSuccessSound();
+                  };
+
+                  return (
+                    <>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 pointer-events-none" />
+                          <Input
+                            ref={creditCustomerSearchInputRef}
+                            placeholder="ކަސްޓަމަރު ކޯޑު ނުވަތަ ނަން (Enter to Select)..."
+                            value={customerSearchTerm}
+                            onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                const codeMatch = filteredCustomers.find(c => matchesCustomerCode(c, customerSearchTerm));
+                                const target = codeMatch || filteredCustomers[0];
+                                if (target) {
+                                  selectCustomer(target);
+                                }
+                              }
+                            }}
+                            className="w-full text-right bg-muted/60 border-border text-foreground h-11 pr-10 pl-3 rounded-xl font-bold placeholder:text-muted-foreground/60 focus:border-primary shadow-xs"
+                            autoFocus
+                          />
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setIsAddCustomerDialogOpen(true)}
+                          className="h-11 w-11 rounded-xl border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary shrink-0"
+                          title={renderBothString('add_new_customer')}
+                        >
+                          <UserPlus className="h-5 w-5" />
+                        </Button>
+                      </div>
+
+                      <ScrollArea className="h-[340px] pr-2 custom-scrollbar">
+                        {filteredCustomers.length === 0 ? (
+                          <div className="p-8 text-center text-muted-foreground bg-muted/20 rounded-2xl border border-dashed border-border/80 flex flex-col items-center justify-center gap-2 mt-4">
+                            <Users className="h-8 w-8 text-muted-foreground/40" />
+                            <p className="text-sm font-bold">{renderBoth('no_customers_found')}</p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setIsAddCustomerDialogOpen(true)}
+                              className="mt-2 text-xs font-bold gap-1 rounded-xl border-primary/30 text-primary hover:bg-primary/10"
                             >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex flex-col items-start gap-1 shrink-0">
-                                  <Badge variant="outline" className={cn(
-                                    "text-[10px] font-black px-2.5 py-0.5 rounded-md",
-                                    isOverLimit 
-                                      ? "bg-red-500/10 text-red-500 border-red-500/30" 
-                                      : "bg-primary/10 text-primary border-primary/30"
-                                  )}>
-                                    {t('credit_limit')}: {settings.shop.currency} {limit.toFixed(2)}
-                                  </Badge>
-                                  {outstanding > 0 && (
-                                    <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400">
-                                      {t('current_outstanding')}: {settings.shop.currency} {outstanding.toFixed(2)}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-right flex-1 min-w-0">
-                                  <p className="font-black text-foreground group-hover:text-primary transition-colors text-sm truncate">
-                                    {customer.name_dv} {customer.name_en ? `(${customer.name_en})` : ''}
-                                  </p>
-                                  <div className="flex items-center justify-end gap-2 text-[11px] text-muted-foreground mt-0.5">
-                                    {customer.phone && <span dir="ltr">📞 {customer.phone}</span>}
-                                    {customer.code && <span className="font-mono opacity-70">#{customer.code}</span>}
+                              <UserPlus className="h-3.5 w-3.5" />
+                              {renderBoth('add_new_customer')}
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="space-y-2.5">
+                            {filteredCustomers.map((customer) => {
+                              const outstanding = customer.outstanding_balance || 0;
+                              const limit = customer.credit_limit || 0;
+                              const isOverLimit = limit > 0 && (outstanding + grandTotal > limit);
+                              const creditCount = customerCreditSalesCountMap[customer.id] || 0;
+
+                              return (
+                                <div
+                                  key={customer.id}
+                                  onClick={() => selectCustomer(customer)}
+                                  className="p-3.5 rounded-2xl cursor-pointer transition-all border border-border bg-card hover:bg-muted/60 hover:border-primary/50 text-right group shadow-xs hover:shadow-md"
+                                >
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="flex flex-col items-start gap-1 shrink-0">
+                                      <Badge variant="outline" className={cn(
+                                        "text-[10px] font-black px-2.5 py-0.5 rounded-md",
+                                        isOverLimit 
+                                          ? "bg-red-500/10 text-red-500 border-red-500/30" 
+                                          : "bg-primary/10 text-primary border-primary/30"
+                                      )}>
+                                        {t('credit_limit')}: {settings.shop.currency} {limit.toFixed(2)}
+                                      </Badge>
+                                      {outstanding > 0 && (
+                                        <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400">
+                                          {t('current_outstanding')}: {settings.shop.currency} {outstanding.toFixed(2)}
+                                        </span>
+                                      )}
+                                      {creditCount > 0 && (
+                                        <span className="text-[9px] font-black text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">
+                                          {creditCount} Credit Sales
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-right flex-1 min-w-0">
+                                      <p className="font-black text-foreground group-hover:text-primary transition-colors text-sm truncate">
+                                        {customer.name_dv} {customer.name_en ? `(${customer.name_en})` : ''}
+                                      </p>
+                                      <div className="flex items-center justify-end gap-2 text-[11px] text-muted-foreground mt-0.5">
+                                        {customer.phone && <span dir="ltr">📞 {customer.phone}</span>}
+                                        {customer.code && (
+                                          <span className="font-mono font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded">
+                                            #{customer.code}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })()}
-                </ScrollArea>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </ScrollArea>
+                    </>
+                  );
+                })()}
               </div>
             ) : (
               <div className="space-y-4">
@@ -2494,7 +2612,7 @@ const POS = () => {
       </Dialog>
 
       <Dialog open={isExpiryDialogOpen} onOpenChange={setIsExpiryDialogOpen}>
-        <DialogContent className="sm:max-w-[500px] w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto overflow-x-hidden font-faruma apple-glass-dialog text-foreground border-white/20 dark:border-white/10 text-right p-5 sm:p-6 shadow-2xl rounded-3xl box-border [&>button]:left-4 [&>button]:right-auto space-y-4" dir="rtl">
+        <DialogContent className="sm:max-w-[560px] w-[min(94vw,560px)] max-h-[92vh] overflow-y-auto font-faruma apple-glass-dialog text-foreground border-white/20 dark:border-white/10 text-right p-4 sm:p-6 shadow-2xl rounded-3xl box-border [&>button]:left-4 [&>button]:right-auto space-y-4" dir="rtl">
           {(() => {
             const basePrice = selectedProductForExpiry?.original_price || selectedProductForExpiry?.price || 0;
             const currentNewPrice = Number(expiryDropPrice) || basePrice;
@@ -2506,8 +2624,8 @@ const POS = () => {
 
             return (
               <>
-                <DialogHeader className="pb-3 text-right space-y-2 border-b border-border/60">
-                  <div className="flex flex-col-reverse sm:flex-row items-start sm:items-center justify-between gap-2.5 pl-8">
+                <DialogHeader className="pb-3 text-right space-y-2 border-b border-border/60 box-border">
+                  <div className="flex flex-col-reverse sm:flex-row items-start sm:items-center justify-between gap-2.5 box-border">
                     {selectedProductForExpiry?.expiry_date && (
                       <Badge
                         variant="outline"
@@ -2522,7 +2640,7 @@ const POS = () => {
                         {diffDays <= 0 ? 'Expires Today' : `${diffDays} days left`} ({formatDate(selectedProductForExpiry.expiry_date)})
                       </Badge>
                     )}
-                    <div className="text-right flex-1 min-w-0">
+                    <div className="text-right flex-1 min-w-0 pl-7 sm:pl-0">
                       <DialogTitle className="text-xl font-black text-orange-600 dark:text-orange-400 flex items-center justify-end gap-2">
                         <span className="truncate">މުއްދަތު ހަމަވާތީ އަގު ތިރިކުރުން</span>
                         <Flame className="h-5 w-5 shrink-0 text-orange-500" />
@@ -2537,52 +2655,52 @@ const POS = () => {
                   </DialogDescription>
                 </DialogHeader>
 
-                {/* Product details & Price comparison card */}
-                <div className="p-4 bg-orange-500/10 dark:bg-orange-500/15 rounded-2xl border border-orange-500/30 space-y-3.5 text-right">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs font-mono font-bold text-muted-foreground">
+                {/* Product details & Price comparison card - Auto-scaled & responsive */}
+                <div className="w-full max-w-full box-border p-3.5 sm:p-4.5 bg-orange-500/10 dark:bg-orange-500/15 rounded-2xl border border-orange-500/30 space-y-3.5 text-right overflow-hidden">
+                  <div className="flex flex-col-reverse sm:flex-row items-start sm:items-center justify-between gap-2.5 w-full box-border">
+                    <span className="text-xs font-mono font-bold text-muted-foreground shrink-0 bg-background/70 px-2.5 py-0.5 rounded-md border border-border/50">
                       Stock: {selectedProductForExpiry?.stock_shop || 0} pcs
                     </span>
-                    <div className="min-w-0 flex-1 text-right">
+                    <div className="min-w-0 flex-1 text-right w-full">
                       <p className="font-black text-sm text-foreground truncate">{selectedProductForExpiry?.name_dv}</p>
                       <p className="text-[11px] text-muted-foreground font-mono font-bold truncate">{selectedProductForExpiry?.name_en}</p>
                     </div>
                   </div>
 
                   {/* Pricing Comparison Grid */}
-                  <div className="grid grid-cols-2 gap-3 pt-1">
-                    <div className="p-3 bg-background/80 rounded-xl border border-border text-right">
-                      <span className="text-[10px] text-muted-foreground font-bold uppercase block mb-0.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 pt-1 w-full box-border">
+                    <div className="p-3 bg-background/80 rounded-xl border border-border text-right min-w-0 box-border overflow-hidden">
+                      <span className="text-[10px] text-muted-foreground font-bold uppercase block mb-0.5 truncate">
                         ކުރީގެ އަގު (Price Before)
                       </span>
-                      <span className="text-base font-black text-muted-foreground font-mono line-through opacity-80">
+                      <span className="text-base font-black text-muted-foreground font-mono line-through opacity-80 block truncate">
                         {settings.shop.currency} {basePrice.toFixed(2)}
                       </span>
                     </div>
 
-                    <div className="p-3 bg-orange-500/20 rounded-xl border border-orange-500/40 text-right">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-[10px] text-orange-600 dark:text-orange-400 font-black uppercase">
+                    <div className="p-3 bg-orange-500/20 rounded-xl border border-orange-500/40 text-right min-w-0 box-border overflow-hidden">
+                      <div className="flex items-center justify-between gap-1 mb-0.5">
+                        <span className="text-[10px] text-orange-600 dark:text-orange-400 font-black uppercase truncate">
                           އާ އަގު (Drop Price)
                         </span>
                         {discountPct > 0 && (
-                          <Badge className="bg-orange-500 text-white text-[9px] font-mono px-1.5 py-0 h-4">
+                          <Badge className="bg-orange-500 text-white text-[9px] font-mono px-1.5 py-0 h-4 shrink-0">
                             {discountPct}% OFF
                           </Badge>
                         )}
                       </div>
-                      <span className="text-lg font-black text-orange-600 dark:text-orange-300 font-mono">
+                      <span className="text-lg font-black text-orange-600 dark:text-orange-300 font-mono block truncate">
                         {settings.shop.currency} {currentNewPrice.toFixed(2)}
                       </span>
                     </div>
                   </div>
 
                   {/* Preset Percent Drop Pills */}
-                  <div className="space-y-1.5 pt-1">
+                  <div className="space-y-1.5 pt-1 w-full box-border">
                     <span className="text-[11px] font-bold text-muted-foreground block text-right">
                       އަވަސް ޑިސްކައުންޓް ޕަސެންޓް (Quick Drop Presets):
                     </span>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-4 gap-1.5 sm:gap-2 w-full box-border">
                       {[10, 20, 30, 50].map((pct) => (
                         <Button
                           key={pct}
@@ -2594,7 +2712,7 @@ const POS = () => {
                             setExpiryDiscountPercent(pct);
                           }}
                           className={cn(
-                            "h-9 border-orange-500/30 font-black text-xs rounded-xl transition-all font-mono",
+                            "h-9 w-full min-w-0 px-1 border-orange-500/30 font-black text-xs rounded-xl transition-all font-mono",
                             discountPct === pct
                               ? "bg-orange-500 text-white hover:bg-orange-600 shadow-sm"
                               : "text-orange-600 dark:text-orange-400 hover:bg-orange-500/20 bg-background/60"
@@ -2607,12 +2725,12 @@ const POS = () => {
                   </div>
 
                   {/* Direct Price Input */}
-                  <div className="space-y-1.5 pt-1">
+                  <div className="space-y-1.5 pt-1 w-full box-border">
                     <Label className="text-[11px] font-bold text-muted-foreground block text-right">
                       ކަނޑައަޅާ އާ އަގު ލިޔުއްވާ (Enter Drop Price):
                     </Label>
-                    <div className="relative">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-orange-600 dark:text-orange-400 font-mono">
+                    <div className="relative w-full box-border">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-orange-600 dark:text-orange-400 font-mono pointer-events-none">
                         {settings.shop.currency}
                       </span>
                       <Input
@@ -2622,18 +2740,18 @@ const POS = () => {
                         value={expiryDropPrice || ''}
                         onChange={(e) => setExpiryDropPrice(parseFloat(e.target.value) || 0)}
                         onFocus={handleFocus}
-                        className="bg-background border-orange-500/40 text-orange-600 dark:text-orange-300 font-black h-11 pl-14 pr-3 text-right text-base rounded-xl font-mono"
+                        className="w-full bg-background border-orange-500/40 text-orange-600 dark:text-orange-300 font-black h-11 pl-16 pr-3.5 text-right text-base rounded-xl font-mono box-border"
                         placeholder="0.00"
                       />
                     </div>
                   </div>
                 </div>
 
-                <DialogFooter className="gap-2.5 pt-3 border-t border-border flex flex-col sm:flex-row justify-between items-center w-full">
+                <DialogFooter className="gap-2.5 pt-3 border-t border-border flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center w-full box-border">
                   <Button
                     variant="outline"
                     onClick={keepOriginalPriceAndAddToCart}
-                    className="w-full sm:w-auto h-11 border-border hover:bg-muted text-muted-foreground hover:text-foreground rounded-xl font-bold text-xs"
+                    className="w-full sm:w-auto h-11 border-border hover:bg-muted text-muted-foreground hover:text-foreground rounded-xl font-bold text-xs shrink-0"
                     title="Add to cart at regular price without changing product data"
                   >
                     އަގު ބަދަލުނުކޮށް ކާޓަށް ލާ (Keep Price)

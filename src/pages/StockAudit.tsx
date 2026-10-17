@@ -19,8 +19,11 @@ import {
   AlertTriangle,
   ArrowRight,
   RefreshCw,
-  Lock
+  Lock,
+  FileSpreadsheet,
+  Download
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -169,7 +172,7 @@ const playBeep = (freq = 880, type: OscillatorType = 'sine', duration = 0.12) =>
 
 export default function StockAudit() {
   const navigate = useNavigate();
-  const { products, setProducts, updateProduct, refreshProducts } = useAppContext();
+  const { products, setProducts, updateProduct, refreshProducts, settings } = useAppContext();
   const { currentUser, isAdmin } = useAuth();
 
   // Check if current user is admin
@@ -1049,6 +1052,106 @@ export default function StockAudit() {
     return allCountedList.filter(item => !item.auditState.isApproved).length;
   }, [allCountedList]);
 
+  // Zakat al-Mal Valuation State & Calculation
+  const [isZakatDialogOpen, setIsZakatDialogOpen] = useState(false);
+  const [zakatScope, setZakatScope] = useState<'counted' | 'all'>('counted');
+  const [zakatRateType, setZakatRateType] = useState<'cost' | 'selling'>('cost');
+
+  const zakatCalculations = useMemo(() => {
+    const list = zakatScope === 'counted' && allCountedList.length > 0
+      ? allCountedList.map(({ product, auditState }) => ({
+          product,
+          qty: auditState.totalCounted || 0
+        }))
+      : products.map(p => ({
+          product: p,
+          qty: (Number(p.stock_shop) || 0) + (Number(p.stock_godown) || 0)
+        }));
+
+    let totalQty = 0;
+    let grandTotal = 0;
+
+    const items = list.map(({ product, qty }) => {
+      const costPrice = Number(product.cost_price || 0);
+      const sellingPrice = Number(product.price || 0);
+      const rate = zakatRateType === 'cost'
+        ? (costPrice > 0 ? costPrice : sellingPrice)
+        : sellingPrice;
+      const total = Number((qty * rate).toFixed(2));
+      totalQty += qty;
+      grandTotal += total;
+
+      return {
+        productCode: product.item_code || product.barcode || product.id,
+        productName: product.name_en || product.name_dv || '',
+        qty,
+        rate,
+        total
+      };
+    });
+
+    const zakatDue = Number((grandTotal * 0.025).toFixed(2));
+
+    return {
+      items,
+      totalQty,
+      grandTotal: Number(grandTotal.toFixed(2)),
+      zakatDue
+    };
+  }, [zakatScope, zakatRateType, allCountedList, products]);
+
+  const handleDownloadZakatExcel = () => {
+    if (zakatCalculations.items.length === 0) {
+      showError('No products available to export');
+      return;
+    }
+
+    // Exact requested columns: "product code", "Rate", "total", with "Product Name" and "Quantity"
+    const rows: any[] = zakatCalculations.items.map(item => ({
+      "product code": item.productCode,
+      "Product Name": item.productName,
+      "Quantity": item.qty,
+      "Rate": item.rate,
+      "total": item.total
+    }));
+
+    // Bottom row: FULL TOTAL
+    rows.push({
+      "product code": "FULL TOTAL",
+      "Product Name": `Total Stock Valuation (${settings?.shop?.currency || 'RF'})`,
+      "Quantity": zakatCalculations.totalQty,
+      "Rate": "",
+      "total": zakatCalculations.grandTotal
+    });
+
+    // Zakat payable (2.5%) row
+    rows.push({
+      "product code": "ZAKAT AL-MAL (2.5%)",
+      "Product Name": "Total Payable Zakat (ނެރެންޖެހޭ ޒަކާތް)",
+      "Quantity": "",
+      "Rate": "2.5%",
+      "total": zakatCalculations.zakatDue
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    worksheet['!cols'] = [
+      { wch: 18 }, // product code
+      { wch: 34 }, // Product Name
+      { wch: 12 }, // Quantity
+      { wch: 12 }, // Rate
+      { wch: 16 }  // total
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Zakat al-Mal Valuation");
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    const fileName = `Stock_Audit_Zakat_${zakatScope}_${dateStr}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+    showSuccess('Zakat al-Mal Excel file downloaded! 📊');
+    setIsZakatDialogOpen(false);
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground pb-24 font-faruma selection:bg-primary selection:text-white" dir="rtl">
       
@@ -1071,6 +1174,18 @@ export default function StockAudit() {
           </div>
 
           <div className="flex items-center gap-1.5 font-sans">
+            {/* Zakat al-Mal Excel Download Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsZakatDialogOpen(true)}
+              className="h-9 px-2 sm:px-2.5 rounded-xl apple-glass-card hover:bg-emerald-500/10 hover:text-emerald-600 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold gap-1.5 shadow-none"
+              title="Download Excel file for Zakat al-Mal valuation"
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span className="hidden sm:inline">Zakat Excel</span>
+            </Button>
+
             {/* Manual Sync from Main App Button */}
             <Button
               variant="outline"
@@ -1318,9 +1433,24 @@ export default function StockAudit() {
                 Counted Items ({totalCountedItems})
                 {countedSearchQuery && ` — Matching (${countedProductsList.length})`}
               </span>
-              <span className="text-[11px] text-muted-foreground/80">
-                {pendingApprovalCount > 0 ? `${pendingApprovalCount} pending review` : 'All approved'}
-              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setZakatScope('counted');
+                    setIsZakatDialogOpen(true);
+                  }}
+                  className="h-7 px-2 text-[11px] font-bold rounded-xl apple-glass-card hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 gap-1 shadow-none"
+                  title="Export Counted Items to Excel for Zakat al-Mal"
+                >
+                  <FileSpreadsheet className="h-3.5 w-3.5" />
+                  <span>Zakat Excel</span>
+                </Button>
+                <span className="text-[11px] text-muted-foreground/80 hidden sm:inline">
+                  {pendingApprovalCount > 0 ? `${pendingApprovalCount} pending review` : 'All approved'}
+                </span>
+              </div>
             </div>
 
             {totalCountedItems === 0 ? (
@@ -1743,7 +1873,141 @@ export default function StockAudit() {
         </DialogContent>
       </Dialog>
 
-      {/* ================= DIALOG 3: BARCODE SCANNER MODAL (KEPT IN DOM) ================= */}
+      {/* ================= DIALOG 3: ZAKAT AL-MAL VALUATION EXCEL MODAL ================= */}
+      <Dialog open={isZakatDialogOpen} onOpenChange={setIsZakatDialogOpen}>
+        <DialogContent className="max-w-md apple-glass-dialog rounded-3xl p-5 sm:p-6 text-foreground font-faruma border border-white/30 dark:border-white/10" dir="rtl">
+          <DialogHeader className="text-right pb-3 border-b border-white/20 dark:border-white/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                  <FileSpreadsheet className="h-5 w-5" />
+                </div>
+                <div>
+                  <DialogTitle className="text-sm sm:text-base font-black text-foreground">
+                    ޒަކާތުލް މާލް އެކްސެލް / Zakat al-Mal Valuation
+                  </DialogTitle>
+                  <DialogDescription className="text-[11px] text-muted-foreground font-sans">
+                    Export inventory valuation with columns: product code, Rate, total & full total
+                  </DialogDescription>
+                </div>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2 font-sans text-xs">
+            {/* Scope Selection */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-foreground">1. Inventory Source / އޮޑިޓް ބާވަތް:</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setZakatScope('counted')}
+                  className={cn(
+                    "p-2.5 rounded-2xl border text-center transition-all",
+                    zakatScope === 'counted'
+                      ? "bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-300 font-black shadow-xs ring-1 ring-emerald-500"
+                      : "bg-white/40 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 text-muted-foreground hover:bg-white/60"
+                  )}
+                >
+                  <span className="block font-bold text-xs">Counted in Audit</span>
+                  <span className="text-[10px] opacity-75">ގުނާފައިވާ ތަކެތި ({allCountedList.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZakatScope('all')}
+                  className={cn(
+                    "p-2.5 rounded-2xl border text-center transition-all",
+                    zakatScope === 'all'
+                      ? "bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-300 font-black shadow-xs ring-1 ring-emerald-500"
+                      : "bg-white/40 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 text-muted-foreground hover:bg-white/60"
+                  )}
+                >
+                  <span className="block font-bold text-xs">All Store Products</span>
+                  <span className="text-[10px] opacity-75">ހުރިހާ މުދަލެއް ({products.length})</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Valuation Rate Selection */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-foreground">2. Valuation Rate / އަގު ބަލާ ގޮތް:</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setZakatRateType('cost')}
+                  className={cn(
+                    "p-2.5 rounded-2xl border text-center transition-all",
+                    zakatRateType === 'cost'
+                      ? "bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-300 font-black shadow-xs ring-1 ring-emerald-500"
+                      : "bg-white/40 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 text-muted-foreground hover:bg-white/60"
+                  )}
+                >
+                  <span className="block font-bold text-xs">Cost Price (ގަތް އަގު)</span>
+                  <span className="text-[10px] opacity-75">Recommended for Zakat</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZakatRateType('selling')}
+                  className={cn(
+                    "p-2.5 rounded-2xl border text-center transition-all",
+                    zakatRateType === 'selling'
+                      ? "bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-300 font-black shadow-xs ring-1 ring-emerald-500"
+                      : "bg-white/40 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 text-muted-foreground hover:bg-white/60"
+                  )}
+                >
+                  <span className="block font-bold text-xs">Retail Price (ވިއްކާ އަގު)</span>
+                  <span className="text-[10px] opacity-75">Market Selling Value</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Summary preview card */}
+            <div className="bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/50 rounded-2xl p-3.5 space-y-2">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-muted-foreground">Total Products:</span>
+                <span className="font-bold text-foreground">{zakatCalculations.items.length} items</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-muted-foreground">Total Quantity:</span>
+                <span className="font-bold text-foreground">{zakatCalculations.totalQty.toLocaleString()} pcs</span>
+              </div>
+              <div className="flex justify-between items-center text-xs pt-1 border-t border-emerald-200 dark:border-emerald-800">
+                <span className="font-black text-emerald-900 dark:text-emerald-200">Full Total Valuation:</span>
+                <span className="font-black text-sm text-emerald-700 dark:text-emerald-400">
+                  {settings?.shop?.currency || 'RF'} {zakatCalculations.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-xs bg-emerald-600/15 p-2 rounded-xl text-emerald-900 dark:text-emerald-200">
+                <span className="font-black">ނެރެންޖެހޭ ޒަކާތް / Zakat Due (2.5%):</span>
+                <span className="font-black text-sm text-emerald-700 dark:text-emerald-300">
+                  {settings?.shop?.currency || 'RF'} {zakatCalculations.zakatDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="flex-row gap-2 pt-2 border-t border-white/20 dark:border-white/10">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsZakatDialogOpen(false)}
+              className="flex-1 h-11 rounded-2xl font-bold text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleDownloadZakatExcel}
+              className="flex-1 h-11 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs gap-1.5 shadow-lg shadow-emerald-600/25"
+            >
+              <Download className="h-4 w-4" />
+              <span>Download Excel (.xlsx)</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ================= DIALOG 4: BARCODE SCANNER MODAL (KEPT IN DOM) ================= */}
       <div 
         className={cn(
           "fixed inset-0 z-[100] items-center justify-center bg-slate-950/40 dark:bg-black/60 backdrop-blur-md p-4 font-faruma",

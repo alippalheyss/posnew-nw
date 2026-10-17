@@ -198,7 +198,13 @@ const POS = () => {
   const [telegramCustomer, setTelegramCustomer] = useState<Customer | null>(null);
   const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false);
   const [isTransferSlipsDialogOpen, setIsTransferSlipsDialogOpen] = useState(false);
-  const [shouldPrintCashReceipt, setShouldPrintCashReceipt] = useState<boolean>(() => localStorage.getItem('pos_print_cash_receipt') === 'true');
+  const [shouldPrintCashReceipt, setShouldPrintCashReceipt] = useState<boolean>(() => {
+    const saved = localStorage.getItem('pos_print_cash_receipt');
+    if (saved !== null) return saved === 'true';
+    return true; // Default to true so receipts print directly without having to manually enable
+  });
+
+  const triggerInstantReceiptPrintRef = useRef<() => void>(() => {});
 
   const TelegramIcon = ({ className }: { className?: string }) => (
     <svg viewBox="0 0 24 24" className={className} fill="currentColor">
@@ -439,6 +445,13 @@ const POS = () => {
         document.activeElement?.tagName !== 'TEXTAREA'
       ) {
         searchInputRef.current?.focus();
+      }
+
+      // Global F9 shortcut - instant print receipt without dialogue
+      if (e.key === 'F9') {
+        e.preventDefault();
+        triggerInstantReceiptPrintRef.current();
+        return;
       }
 
       if (e.key === 'Enter') {
@@ -978,7 +991,8 @@ const POS = () => {
 
       showSuccess(t('cash_payment_successful'));
       setLastSaleForPrint(recordedSale);
-      if (shouldPrintCashReceipt) {
+      const shouldAutoPrint = shouldPrintCashReceipt || settings.printing?.printMode === 'auto';
+      if (shouldAutoPrint) {
         handlePrintReceipt(recordedSale);
       }
       clearActiveCart();
@@ -1031,6 +1045,10 @@ const POS = () => {
 
       showSuccess(t('credit_sale_successful'));
       setLastSaleForPrint(recordedSale);
+      const shouldAutoPrint = shouldPrintCashReceipt || settings.printing?.printMode === 'auto';
+      if (shouldAutoPrint) {
+        handlePrintReceipt(recordedSale);
+      }
       maybeSendTelegramSaleReceipt(recordedSale, activeCart.customer);
       clearActiveCart();
       setIsCreditDialogOpen(false);
@@ -1190,6 +1208,39 @@ const POS = () => {
     printContent(htmlContent, settings);
   };
 
+  const triggerInstantReceiptPrint = () => {
+    if (lastSaleForPrint) {
+      showSuccess(`Printing receipt #${lastSaleForPrint.invoiceNumber || lastSaleForPrint.id} 🖨️`);
+      handlePrintReceipt(lastSaleForPrint);
+      return;
+    }
+    if (sales && sales.length > 0) {
+      const mostRecentSale = sales[0];
+      setLastSaleForPrint(mostRecentSale);
+      showSuccess(`Printing receipt #${mostRecentSale.invoiceNumber || mostRecentSale.id} 🖨️`);
+      handlePrintReceipt(mostRecentSale);
+      return;
+    }
+    if (activeCart && activeCart.items.length > 0) {
+      const temporarySale: any = {
+        id: `EST-${Date.now().toString().slice(-6)}`,
+        invoiceNumber: `EST-${Date.now().toString().slice(-6)}`,
+        date: toISODatetime(),
+        customer: activeCart.customer,
+        items: activeCart.items,
+        grandTotal: grandTotal,
+        paymentMethod: 'cash',
+        paidAmount: grandTotal,
+        balance: 0
+      };
+      showSuccess('Printing bill estimate 🖨️');
+      handlePrintReceipt(temporarySale);
+      return;
+    }
+    showInfo('No receipt available to print');
+  };
+  triggerInstantReceiptPrintRef.current = triggerInstantReceiptPrint;
+
   const toggleSplitCustomer = (id: string) => {
     setSelectedSplitCustomerIds(prev =>
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
@@ -1298,6 +1349,10 @@ const POS = () => {
 
       showSuccess(t('split_payment_successful'));
       setLastSaleForPrint(recordedSale);
+      const shouldAutoPrint = shouldPrintCashReceipt || settings.printing?.printMode === 'auto';
+      if (shouldAutoPrint) {
+        handlePrintReceipt(recordedSale);
+      }
       maybeSendTelegramSaleReceipt(recordedSale, activeCart?.customer || null);
       clearActiveCart();
       setIsSplitDialogOpen(false);
@@ -1332,6 +1387,17 @@ const POS = () => {
             >
               <MonitorPlay className="h-4 w-4" />
               CUSTOMER DISPLAY
+            </Button>
+
+            {/* 1-Click Print Receipt Button (No dialogue) */}
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-1.5 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 rounded-xl h-10 px-3 text-[10px] font-black shadow-none"
+              onClick={triggerInstantReceiptPrint}
+              title="Print latest receipt directly without dialogue (F9)"
+            >
+              <Printer className="h-4 w-4" />
+              <span>PRINT RECEIPT (F9)</span>
             </Button>
             
             <Select value={selectedCategory} onValueChange={(val) => { setSelectedCategory(val); setVisibleCatalogueCount(60); }}>

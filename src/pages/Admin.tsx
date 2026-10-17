@@ -918,6 +918,21 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                              />
                            </div>
                         </div>
+
+                        {/* Silent Printing Tip Box */}
+                        <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-start gap-3 text-right" dir="rtl">
+                          <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                            <Receipt className="h-4 w-4" />
+                          </div>
+                          <div className="space-y-1">
+                            <h4 className="text-xs font-black text-emerald-700 dark:text-emerald-300">
+                              ކޮންފާމޭޝަން ޑައިލޮގް ނުލައި ވަގުތުން ޕްރިންޓްކުރުން (Silent Instant Printing):
+                            </h4>
+                            <p className="text-[11px] text-muted-foreground leading-relaxed">
+                              ބްރައުޒާގެ ޕްރިންޓް ޕޮޕްއަޕް ޑައިލޮގް ފެނުމެއް ނެތި 1-ކްލިކުން ނުވަތަ F9 ފިއްތައިގެން ވަގުތުން ރަސީދު ޕްރިންޓް ކުރަން ބޭނުންނަމަ، ކްރޯމް ނުވަތަ އެޖް ޝޯޓްކަޓްގެ <strong>Target</strong> ކޮޅަށް <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-[10px] text-foreground">--kiosk-printing</code> އިތުރުކޮށްލާށެވެ. ނުވަތަ މަތީގައިވާ <strong>QZ Tray Direct Printing</strong> އޮޕްޝަން ބޭނުންކުރައްވާށެވެ.
+                            </p>
+                          </div>
+                        </div>
                      </div>
                   
                   </div>

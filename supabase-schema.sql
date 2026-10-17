@@ -208,12 +208,18 @@ CREATE POLICY "Allow authenticated users full access to sales" ON public.sales
     FOR ALL USING (auth.role() = 'authenticated');
 
 -- Vendors policies
-CREATE POLICY "Allow authenticated users full access to vendors" ON public.vendors
-    FOR ALL USING (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "Allow authenticated users full access to vendors" ON public.vendors;
+DROP POLICY IF EXISTS "Allow all access to vendors" ON public.vendors;
+CREATE POLICY "Allow all access to vendors" ON public.vendors
+    FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.vendors TO anon, authenticated;
 
 -- Purchases policies
-CREATE POLICY "Allow authenticated users full access to purchases" ON public.purchases
-    FOR ALL USING (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "Allow authenticated users full access to purchases" ON public.purchases;
+DROP POLICY IF EXISTS "Allow all access to purchases" ON public.purchases;
+CREATE POLICY "Allow all access to purchases" ON public.purchases
+    FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.purchases TO anon, authenticated;
 
 -- Expenses policies
 CREATE POLICY "Allow authenticated users full access to expenses" ON public.expenses

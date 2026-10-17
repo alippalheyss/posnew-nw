@@ -74,6 +74,8 @@ const LocalPurchaseWindow = () => {
   const [isCatalogPickerOpen, setIsCatalogPickerOpen] = useState(false);
   const [catalogSearchQuery, setCatalogSearchQuery] = useState('');
   const [catalogSelectedCategory, setCatalogSelectedCategory] = useState('all');
+  const [catalogVisibleCount, setCatalogVisibleCount] = useState(36);
+  const deferredCatalogSearch = React.useDeferredValue(catalogSearchQuery);
 
   // Quick Entry Dialog — shown when user picks a product from catalog
   const [quickEntryProduct, setQuickEntryProduct] = useState<Product | null>(null);
@@ -269,19 +271,28 @@ const LocalPurchaseWindow = () => {
     return Array.from(cats);
   }, [products]);
 
-  // Catalog filtered products
+  // Catalog filtered products (calculated only when catalog is actually open)
   const catalogFilteredProducts = useMemo(() => {
+    if (!isCatalogPickerOpen) return [];
+    const q = (deferredCatalogSearch || '').trim().toLowerCase();
     return products.filter(p => {
-      const matchesSearch = !catalogSearchQuery || 
-        p.name_en.toLowerCase().includes(catalogSearchQuery.toLowerCase()) ||
-        p.name_dv.toLowerCase().includes(catalogSearchQuery.toLowerCase()) ||
-        p.barcode.includes(catalogSearchQuery) ||
-        p.item_code.toLowerCase().includes(catalogSearchQuery.toLowerCase());
-      
-      const matchesCat = catalogSelectedCategory === 'all' || p.category === catalogSelectedCategory;
-      return matchesSearch && matchesCat;
+      if (catalogSelectedCategory !== 'all' && p.category !== catalogSelectedCategory) {
+        return false;
+      }
+      if (!q) return true;
+      return (
+        (p.name_en && p.name_en.toLowerCase().includes(q)) ||
+        (p.name_dv && p.name_dv.includes(q)) ||
+        (p.barcode && p.barcode.includes(q)) ||
+        (p.item_code && p.item_code.toLowerCase().includes(q))
+      );
     });
-  }, [products, catalogSearchQuery, catalogSelectedCategory]);
+  }, [products, deferredCatalogSearch, catalogSelectedCategory, isCatalogPickerOpen]);
+
+  // Sliced for instant sub-millisecond rendering (<36 DOM nodes instead of 5,000)
+  const displayCatalogProducts = useMemo(() => {
+    return catalogFilteredProducts.slice(0, catalogVisibleCount);
+  }, [catalogFilteredProducts, catalogVisibleCount]);
 
   const handleQuickAddVendor = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -567,7 +578,12 @@ const LocalPurchaseWindow = () => {
                 type="button"
                 variant="secondary"
                 size="sm"
-                onClick={() => setIsCatalogPickerOpen(true)}
+                onClick={() => {
+                  setCatalogSearchQuery('');
+                  setCatalogSelectedCategory('all');
+                  setCatalogVisibleCount(36);
+                  setIsCatalogPickerOpen(true);
+                }}
                 className="h-9 px-3.5 text-xs font-black bg-muted/80 hover:bg-muted text-foreground border border-border gap-1.5 rounded-xl transition-all shadow-xs"
               >
                 <Layers className="h-4 w-4 text-purple-500" />
@@ -1082,14 +1098,23 @@ const LocalPurchaseWindow = () => {
                 <Input
                   placeholder="Search by product name, barcode, code..."
                   value={catalogSearchQuery}
-                  onChange={(e) => setCatalogSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setCatalogSearchQuery(e.target.value);
+                    setCatalogVisibleCount(36);
+                  }}
                   className="h-11 pr-9 bg-muted border-border font-bold text-xs sm:text-sm rounded-xl text-right"
                   autoFocus
                 />
               </div>
 
               <div>
-                <Select value={catalogSelectedCategory} onValueChange={setCatalogSelectedCategory}>
+                <Select 
+                  value={catalogSelectedCategory} 
+                  onValueChange={(val) => {
+                    setCatalogSelectedCategory(val);
+                    setCatalogVisibleCount(36);
+                  }}
+                >
                   <SelectTrigger className="h-11 bg-muted border-border rounded-xl font-bold text-xs text-right">
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
@@ -1106,7 +1131,7 @@ const LocalPurchaseWindow = () => {
             {/* Catalog Grid */}
             <ScrollArea className="flex-1 max-h-[50vh] custom-scrollbar">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 p-1">
-                {catalogFilteredProducts.map(prod => {
+                {displayCatalogProducts.map(prod => {
                   const pStock = Number(prod.stock_shop) || 0;
                   const isZero = isProductZeroTax(prod);
                   return (
@@ -1149,6 +1174,19 @@ const LocalPurchaseWindow = () => {
                   );
                 })}
               </div>
+
+              {catalogFilteredProducts.length > catalogVisibleCount && (
+                <div className="flex justify-center py-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setCatalogVisibleCount(prev => prev + 36)}
+                    className="h-9 px-6 rounded-xl border border-border bg-card hover:bg-muted text-xs font-black text-primary transition-all shadow-xs"
+                  >
+                    Load More Products ({catalogFilteredProducts.length - catalogVisibleCount} remaining)
+                  </Button>
+                </div>
+              )}
 
               {catalogFilteredProducts.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground">

@@ -1522,7 +1522,20 @@ GRANT ALL ON TABLE public.customers TO anon, authenticated;
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow all access to users" ON public.users;
 CREATE POLICY "Allow all access to users" ON public.users FOR ALL USING (true) WITH CHECK (true);
-GRANT ALL ON TABLE public.users TO anon, authenticated;`);
+GRANT ALL ON TABLE public.users TO anon, authenticated;
+
+-- Purchases & Vendors permissions (Local Purchases)
+ALTER TABLE public.purchases ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all access to purchases" ON public.purchases;
+DROP POLICY IF EXISTS "Allow authenticated users full access to purchases" ON public.purchases;
+CREATE POLICY "Allow all access to purchases" ON public.purchases FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.purchases TO anon, authenticated;
+
+ALTER TABLE public.vendors ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all access to vendors" ON public.vendors;
+DROP POLICY IF EXISTS "Allow authenticated users full access to vendors" ON public.vendors;
+CREATE POLICY "Allow all access to vendors" ON public.vendors FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.vendors TO anon, authenticated;`);
                           showSuccess("SQL copied to clipboard!");
                         }}
                         className="h-8 text-xs font-bold gap-1.5"
@@ -1545,7 +1558,14 @@ GRANT ALL ON TABLE public.users TO anon, authenticated;`);
                         ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;<br/>
                         DROP POLICY IF EXISTS "Allow all access to users" ON public.users;<br/>
                         CREATE POLICY "Allow all access to users" ON public.users FOR ALL USING (true) WITH CHECK (true);<br/>
-                        GRANT ALL ON TABLE public.users TO anon, authenticated;
+                        GRANT ALL ON TABLE public.users TO anon, authenticated;<br/><br/>
+                        -- Purchases &amp; Vendors (Local Purchase)<br/>
+                        ALTER TABLE public.purchases ENABLE ROW LEVEL SECURITY;<br/>
+                        CREATE POLICY "Allow all access to purchases" ON public.purchases FOR ALL USING (true) WITH CHECK (true);<br/>
+                        GRANT ALL ON TABLE public.purchases TO anon, authenticated;<br/>
+                        ALTER TABLE public.vendors ENABLE ROW LEVEL SECURITY;<br/>
+                        CREATE POLICY "Allow all access to vendors" ON public.vendors FOR ALL USING (true) WITH CHECK (true);<br/>
+                        GRANT ALL ON TABLE public.vendors TO anon, authenticated;
                       </code>
                     </div>
                   </div>

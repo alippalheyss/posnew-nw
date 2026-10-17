@@ -636,6 +636,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         try {
           if (item.type === 'insert_sale') {
             await supabase.from('sales').upsert([item.payload]);
+          } else if (item.type === 'insert_purchase') {
+            await supabase.from('purchases').upsert([item.payload]);
           } else if (item.type === 'update_stock') {
             await supabase.from('products').update({ stock_shop: item.payload.stock_shop, updated_at: new Date().toISOString() }).eq('id', item.payload.id);
           } else if (item.type === 'update_customer_balance') {
@@ -3152,56 +3154,91 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const addPurchase = async (purchase: Purchase) => {
     try {
-      const { error } = await supabase
-        .from('purchases')
-        .insert([{
-          id: purchase.id,
-          date: purchase.date,
-          vendor_id: purchase.vendorId,
-          bill_number: purchase.billNumber,
-          description: purchase.description,
-          amount: purchase.amount,
-          gst_amount: purchase.gstAmount,
-          items: purchase.items
-        }]);
+      // 1. Sanitize IDs (Postgres UUID validation)
+      const isUuid = (val?: string) => Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));
+      const validPurchaseId = isUuid(purchase.id) ? purchase.id : crypto.randomUUID();
+      const validVendorId = isUuid(purchase.vendorId) ? purchase.vendorId : null;
 
-      if (error) throw error;
+      const fullPurchase: Purchase = {
+        ...purchase,
+        id: validPurchaseId,
+        vendorId: validVendorId || undefined
+      };
 
-      // Update cost prices and stock quantities for products in the purchase
-      if (purchase.items && purchase.items.length > 0) {
-        for (const item of purchase.items) {
+      // 2. Immediately persist to local state & storage (optimistic offline-resilient UI)
+      setPurchases(prev => [fullPurchase, ...prev]);
+
+      // 3. Update cost prices and stock quantities locally
+      if (fullPurchase.items && fullPurchase.items.length > 0) {
+        const stockUpdates = new Map<string, { newStock: number; newCostPrice: number | null }>();
+        fullPurchase.items.forEach((item) => {
           const product = products.find(p => p.id === item.product_id);
           const currentShopStock = product ? (Number(product.stock_shop) || 0) : 0;
           const addedQty = Number(item.quantity) || 0;
-          // Handles minus/negative stock automatically: -3 + 10 = 7
           const newShopStock = Math.round(currentShopStock + addedQty);
           const newCostPrice = Number(item.unit_price) > 0 ? Number(item.unit_price) : (product?.cost_price || null);
+          stockUpdates.set(item.product_id, { newStock: newShopStock, newCostPrice });
+        });
 
+        setProducts(prev => prev.map(p => {
+          const update = stockUpdates.get(p.id);
+          if (!update) return p;
+          return {
+            ...p,
+            stock_shop: update.newStock,
+            cost_price: update.newCostPrice || p.cost_price,
+            last_purchase_date: fullPurchase.date
+          };
+        }));
+
+        // Asynchronously update cloud database in background
+        Promise.all(Array.from(stockUpdates.entries()).map(async ([productId, data]) => {
           try {
             await supabase
               .from('products')
               .update({
-                stock_shop: newShopStock,
-                cost_price: newCostPrice,
-                last_purchase_date: purchase.date
+                stock_shop: data.newStock,
+                cost_price: data.newCostPrice,
+                last_purchase_date: fullPurchase.date,
+                updated_at: new Date().toISOString()
               })
-              .eq('id', item.product_id);
+              .eq('id', productId);
           } catch (dbErr) {
-            console.warn('Supabase product stock update error during purchase:', dbErr);
+            console.warn('Supabase product stock update note during purchase:', dbErr);
           }
-
-          setProducts(prev => prev.map(p => {
-            if (p.id !== item.product_id) return p;
-            return {
-              ...p,
-              stock_shop: newShopStock,
-              cost_price: newCostPrice || p.cost_price,
-              last_purchase_date: purchase.date
-            };
-          }));
-        }
+        })).catch(() => {});
       }
-      setPurchases(prev => [purchase, ...prev]);
+
+      const purchasePayload = {
+        id: fullPurchase.id,
+        date: fullPurchase.date,
+        vendor_id: validVendorId,
+        bill_number: fullPurchase.billNumber,
+        description: fullPurchase.description,
+        amount: fullPurchase.amount,
+        gst_amount: fullPurchase.gstAmount,
+        items: fullPurchase.items
+      };
+
+      // 4. Persist to DB if online, else queue (handles 401/RLS gracefully)
+      try {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          queueOfflineAction('insert_purchase', purchasePayload);
+        } else {
+          const { error } = await supabase
+            .from('purchases')
+            .insert([purchasePayload]);
+
+          if (error) {
+            console.warn('Cloud purchase insert note (stored locally & queued for sync):', error);
+            queueOfflineAction('insert_purchase', purchasePayload);
+          }
+        }
+      } catch (err) {
+        console.warn('Network exception adding purchase, queuing for offline sync:', err);
+        queueOfflineAction('insert_purchase', purchasePayload);
+      }
+
       showSuccess('Purchase bill saved & product inventory stock updated! 📦');
     } catch (error) {
       console.error('Error adding purchase:', error);

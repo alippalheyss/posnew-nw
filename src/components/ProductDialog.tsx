@@ -581,12 +581,13 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                             {settings.shop.currency}
                                         </span>
                                         <Input 
+                                            dir="ltr"
                                             type="number" 
                                             step="0.01"
                                             value={editedProduct.price} 
                                             onChange={(e) => updateField('price', parseFloat(e.target.value) || 0)} 
                                             onFocus={handleFocus}
-                                            className="apple-glass-input h-11 rounded-xl text-right pl-12 pr-3 text-lg font-black text-primary" 
+                                            className="apple-glass-input h-11 rounded-xl text-left pl-14 pr-3 text-lg font-black text-primary font-mono" 
                                         />
                                     </div>
                                 </div>
@@ -600,13 +601,14 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                             {settings.shop.currency}
                                         </span>
                                         <Input 
+                                            dir="ltr"
                                             type="number" 
                                             step="0.01"
                                             value={editedProduct.cost_price ?? ''} 
                                             onChange={(e) => updateField('cost_price', e.target.value === '' ? undefined : (parseFloat(e.target.value) || 0))} 
                                             onFocus={handleFocus}
                                             placeholder="0.00"
-                                            className="apple-glass-input h-11 rounded-xl text-right pl-12 pr-3 text-lg font-black text-foreground" 
+                                            className="apple-glass-input h-11 rounded-xl text-left pl-14 pr-3 text-lg font-black text-foreground font-mono" 
                                         />
                                     </div>
                                 </div>
@@ -820,11 +822,12 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                 {renderBoth('unit_name')}*
                                             </Label>
                                             <Input
+                                                dir="ltr"
                                                 value={unitForm.name}
                                                 onChange={(e) => setUnitForm(prev => ({ ...prev, name: e.target.value }))}
                                                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
                                                 placeholder="e.g. Box"
-                                                className="h-9 apple-glass-input rounded-xl text-right font-bold text-xs"
+                                                className="h-9 apple-glass-input rounded-xl text-left font-bold text-xs"
                                             />
                                         </div>
 
@@ -833,12 +836,13 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                 {renderBoth('conversion_factor')}*
                                             </Label>
                                             <Input
+                                                dir="ltr"
                                                 type="number"
                                                 value={unitForm.conversion_factor}
                                                 onChange={(e) => setUnitForm(prev => ({ ...prev, conversion_factor: e.target.value }))}
                                                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
                                                 placeholder="12"
-                                                className="h-9 apple-glass-input rounded-xl text-right font-bold text-xs"
+                                                className="h-9 apple-glass-input rounded-xl text-left font-mono font-bold text-xs"
                                             />
                                         </div>
                                     </div>
@@ -849,13 +853,14 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                 {renderBoth('unit_price')} ({settings?.shop?.currency || 'MVR'})*
                                             </Label>
                                             <Input
+                                                dir="ltr"
                                                 type="number"
                                                 step="0.01"
                                                 value={unitForm.price}
                                                 onChange={(e) => setUnitForm(prev => ({ ...prev, price: e.target.value }))}
                                                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
                                                 placeholder="0.00"
-                                                className="h-9 apple-glass-input rounded-xl text-right font-bold text-xs text-primary"
+                                                className="h-9 apple-glass-input rounded-xl text-left font-mono font-bold text-xs text-primary"
                                             />
                                         </div>
 
@@ -864,11 +869,12 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                 {renderBoth('unit_barcode')}
                                             </Label>
                                             <Input
+                                                dir="ltr"
                                                 value={unitForm.barcode}
                                                 onChange={(e) => setUnitForm(prev => ({ ...prev, barcode: e.target.value }))}
                                                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
                                                 placeholder="Optional"
-                                                className="h-9 apple-glass-input rounded-xl text-right font-mono text-[11px]"
+                                                className="h-9 apple-glass-input rounded-xl text-left font-mono text-[11px]"
                                             />
                                         </div>
                                     </div>

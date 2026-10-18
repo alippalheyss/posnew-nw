@@ -107,8 +107,8 @@ const CustomerAddDialog: React.FC<CustomerAddDialogProps> = ({ isOpen, onClose, 
               <div className="space-y-2">
                 <Label htmlFor="name_en" className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('customer_name')} (English)*</Label>
                 <div className="relative">
-                   <User className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-                   <Input id="name_en" value={newCustomer.name_en} onChange={handleChange} className="apple-glass-input h-11 rounded-xl text-right pr-10 font-bold" />
+                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+                   <Input id="name_en" dir="ltr" value={newCustomer.name_en} onChange={handleChange} className="apple-glass-input h-11 rounded-xl text-left pl-10 pr-3 font-bold" />
                 </div>
               </div>
            </div>
@@ -117,15 +117,15 @@ const CustomerAddDialog: React.FC<CustomerAddDialogProps> = ({ isOpen, onClose, 
               <div className="space-y-2">
                 <Label htmlFor="code" className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('customer_code')}</Label>
                 <div className="relative">
-                   <Hash className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-                   <Input id="code" value={newCustomer.code} readOnly className="apple-glass-input h-11 rounded-xl text-right pr-10 font-mono text-sm opacity-60" />
+                   <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+                   <Input id="code" dir="ltr" value={newCustomer.code} readOnly className="apple-glass-input h-11 rounded-xl text-left pl-10 pr-3 font-mono text-sm opacity-60" />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone" className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('customer_phone')}*</Label>
                 <div className="relative">
-                   <Phone className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-                   <Input id="phone" value={newCustomer.phone} onChange={handleChange} className="apple-glass-input h-11 rounded-xl text-right pr-10 font-bold" />
+                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+                   <Input id="phone" dir="ltr" value={newCustomer.phone} onChange={handleChange} className="apple-glass-input h-11 rounded-xl text-left pl-10 pr-3 font-mono font-bold" />
                 </div>
               </div>
            </div>
@@ -133,16 +133,16 @@ const CustomerAddDialog: React.FC<CustomerAddDialogProps> = ({ isOpen, onClose, 
            <div className="space-y-2">
               <Label htmlFor="email" className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('customer_email')}</Label>
               <div className="relative">
-                 <Mail className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-                 <Input id="email" type="email" value={newCustomer.email} onChange={handleChange} className="apple-glass-input h-11 rounded-xl text-right pr-10" />
+                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+                 <Input id="email" type="email" dir="ltr" value={newCustomer.email} onChange={handleChange} className="apple-glass-input h-11 rounded-xl text-left pl-10 pr-3 font-mono" />
               </div>
            </div>
 
            <div className="space-y-2">
               <Label htmlFor="credit_limit" className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('credit_limit')}</Label>
-              <div className="relative">
-                 <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-primary font-mono">MVR</span>
-                 <Input id="credit_limit" type="number" value={newCustomer.credit_limit} onChange={handleChange} onFocus={handleFocus} className="apple-glass-input h-13 rounded-2xl text-right pr-4 text-2xl font-black text-foreground" />
+              <div className="relative" dir="ltr">
+                 <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-primary font-mono text-sm">MVR</span>
+                 <Input id="credit_limit" type="number" dir="ltr" value={newCustomer.credit_limit} onChange={handleChange} onFocus={handleFocus} className="apple-glass-input h-13 rounded-2xl text-left pl-16 pr-4 text-2xl font-black text-foreground font-mono" />
               </div>
            </div>
         </div>

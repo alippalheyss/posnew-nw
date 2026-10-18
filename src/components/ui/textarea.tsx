@@ -7,9 +7,17 @@ export interface TextareaProps
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, dir, ...props }, ref) => {
+    const isDhivehi =
+      dir === 'rtl' ||
+      className?.includes('font-faruma') ||
+      props.name?.includes('_dv') ||
+      props.id?.includes('_dv');
+
+    const resolvedDir = dir ?? (isDhivehi ? 'rtl' : 'ltr');
+
     return (
       <textarea
-        dir={dir}
+        dir={resolvedDir}
         className={cn(
           "flex min-h-[80px] w-full rounded-xl apple-glass-input p-3 text-sm ring-offset-background placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-semibold text-foreground transition-all duration-200",
           className,

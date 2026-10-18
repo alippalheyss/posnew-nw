@@ -131,6 +131,7 @@ const CartQtyStepper = ({
             focusSearchBar();
           }
         }}
+        dir="ltr"
         className="cart-qty-input min-w-[36px] max-w-[56px] w-auto text-center text-xs font-black text-foreground bg-transparent border-none h-5 px-1 focus:bg-background focus:ring-1 focus:ring-primary rounded-md font-mono outline-none"
       />
       <Button
@@ -2800,13 +2801,14 @@ const POS = () => {
                         {settings.shop.currency}
                       </span>
                       <Input
+                        dir="ltr"
                         type="number"
                         step="any"
                         min="0"
                         value={expiryDropPrice || ''}
                         onChange={(e) => setExpiryDropPrice(parseFloat(e.target.value) || 0)}
                         onFocus={handleFocus}
-                        className="w-full bg-background border-orange-500/40 text-orange-600 dark:text-orange-300 font-black h-11 pl-16 pr-3.5 text-right text-base rounded-xl font-mono box-border"
+                        className="w-full bg-background border-orange-500/40 text-orange-600 dark:text-orange-300 font-black h-11 pl-16 pr-3.5 text-left text-base rounded-xl font-mono box-border"
                         placeholder="0.00"
                       />
                     </div>
@@ -3042,6 +3044,7 @@ const POS = () => {
                                 {settings.shop.currency}
                               </span>
                               <Input
+                                dir="ltr"
                                 type="number"
                                 step="0.01"
                                 value={entry.amount}
@@ -3053,7 +3056,7 @@ const POS = () => {
                                     processSplitPayment();
                                   }
                                 }}
-                                className="h-10 bg-muted/60 border-border rounded-xl pl-11 sm:pl-12 pr-2.5 sm:pr-3 text-right text-sm sm:text-base font-black font-mono text-foreground focus:border-primary"
+                                className="h-10 bg-muted/60 border-border rounded-xl pl-11 sm:pl-12 pr-2.5 sm:pr-3 text-left text-sm sm:text-base font-black font-mono text-foreground focus:border-primary"
                               />
                             </div>
                           </div>
@@ -3147,11 +3150,12 @@ const POS = () => {
                     {settings.shop.currency}
                   </span>
                   <Input
+                    dir="ltr"
                     type="number"
                     value={transferAmount}
                     onChange={(e) => setTransferAmount(parseFloat(e.target.value) || 0)}
                     onFocus={handleFocus}
-                    className="apple-glass-input h-10 rounded-xl pl-10 pr-3 text-lg font-mono font-black text-foreground text-right"
+                    className="apple-glass-input h-10 rounded-xl pl-10 pr-3 text-lg font-mono font-black text-foreground text-left"
                     autoFocus
                   />
                 </div>

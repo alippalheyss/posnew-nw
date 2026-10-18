@@ -573,7 +573,8 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                              type="number"
                              value={shopSettings.taxRate} 
                              onChange={(e) => handleSettingsChange('shop', 'taxRate', parseFloat(e.target.value))}
-                             className="bg-muted border-border h-12 rounded-xl text-right font-black"
+                             dir="ltr"
+                              className="bg-muted border-border h-12 rounded-xl text-left font-black font-mono"
                            />
                         </div>
                      </div>
@@ -600,12 +601,13 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         <div className="space-y-2">
                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Default Credit Limit</Label>
                            <div className="relative">
-                              <Percent className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+                              <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
                               <Input 
                                 type="number"
                                 value={accountingSettings.creditLimit} 
                                 onChange={(e) => handleSettingsChange('accounting', 'creditLimit', parseFloat(e.target.value))}
-                                className="bg-muted border-border h-12 rounded-xl text-right font-bold pr-10"
+                                dir="ltr"
+                                className="bg-muted border-border h-12 rounded-xl text-left font-bold font-mono pl-10 pr-3"
                               />
                            </div>
                         </div>
@@ -752,7 +754,8 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                                 type="number"
                                 value={generalSettings.loyaltyAmountPerPoint ?? 20} 
                                 onChange={(e) => handleSettingsChange('general', 'loyaltyAmountPerPoint', parseFloat(e.target.value))}
-                                className="bg-muted border-border h-12 rounded-xl text-right font-bold"
+                                dir="ltr"
+                                className="bg-muted border-border h-12 rounded-xl text-left font-bold font-mono"
                               />
                            </div>
                         </div>
@@ -796,7 +799,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         <div className="space-y-2">
                            <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Idle Timeout (Minutes)</Label>
                            <div className="relative">
-                              <Clock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+                              <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
                               <Input 
                                 type="number"
                                 value={generalSettings.customerDisplayIdleTimeout || 10} 

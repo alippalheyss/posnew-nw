@@ -236,12 +236,13 @@ const SaleEditDialog: React.FC<SaleEditDialogProps> = ({ isOpen, onClose, sale, 
                  <div className="space-y-1.5">
                     <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('paid_amount')}</Label>
                     <div className="relative">
-                       <DollarSign className="absolute right-4 top-1/2 -translate-y-1/2 h-6 w-6 text-primary/40" />
+                       <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-primary/40" />
                        <Input
                          type="number"
                          value={paidAmount}
                          onChange={(e) => setPaidAmount(parseFloat(e.target.value) || '')}
-                         className="apple-glass-input h-13 rounded-2xl pr-14 text-2xl font-black text-foreground text-right font-mono"
+                         dir="ltr"
+                          className="apple-glass-input h-13 rounded-2xl pl-14 pr-4 text-2xl font-black text-foreground text-left font-mono"
                          placeholder="0.00"
                        />
                     </div>

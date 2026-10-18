@@ -152,15 +152,16 @@ const StockTransferDialog: React.FC<StockTransferDialogProps> = ({
                             </Label>
                         </div>
                         <div className="relative box-border">
-                            <ArrowRightLeft className="absolute right-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/50" />
+                            <ArrowRightLeft className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/50" />
                             <Input
+                                dir="ltr"
                                 type="number"
                                 min="1"
                                 max={maxAmount}
                                 value={transferAmount}
                                 onChange={(e) => setTransferAmount(e.target.value)}
                                 className={cn(
-                                    "apple-glass-input h-12 sm:h-13 rounded-2xl pr-12 pl-4 sm:pl-5 text-xl sm:text-2xl font-black text-foreground text-right font-mono transition-all",
+                                    "apple-glass-input h-12 sm:h-13 rounded-2xl pl-12 pr-4 sm:pr-5 text-xl sm:text-2xl font-black text-foreground text-left font-mono transition-all",
                                     !isValid && currentAmount > 0 ? "border-red-500/50" : ""
                                 )}
                                 placeholder="0"

@@ -1006,7 +1006,8 @@ const Expenses: React.FC = () => {
                   placeholder="0.00"
                   value={formData.amount}
                   onChange={e => setFormData(prev => ({ ...prev, amount: e.target.value }))}
-                  className="apple-glass-input rounded-2xl h-11 text-right font-black text-lg font-mono"
+                  dir="ltr"
+                  className="apple-glass-input rounded-2xl h-11 text-left font-black text-lg font-mono"
                 />
               </div>
 
@@ -1016,7 +1017,8 @@ const Expenses: React.FC = () => {
                   type="date"
                   value={formData.date}
                   onChange={e => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                  className="apple-glass-input rounded-2xl h-11 text-right font-bold font-mono"
+                  dir="ltr"
+                  className="apple-glass-input rounded-2xl h-11 text-left font-bold font-mono"
                 />
               </div>
             </div>

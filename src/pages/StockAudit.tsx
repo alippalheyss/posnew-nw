@@ -1881,6 +1881,7 @@ export default function StockAudit() {
                 type="number"
                 min="1"
                 step="1"
+                dir="ltr"
                 value={countQuantity}
                 onChange={(e) => setCountQuantity(e.target.value)}
                 className="h-12 rounded-2xl apple-glass-input text-xl font-black text-center font-mono"
@@ -1983,6 +1984,7 @@ export default function StockAudit() {
                 type="number"
                 min="1"
                 step="1"
+                dir="ltr"
                 value={editQtyInput}
                 onChange={(e) => setEditQtyInput(e.target.value)}
                 className="h-12 rounded-2xl apple-glass-input text-xl font-black text-center font-mono"

@@ -339,12 +339,13 @@ const Vendors = () => {
                                     <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('tin_number')}*</Label>
                                 </div>
                                 <Input 
+                                    dir="ltr"
                                     maxLength={13} 
                                     placeholder="e.g. 1021550GST501" 
                                     value={vendorForm.tin_number} 
                                     onChange={(e) => setVendorForm({ ...vendorForm, tin_number: e.target.value.toUpperCase().replace(/\s+/g, '') })} 
                                     className={cn(
-                                        "text-right h-11 font-mono apple-glass-input rounded-2xl tracking-wider transition-all",
+                                        "text-left h-11 font-mono apple-glass-input rounded-2xl tracking-wider transition-all",
                                         vendorForm.tin_number.trim().length === 13 ? "border-emerald-500/50" : ""
                                     )} 
                                 />
@@ -352,7 +353,7 @@ const Vendors = () => {
                         </div>
                         <div className="space-y-1.5">
                             <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('address')}</Label>
-                            <Input value={vendorForm.address} onChange={(e) => setVendorForm({ ...vendorForm, address: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-bold" />
+                            <Input dir="ltr" value={vendorForm.address} onChange={(e) => setVendorForm({ ...vendorForm, address: e.target.value })} className="text-left h-11 apple-glass-input rounded-2xl font-bold" />
                         </div>
                     </div>
                     <DialogFooter className="gap-2.5 pt-3 border-t border-white/10 flex flex-row">
@@ -415,12 +416,13 @@ const Vendors = () => {
                                     <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('tin_number')}*</Label>
                                 </div>
                                 <Input 
+                                    dir="ltr"
                                     maxLength={13} 
                                     placeholder="e.g. 1021550GST501" 
                                     value={vendorForm.tin_number} 
                                     onChange={(e) => setVendorForm({ ...vendorForm, tin_number: e.target.value.toUpperCase().replace(/\s+/g, '') })} 
                                     className={cn(
-                                        "text-right h-11 font-mono apple-glass-input rounded-2xl tracking-wider transition-all",
+                                        "text-left h-11 font-mono apple-glass-input rounded-2xl tracking-wider transition-all",
                                         vendorForm.tin_number.trim().length === 13 ? "border-emerald-500/50" : ""
                                     )} 
                                 />
@@ -428,7 +430,7 @@ const Vendors = () => {
                         </div>
                         <div className="space-y-1.5">
                             <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('address')}</Label>
-                            <Input value={vendorForm.address} onChange={(e) => setVendorForm({ ...vendorForm, address: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-bold" />
+                            <Input dir="ltr" value={vendorForm.address} onChange={(e) => setVendorForm({ ...vendorForm, address: e.target.value })} className="text-left h-11 apple-glass-input rounded-2xl font-bold" />
                         </div>
                     </div>
                     <DialogFooter className="gap-2.5 pt-3 border-t border-white/10 flex flex-row">

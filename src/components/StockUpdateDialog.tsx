@@ -117,7 +117,7 @@ const StockUpdateDialog: React.FC<StockUpdateDialogProps> = ({ isOpen, onClose, 
                 {renderBoth('new_stock_quantity')}* ({target === 'shop' ? t('shop') : t('godown')})
               </Label>
               <div className="relative">
-                 <Boxes className="absolute right-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/50" />
+                 <Boxes className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/50" />
                  <Input
                    id="newStock"
                    type="number"
@@ -125,7 +125,8 @@ const StockUpdateDialog: React.FC<StockUpdateDialogProps> = ({ isOpen, onClose, 
                    value={editedStock}
                    onChange={(e) => setEditedStock(parseFloat(e.target.value) || '')} 
                    onFocus={handleFocus}
-                   className="apple-glass-input h-13 rounded-2xl pr-12 text-2xl font-black text-foreground font-mono text-right"
+                   dir="ltr"
+                   className="apple-glass-input h-13 rounded-2xl pl-12 pr-4 text-2xl font-black text-foreground font-mono text-left"
                    autoFocus
                    placeholder="0"
                  />

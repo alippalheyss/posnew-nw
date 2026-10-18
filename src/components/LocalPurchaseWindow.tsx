@@ -966,6 +966,7 @@ const LocalPurchaseWindow = () => {
                 <label className="text-[11px] font-black uppercase text-muted-foreground block">Quantity (ތަދާދު)*</label>
                 <input
                   ref={quickEntryQtyRef}
+                  dir="ltr"
                   type="number"
                   min="0.01"
                   step="any"
@@ -989,6 +990,7 @@ const LocalPurchaseWindow = () => {
                 <label className="text-[11px] font-black uppercase text-muted-foreground block">Unit Cost — {currency} (ޔުނިޓް ކޮސްޓް)</label>
                 <input
                   ref={quickEntryUnitCostRef}
+                  dir="ltr"
                   type="number"
                   min="0"
                   step="0.01"
@@ -1011,6 +1013,7 @@ const LocalPurchaseWindow = () => {
                 <label className="text-[11px] font-black uppercase text-muted-foreground block">Subtotal — {currency} (ސަބްޓޯޓަލް)</label>
                 <input
                   ref={quickEntrySubtotalRef}
+                  dir="ltr"
                   type="number"
                   min="0"
                   step="0.01"

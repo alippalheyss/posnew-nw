@@ -868,6 +868,7 @@ const MobilePurchase: React.FC = () => {
                 <Label className="text-xs font-black uppercase text-foreground">Quantity (އަދަދު)*</Label>
                 <Input
                   ref={mobileQtyRef}
+                  dir="ltr"
                   type="number"
                   step="1"
                   min="1"
@@ -885,13 +886,14 @@ const MobilePurchase: React.FC = () => {
                   <Label className="text-[10px] font-black uppercase text-muted-foreground">Unit Cost (ގަތް އަގު - {currency})</Label>
                   <Input
                     ref={mobileCostRef}
+                    dir="ltr"
                     type="number"
                     step="0.01"
                     inputMode="decimal"
                     value={mobileCost}
                     onChange={(e) => handleCostChange(e.target.value)}
                     onFocus={(e) => e.target.select()}
-                    className="h-11 bg-muted text-right font-black font-mono text-sm rounded-xl"
+                    className="h-11 bg-muted text-left font-black font-mono text-sm rounded-xl"
                     placeholder="0.00"
                   />
                 </div>
@@ -900,6 +902,7 @@ const MobilePurchase: React.FC = () => {
                   <Label className="text-[10px] font-black uppercase text-primary font-bold">Subtotal (ޖުމްލަ - {currency})*</Label>
                   <Input
                     ref={mobileSubtotalRef}
+                    dir="ltr"
                     type="number"
                     step="0.01"
                     inputMode="decimal"
@@ -912,7 +915,7 @@ const MobilePurchase: React.FC = () => {
                         handleConfirmMobileEntry();
                       }
                     }}
-                    className="h-11 bg-primary/10 border-primary/40 text-right font-black font-mono text-sm text-primary rounded-xl"
+                    className="h-11 bg-primary/10 border-primary/40 text-left font-black font-mono text-sm text-primary rounded-xl"
                     placeholder="0.00"
                   />
                 </div>

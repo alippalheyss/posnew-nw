@@ -860,7 +860,8 @@ const CreditOutstanding = () => {
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(e.target.value === '' ? '' : (parseFloat(e.target.value) || 0))}
                   onFocus={(e) => e.target.select()}
-                  className="text-right h-12 apple-glass-input text-2xl font-black text-foreground font-mono pl-14 pr-4 rounded-2xl w-full"
+                  dir="ltr"
+                  className="text-left h-12 apple-glass-input text-2xl font-black text-foreground font-mono pl-14 pr-4 rounded-2xl w-full"
                   autoFocus
                   placeholder="0.00"
                 />

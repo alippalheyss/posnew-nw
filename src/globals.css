@@ -518,3 +518,31 @@
   font-family: 'Roboto', 'Faruma', system-ui, -apple-system, sans-serif;
   font-weight: 700;
 }
+
+/* Universal LTR enforcement for all numeric, code, currency, phone, date, and English inputs */
+input[type="number"],
+input[type="tel"],
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[inputmode="numeric"],
+input[inputmode="decimal"],
+input.font-mono,
+.cart-qty-input {
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+}
+
+/* Numeric inputs should default to left alignment unless explicitly centered */
+input[type="number"]:not(.text-center):not([class*="text-center"]),
+input[type="tel"]:not(.text-center):not([class*="text-center"]),
+input[inputmode="numeric"]:not(.text-center):not([class*="text-center"]),
+input[inputmode="decimal"]:not(.text-center):not([class*="text-center"]) {
+  text-align: left;
+}
+
+/* Default all input and textarea fields to LTR unless explicitly marked as Dhivehi/Faruma */
+input:not([dir="rtl"]):not(.font-faruma):not([name*="_dv"]):not([id*="_dv"]),
+textarea:not([dir="rtl"]):not(.font-faruma):not([name*="_dv"]):not([id*="_dv"]) {
+  direction: ltr;
+}

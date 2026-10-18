@@ -62,31 +62,44 @@ export interface ActiveAuditSession {
   startedAt: string;
   status: 'active' | 'completed';
   items: Record<string, ProductAuditState>;
+  deletedProductIds?: Record<string, string>; // productId -> ISO timestamp
+  deletedEntryIds?: Record<string, string>;   // entryId -> ISO timestamp
 }
 
-// Helper: Merge product state between local and cloud without losing entries or approval
-export function mergeProductItems(localItem?: ProductAuditState, cloudItem?: ProductAuditState): ProductAuditState {
-  if (!localItem) return cloudItem!;
-  if (!cloudItem) return localItem;
+// Helper: Merge product state between local and cloud without losing entries or approval, respecting deleted entries
+export function mergeProductItems(
+  localItem?: ProductAuditState,
+  cloudItem?: ProductAuditState,
+  deletedEntryIds?: Record<string, string>
+): ProductAuditState | null {
+  if (!localItem && !cloudItem) return null;
 
-  // Union entries by unique entry id
+  // Union entries by unique entry id, filtering out any deletedEntryIds
   const entryMap = new Map<string, AuditEntry>();
-  for (const e of (localItem.entries || [])) {
-    entryMap.set(e.id, e);
+  for (const e of (localItem?.entries || [])) {
+    if (!deletedEntryIds?.[e.id]) {
+      entryMap.set(e.id, e);
+    }
   }
-  for (const e of (cloudItem.entries || [])) {
-    entryMap.set(e.id, e);
+  for (const e of (cloudItem?.entries || [])) {
+    if (!deletedEntryIds?.[e.id]) {
+      entryMap.set(e.id, e);
+    }
   }
   const entries = Array.from(entryMap.values()).sort((a, b) => 
     new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
 
+  if (entries.length === 0) {
+    return null;
+  }
+
   const totalShopCounted = entries.filter(e => e.location === 'shop').reduce((sum, e) => sum + e.quantity, 0);
   const totalGodownCounted = entries.filter(e => e.location === 'godown').reduce((sum, e) => sum + e.quantity, 0);
   const totalCounted = totalShopCounted + totalGodownCounted;
 
-  const localTime = new Date(localItem.lastUpdated || 0).getTime();
-  const cloudTime = new Date(cloudItem.lastUpdated || 0).getTime();
+  const localTime = new Date(localItem?.lastUpdated || 0).getTime();
+  const cloudTime = new Date(cloudItem?.lastUpdated || 0).getTime();
 
   let isApproved = false;
   let approvedBy: string | undefined = undefined;
@@ -94,13 +107,13 @@ export function mergeProductItems(localItem?: ProductAuditState, cloudItem?: Pro
 
   // Most recent approval decision takes precedence
   if (cloudTime >= localTime) {
-    isApproved = Boolean(cloudItem.isApproved);
-    approvedBy = cloudItem.approvedBy;
-    approvedAt = cloudItem.approvedAt;
+    isApproved = Boolean(cloudItem?.isApproved);
+    approvedBy = cloudItem?.approvedBy;
+    approvedAt = cloudItem?.approvedAt;
   } else {
-    isApproved = Boolean(localItem.isApproved);
-    approvedBy = localItem.approvedBy;
-    approvedAt = localItem.approvedAt;
+    isApproved = Boolean(localItem?.isApproved);
+    approvedBy = localItem?.approvedBy;
+    approvedAt = localItem?.approvedAt;
   }
 
   // If approved, but a subsequent count was logged after approvedAt, re-require admin approval
@@ -113,7 +126,7 @@ export function mergeProductItems(localItem?: ProductAuditState, cloudItem?: Pro
   }
 
   return {
-    productId: localItem.productId || cloudItem.productId,
+    productId: localItem?.productId || cloudItem?.productId || '',
     entries,
     totalShopCounted,
     totalGodownCounted,
@@ -125,10 +138,20 @@ export function mergeProductItems(localItem?: ProductAuditState, cloudItem?: Pro
   };
 }
 
-// Helper: Merge complete audit sessions across devices
+// Helper: Merge complete audit sessions across devices without resurrecting deleted items
 export function mergeAuditSessions(localSession: ActiveAuditSession, cloudSession: ActiveAuditSession): ActiveAuditSession {
   if (!cloudSession || !cloudSession.items) return localSession;
   if (!localSession || !localSession.items) return cloudSession;
+
+  // Combine tombstones for deleted products and entries
+  const mergedDeletedProductIds: Record<string, string> = {
+    ...(cloudSession.deletedProductIds || {}),
+    ...(localSession.deletedProductIds || {})
+  };
+  const mergedDeletedEntryIds: Record<string, string> = {
+    ...(cloudSession.deletedEntryIds || {}),
+    ...(localSession.deletedEntryIds || {})
+  };
 
   const mergedItems: Record<string, ProductAuditState> = {};
   const allProductIds = new Set([
@@ -137,9 +160,28 @@ export function mergeAuditSessions(localSession: ActiveAuditSession, cloudSessio
   ]);
 
   for (const pid of allProductIds) {
+    const deletedAt = mergedDeletedProductIds[pid];
     const localItem = localSession.items?.[pid];
     const cloudItem = cloudSession.items?.[pid];
-    mergedItems[pid] = mergeProductItems(localItem, cloudItem);
+
+    // If product was deleted, check if any entry was logged strictly AFTER the deletion timestamp
+    if (deletedAt) {
+      const deletedTime = new Date(deletedAt).getTime();
+      const hasNewerLocalEntry = localItem?.entries?.some(e => new Date(e.timestamp).getTime() > deletedTime);
+      const hasNewerCloudEntry = cloudItem?.entries?.some(e => new Date(e.timestamp).getTime() > deletedTime);
+      if (!hasNewerLocalEntry && !hasNewerCloudEntry) {
+        // Still deleted! Do not restore
+        continue;
+      } else {
+        // User explicitly recounted this product after deletion
+        delete mergedDeletedProductIds[pid];
+      }
+    }
+
+    const merged = mergeProductItems(localItem, cloudItem, mergedDeletedEntryIds);
+    if (merged && merged.entries.length > 0) {
+      mergedItems[pid] = merged;
+    }
   }
 
   return {
@@ -147,7 +189,9 @@ export function mergeAuditSessions(localSession: ActiveAuditSession, cloudSessio
     title: cloudSession.title || localSession.title || 'Store Audit',
     startedAt: cloudSession.startedAt || localSession.startedAt || new Date().toISOString(),
     status: cloudSession.status || localSession.status || 'active',
-    items: mergedItems
+    items: mergedItems,
+    deletedProductIds: mergedDeletedProductIds,
+    deletedEntryIds: mergedDeletedEntryIds
   };
 }
 
@@ -509,8 +553,12 @@ export default function StockAudit() {
         .reduce((sum, e) => sum + e.quantity, 0);
       const totalCounted = totalShopCounted + totalGodownCounted;
 
+      const newDeletedProductIds = { ...(prev.deletedProductIds || {}) };
+      delete newDeletedProductIds[selectedProduct.id];
+
       const updatedSession: ActiveAuditSession = {
         ...prev,
+        deletedProductIds: newDeletedProductIds,
         items: {
           ...prev.items,
           [selectedProduct.id]: {
@@ -616,19 +664,28 @@ export default function StockAudit() {
       const item = prev.items[productId];
       if (!item) return prev;
 
+      const now = new Date().toISOString();
       const updatedEntries = item.entries.filter(e => e.id !== entryId);
-      const totalShopCounted = updatedEntries
-        .filter(e => e.location === 'shop')
-        .reduce((sum, e) => sum + e.quantity, 0);
-      const totalGodownCounted = updatedEntries
-        .filter(e => e.location === 'godown')
-        .reduce((sum, e) => sum + e.quantity, 0);
-      const totalCounted = totalShopCounted + totalGodownCounted;
+      const newDeletedEntryIds = {
+        ...(prev.deletedEntryIds || {}),
+        [entryId]: now
+      };
 
       const newItems = { ...prev.items };
+      const newDeletedProductIds = { ...(prev.deletedProductIds || {}) };
+
       if (updatedEntries.length === 0) {
         delete newItems[productId];
+        newDeletedProductIds[productId] = now;
       } else {
+        const totalShopCounted = updatedEntries
+          .filter(e => e.location === 'shop')
+          .reduce((sum, e) => sum + e.quantity, 0);
+        const totalGodownCounted = updatedEntries
+          .filter(e => e.location === 'godown')
+          .reduce((sum, e) => sum + e.quantity, 0);
+        const totalCounted = totalShopCounted + totalGodownCounted;
+
         newItems[productId] = {
           ...item,
           entries: updatedEntries,
@@ -636,17 +693,64 @@ export default function StockAudit() {
           totalGodownCounted,
           totalCounted,
           isApproved: false,
-          lastUpdated: new Date().toISOString()
+          lastUpdated: now
         };
       }
 
-      const updatedSession = { ...prev, items: newItems };
+      const updatedSession: ActiveAuditSession = {
+        ...prev,
+        items: newItems,
+        deletedProductIds: newDeletedProductIds,
+        deletedEntryIds: newDeletedEntryIds
+      };
+
       saveAuditSessionDebounced(updatedSession, counterName, 'audit_update');
       return updatedSession;
     });
 
+    playBeep(700, 'sine', 0.1);
     showSuccess('Count entry removed');
-  }, [counterName, saveAuditSessionDebounced]);
+  }, [counterName, isAdminUser, saveAuditSessionDebounced]);
+
+  // 6b. Delete All Product Counts (Reset back to default Not Counted)
+  const handleDeleteProductCount = useCallback((productId: string) => {
+    const currentItem = auditSessionRef.current?.items?.[productId];
+
+    if (currentItem?.isApproved && !isAdminUser) {
+      showError('Approved products cannot be deleted. Please submit a new count to adjust.');
+      return;
+    }
+
+    setAuditSession(prev => {
+      const newItems = { ...prev.items };
+      delete newItems[productId];
+
+      const now = new Date().toISOString();
+      const newDeletedProductIds = {
+        ...(prev.deletedProductIds || {}),
+        [productId]: now
+      };
+      const newDeletedEntryIds = { ...(prev.deletedEntryIds || {}) };
+      if (currentItem?.entries) {
+        currentItem.entries.forEach(e => {
+          newDeletedEntryIds[e.id] = now;
+        });
+      }
+
+      const updatedSession: ActiveAuditSession = {
+        ...prev,
+        items: newItems,
+        deletedProductIds: newDeletedProductIds,
+        deletedEntryIds: newDeletedEntryIds
+      };
+
+      saveAuditSessionDebounced(updatedSession, counterName, 'audit_update');
+      return updatedSession;
+    });
+
+    playBeep(650, 'sine', 0.12);
+    showSuccess('Product count removed. Reset back to Not Counted.');
+  }, [counterName, isAdminUser, saveAuditSessionDebounced]);
 
   // 7. Admin Single Product Stock Approval & Direct Commit to Main App
   const handleApproveStock = useCallback(async (product: Product) => {
@@ -1264,10 +1368,11 @@ export default function StockAudit() {
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
                   type="text"
+                  dir="rtl"
                   placeholder="ހޯދާ / Search item, code, barcode..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pr-9 pl-8 h-11 rounded-2xl apple-glass-input text-xs sm:text-sm font-sans focus-visible:ring-primary shadow-xs"
+                  className="pr-9 pl-8 h-11 rounded-2xl apple-glass-input text-xs sm:text-sm text-right font-faruma focus-visible:ring-primary shadow-xs"
                 />
                 {searchQuery && (
                   <button
@@ -1342,19 +1447,35 @@ export default function StockAudit() {
                           </div>
                         </div>
 
-                        {/* Quick Count Button */}
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            setSelectedProduct(product);
-                            setCountQuantity('1');
-                            setCountLocation('shop');
-                          }}
-                          className="h-8 px-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs shrink-0 gap-1 shadow-none"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                          <span>Count</span>
-                        </Button>
+                        {/* Quick Count Button & Reset button */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {hasCount && (!isApproved || isAdminUser) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteProductCount(product.id);
+                              }}
+                              className="h-8 px-2 rounded-xl text-[10px] font-bold text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-rose-200/60 dark:border-rose-900/40 gap-1 shadow-none"
+                              title="Reset back to Not Counted / ނުގުނާ ގޮތަށް ބަދަލުކުރޭ"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setSelectedProduct(product);
+                              setCountQuantity('1');
+                              setCountLocation('shop');
+                            }}
+                            className="h-8 px-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs shrink-0 gap-1 shadow-none"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            <span>Count</span>
+                          </Button>
+                        </div>
                       </div>
 
                       {/* Admin Quick Approval Row if Pending Count exists */}
@@ -1410,10 +1531,11 @@ export default function StockAudit() {
                   <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   <Input
                     type="text"
+                    dir="rtl"
                     placeholder="ގުނާފައިވާ ތަކެތިން ހޯދާ / Search counted items..."
                     value={countedSearchQuery}
                     onChange={(e) => setCountedSearchQuery(e.target.value)}
-                    className="pr-9 pl-8 h-10 rounded-2xl apple-glass-input text-xs sm:text-sm font-sans focus-visible:ring-primary shadow-xs"
+                    className="pr-9 pl-8 h-10 rounded-2xl apple-glass-input text-xs sm:text-sm text-right font-faruma focus-visible:ring-primary shadow-xs"
                   />
                   {countedSearchQuery && (
                     <button
@@ -1431,7 +1553,7 @@ export default function StockAudit() {
             <div className="flex items-center justify-between px-1 text-xs font-sans text-muted-foreground">
               <span className="font-bold text-foreground">
                 Counted Items ({totalCountedItems})
-                {countedSearchQuery && ` — Matching (${countedProductsList.length})`}
+                {countedSearchQuery && <span className="opacity-80 font-normal"> ({countedProductsList.length} Matching)</span>}
               </span>
               <div className="flex items-center gap-2">
                 <Button
@@ -1512,26 +1634,41 @@ export default function StockAudit() {
                         <p className="text-[11px] font-bold text-muted-foreground font-sans mt-0.5 truncate">{product.name_en}</p>
                       </div>
 
-                      {/* Add more count button */}
-                      <Button
-                        size="sm"
-                        variant={auditState.isApproved ? "default" : "outline"}
-                        onClick={() => {
-                          setSelectedProduct(product);
-                          setCountQuantity('1');
-                          setCountLocation('shop');
-                        }}
-                        className={cn(
-                          "h-7 px-2.5 rounded-xl text-[10px] font-bold shrink-0 gap-1 shadow-none",
-                          auditState.isApproved
-                            ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                            : "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300"
+                      {/* Action buttons: Reset to Not Counted & Add More */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        {(!auditState.isApproved || isAdminUser) && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDeleteProductCount(product.id)}
+                            className="h-7 px-2 rounded-xl text-[10px] font-bold text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-rose-200/60 dark:border-rose-900/40 gap-1 shadow-none"
+                            title="Reset to Not Counted / ނުގުނާ ގޮތަށް ބަދަލުކުރޭ"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            <span className="hidden sm:inline">Reset</span>
+                          </Button>
                         )}
-                        title={auditState.isApproved ? "Submit a new count for this approved product" : "Add count"}
-                      >
-                        <Plus className="h-3 w-3" />
-                        <span>{auditState.isApproved ? '+ Add More' : 'Add'}</span>
-                      </Button>
+
+                        <Button
+                          size="sm"
+                          variant={auditState.isApproved ? "default" : "outline"}
+                          onClick={() => {
+                            setSelectedProduct(product);
+                            setCountQuantity('1');
+                            setCountLocation('shop');
+                          }}
+                          className={cn(
+                            "h-7 px-2.5 rounded-xl text-[10px] font-bold shrink-0 gap-1 shadow-none",
+                            auditState.isApproved
+                              ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                              : "bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300"
+                          )}
+                          title={auditState.isApproved ? "Submit a new count for this approved product" : "Add count"}
+                        >
+                          <Plus className="h-3 w-3" />
+                          <span>{auditState.isApproved ? '+ Add More' : 'Add'}</span>
+                        </Button>
+                      </div>
                     </div>
 
                     {/* Stock & Counted Comparison Bar */}

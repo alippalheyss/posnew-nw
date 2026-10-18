@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, PackagePlus, Boxes, ArrowRightLeft, Store, Warehouse, Pencil, AlertTriangle, TrendingDown, TrendingUp, Info, QrCode, Smartphone } from 'lucide-react';
+import { Search, PackagePlus, Boxes, ArrowRightLeft, Store, Warehouse, Pencil, AlertTriangle, TrendingDown, TrendingUp, Info, QrCode, Smartphone, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import StockUpdateDialog from '@/components/StockUpdateDialog';
@@ -137,14 +137,24 @@ const Stock = () => {
       </div>
 
       {/* Search Bar */}
-      <div className="relative mb-8">
-         <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+      <div className="relative mb-8" dir="ltr">
+         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 pointer-events-none" />
          <Input 
+           dir="ltr"
            placeholder="Search stock by name, code or barcode..."
            value={searchTerm}
            onChange={(e) => { setSearchTerm(e.target.value); setVisibleCount(20); }}
-           className="w-full apple-glass-input rounded-2xl pr-12 h-14 text-right font-bold transition-all text-lg shadow-sm"
+           className="w-full apple-glass-input rounded-2xl pl-12 pr-10 h-14 text-left font-bold transition-all text-lg shadow-sm"
          />
+         {searchTerm && (
+           <button
+             onClick={() => { setSearchTerm(''); setVisibleCount(20); }}
+             className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors"
+             title="Clear search"
+           >
+             <X className="h-4 w-4" />
+           </button>
+         )}
       </div>
 
       {/* Stock Grid */}

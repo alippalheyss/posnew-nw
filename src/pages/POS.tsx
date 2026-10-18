@@ -1393,12 +1393,13 @@ const POS = () => {
             {/* 1-Click Print Receipt Button (No dialogue) */}
             <Button 
               variant="outline" 
-              className="flex items-center gap-1.5 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 rounded-xl h-10 px-3 text-[10px] font-black shadow-none"
+              size="sm"
+              className="flex items-center gap-1 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 rounded-lg h-8 px-2 text-[9px] font-black shadow-none"
               onClick={triggerInstantReceiptPrint}
               title="Print latest receipt directly without dialogue (F9)"
             >
-              <Printer className="h-4 w-4" />
-              <span>PRINT RECEIPT (F9)</span>
+              <Printer className="h-3.5 w-3.5" />
+              <span>Print (F9)</span>
             </Button>
             
             <Select value={selectedCategory} onValueChange={(val) => { setSelectedCategory(val); setVisibleCatalogueCount(60); }}>

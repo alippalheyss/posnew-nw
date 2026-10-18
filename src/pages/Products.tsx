@@ -448,18 +448,19 @@ const Products = () => {
 
       {/* PROMINENT CENTERED SEARCH BAR */}
       <div className="w-full flex items-center justify-center mb-4">
-        <div className="relative w-full max-w-2xl">
-          <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary pointer-events-none" />
+        <div className="relative w-full max-w-2xl" dir="ltr">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary pointer-events-none" />
           <Input 
+            dir="ltr"
             placeholder={renderBothString('search_products')}
             value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); setVisibleCount(30); }}
-            className="w-full bg-muted/80 hover:bg-muted border-2 border-border focus:border-primary rounded-2xl pr-12 pl-12 h-12 text-right font-bold text-sm sm:text-base focus:bg-background transition-all shadow-sm placeholder:text-muted-foreground/60 text-foreground"
+            className="w-full bg-muted/80 hover:bg-muted border-2 border-border focus:border-primary rounded-2xl pl-12 pr-12 h-12 text-left font-bold text-sm sm:text-base focus:bg-background transition-all shadow-sm placeholder:text-muted-foreground/60 text-foreground"
           />
           {searchTerm && (
             <button
               onClick={() => { setSearchTerm(''); setVisibleCount(30); }}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors"
               title="Clear search"
             >
               <X className="h-4 w-4" />

@@ -6,7 +6,7 @@ import {
   Wallet, Zap, Landmark, Truck, Trash2, PlusCircle, Search, 
   Download, FileSpreadsheet, Printer, PencilLine, Trash, 
   Calendar as CalendarIcon, DollarSign, Receipt, Filter, 
-  CheckCircle2, ArrowRightLeft, Clock, HelpCircle, FileText
+  CheckCircle2, ArrowRightLeft, Clock, HelpCircle, FileText, X
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -811,14 +811,24 @@ const Expenses: React.FC = () => {
       </div>
 
       {/* Search Bar */}
-      <div className="relative mb-6">
-        <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+      <div className="relative mb-6" dir="ltr">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 pointer-events-none" />
         <Input
+          dir="ltr"
           placeholder="Search expenses by title, bill/ref number, category, or remarks..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
-          className="w-full apple-glass-input rounded-2xl pr-12 h-12 text-right font-bold transition-all shadow-sm"
+          className="w-full apple-glass-input rounded-2xl pl-12 pr-10 h-12 text-left font-bold transition-all shadow-sm"
         />
+        {searchTerm && (
+          <button
+            onClick={() => setSearchTerm('')}
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors"
+            title="Clear search"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {/* Expense Entries List */}

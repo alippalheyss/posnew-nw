@@ -662,14 +662,24 @@ const CreditOutstanding = () => {
 
       {/* Search & Actions Bar */}
       <div className="flex flex-row-reverse gap-4 mb-8">
-        <div className="relative flex-1">
-           <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+        <div className="relative flex-1" dir="ltr">
+           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 pointer-events-none" />
            <Input 
+             dir="ltr"
              placeholder="Search by customer name or ID code..."
              value={searchTerm}
              onChange={(e) => setSearchTerm(e.target.value)}
-             className="w-full apple-glass-input rounded-2xl pr-12 h-14 text-right font-bold transition-all text-lg shadow-sm"
+             className="w-full apple-glass-input rounded-2xl pl-12 pr-10 h-14 text-left font-bold transition-all text-lg shadow-sm"
            />
+           {searchTerm && (
+             <button
+               onClick={() => setSearchTerm('')}
+               className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors"
+               title="Clear search"
+             >
+               <X className="h-4 w-4" />
+             </button>
+           )}
         </div>
         <Button
           onClick={handleOpenBatchRemindersDialog}

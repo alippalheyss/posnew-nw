@@ -132,13 +132,6 @@
   table th {
     font-weight: 800 !important;
   }
-
-  /* Writing cursor ("writing dash" / ލިޔާ ދަނޑި) starts on the right side by default in Dhivehi/Thaana RTL UI */
-  input:not([dir="ltr"]):not(.text-center):not(.text-left):not([type="number"]):not([type="date"]):not([type="time"]),
-  textarea:not([dir="ltr"]):not(.text-center):not(.text-left) {
-    direction: rtl;
-    text-align: right;
-  }
 }
 
 @layer utilities {

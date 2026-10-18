@@ -186,13 +186,24 @@ const Vendors = () => {
 
             {/* Search Bar */}
             <div className="relative mb-8">
-                <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 pointer-events-none" />
                 <Input
-                    placeholder={t('search_vendors')}
+                    dir="auto"
+                    placeholder="Search vendors... / ވިޔަފާރިވެރިން ހޯދާ"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full apple-glass-input rounded-2xl pr-12 h-14 text-right font-bold transition-all text-lg shadow-sm"
+                    className="w-full apple-glass-input rounded-2xl pl-12 pr-12 h-14 text-left font-sans font-bold transition-all text-base shadow-sm"
                 />
+                {searchTerm && (
+                    <button
+                        type="button"
+                        onClick={() => setSearchTerm('')}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1.5 rounded-full hover:bg-muted-foreground/10 transition-colors"
+                        title="Clear search"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                )}
             </div>
 
             {/* Vendors Table/List Container */}
@@ -291,27 +302,27 @@ const Vendors = () => {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('vendor_name_en')}*</Label>
-                                <Input value={vendorForm.name_en} onChange={(e) => setVendorForm({ ...vendorForm, name_en: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-bold" placeholder="e.g. STO" />
+                                <Input dir="ltr" value={vendorForm.name_en} onChange={(e) => setVendorForm({ ...vendorForm, name_en: e.target.value })} className="text-left h-11 apple-glass-input rounded-2xl font-bold" placeholder="e.g. STO" />
                             </div>
                             <div className="space-y-1.5">
                                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('vendor_name_dv')}</Label>
-                                <Input value={vendorForm.name_dv} onChange={(e) => setVendorForm({ ...vendorForm, name_dv: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-bold" placeholder="އެސް.ޓީ.އޯ" />
+                                <Input dir="rtl" value={vendorForm.name_dv} onChange={(e) => setVendorForm({ ...vendorForm, name_dv: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-faruma font-bold" placeholder="އެސް.ޓީ.އޯ" />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('phone')}*</Label>
-                                <Input value={vendorForm.phone} onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })} className="text-right h-11 font-mono apple-glass-input rounded-2xl" />
+                                <Input dir="ltr" value={vendorForm.phone} onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })} className="text-left h-11 font-mono apple-glass-input rounded-2xl" />
                             </div>
                             <div className="space-y-1.5">
                                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('contact_person')}</Label>
-                                <Input value={vendorForm.contact_person} onChange={(e) => setVendorForm({ ...vendorForm, contact_person: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-bold" />
+                                <Input dir="auto" value={vendorForm.contact_person} onChange={(e) => setVendorForm({ ...vendorForm, contact_person: e.target.value })} className="text-left h-11 apple-glass-input rounded-2xl font-bold" />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('email')}</Label>
-                                <Input type="email" value={vendorForm.email} onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-mono" />
+                                <Input dir="ltr" type="email" value={vendorForm.email} onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })} className="text-left h-11 apple-glass-input rounded-2xl font-mono" />
                             </div>
                             <div className="space-y-1.5">
                                 <div className="flex justify-between items-center">
@@ -367,27 +378,27 @@ const Vendors = () => {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('vendor_name_en')}*</Label>
-                                <Input value={vendorForm.name_en} onChange={(e) => setVendorForm({ ...vendorForm, name_en: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-bold" />
+                                <Input dir="ltr" value={vendorForm.name_en} onChange={(e) => setVendorForm({ ...vendorForm, name_en: e.target.value })} className="text-left h-11 apple-glass-input rounded-2xl font-bold" />
                             </div>
                             <div className="space-y-1.5">
                                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('vendor_name_dv')}</Label>
-                                <Input value={vendorForm.name_dv} onChange={(e) => setVendorForm({ ...vendorForm, name_dv: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-bold" />
+                                <Input dir="rtl" value={vendorForm.name_dv} onChange={(e) => setVendorForm({ ...vendorForm, name_dv: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-faruma font-bold" />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('phone')}*</Label>
-                                <Input value={vendorForm.phone} onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })} className="text-right h-11 font-mono apple-glass-input rounded-2xl" />
+                                <Input dir="ltr" value={vendorForm.phone} onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })} className="text-left h-11 font-mono apple-glass-input rounded-2xl" />
                             </div>
                             <div className="space-y-1.5">
                                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('contact_person')}</Label>
-                                <Input value={vendorForm.contact_person} onChange={(e) => setVendorForm({ ...vendorForm, contact_person: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-bold" />
+                                <Input dir="auto" value={vendorForm.contact_person} onChange={(e) => setVendorForm({ ...vendorForm, contact_person: e.target.value })} className="text-left h-11 apple-glass-input rounded-2xl font-bold" />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('email')}</Label>
-                                <Input type="email" value={vendorForm.email} onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })} className="text-right h-11 apple-glass-input rounded-2xl font-mono" />
+                                <Input dir="ltr" type="email" value={vendorForm.email} onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })} className="text-left h-11 apple-glass-input rounded-2xl font-mono" />
                             </div>
                             <div className="space-y-1.5">
                                 <div className="flex justify-between items-center">

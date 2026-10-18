@@ -530,9 +530,10 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                             </Label>
                                         </div>
                                         <Input 
+                                            dir="rtl"
                                             value={editedProduct.name_dv} 
                                             onChange={(e) => updateField('name_dv', e.target.value)} 
-                                            className="apple-glass-input h-10 rounded-xl text-right font-bold text-sm"
+                                            className="apple-glass-input h-10 rounded-xl text-right font-faruma font-bold text-sm"
                                             placeholder="ތަކެތީގެ ނަން"
                                         />
                                     </div>
@@ -541,6 +542,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                             {renderBoth('product_name')} (English)*
                                         </Label>
                                         <Input 
+                                            dir="ltr"
                                             value={editedProduct.name_en} 
                                             onChange={(e) => updateField('name_en', e.target.value)} 
                                             onBlur={() => {
@@ -549,7 +551,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                     if (translated) updateField('name_dv', translated);
                                                 }
                                             }}
-                                            className="apple-glass-input h-10 rounded-xl text-right font-bold text-sm"
+                                            className="apple-glass-input h-10 rounded-xl text-left font-bold text-sm"
                                             placeholder="Product Name"
                                         />
                                     </div>
@@ -617,12 +619,13 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                         {renderBoth('item_code')}*
                                     </Label>
                                     <div className="relative">
-                                        <Hash className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+                                        <Hash className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
                                         <Input 
+                                            dir="ltr"
                                             value={editedProduct.item_code} 
                                             onChange={(e) => updateField('item_code', e.target.value.replace(/\D/g, ''))} 
                                             placeholder="1001"
-                                            className="apple-glass-input h-11 rounded-xl text-right pr-8 font-mono text-xs" 
+                                            className="apple-glass-input h-11 rounded-xl text-left pl-8 font-mono text-xs" 
                                         />
                                     </div>
                                 </div>
@@ -660,12 +663,13 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                         </Label>
                                     </div>
                                     <div className="relative">
-                                        <Barcode className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+                                        <Barcode className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
                                         <Input 
+                                            dir="ltr"
                                             value={editedProduct.barcode} 
                                             onChange={(e) => updateField('barcode', e.target.value)} 
                                             placeholder="Scan barcode or click Generate"
-                                            className="apple-glass-input h-11 rounded-xl text-right pr-8 font-mono text-xs" 
+                                            className="apple-glass-input h-11 rounded-xl text-left pl-8 font-mono text-xs" 
                                         />
                                     </div>
                                 </div>

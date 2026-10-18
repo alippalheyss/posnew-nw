@@ -352,24 +352,25 @@ const Customers = () => {
 
         {/* Search Bar with Dynamic Placeholder */}
         <div className="relative">
-          <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 pointer-events-none" />
           <Input 
+            dir="auto"
             placeholder={
               filterType === 'BY_NAME'
-                ? "ނަމުން ކަސްޓަމަރު ހޯދާ / Search customer by name..."
+                ? "Search customer by name... / ނަމުން ކަސްޓަމަރު ހޯދާ"
                 : filterType === 'BY_CODE'
-                  ? "ކޯޑުން ކަސްޓަމަރު ހޯދާ (e.g. CUST-001) / Search customer by code..."
-                  : renderBothString('search_customers')
+                  ? "Search customer by code (e.g. 001)... / ކޯޑުން ހޯދާ"
+                  : "Search customer name, code, phone..."
             }
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full apple-glass-input rounded-2xl pr-12 pl-12 h-14 text-right font-bold transition-all text-base shadow-sm"
+            className="w-full apple-glass-input rounded-2xl pl-12 pr-12 h-14 text-left font-sans font-bold transition-all text-base shadow-sm"
           />
           {searchTerm && (
             <button
               type="button"
               onClick={() => setSearchTerm('')}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1.5 rounded-full hover:bg-muted-foreground/10 transition-colors"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1.5 rounded-full hover:bg-muted-foreground/10 transition-colors"
               title="Clear search"
             >
               <X className="h-4 w-4" />
@@ -536,9 +537,10 @@ const Customers = () => {
               </Label>
               <Input
                 id="customerNameDv"
+                dir="rtl"
                 value={editingCustomer?.name_dv || ''}
                 onChange={(e) => setEditingCustomer(prev => prev ? { ...prev, name_dv: e.target.value } : null)}
-                className="text-right h-12 apple-glass-input rounded-2xl font-medium"
+                className="text-right h-12 apple-glass-input rounded-2xl font-faruma font-bold"
               />
             </div>
             <div className="space-y-1.5">
@@ -547,9 +549,10 @@ const Customers = () => {
               </Label>
               <Input
                 id="customerNameEn"
+                dir="ltr"
                 value={editingCustomer?.name_en || ''}
                 onChange={(e) => setEditingCustomer(prev => prev ? { ...prev, name_en: e.target.value } : null)}
-                className="text-right h-12 apple-glass-input rounded-2xl font-medium"
+                className="text-left h-12 apple-glass-input rounded-2xl font-medium"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -559,9 +562,10 @@ const Customers = () => {
                 </Label>
                 <Input
                   id="customerCode"
+                  dir="ltr"
                   value={editingCustomer?.code || ''}
                   readOnly 
-                  className="text-right h-12 apple-glass-input rounded-2xl opacity-50 font-mono"
+                  className="text-left h-12 apple-glass-input rounded-2xl opacity-50 font-mono"
                 />
               </div>
               <div className="space-y-1.5">
@@ -570,9 +574,10 @@ const Customers = () => {
                 </Label>
                 <Input
                   id="customerPhone"
+                  dir="ltr"
                   value={editingCustomer?.phone || ''}
                   onChange={(e) => setEditingCustomer(prev => prev ? { ...prev, phone: e.target.value } : null)}
-                  className="text-right h-12 apple-glass-input rounded-2xl font-medium"
+                  className="text-left h-12 apple-glass-input rounded-2xl font-mono font-medium"
                 />
               </div>
             </div>
@@ -584,9 +589,10 @@ const Customers = () => {
                 <Input
                   id="customerEmail"
                   type="email"
+                  dir="ltr"
                   value={editingCustomer?.email || ''}
                   onChange={(e) => setEditingCustomer(prev => prev ? { ...prev, email: e.target.value } : null)}
-                  className="text-right h-12 apple-glass-input rounded-2xl font-medium"
+                  className="text-left h-12 apple-glass-input rounded-2xl font-medium"
                 />
               </div>
               <div className="space-y-1.5">
@@ -596,9 +602,10 @@ const Customers = () => {
                 <Input
                   id="creditLimit"
                   type="number"
+                  dir="ltr"
                   value={editingCustomer?.credit_limit !== undefined ? editingCustomer.credit_limit : ''}
                   onChange={(e) => setEditingCustomer(prev => prev ? { ...prev, credit_limit: parseFloat(e.target.value) || 0 } : null)}
-                  className="text-right h-12 apple-glass-input rounded-2xl font-mono font-bold"
+                  className="text-left h-12 apple-glass-input rounded-2xl font-mono font-bold"
                 />
               </div>
             </div>

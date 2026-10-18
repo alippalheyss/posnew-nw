@@ -1463,10 +1463,10 @@ const POS = () => {
           {/* Right: Search Bar positioned directly next to the Cart panel */}
           <div className="flex-1 max-w-lg ml-auto">
             <div className="relative">
-              <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary pointer-events-none" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary pointer-events-none" />
               <Input
                 ref={searchInputRef}
-                placeholder="...Search name, code, barcode (Enter to add)"
+                placeholder="Search name, code, barcode... (Enter to add)"
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setVisibleCatalogueCount(60); }}
                 onKeyDown={(e) => {
@@ -1475,10 +1475,10 @@ const POS = () => {
                     handleSearchSubmit();
                   }
                 }}
-                className="w-full bg-muted/90 hover:bg-muted border-2 border-border focus:border-primary rounded-xl px-12 text-right font-bold h-11 text-foreground transition-all placeholder:text-muted-foreground/60 shadow-xs text-xs sm:text-sm"
-                dir="rtl"
+                className="w-full bg-muted/90 hover:bg-muted border-2 border-border focus:border-primary rounded-xl pl-12 pr-12 text-left font-bold h-11 text-foreground transition-all placeholder:text-muted-foreground/60 shadow-xs text-xs sm:text-sm font-sans"
+                dir="auto"
               />
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
                 {searchTerm ? (
                   <button
                     type="button"

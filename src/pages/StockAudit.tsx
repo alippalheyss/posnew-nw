@@ -1365,19 +1365,19 @@ export default function StockAudit() {
             {/* Search Input with Barcode Camera Button */}
             <div className="relative flex items-center gap-1.5">
               <div className="relative flex-1">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <Input
                   type="text"
-                  dir="rtl"
-                  placeholder="ހޯދާ / Search item, code, barcode..."
+                  dir="auto"
+                  placeholder="Search item, code, barcode... (ހޯދާ)"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pr-9 pl-8 h-11 rounded-2xl apple-glass-input text-xs sm:text-sm text-right font-faruma focus-visible:ring-primary shadow-xs"
+                  className="pl-9 pr-8 h-11 rounded-2xl apple-glass-input text-xs sm:text-sm text-left font-sans focus-visible:ring-primary shadow-xs"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -1528,19 +1528,19 @@ export default function StockAudit() {
             {totalCountedItems > 0 && (
               <div className="relative flex items-center gap-1.5">
                 <div className="relative flex-1">
-                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   <Input
                     type="text"
-                    dir="rtl"
-                    placeholder="ގުނާފައިވާ ތަކެތިން ހޯދާ / Search counted items..."
+                    dir="auto"
+                    placeholder="Search counted items... (ގުނާފައިވާ ތަކެތިން ހޯދާ)"
                     value={countedSearchQuery}
                     onChange={(e) => setCountedSearchQuery(e.target.value)}
-                    className="pr-9 pl-8 h-10 rounded-2xl apple-glass-input text-xs sm:text-sm text-right font-faruma focus-visible:ring-primary shadow-xs"
+                    className="pl-9 pr-8 h-10 rounded-2xl apple-glass-input text-xs sm:text-sm text-left font-sans focus-visible:ring-primary shadow-xs"
                   />
                   {countedSearchQuery && (
                     <button
                       onClick={() => setCountedSearchQuery('')}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
                       title="Clear Search"
                     >
                       <X className="h-4 w-4" />

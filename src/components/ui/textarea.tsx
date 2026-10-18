@@ -7,15 +7,11 @@ export interface TextareaProps
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, dir, ...props }, ref) => {
-    const isExplicitLtr = dir === 'ltr' || className?.includes('text-left') || className?.includes('text-center');
-    const resolvedDir = dir || (isExplicitLtr ? undefined : 'rtl');
-
     return (
       <textarea
-        dir={resolvedDir}
+        dir={dir}
         className={cn(
           "flex min-h-[80px] w-full rounded-xl apple-glass-input p-3 text-sm ring-offset-background placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-semibold text-foreground transition-all duration-200",
-          !isExplicitLtr && "text-right",
           className,
         )}
         ref={ref}

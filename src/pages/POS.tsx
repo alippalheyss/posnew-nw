@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useAppContext, Product, Customer, CartItem, Sale } from '@/context/AppContext';
-import { showSuccess, showError } from '@/utils/toast';
+import { showSuccess, showError, showInfo } from '@/utils/toast';
 import LoyaltyRedemptionDialog from '@/components/LoyaltyRedemptionDialog';
 import UnitSelectionDialog from '@/components/UnitSelectionDialog';
 import CustomerAddDialog from '@/components/CustomerAddDialog';

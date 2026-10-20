@@ -17,7 +17,9 @@ import {
   Tag,
   ShieldCheck,
   Percent,
-  Layers
+  Layers,
+  History,
+  Pencil
 } from 'lucide-react';
 import { useAppContext, Purchase, Vendor, PurchaseItem, Product } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
@@ -53,8 +55,13 @@ const LocalPurchaseWindow = () => {
     setIsPurchaseWindowMinimized,
     vendors,
     products,
+    purchases,
     addPurchase,
+    updatePurchase,
+    deletePurchase,
     addVendor,
+    editingPurchase,
+    setEditingPurchase,
     settings
   } = useAppContext();
 
@@ -69,6 +76,39 @@ const LocalPurchaseWindow = () => {
   ]);
   const [productSearchQueries, setProductSearchQueries] = useState<Record<string, string>>({});
   const [activeSearchRowId, setActiveSearchRowId] = useState<string | null>(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  // Sync form when editingPurchase is supplied
+  useEffect(() => {
+    if (editingPurchase) {
+      setVendorId(editingPurchase.vendorId || '');
+      setBillNumber(editingPurchase.billNumber || '');
+      setDate(editingPurchase.date ? editingPurchase.date.split('T')[0] : new Date().toISOString().split('T')[0]);
+      setDescription(editingPurchase.description || '');
+      if (editingPurchase.items && editingPurchase.items.length > 0) {
+        setItems(editingPurchase.items.map(i => {
+          const prod = products.find(p => p.id === i.product_id);
+          return {
+            id: crypto.randomUUID(),
+            productId: i.product_id,
+            quantity: i.quantity,
+            unitPrice: i.unit_price,
+            subtotal: i.subtotal,
+            isZeroTax: i.is_zero_tax !== undefined ? Boolean(i.is_zero_tax) : isProductZeroTax(prod)
+          };
+        }));
+      } else {
+        setItems([{
+          id: crypto.randomUUID(),
+          productId: '',
+          quantity: 1,
+          unitPrice: editingPurchase.amount || '',
+          subtotal: editingPurchase.amount || '',
+          isZeroTax: false
+        }]);
+      }
+    }
+  }, [editingPurchase, products]);
 
   // Dedicated Product Catalog Browser Modal
   const [isCatalogPickerOpen, setIsCatalogPickerOpen] = useState(false);
@@ -374,7 +414,7 @@ const LocalPurchaseWindow = () => {
     });
 
     const purchase: Purchase = {
-      id: crypto.randomUUID(),
+      id: editingPurchase?.id || crypto.randomUUID(),
       vendorId: vendor.id,
       vendor: vendor.name_en,
       billNumber: billNumber.trim(),
@@ -387,11 +427,15 @@ const LocalPurchaseWindow = () => {
     };
 
     try {
-      await addPurchase(purchase);
+      if (editingPurchase) {
+        await updatePurchase(purchase);
+      } else {
+        await addPurchase(purchase);
+      }
       handleClose();
     } catch (error) {
       console.error('Error saving purchase:', error);
-      showError('Failed to save purchase bill');
+      showError(editingPurchase ? 'Failed to update purchase bill' : 'Failed to save purchase bill');
     } finally {
       setIsSavingPurchase(false);
     }
@@ -400,6 +444,8 @@ const LocalPurchaseWindow = () => {
   const handleClose = () => {
     setIsPurchaseWindowOpen(false);
     setIsPurchaseWindowMinimized(false);
+    setEditingPurchase(null);
+    setIsHistoryOpen(false);
     setVendorId('');
     setBillNumber('');
     setDate(new Date().toISOString().split('T')[0]);
@@ -471,19 +517,57 @@ const LocalPurchaseWindow = () => {
             >
               <X className="h-4 w-4 stroke-[2.5]" />
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+              className="h-9 px-3 rounded-xl border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-black gap-1.5 shadow-sm"
+              title="Purchase History (ފަހުގެ ބިލްތައް)"
+            >
+              <History className="h-4 w-4" />
+              <span className="hidden sm:inline">ބިލްތަކުގެ ތާރީޚް</span>
+              <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-mono h-4">
+                {purchases.length}
+              </Badge>
+            </Button>
           </div>
           <div className="text-right flex-1 min-w-0">
             <div className="flex items-center justify-end gap-3 flex-wrap">
-              <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg bg-primary/15 text-primary border border-primary/30">
-                GST Input Tax & Inventory Management
-              </span>
+              {editingPurchase ? (
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-amber-500/20 text-amber-500 border border-amber-500/40 text-[11px] font-black px-2.5 py-1 rounded-lg">
+                    ބަދަލުކުރަނީ: #{editingPurchase.billNumber} (Editing)
+                  </Badge>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setEditingPurchase(null);
+                      setVendorId('');
+                      setBillNumber('');
+                      setDate(new Date().toISOString().split('T')[0]);
+                      setDescription('');
+                      setItems([{ id: crypto.randomUUID(), productId: '', quantity: 1, unitPrice: '', subtotal: '', isZeroTax: false }]);
+                    }}
+                    className="h-7 px-2.5 rounded-lg border-border text-[11px] font-black text-muted-foreground hover:text-foreground"
+                  >
+                    + New Bill (އައު ބިލެއް)
+                  </Button>
+                </div>
+              ) : (
+                <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg bg-primary/15 text-primary border border-primary/30">
+                  GST Input Tax & Inventory Management
+                </span>
+              )}
               <h2 className="text-xl sm:text-2xl font-black text-foreground flex items-center justify-end gap-2.5 truncate">
-                <span>{t('record_local_purchase') || 'Local Purchase Bill'} (ލޯކަލް ޕަރޗޭސް ބިލް)</span> 
+                <span>{editingPurchase ? `Edit Bill #${editingPurchase.billNumber}` : (t('record_local_purchase') || 'Local Purchase Bill')} ({editingPurchase ? 'ބިލް ބަދަލުކުރުން' : 'ލޯކަލް ޕަރޗޭސް ބިލް'})</span> 
                 <ShoppingBag className="h-6 w-6 text-primary shrink-0" />
               </h2>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5 truncate">
-              Select vendor, add invoice items, auto-detect 0% zero-tax products, auto-calculate Input GST, and update stock.
+              {editingPurchase ? 'Edit purchase bill details, update items, adjust unit costs, and automatically sync stock differences.' : 'Select vendor, add invoice items, auto-detect 0% zero-tax products, auto-calculate Input GST, and update stock.'}
             </p>
           </div>
         </div>
@@ -921,10 +1005,20 @@ const LocalPurchaseWindow = () => {
             type="button"
             onClick={handleSavePurchase}
             disabled={isSavingPurchase || !vendorId || !billNumber.trim() || grandTotal <= 0}
-            className="flex-1 max-w-md h-12 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs sm:text-sm shadow-xl shadow-primary/20 uppercase gap-2"
+            className={cn(
+              "flex-1 max-w-md h-12 rounded-2xl font-black text-xs sm:text-sm shadow-xl uppercase gap-2 transition-all",
+              editingPurchase 
+                ? "bg-amber-500 hover:bg-amber-600 text-black shadow-amber-500/20" 
+                : "bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/20"
+            )}
           >
             <Save className="h-4 w-4" />
-            <span>{isSavingPurchase ? 'Saving & Updating Stock...' : 'Save Paid Bill & Update Stock (ބިލް ސޭވްކުރޭ)'}</span>
+            <span>
+              {isSavingPurchase 
+                ? (editingPurchase ? 'Updating Purchase...' : 'Saving & Updating Stock...') 
+                : (editingPurchase ? 'Update Purchase Bill (ބިލް އަޕްޑޭޓް ކުރޭ)' : 'Save Paid Bill & Update Stock (ބިލް ސޭވްކުރޭ)')
+              }
+            </span>
           </Button>
         </div>
       </div>
@@ -1295,6 +1389,115 @@ const LocalPurchaseWindow = () => {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Recent Purchases History Drawer Modal */}
+      {isHistoryOpen && (
+        <div 
+          className="fixed inset-0 z-[160] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in"
+          onClick={() => setIsHistoryOpen(false)}
+        >
+          <div 
+            className="w-full max-w-2xl max-h-[85vh] bg-card border border-border rounded-3xl p-6 shadow-2xl flex flex-col font-faruma text-foreground animate-in zoom-in-95"
+            dir="rtl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-border mb-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsHistoryOpen(false)}
+                className="h-8 w-8 rounded-lg"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+              <div className="text-right">
+                <h3 className="text-lg font-black text-foreground flex items-center gap-2 justify-end">
+                  <span>ފަހުގެ ލޯކަލް ޕާޗޭސް ބިލްތައް</span>
+                  <History className="h-5 w-5 text-primary" />
+                </h3>
+                <p className="text-xs text-muted-foreground">Select any bill to edit or view details</p>
+              </div>
+            </div>
+
+            <ScrollArea className="flex-1 pr-1">
+              {purchases.length === 0 ? (
+                <div className="text-center py-16 text-muted-foreground font-bold">
+                  No local purchase bills saved yet
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {purchases.map(p => (
+                    <div 
+                      key={p.id}
+                      className={cn(
+                        "p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 text-right group",
+                        editingPurchase?.id === p.id 
+                          ? "bg-amber-500/10 border-amber-500/40" 
+                          : "bg-muted/40 border-border hover:bg-muted/70 hover:border-primary/30"
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setEditingPurchase(p);
+                            setIsHistoryOpen(false);
+                            showSuccess(`Editing bill #${p.billNumber}`);
+                          }}
+                          className="h-9 px-3 rounded-xl border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary font-bold text-xs gap-1.5"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          <span>Edit (ބަދަލުކުރޭ)</span>
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={async () => {
+                            if (window.confirm(`Delete purchase bill #${p.billNumber}?`)) {
+                              await deletePurchase(p.id);
+                              if (editingPurchase?.id === p.id) {
+                                setEditingPurchase(null);
+                              }
+                            }
+                          }}
+                          className="h-9 w-9 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-xl"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      <div className="text-left font-mono">
+                        <span className="text-sm font-black text-primary block">
+                          {currency} {(Number(p.amount || 0) + Number(p.gstAmount || 0)).toFixed(2)}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground block">
+                          GST: {currency} {Number(p.gstAmount || 0).toFixed(2)}
+                        </span>
+                      </div>
+
+                      <div className="text-right flex-1 min-w-0">
+                        <span className="text-xs font-black text-foreground block truncate">
+                          {p.vendorName || p.vendor || 'Unknown Vendor'}
+                        </span>
+                        <div className="flex items-center gap-2 justify-end text-[11px] text-muted-foreground mt-0.5">
+                          <Badge variant="outline" className="font-mono text-[10px] px-1.5 py-0 h-4">
+                            #{p.billNumber}
+                          </Badge>
+                          <span>{p.date ? p.date.split('T')[0] : ''}</span>
+                          {p.items && p.items.length > 0 && (
+                            <span className="text-[10px] font-mono opacity-80">({p.items.length} items)</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
           </div>
         </div>
       )}

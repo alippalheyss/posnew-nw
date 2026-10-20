@@ -76,7 +76,7 @@ export const printViaIframe = (htmlContent: string) => {
       // Also listen on main window as standard fallback
       window.addEventListener('afterprint', cleanupAndRestoreFocus, { once: true });
 
-      iframe.contentWindow?.focus();
+      // Avoid iframe.contentWindow?.focus() as it breaks Radix UI modal focus trap
       iframe.contentWindow?.print();
     } catch (error) {
       console.error('Print trigger error:', error);
@@ -84,7 +84,7 @@ export const printViaIframe = (htmlContent: string) => {
     }
 
     // Safety fallback: if afterprint doesn't fire in the environment, clean up after timeout
-    setTimeout(cleanupAndRestoreFocus, 10000);
+    setTimeout(cleanupAndRestoreFocus, 1500);
   };
 
   if (iframe.contentWindow) {

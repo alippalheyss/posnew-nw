@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Download, PlusCircle, Receipt, Building2, Calculator, ArrowUpRight, ArrowDownLeft, Landmark, X, ShoppingCart, Archive, Play, Trash2, Save, Package, FileText, Info, TrendingDown, TrendingUp, Smartphone } from 'lucide-react';
+import { Download, PlusCircle, Receipt, Building2, Calculator, ArrowUpRight, ArrowDownLeft, Landmark, X, ShoppingCart, Archive, Play, Trash2, Save, Package, FileText, Info, TrendingDown, TrendingUp, Smartphone, Pencil } from 'lucide-react';
 import { useAppContext, Purchase, Vendor, PurchaseItem, Product } from '@/context/AppContext';
 import { Badge } from '@/components/ui/badge';
 import { showSuccess, showError } from '@/utils/toast';
@@ -22,7 +22,7 @@ import * as XLSX from 'xlsx';
 const GSTReports = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { sales, purchases, vendors, settings, setIsPurchaseWindowOpen, deletePurchase } = useAppContext();
+    const { sales, purchases, vendors, settings, setIsPurchaseWindowOpen, deletePurchase, setEditingPurchase } = useAppContext();
     const [timeRange, setTimeRange] = useState('this_month');
     const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(null);
     
@@ -330,15 +330,29 @@ const GSTReports = () => {
                                                     {settings.shop.currency} {(purchase.amount + purchase.gstAmount).toFixed(2)}
                                                 </TableCell>
                                                 <TableCell className="text-center">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => setPurchaseToDelete(purchase)}
-                                                        className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg opacity-60 group-hover:opacity-100 transition-all"
-                                                        title="Delete Purchase Record"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => {
+                                                                setEditingPurchase(purchase);
+                                                                setIsPurchaseWindowOpen(true);
+                                                            }}
+                                                            className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg opacity-80 group-hover:opacity-100 transition-all"
+                                                            title="Edit Purchase Bill (ބިލް ބަދަލުކުރޭ)"
+                                                        >
+                                                            <Pencil className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => setPurchaseToDelete(purchase)}
+                                                            className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg opacity-60 group-hover:opacity-100 transition-all"
+                                                            title="Delete Purchase Record"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))

@@ -329,7 +329,10 @@ interface AppContextType {
   addSettlement: (customerId: string, settlement: Settlement) => Promise<void>;
   purchases: Purchase[];
   addPurchase: (purchase: Purchase) => Promise<void>;
+  updatePurchase: (purchase: Purchase) => Promise<void>;
   deletePurchase: (purchaseId: string) => Promise<void>;
+  editingPurchase: Purchase | null;
+  setEditingPurchase: (purchase: Purchase | null) => void;
   vendors: Vendor[];
   setVendors: React.Dispatch<React.SetStateAction<Vendor[]>>;
   addVendor: (vendor: Vendor) => Promise<void>;
@@ -654,7 +657,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         try {
           if (item.type === 'insert_sale') {
             await supabase.from('sales').upsert([item.payload]);
-          } else if (item.type === 'insert_purchase') {
+          } else if (item.type === 'insert_purchase' || item.type === 'update_purchase') {
             await supabase.from('purchases').upsert([item.payload]);
           } else if (item.type === 'update_stock') {
             await supabase.from('products').update({ stock_shop: item.payload.stock_shop, updated_at: new Date().toISOString() }).eq('id', item.payload.id);
@@ -1689,6 +1692,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const [isPurchaseWindowOpen, setIsPurchaseWindowOpen] = useState(false);
   const [isPurchaseWindowMinimized, setIsPurchaseWindowMinimized] = useState(false);
+  const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
 
   const [settings, setSettings] = useState<AppSettings>(() => {
     const defaultSettings: AppSettings = {
@@ -3629,6 +3633,129 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
+  const updatePurchase = async (purchase: Purchase) => {
+    try {
+      const isUuid = (val?: string) => Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));
+      const validPurchaseId = purchase.id;
+      const matchedVendor = vendors.find(v => v.id === purchase.vendorId || (v.name_en && purchase.vendor && v.name_en.toLowerCase() === purchase.vendor.toLowerCase()) || (v.name_dv && purchase.vendor && v.name_dv === purchase.vendor));
+      const vendorId = matchedVendor?.id || purchase.vendorId;
+      const validVendorId = isUuid(vendorId) ? vendorId : null;
+      const resolvedVendorName = purchase.vendor || matchedVendor?.name_en || matchedVendor?.name_dv || '';
+
+      const oldPurchase = purchases.find(p => p.id === purchase.id);
+
+      const fullPurchase: Purchase = {
+        ...purchase,
+        id: validPurchaseId,
+        vendor: resolvedVendorName,
+        vendorId: validVendorId || vendorId || undefined
+      };
+
+      // 1. Calculate stock adjustments: (newQty - oldQty)
+      const stockDiffMap = new Map<string, { deltaStock: number; costPrice: number | null }>();
+
+      if (oldPurchase?.items && oldPurchase.items.length > 0) {
+        oldPurchase.items.forEach(item => {
+          if (!item.product_id) return;
+          const current = stockDiffMap.get(item.product_id) || { deltaStock: 0, costPrice: null };
+          stockDiffMap.set(item.product_id, {
+            deltaStock: current.deltaStock - (Number(item.quantity) || 0),
+            costPrice: current.costPrice
+          });
+        });
+      }
+
+      if (fullPurchase.items && fullPurchase.items.length > 0) {
+        fullPurchase.items.forEach(item => {
+          if (!item.product_id) return;
+          const current = stockDiffMap.get(item.product_id) || { deltaStock: 0, costPrice: null };
+          const newCostPrice = Number(item.unit_price) > 0 ? Number(item.unit_price) : current.costPrice;
+          stockDiffMap.set(item.product_id, {
+            deltaStock: current.deltaStock + (Number(item.quantity) || 0),
+            costPrice: newCostPrice
+          });
+        });
+      }
+
+      // Update products state locally
+      if (stockDiffMap.size > 0) {
+        setProducts(prev => prev.map(p => {
+          const diff = stockDiffMap.get(p.id);
+          if (!diff) return p;
+          const newStock = Math.round((Number(p.stock_shop) || 0) + diff.deltaStock);
+          return {
+            ...p,
+            stock_shop: newStock,
+            cost_price: diff.costPrice || p.cost_price,
+            last_purchase_date: fullPurchase.date
+          };
+        }));
+
+        // Async update cloud product stock
+        Promise.all(Array.from(stockDiffMap.entries()).map(async ([productId, diff]) => {
+          try {
+            const product = products.find(p => p.id === productId);
+            const currentStock = product ? (Number(product.stock_shop) || 0) : 0;
+            const updatedStock = Math.round(currentStock + diff.deltaStock);
+            await supabase
+              .from('products')
+              .update({
+                stock_shop: updatedStock,
+                cost_price: diff.costPrice || product?.cost_price,
+                last_purchase_date: fullPurchase.date,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', productId);
+          } catch (dbErr) {
+            console.warn('Supabase product stock update note during purchase update:', dbErr);
+          }
+        })).catch(() => {});
+      }
+
+      // 2. Update purchase in local state
+      setPurchases(prev => prev.map(p => p.id === validPurchaseId ? fullPurchase : p));
+
+      // 3. Persist to DB
+      const purchasePayload = {
+        id: validPurchaseId,
+        date: fullPurchase.date,
+        vendor_id: validVendorId,
+        bill_number: fullPurchase.billNumber,
+        description: fullPurchase.description,
+        amount: fullPurchase.amount,
+        gst_amount: fullPurchase.gstAmount,
+        items: fullPurchase.items,
+        subtotal: fullPurchase.subtotal || fullPurchase.amount
+      };
+
+      try {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          queueOfflineAction('update_purchase', purchasePayload);
+        } else {
+          const { error } = await supabase
+            .from('purchases')
+            .update(purchasePayload)
+            .eq('id', validPurchaseId);
+
+          if (error) {
+            console.warn('Cloud purchase update note, queuing:', error);
+            queueOfflineAction('update_purchase', purchasePayload);
+          }
+        }
+      } catch (err) {
+        console.warn('Network exception updating purchase, queuing for offline sync:', err);
+        queueOfflineAction('update_purchase', purchasePayload);
+      }
+
+      showSuccess('Purchase bill updated & inventory adjusted! 📦');
+      broadcastLiveSync('purchase_updated', { purchase: fullPurchase });
+    } catch (error) {
+      console.error('Error updating purchase:', error);
+      showError('Failed to update purchase bill');
+      throw error;
+    }
+  };
+
   const deletePurchase = async (purchaseId: string) => {
     try {
       const { error } = await supabase
@@ -3937,7 +4064,10 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       transferStock,
       purchases,
       addPurchase,
+      updatePurchase,
       deletePurchase,
+      editingPurchase,
+      setEditingPurchase,
       vendors,
       setVendors,
       addVendor,

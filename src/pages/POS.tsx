@@ -202,8 +202,9 @@ const POS = () => {
   const [shouldPrintCashReceipt, setShouldPrintCashReceipt] = useState<boolean>(() => {
     const saved = localStorage.getItem('pos_print_cash_receipt');
     if (saved !== null) return saved === 'true';
-    return true; // Default to true so receipts print directly without having to manually enable
+    return false; // Default to false: user must explicitly toggle ON to auto-print
   });
+  const cashDialogOpenedAt = useRef<number>(0);
 
   const triggerInstantReceiptPrintRef = useRef<() => void>(() => {});
 
@@ -316,6 +317,7 @@ const POS = () => {
       return;
     }
     setPaidAmount(grandTotal);
+    cashDialogOpenedAt.current = Date.now();
     setIsCashDialogOpen(true);
   };
 
@@ -887,10 +889,7 @@ const POS = () => {
   const handleSearchSubmit = (termToSubmit?: string) => {
     const rawTerm = (termToSubmit !== undefined ? termToSubmit : searchTerm).trim();
     if (!rawTerm) {
-      // If search bar is empty and Enter is pressed, proceed to checkout if cart has items
-      if (activeCart && activeCart.items.length > 0) {
-        setIsCashDialogOpen(true);
-      }
+      // Do NOT trigger payment dialog on empty search Enter to avoid accidental checkouts
       return;
     }
 
@@ -947,6 +946,8 @@ const POS = () => {
   };
 
   const processCashPayment = async () => {
+    if (isProcessing) return;
+
     if (!activeCart || activeCart.items.length === 0) {
       showError(t('cart_empty_error'));
       return;
@@ -964,6 +965,8 @@ const POS = () => {
       return;
     }
 
+    const calculatedBalance = Math.max(0, finalPaidAmount - grandTotal);
+
     const newSale = {
       id: crypto.randomUUID(),
       date: toISODate(),
@@ -972,8 +975,10 @@ const POS = () => {
       grandTotal: grandTotal,
       paymentMethod: 'cash' as const,
       paidAmount: finalPaidAmount,
-      balance: balance,
+      balance: calculatedBalance,
     };
+
+    setIsProcessing(true);
     try {
       const recordedSale = await addSale(newSale);
 
@@ -992,17 +997,25 @@ const POS = () => {
 
       showSuccess(t('cash_payment_successful'));
       setLastSaleForPrint(recordedSale);
-      const shouldAutoPrint = shouldPrintCashReceipt || settings.printing?.printMode === 'auto';
-      if (shouldAutoPrint) {
-        handlePrintReceipt(recordedSale);
-      }
+
+      // Close dialog & clear cart immediately so UI never gets stuck
       clearActiveCart();
       setPaidAmount(0);
       setIsCashDialogOpen(false);
       focusSearchBar();
+
+      // Respect the user's toggle strictly
+      const shouldAutoPrint = shouldPrintCashReceipt && settings.printing?.printMode !== 'off';
+      if (shouldAutoPrint) {
+        setTimeout(() => {
+          handlePrintReceipt(recordedSale);
+        }, 150);
+      }
     } catch (error) {
       console.error('Error processing cash payment:', error);
       showError('Failed to save sale');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -1046,9 +1059,11 @@ const POS = () => {
 
       showSuccess(t('credit_sale_successful'));
       setLastSaleForPrint(recordedSale);
-      const shouldAutoPrint = shouldPrintCashReceipt || settings.printing?.printMode === 'auto';
+      const shouldAutoPrint = shouldPrintCashReceipt && settings.printing?.printMode !== 'off';
       if (shouldAutoPrint) {
-        handlePrintReceipt(recordedSale);
+        setTimeout(() => {
+          handlePrintReceipt(recordedSale);
+        }, 150);
       }
       maybeSendTelegramSaleReceipt(recordedSale, activeCart.customer);
       clearActiveCart();
@@ -1350,9 +1365,11 @@ const POS = () => {
 
       showSuccess(t('split_payment_successful'));
       setLastSaleForPrint(recordedSale);
-      const shouldAutoPrint = shouldPrintCashReceipt || settings.printing?.printMode === 'auto';
+      const shouldAutoPrint = shouldPrintCashReceipt && settings.printing?.printMode !== 'off';
       if (shouldAutoPrint) {
-        handlePrintReceipt(recordedSale);
+        setTimeout(() => {
+          handlePrintReceipt(recordedSale);
+        }, 150);
       }
       maybeSendTelegramSaleReceipt(recordedSale, activeCart?.customer || null);
       clearActiveCart();
@@ -1390,12 +1407,42 @@ const POS = () => {
               CUSTOMER DISPLAY
             </Button>
 
+            {/* Auto-Print Receipt Toggle in Header */}
+            <div 
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 h-8 rounded-lg border transition-all cursor-pointer select-none",
+                shouldPrintCashReceipt 
+                  ? "bg-primary/10 border-primary/40 text-primary" 
+                  : "bg-muted/80 border-border text-muted-foreground hover:bg-muted"
+              )}
+              onClick={() => {
+                const nextVal = !shouldPrintCashReceipt;
+                setShouldPrintCashReceipt(nextVal);
+                localStorage.setItem('pos_print_cash_receipt', String(nextVal));
+              }}
+              title="Toggle automatic receipt printing on sale completion"
+            >
+              <Printer className="h-3.5 w-3.5" />
+              <span className="text-[10px] font-bold hidden sm:inline">
+                Auto-Print: {shouldPrintCashReceipt ? 'ON' : 'OFF'}
+              </span>
+              <Switch 
+                checked={shouldPrintCashReceipt}
+                onCheckedChange={(checked) => {
+                  setShouldPrintCashReceipt(checked);
+                  localStorage.setItem('pos_print_cash_receipt', String(checked));
+                }}
+                className="scale-75 origin-right pointer-events-none"
+              />
+            </div>
+
             {/* 1-Click Print Receipt Button (No dialogue) */}
             <Button 
               variant="outline" 
               size="sm"
               className="flex items-center gap-1 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 rounded-lg h-8 px-2 text-[9px] font-black shadow-none"
               onClick={triggerInstantReceiptPrint}
+              onFocus={(e) => e.currentTarget.blur()}
               title="Print latest receipt directly without dialogue (F9)"
             >
               <Printer className="h-3.5 w-3.5" />
@@ -2041,6 +2088,10 @@ const POS = () => {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
+                      // Prevent accidental trigger if enter was pressed right as dialog opened
+                      if (Date.now() - cashDialogOpenedAt.current < 400) {
+                        return;
+                      }
                       processCashPayment();
                     }
                   }}
@@ -2186,12 +2237,21 @@ const POS = () => {
             </Button>
             <Button
               onClick={processCashPayment}
-              disabled={typeof paidAmount === 'number' && paidAmount < grandTotal}
+              disabled={isProcessing || (typeof paidAmount === 'number' && paidAmount < grandTotal)}
               className="h-11 sm:h-12 flex-1 rounded-2xl btn-gradient-blue text-white font-black text-sm sm:text-base shadow-lg shadow-blue-500/25 hover:shadow-blue-500/35 gap-2"
             >
-              <Check className="h-4 w-4" />
-              <span>{renderBoth('confirm_payment')}</span>
-              <kbd className="hidden sm:inline-block text-[10px] font-mono bg-white/20 px-1.5 py-0.5 rounded-md ml-1 font-bold">↵ Enter</kbd>
+              {isProcessing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Processing...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="h-4 w-4" />
+                  <span>{renderBoth('confirm_payment')}</span>
+                  <kbd className="hidden sm:inline-block text-[10px] font-mono bg-white/20 px-1.5 py-0.5 rounded-md ml-1 font-bold">↵ Enter</kbd>
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

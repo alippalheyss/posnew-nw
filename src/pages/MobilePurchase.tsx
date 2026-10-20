@@ -17,7 +17,8 @@ import {
   History,
   RotateCcw,
   Tag,
-  Package
+  Package,
+  Pencil
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,7 +48,7 @@ interface MobileItem {
 const MobilePurchase: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { vendors, addPurchase, addVendor, purchases, settings, products } = useAppContext();
+  const { vendors, addPurchase, updatePurchase, addVendor, purchases, settings, products } = useAppContext();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mobileQtyRef = useRef<HTMLInputElement>(null);
@@ -55,6 +56,7 @@ const MobilePurchase: React.FC = () => {
   const mobileSubtotalRef = useRef<HTMLInputElement>(null);
 
   // Form State matching LocalPurchaseWindow
+  const [editingPurchaseId, setEditingPurchaseId] = useState<string | null>(null);
   const [vendorId, setVendorId] = useState('');
   const [vendorSearch, setVendorSearch] = useState('');
   const [isVendorDropdownOpen, setIsVendorDropdownOpen] = useState(false);
@@ -315,7 +317,7 @@ const MobilePurchase: React.FC = () => {
       }));
 
       const purchaseData: Purchase = {
-        id: crypto.randomUUID(),
+        id: editingPurchaseId || crypto.randomUUID(),
         date: date,
         vendorId: vendorId,
         vendor: selectedVendor?.name_en || selectedVendor?.name_dv || '',
@@ -328,8 +330,13 @@ const MobilePurchase: React.FC = () => {
         subtotal: parseFloat(totalSubtotal.toFixed(2))
       };
 
-      await addPurchase(purchaseData);
-      showSuccess('Purchase bill recorded successfully! 🎉');
+      if (editingPurchaseId) {
+        await updatePurchase(purchaseData);
+        setEditingPurchaseId(null);
+      } else {
+        await addPurchase(purchaseData);
+      }
+      showSuccess(editingPurchaseId ? 'Purchase bill updated! 🎉' : 'Purchase bill recorded successfully! 🎉');
 
       // Reset form
       setBillNumber('');
@@ -340,7 +347,7 @@ const MobilePurchase: React.FC = () => {
       setVendorSearch('');
     } catch (error) {
       console.error('Failed to save mobile purchase:', error);
-      showError('Failed to record purchase');
+      showError(editingPurchaseId ? 'Failed to update purchase' : 'Failed to record purchase');
     } finally {
       setIsSaving(false);
     }
@@ -720,13 +727,43 @@ const MobilePurchase: React.FC = () => {
             <div className="space-y-2">
               {recentPurchases.map(p => (
                 <div key={p.id} className="bg-card border border-border rounded-xl p-3 flex items-center justify-between text-right">
-                  <div className="text-left font-mono">
-                    <span className="text-xs font-black text-primary block">
-                      {currency} {(Number(p.amount || 0) + Number(p.gstAmount || 0)).toFixed(2)}
-                    </span>
-                    <span className="text-[9px] text-muted-foreground block">
-                      GST: {currency} {Number(p.gstAmount || 0).toFixed(2)}
-                    </span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setEditingPurchaseId(p.id);
+                        setVendorId(p.vendorId || '');
+                        setBillNumber(p.billNumber);
+                        setDate(p.date ? p.date.split('T')[0] : toISODate());
+                        setDescription(p.description || '');
+                        if (p.items && p.items.length > 0) {
+                          setMobileItems(p.items.map(item => ({
+                            id: crypto.randomUUID(),
+                            productId: item.product_id,
+                            productName: item.product_name,
+                            quantity: item.quantity,
+                            unitPrice: item.unit_price,
+                            subtotal: item.subtotal,
+                            isZeroTax: item.is_zero_tax !== undefined ? Boolean(item.is_zero_tax) : false
+                          })));
+                        }
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        showSuccess(`Editing bill #${p.billNumber}`);
+                      }}
+                      className="h-8 px-2 rounded-lg border-primary/30 bg-primary/10 text-primary text-[10px] font-bold gap-1"
+                    >
+                      <Pencil className="h-3 w-3" />
+                      <span>Edit</span>
+                    </Button>
+                    <div className="text-left font-mono">
+                      <span className="text-xs font-black text-primary block">
+                        {currency} {(Number(p.amount || 0) + Number(p.gstAmount || 0)).toFixed(2)}
+                      </span>
+                      <span className="text-[9px] text-muted-foreground block">
+                        GST: {currency} {Number(p.gstAmount || 0).toFixed(2)}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="text-right">

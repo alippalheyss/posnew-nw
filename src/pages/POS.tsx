@@ -1442,34 +1442,6 @@ const POS = () => {
               CUSTOMER DISPLAY
             </Button>
 
-            {/* Auto-Print Receipt Toggle in Header */}
-            <div 
-              className={cn(
-                "flex items-center gap-1.5 px-2.5 h-8 rounded-lg border transition-all cursor-pointer select-none",
-                shouldPrintCashReceipt 
-                  ? "bg-primary/10 border-primary/40 text-primary" 
-                  : "bg-muted/80 border-border text-muted-foreground hover:bg-muted"
-              )}
-              onClick={() => {
-                const nextVal = !shouldPrintCashReceipt;
-                setShouldPrintCashReceipt(nextVal);
-                localStorage.setItem('pos_print_cash_receipt', String(nextVal));
-              }}
-              title="Toggle automatic receipt printing on sale completion"
-            >
-              <Printer className="h-3.5 w-3.5" />
-              <span className="text-[10px] font-bold hidden sm:inline">
-                Auto-Print: {shouldPrintCashReceipt ? 'ON' : 'OFF'}
-              </span>
-              <Switch 
-                checked={shouldPrintCashReceipt}
-                onCheckedChange={(checked) => {
-                  setShouldPrintCashReceipt(checked);
-                  localStorage.setItem('pos_print_cash_receipt', String(checked));
-                }}
-                className="scale-75 origin-right pointer-events-none"
-              />
-            </div>
 
             {/* 1-Click Print Receipt Button (No dialogue) */}
             <Button 

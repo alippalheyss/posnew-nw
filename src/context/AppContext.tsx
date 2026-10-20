@@ -137,6 +137,7 @@ export interface PurchaseItem {
   subtotal: number; // quantity * unit_price
   gst_amount: number; // subtotal * gst_rate
   total: number; // subtotal + gst_amount
+  is_zero_tax?: boolean;
 }
 
 export interface Purchase {

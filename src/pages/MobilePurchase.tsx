@@ -738,15 +738,21 @@ const MobilePurchase: React.FC = () => {
                         setDate(p.date ? p.date.split('T')[0] : toISODate());
                         setDescription(p.description || '');
                         if (p.items && p.items.length > 0) {
-                          setMobileItems(p.items.map(item => ({
-                            id: crypto.randomUUID(),
-                            productId: item.product_id,
-                            productName: item.product_name,
-                            quantity: item.quantity,
-                            unitPrice: item.unit_price,
-                            subtotal: item.subtotal,
-                            isZeroTax: item.is_zero_tax !== undefined ? Boolean(item.is_zero_tax) : false
-                          })));
+                          setMobileItems(p.items.map(item => {
+                            const prod = products.find(prodItem => prodItem.id === item.product_id);
+                            return {
+                              id: crypto.randomUUID(),
+                              productId: item.product_id,
+                              productNameDv: prod?.name_dv || item.product_name,
+                              productNameEn: prod?.name_en || item.product_name,
+                              itemCode: prod?.item_code,
+                              barcode: prod?.barcode,
+                              qty: Number(item.quantity) || 1,
+                              unitCost: Number(item.unit_price) || 0,
+                              subtotal: Number(item.subtotal) || 0,
+                              isZeroTax: item.is_zero_tax !== undefined ? Boolean(item.is_zero_tax) : isProductZeroTax(prod)
+                            };
+                          }));
                         }
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                         showSuccess(`Editing bill #${p.billNumber}`);

@@ -139,6 +139,15 @@ const Sidebar = () => {
             <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-background" />
           </div>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleLogout}
+          className="w-full h-9 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-500 dark:text-red-400 font-bold text-xs flex items-center justify-between px-3 transition-all active:scale-[0.98]"
+        >
+          <span>{t('logout') || 'ލޮގްއައުޓް (Logout)'}</span>
+          <LogOut className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );

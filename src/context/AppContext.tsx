@@ -329,8 +329,8 @@ interface AppContextType {
   updateCustomerBalance: (customerId: string, amount: number) => Promise<void>;
   addSettlement: (customerId: string, settlement: Settlement) => Promise<void>;
   purchases: Purchase[];
-  addPurchase: (purchase: Purchase) => Promise<void>;
-  updatePurchase: (purchase: Purchase) => Promise<void>;
+  addPurchase: (purchase: Purchase, updateStock?: boolean) => Promise<void>;
+  updatePurchase: (purchase: Purchase, updateStock?: boolean) => Promise<void>;
   deletePurchase: (purchaseId: string) => Promise<void>;
   editingPurchase: Purchase | null;
   setEditingPurchase: (purchase: Purchase | null) => void;
@@ -3535,7 +3535,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
-  const addPurchase = async (purchase: Purchase) => {
+  const addPurchase = async (purchase: Purchase, updateStock: boolean = true) => {
     try {
       // 1. Sanitize IDs (Postgres UUID validation) & Resolve Vendor Name
       const isUuid = (val?: string) => Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));
@@ -3557,41 +3557,44 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
       // 3. Update cost prices and stock quantities locally
       if (fullPurchase.items && fullPurchase.items.length > 0) {
-        const stockUpdates = new Map<string, { newStock: number; newCostPrice: number | null }>();
+        const productUpdates = new Map<string, { newStock: number | null; newCostPrice: number | null }>();
         fullPurchase.items.forEach((item) => {
           const product = products.find(p => p.id === item.product_id);
           const currentShopStock = product ? (Number(product.stock_shop) || 0) : 0;
           const addedQty = Number(item.quantity) || 0;
-          const newShopStock = Math.round(currentShopStock + addedQty);
+          const newShopStock = updateStock ? Math.round(currentShopStock + addedQty) : null;
           const newCostPrice = Number(item.unit_price) > 0 ? Number(item.unit_price) : (product?.cost_price || null);
-          stockUpdates.set(item.product_id, { newStock: newShopStock, newCostPrice });
+          productUpdates.set(item.product_id, { newStock: newShopStock, newCostPrice });
         });
 
         setProducts(prev => prev.map(p => {
-          const update = stockUpdates.get(p.id);
+          const update = productUpdates.get(p.id);
           if (!update) return p;
           return {
             ...p,
-            stock_shop: update.newStock,
+            ...(update.newStock !== null ? { stock_shop: update.newStock } : {}),
             cost_price: update.newCostPrice || p.cost_price,
             last_purchase_date: fullPurchase.date
           };
         }));
 
         // Asynchronously update cloud database in background
-        Promise.all(Array.from(stockUpdates.entries()).map(async ([productId, data]) => {
+        Promise.all(Array.from(productUpdates.entries()).map(async ([productId, data]) => {
           try {
+            const updatePayload: any = {
+              cost_price: data.newCostPrice,
+              last_purchase_date: fullPurchase.date,
+              updated_at: new Date().toISOString()
+            };
+            if (data.newStock !== null) {
+              updatePayload.stock_shop = data.newStock;
+            }
             await supabase
               .from('products')
-              .update({
-                stock_shop: data.newStock,
-                cost_price: data.newCostPrice,
-                last_purchase_date: fullPurchase.date,
-                updated_at: new Date().toISOString()
-              })
+              .update(updatePayload)
               .eq('id', productId);
           } catch (dbErr) {
-            console.warn('Supabase product stock update note during purchase:', dbErr);
+            console.warn('Supabase product update note during purchase:', dbErr);
           }
         })).catch(() => {});
       }
@@ -3626,7 +3629,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         queueOfflineAction('insert_purchase', purchasePayload);
       }
 
-      showSuccess('Purchase bill saved & product inventory stock updated! 📦');
+      showSuccess(updateStock 
+        ? 'Purchase bill saved & product inventory stock updated! 📦' 
+        : 'Purchase bill saved & product cost prices updated (Stock unchanged)! 📦');
       broadcastLiveSync('purchase_created', { purchase: fullPurchase });
     } catch (error) {
       console.error('Error adding purchase:', error);
@@ -3634,7 +3639,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
-  const updatePurchase = async (purchase: Purchase) => {
+  const updatePurchase = async (purchase: Purchase, updateStock: boolean = true) => {
     try {
       const isUuid = (val?: string) => Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));
       const validPurchaseId = purchase.id;
@@ -3652,65 +3657,99 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         vendorId: validVendorId || vendorId || undefined
       };
 
-      // 1. Calculate stock adjustments: (newQty - oldQty)
-      const stockDiffMap = new Map<string, { deltaStock: number; costPrice: number | null }>();
+      if (updateStock) {
+        // 1. Calculate stock adjustments: (newQty - oldQty)
+        const stockDiffMap = new Map<string, { deltaStock: number; costPrice: number | null }>();
 
-      if (oldPurchase?.items && oldPurchase.items.length > 0) {
-        oldPurchase.items.forEach(item => {
-          if (!item.product_id) return;
-          const current = stockDiffMap.get(item.product_id) || { deltaStock: 0, costPrice: null };
-          stockDiffMap.set(item.product_id, {
-            deltaStock: current.deltaStock - (Number(item.quantity) || 0),
-            costPrice: current.costPrice
+        if (oldPurchase?.items && oldPurchase.items.length > 0) {
+          oldPurchase.items.forEach(item => {
+            if (!item.product_id) return;
+            const current = stockDiffMap.get(item.product_id) || { deltaStock: 0, costPrice: null };
+            stockDiffMap.set(item.product_id, {
+              deltaStock: current.deltaStock - (Number(item.quantity) || 0),
+              costPrice: current.costPrice
+            });
           });
-        });
-      }
+        }
 
-      if (fullPurchase.items && fullPurchase.items.length > 0) {
-        fullPurchase.items.forEach(item => {
-          if (!item.product_id) return;
-          const current = stockDiffMap.get(item.product_id) || { deltaStock: 0, costPrice: null };
-          const newCostPrice = Number(item.unit_price) > 0 ? Number(item.unit_price) : current.costPrice;
-          stockDiffMap.set(item.product_id, {
-            deltaStock: current.deltaStock + (Number(item.quantity) || 0),
-            costPrice: newCostPrice
+        if (fullPurchase.items && fullPurchase.items.length > 0) {
+          fullPurchase.items.forEach(item => {
+            if (!item.product_id) return;
+            const current = stockDiffMap.get(item.product_id) || { deltaStock: 0, costPrice: null };
+            const newCostPrice = Number(item.unit_price) > 0 ? Number(item.unit_price) : current.costPrice;
+            stockDiffMap.set(item.product_id, {
+              deltaStock: current.deltaStock + (Number(item.quantity) || 0),
+              costPrice: newCostPrice
+            });
           });
-        });
-      }
+        }
 
-      // Update products state locally
-      if (stockDiffMap.size > 0) {
-        setProducts(prev => prev.map(p => {
-          const diff = stockDiffMap.get(p.id);
-          if (!diff) return p;
-          const newStock = Math.round((Number(p.stock_shop) || 0) + diff.deltaStock);
-          return {
-            ...p,
-            stock_shop: newStock,
-            cost_price: diff.costPrice || p.cost_price,
-            last_purchase_date: fullPurchase.date
-          };
-        }));
+        // Update products state locally
+        if (stockDiffMap.size > 0) {
+          setProducts(prev => prev.map(p => {
+            const diff = stockDiffMap.get(p.id);
+            if (!diff) return p;
+            const newStock = Math.round((Number(p.stock_shop) || 0) + diff.deltaStock);
+            return {
+              ...p,
+              stock_shop: newStock,
+              cost_price: diff.costPrice || p.cost_price,
+              last_purchase_date: fullPurchase.date
+            };
+          }));
 
-        // Async update cloud product stock
-        Promise.all(Array.from(stockDiffMap.entries()).map(async ([productId, diff]) => {
-          try {
-            const product = products.find(p => p.id === productId);
-            const currentStock = product ? (Number(product.stock_shop) || 0) : 0;
-            const updatedStock = Math.round(currentStock + diff.deltaStock);
-            await supabase
-              .from('products')
-              .update({
-                stock_shop: updatedStock,
-                cost_price: diff.costPrice || product?.cost_price,
-                last_purchase_date: fullPurchase.date,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', productId);
-          } catch (dbErr) {
-            console.warn('Supabase product stock update note during purchase update:', dbErr);
+          // Async update cloud product stock
+          Promise.all(Array.from(stockDiffMap.entries()).map(async ([productId, diff]) => {
+            try {
+              const product = products.find(p => p.id === productId);
+              const currentStock = product ? (Number(product.stock_shop) || 0) : 0;
+              const updatedStock = Math.round(currentStock + diff.deltaStock);
+              await supabase
+                .from('products')
+                .update({
+                  stock_shop: updatedStock,
+                  cost_price: diff.costPrice || product?.cost_price,
+                  last_purchase_date: fullPurchase.date,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', productId);
+            } catch (dbErr) {
+              console.warn('Supabase product stock update note during purchase update:', dbErr);
+            }
+          })).catch(() => {});
+        }
+      } else {
+        // Stock untouched, only update cost prices and purchase date
+        if (fullPurchase.items && fullPurchase.items.length > 0) {
+          const costUpdates = new Map<string, number>();
+          fullPurchase.items.forEach(item => {
+            if (item.product_id && Number(item.unit_price) > 0) {
+              costUpdates.set(item.product_id, Number(item.unit_price));
+            }
+          });
+          if (costUpdates.size > 0) {
+            setProducts(prev => prev.map(p => {
+              const newCost = costUpdates.get(p.id);
+              if (newCost === undefined) return p;
+              return { ...p, cost_price: newCost, last_purchase_date: fullPurchase.date };
+            }));
+
+            Promise.all(Array.from(costUpdates.entries()).map(async ([productId, newCost]) => {
+              try {
+                await supabase
+                  .from('products')
+                  .update({
+                    cost_price: newCost,
+                    last_purchase_date: fullPurchase.date,
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', productId);
+              } catch (dbErr) {
+                console.warn('Supabase cost update note during purchase update:', dbErr);
+              }
+            })).catch(() => {});
           }
-        })).catch(() => {});
+        }
       }
 
       // 2. Update purchase in local state
@@ -3748,7 +3787,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         queueOfflineAction('update_purchase', purchasePayload);
       }
 
-      showSuccess('Purchase bill updated & inventory adjusted! 📦');
+      showSuccess(updateStock 
+        ? 'Purchase bill updated & inventory adjusted! 📦' 
+        : 'Purchase bill updated & cost prices adjusted (Stock unchanged)! 📦');
       broadcastLiveSync('purchase_updated', { purchase: fullPurchase });
     } catch (error) {
       console.error('Error updating purchase:', error);

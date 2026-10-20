@@ -28,6 +28,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { showSuccess, showError } from '@/utils/toast';
 
@@ -77,6 +78,7 @@ const LocalPurchaseWindow = () => {
   const [productSearchQueries, setProductSearchQueries] = useState<Record<string, string>>({});
   const [activeSearchRowId, setActiveSearchRowId] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [shouldUpdateStock, setShouldUpdateStock] = useState<boolean>(true);
 
   // Sync form when editingPurchase is supplied
   useEffect(() => {
@@ -428,9 +430,9 @@ const LocalPurchaseWindow = () => {
 
     try {
       if (editingPurchase) {
-        await updatePurchase(purchase);
+        await updatePurchase(purchase, shouldUpdateStock);
       } else {
-        await addPurchase(purchase);
+        await addPurchase(purchase, shouldUpdateStock);
       }
       handleClose();
     } catch (error) {
@@ -450,6 +452,7 @@ const LocalPurchaseWindow = () => {
     setBillNumber('');
     setDate(new Date().toISOString().split('T')[0]);
     setDescription('');
+    setShouldUpdateStock(true);
     setItems([{ id: crypto.randomUUID(), productId: '', quantity: 1, unitPrice: '', subtotal: '', isZeroTax: false }]);
     setProductSearchQueries({});
     setActiveSearchRowId(null);
@@ -991,35 +994,69 @@ const LocalPurchaseWindow = () => {
         </div>
 
         {/* Sticky Footer Actions */}
-        <div className="p-4 sm:p-5 border-t border-border bg-muted/80 flex flex-row gap-4 items-center justify-between shrink-0">
+        <div className="p-4 sm:p-5 border-t border-border bg-muted/80 flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center justify-between shrink-0">
           <Button
             type="button"
             variant="outline"
             onClick={handleClose}
-            className="h-12 px-6 rounded-2xl border-border hover:bg-muted text-foreground font-bold text-xs"
+            className="h-12 px-6 rounded-2xl border-border hover:bg-muted text-foreground font-bold text-xs order-2 sm:order-1"
           >
             {t('cancel') || 'Cancel'}
           </Button>
 
-          <Button
-            type="button"
-            onClick={handleSavePurchase}
-            disabled={isSavingPurchase || !vendorId || !billNumber.trim() || grandTotal <= 0}
-            className={cn(
-              "flex-1 max-w-md h-12 rounded-2xl font-black text-xs sm:text-sm shadow-xl uppercase gap-2 transition-all",
-              editingPurchase 
-                ? "bg-amber-500 hover:bg-amber-600 text-black shadow-amber-500/20" 
-                : "bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/20"
-            )}
-          >
-            <Save className="h-4 w-4" />
-            <span>
-              {isSavingPurchase 
-                ? (editingPurchase ? 'Updating Purchase...' : 'Saving & Updating Stock...') 
-                : (editingPurchase ? 'Update Purchase Bill (ބިލް އަޕްޑޭޓް ކުރޭ)' : 'Save Paid Bill & Update Stock (ބިލް ސޭވްކުރޭ)')
-              }
-            </span>
-          </Button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 max-w-2xl justify-end order-1 sm:order-2">
+            {/* Stock Update Toggle Button */}
+            <div 
+              onClick={() => setShouldUpdateStock(!shouldUpdateStock)}
+              className={cn(
+                "flex items-center justify-between sm:justify-start gap-3 px-3.5 py-2 rounded-2xl border transition-all cursor-pointer select-none",
+                shouldUpdateStock 
+                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400" 
+                  : "bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400"
+              )}
+              title={shouldUpdateStock ? "Stock quantities will be increased by bill item quantities" : "Only product cost price and bill will be saved. Stock remains unchanged."}
+            >
+              <div className="text-right">
+                <span className="text-xs font-black block">
+                  {shouldUpdateStock ? 'ސްޓޮކް އިތުރުކުރޭ (Update Stock)' : 'ހަމައެކަނި ބިލް ސޭވްކުރޭ (Save Bill Only)'}
+                </span>
+                <span className="text-[10px] opacity-80 block">
+                  {shouldUpdateStock ? 'Updates cost price & adds quantities to stock' : 'Saves cost price & bill (Stock unchanged)'}
+                </span>
+              </div>
+              <Switch
+                checked={shouldUpdateStock}
+                onCheckedChange={setShouldUpdateStock}
+                className="shrink-0"
+              />
+            </div>
+
+            {/* Save Button */}
+            <Button
+              type="button"
+              onClick={handleSavePurchase}
+              disabled={isSavingPurchase || !vendorId || !billNumber.trim() || grandTotal <= 0}
+              className={cn(
+                "h-12 px-5 rounded-2xl font-black text-xs sm:text-sm shadow-xl uppercase gap-2 transition-all shrink-0",
+                editingPurchase 
+                  ? "bg-amber-500 hover:bg-amber-600 text-black shadow-amber-500/20" 
+                  : shouldUpdateStock 
+                    ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/20"
+                    : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/25"
+              )}
+            >
+              <Save className="h-4 w-4" />
+              <span>
+                {isSavingPurchase 
+                  ? (editingPurchase ? 'Updating Purchase...' : shouldUpdateStock ? 'Saving & Updating Stock...' : 'Saving Bill Only...') 
+                  : (editingPurchase 
+                      ? (shouldUpdateStock ? 'Update Bill & Stock (ބިލް އަޕްޑޭޓް ކުރޭ)' : 'Update Bill Only (ހަމައެކަނި ބިލް)')
+                      : (shouldUpdateStock ? 'Save Bill & Update Stock (ބިލް އަދި ސްޓޮކް)' : 'Save The Bill (ހަމައެކަނި ބިލް ސޭވްކުރޭ)')
+                    )
+                }
+              </span>
+            </Button>
+          </div>
         </div>
       </div>
 

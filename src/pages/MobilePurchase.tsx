@@ -26,6 +26,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
 import { useAppContext, Purchase, Vendor, Product, PurchaseItem } from '@/context/AppContext';
 import { isProductZeroTax } from '@/components/LocalPurchaseWindow';
 import { showSuccess, showError } from '@/utils/toast';
@@ -65,6 +66,7 @@ const MobilePurchase: React.FC = () => {
   const [description, setDescription] = useState('');
   const [billImage, setBillImage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [shouldUpdateStock, setShouldUpdateStock] = useState<boolean>(true);
 
   // Product Line Items State
   const [mobileItems, setMobileItems] = useState<MobileItem[]>([]);
@@ -331,10 +333,10 @@ const MobilePurchase: React.FC = () => {
       };
 
       if (editingPurchaseId) {
-        await updatePurchase(purchaseData);
+        await updatePurchase(purchaseData, shouldUpdateStock);
         setEditingPurchaseId(null);
       } else {
-        await addPurchase(purchaseData);
+        await addPurchase(purchaseData, shouldUpdateStock);
       }
       showSuccess(editingPurchaseId ? 'Purchase bill updated! 🎉' : 'Purchase bill recorded successfully! 🎉');
 
@@ -345,6 +347,7 @@ const MobilePurchase: React.FC = () => {
       setMobileItems([]);
       setVendorId('');
       setVendorSearch('');
+      setShouldUpdateStock(true);
     } catch (error) {
       console.error('Failed to save mobile purchase:', error);
       showError(editingPurchaseId ? 'Failed to update purchase' : 'Failed to record purchase');
@@ -702,15 +705,53 @@ const MobilePurchase: React.FC = () => {
           />
         </div>
 
+        {/* Stock Update Toggle */}
+        <div 
+          onClick={() => setShouldUpdateStock(!shouldUpdateStock)}
+          className={cn(
+            "flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none",
+            shouldUpdateStock 
+              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400" 
+              : "bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400"
+          )}
+          title={shouldUpdateStock ? "Increases inventory stock" : "Updates cost price only (Stock unchanged)"}
+        >
+          <div className="text-right">
+            <span className="text-xs font-black block">
+              {shouldUpdateStock ? 'ސްޓޮކް އިތުރުކުރޭ (Update Stock)' : 'ހަމައެކަނި ބިލް ސޭވްކުރޭ (Save Bill Only)'}
+            </span>
+            <span className="text-[10px] opacity-80 block">
+              {shouldUpdateStock ? 'Adds item quantities to shop stock' : 'Saves cost price & bill (Stock unchanged)'}
+            </span>
+          </div>
+          <Switch
+            checked={shouldUpdateStock}
+            onCheckedChange={setShouldUpdateStock}
+            className="shrink-0"
+          />
+        </div>
+
         {/* Save Button */}
         <Button
           type="button"
           disabled={isSaving || mobileItems.length === 0}
           onClick={handleSave}
-          className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-base uppercase tracking-wider rounded-2xl shadow-xl shadow-primary/30 active:scale-[0.99] transition-all disabled:opacity-50"
+          className={cn(
+            "w-full h-14 font-black text-base uppercase tracking-wider rounded-2xl shadow-xl active:scale-[0.99] transition-all disabled:opacity-50",
+            shouldUpdateStock 
+              ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/30" 
+              : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/30"
+          )}
         >
           <Check className="h-5 w-5 mr-2" />
-          <span>{isSaving ? 'ރައްކާކުރަނީ...' : `Save Purchase Bill (${currency} ${grandTotal.toFixed(2)})`}</span>
+          <span>
+            {isSaving 
+              ? 'ރައްކާކުރަނީ...' 
+              : shouldUpdateStock
+                ? `Save Bill & Update Stock (${currency} ${grandTotal.toFixed(2)})`
+                : `Save The Bill (${currency} ${grandTotal.toFixed(2)})`
+            }
+          </span>
         </Button>
 
         {/* Recent Purchases List */}

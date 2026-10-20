@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ShoppingCart, PlusCircle, Minus, Trash2, MonitorPlay, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, Star, ArrowLeft, Plus, ChevronDown, Boxes, X, CheckCircle2, Package, Loader2, Check, Printer, Gift, Flame, TrendingDown, Clock } from 'lucide-react';
+import { ShoppingCart, PlusCircle, Minus, Trash2, MonitorPlay, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, Star, ArrowLeft, Plus, ChevronDown, Boxes, X, CheckCircle2, Package, Loader2, Check, Printer, Gift, Flame, TrendingDown, Clock, LogOut } from 'lucide-react';
 import { formatDate, toISODate, toISODatetime, formatTime, formatDateTime } from '@/utils/formatters';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
@@ -21,6 +22,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useAppContext, Product, Customer, CartItem, Sale } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { showSuccess, showError, showInfo } from '@/utils/toast';
 import LoyaltyRedemptionDialog from '@/components/LoyaltyRedemptionDialog';
 import UnitSelectionDialog from '@/components/UnitSelectionDialog';
@@ -149,6 +151,8 @@ const CartQtyStepper = ({
 
 const POS = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { currentUser, logout } = useAuth();
   const {
     products,
     customers,
@@ -199,11 +203,7 @@ const POS = () => {
   const [telegramCustomer, setTelegramCustomer] = useState<Customer | null>(null);
   const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false);
   const [isTransferSlipsDialogOpen, setIsTransferSlipsDialogOpen] = useState(false);
-  const [shouldPrintCashReceipt, setShouldPrintCashReceipt] = useState<boolean>(() => {
-    const saved = localStorage.getItem('pos_print_cash_receipt');
-    if (saved !== null) return saved === 'true';
-    return false; // Default to false: user must explicitly toggle ON to auto-print
-  });
+  const [shouldPrintCashReceipt, setShouldPrintCashReceipt] = useState<boolean>(false);
   const cashDialogOpenedAt = useRef<number>(0);
 
   const triggerInstantReceiptPrintRef = useRef<() => void>(() => {});
@@ -317,7 +317,7 @@ const POS = () => {
       return;
     }
     setPaidAmount(grandTotal);
-    cashDialogOpenedAt.current = Date.now();
+    setShouldPrintCashReceipt(false); // Off by default for each new transaction
     setIsCashDialogOpen(true);
   };
 
@@ -383,6 +383,21 @@ const POS = () => {
     isAnyModalOpenRef.current = isAnyModalOpen;
   }, [isAnyModalOpen]);
 
+  const openCashDialogRef = useRef(openCashDialog);
+  useEffect(() => {
+    openCashDialogRef.current = openCashDialog;
+  });
+
+  const processCashPaymentRef = useRef(processCashPayment);
+  useEffect(() => {
+    processCashPaymentRef.current = processCashPayment;
+  });
+
+  const isCashDialogOpenRef = useRef(isCashDialogOpen);
+  useEffect(() => {
+    isCashDialogOpenRef.current = isCashDialogOpen;
+  });
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Global F2 shortcut - focus product search anytime
@@ -406,6 +421,21 @@ const POS = () => {
           focusSearchBar();
           return;
         }
+      }
+
+      // If Cash Dialog is currently open: Enter confirms cash payment, Escape closes it
+      if (isCashDialogOpenRef.current) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          processCashPaymentRef.current();
+          return;
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setIsCashDialogOpen(false);
+          return;
+        }
+        return;
       }
 
       if (document.activeElement?.tagName === 'INPUT' && document.activeElement !== searchInputRef.current) {
@@ -459,7 +489,7 @@ const POS = () => {
 
       if (e.key === 'Enter') {
         e.preventDefault();
-        openCashDialog();
+        openCashDialogRef.current();
       } else if (e.key === 'F11') {
         e.preventDefault();
         setCreditDialogStep(1);
@@ -889,7 +919,8 @@ const POS = () => {
   const handleSearchSubmit = (termToSubmit?: string) => {
     const rawTerm = (termToSubmit !== undefined ? termToSubmit : searchTerm).trim();
     if (!rawTerm) {
-      // Do NOT trigger payment dialog on empty search Enter to avoid accidental checkouts
+      // If search bar is empty and Enter is pressed, proceed to cash checkout if cart has items
+      openCashDialogRef.current();
       return;
     }
 
@@ -998,14 +1029,19 @@ const POS = () => {
       showSuccess(t('cash_payment_successful'));
       setLastSaleForPrint(recordedSale);
 
+      // Check whether user toggled ON printing for this specific transaction
+      const shouldAutoPrint = shouldPrintCashReceipt && settings.printing?.printMode !== 'off';
+
+      // Always reset back to OFF after processing so subsequent transactions do NOT print automatically
+      setShouldPrintCashReceipt(false);
+      localStorage.setItem('pos_print_cash_receipt', 'false');
+
       // Close dialog & clear cart immediately so UI never gets stuck
       clearActiveCart();
       setPaidAmount(0);
       setIsCashDialogOpen(false);
       focusSearchBar();
 
-      // Respect the user's toggle strictly
-      const shouldAutoPrint = shouldPrintCashReceipt && settings.printing?.printMode !== 'off';
       if (shouldAutoPrint) {
         setTimeout(() => {
           handlePrintReceipt(recordedSale);
@@ -1398,6 +1434,29 @@ const POS = () => {
         <div className="h-20 px-6 flex items-center justify-between gap-4 border-b border-border bg-background/50 backdrop-blur-sm">
           {/* Left utility controls */}
           <div className="flex items-center gap-2">
+            {/* Cashier Profile & Logout */}
+            {currentUser && (
+              <div className="flex items-center gap-2 border-r border-border pr-2.5 mr-1">
+                <div className="hidden sm:flex flex-col text-right">
+                  <span className="text-[9px] uppercase font-bold text-primary">{currentUser.role}</span>
+                  <span className="text-xs font-black text-foreground truncate max-w-[120px]">{currentUser.name_dv || currentUser.name_en}</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    navigate('/login');
+                  }}
+                  title={t('logout') || 'Logout (ލޮގްއައުޓް)'}
+                  className="h-8 w-8 rounded-xl border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-500 dark:text-red-400 shrink-0"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+
             <Button 
               variant="outline" 
               className="hidden xl:flex items-center gap-2 border-primary/20 text-primary hover:bg-primary/10 rounded-xl h-10 text-[10px] font-black"
@@ -2034,7 +2093,22 @@ const POS = () => {
       />
 
       <Dialog open={isCashDialogOpen} onOpenChange={setIsCashDialogOpen}>
-        <DialogContent className="sm:max-w-[38rem] 2xl:max-w-[44rem] w-[94vw] font-faruma apple-glass-dialog text-foreground border border-white/20 dark:border-white/10 text-right p-5 sm:p-7 shadow-2xl rounded-3xl box-border overflow-hidden [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+        <DialogContent 
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            const el = document.getElementById('paidAmount') as HTMLInputElement;
+            el?.focus();
+            el?.select();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              processCashPayment();
+            }
+          }}
+          className="sm:max-w-[38rem] 2xl:max-w-[44rem] w-[94vw] font-faruma apple-glass-dialog text-foreground border border-white/20 dark:border-white/10 text-right p-5 sm:p-7 shadow-2xl rounded-3xl box-border overflow-hidden [&>button]:left-4 [&>button]:right-auto" 
+          dir="rtl"
+        >
           <DialogHeader className="pb-3.5 text-right space-y-1.5 border-b border-white/15 dark:border-white/10 pl-10 pr-1">
             <div className="flex items-center justify-between">
               <div className="text-right flex-1 min-w-0">
@@ -2088,10 +2162,6 @@ const POS = () => {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
-                      // Prevent accidental trigger if enter was pressed right as dialog opened
-                      if (Date.now() - cashDialogOpenedAt.current < 400) {
-                        return;
-                      }
                       processCashPayment();
                     }
                   }}
@@ -2221,7 +2291,6 @@ const POS = () => {
                 checked={shouldPrintCashReceipt}
                 onCheckedChange={(checked) => {
                   setShouldPrintCashReceipt(checked);
-                  localStorage.setItem('pos_print_cash_receipt', String(checked));
                 }}
               />
             </div>

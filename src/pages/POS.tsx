@@ -1432,28 +1432,6 @@ const POS = () => {
         <div className="h-20 px-6 flex items-center justify-between gap-4 border-b border-border bg-background/50 backdrop-blur-sm">
           {/* Left utility controls */}
           <div className="flex items-center gap-2">
-            {/* Cashier Profile & Logout */}
-            {currentUser && (
-              <div className="flex items-center gap-2 border-r border-border pr-2.5 mr-1">
-                <div className="hidden sm:flex flex-col text-right">
-                  <span className="text-[9px] uppercase font-bold text-primary">{currentUser.role}</span>
-                  <span className="text-xs font-black text-foreground truncate max-w-[120px]">{currentUser.name_dv || currentUser.name_en}</span>
-                </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  type="button"
-                  onClick={() => {
-                    logout();
-                    navigate('/login');
-                  }}
-                  title={t('logout') || 'Logout (ލޮގްއައުޓް)'}
-                  className="h-8 w-8 rounded-xl border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-500 dark:text-red-400 shrink-0"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
 
             <Button 
               variant="outline" 

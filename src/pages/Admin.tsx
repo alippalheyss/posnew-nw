@@ -467,17 +467,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
 
   return (
     <div className="p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
-       <div className="flex justify-between items-center mb-8">
-          <Button 
-            onClick={() => {
-              logout();
-              navigate('/login');
-            }}
-            variant="destructive"
-            className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-foreground h-11 px-6 rounded-xl font-black gap-2 transition-all"
-          >
-             <LogOut className="h-4 w-4" /> {renderBoth('logout')}
-          </Button>
+       <div className="flex justify-end items-center mb-8">
           <div className="text-right">
              <h1 className="text-3xl font-black text-foreground flex items-center justify-end gap-3">
                {renderBoth('admin_settings')} <Settings className="h-8 w-8 text-primary" />

@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Home, Package, Boxes, Users, DollarSign, Settings, BarChart, 
-  Receipt, CalendarDays, AlertTriangle, Building2, LogOut, FileText, ChevronRight, ChevronLeft, Activity, Pin, PinOff, Wallet, Menu, X
+  Receipt, CalendarDays, AlertTriangle, Building2, LogOut, FileText, ChevronRight, ChevronLeft, Activity, Pin, PinOff, Wallet, Menu, X,
+  ShieldCheck, Check, Lock, Edit3, Save, User as UserIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +13,12 @@ import { useAuth } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAppContext } from '@/context/AppContext';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Badge } from './ui/badge';
+import { ScrollArea } from './ui/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
+import { showSuccess, showError } from '@/utils/toast';
 import { PWAInstallButton } from './PWAInstallButton';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 
@@ -19,14 +26,56 @@ const Sidebar = () => {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, updateUser } = useAuth();
   const { can } = usePermissions();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [editNameDv, setEditNameDv] = useState('');
+  const [editNameEn, setEditNameEn] = useState('');
+  const [isSavingName, setIsSavingName] = useState(false);
+
+  useEffect(() => {
+    if (currentUser) {
+      setEditNameDv(currentUser.name_dv || '');
+      setEditNameEn(currentUser.name_en || '');
+    }
+  }, [currentUser, isProfileOpen]);
+
+  const handleSaveName = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) return;
+    setIsSavingName(true);
+    try {
+      await updateUser(currentUser.id, {
+        name_dv: editNameDv.trim() || currentUser.name_dv,
+        name_en: editNameEn.trim() || currentUser.name_en,
+      });
+      showSuccess('ޕްރޮފައިލް ނަން ކާމިޔާބުކަމާއެކު ބަދަލުކުރެވިއްޖެ! (Name updated)');
+    } catch (err) {
+      console.error(err);
+      showError('Failed to update name');
+    } finally {
+      setIsSavingName(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+  const permissionsList = [
+    { key: 'canAccessPOS', labelDv: 'ޕީ.އޯ.އެސް ވިއްކުން', labelEn: 'POS Checkout & Sales', granted: can('canAccessPOS') },
+    { key: 'canAccessProducts', labelDv: 'މުދަލުގެ މަޢުލޫމާތު', labelEn: 'Products Catalog', granted: can('canAccessProducts') },
+    { key: 'canAccessStock', labelDv: 'ސްޓޮކް ބެލެހެއްޓުން', labelEn: 'Stock & Inventory', granted: can('canAccessStock') },
+    { key: 'canAccessCustomers', labelDv: 'ކަސްޓަމަރުންނާއި ދަރަނި', labelEn: 'Customers & Balance', granted: can('canAccessCustomers') },
+    { key: 'canAccessSales', labelDv: 'ދުވަހުގެ ވިޔަފާރި', labelEn: 'Daily Sales & Invoices', granted: can('canAccessSales') },
+    { key: 'canAccessReports', labelDv: 'ރިޕޯޓްތައް', labelEn: 'Reports & Statements', granted: can('canAccessReports') },
+    { key: 'canAccessAdmin', labelDv: 'ސިސްޓަމް އެޑްމިން ސެޓިންގްސް', labelEn: 'Admin System Settings', granted: can('canAccessAdmin') },
+    { key: 'canEditProducts', labelDv: 'މުދާ ބަދަލުކުރުމުގެ ހުއްދަ', labelEn: 'Edit Product Details', granted: can('canEditProducts') },
+    { key: 'canMakeCreditSales', labelDv: 'ދަރަންޏަށް ދޫކުރުން', labelEn: 'Credit Sales Authorization', granted: can('canMakeCreditSales') },
+    { key: 'canDeleteSales', labelDv: 'ސޭލްސް ފޮހެލުމުގެ ހުއްދަ', labelEn: 'Delete Sales Transactions', granted: can('canDeleteSales') },
+  ];
 
   const allNavItems = [
     { name_dv: t('pos_title'), name_en: t('pos_title', { lng: 'en' }), icon: Home, path: '/', permission: 'canAccessPOS' as const },
@@ -129,25 +178,33 @@ const Sidebar = () => {
       {/* Bottom Install & User Section */}
       <div className="p-4 mt-auto border-t border-white/10 bg-background/40 backdrop-blur-md rounded-b-[2.5rem] flex flex-col gap-3">
         <PWAInstallButton />
-        <div className="flex items-center justify-between px-1">
-          <div className="text-right">
-            <p className="text-[10px] text-primary uppercase font-black tracking-wider mb-0.5">{currentUser?.role}</p>
-            <p className="text-sm sm:text-base font-black text-foreground truncate w-32">{currentUser?.name_dv}</p>
-          </div>
-          <div className="w-9 h-9 rounded-xl bg-background/80 border border-white/20 shadow-xs flex items-center justify-center relative">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-background" />
-          </div>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleLogout}
-          className="w-full h-9 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-500 dark:text-red-400 font-bold text-xs flex items-center justify-between px-3 transition-all active:scale-[0.98]"
+        <button
+          type="button"
+          onClick={() => {
+            setIsProfileOpen(true);
+            setMobileOpen(false);
+          }}
+          className="flex items-center justify-between p-2.5 rounded-2xl bg-background/80 hover:bg-background border border-white/20 shadow-xs transition-all text-right group/user cursor-pointer active:scale-[0.98]"
+          title="ބޭނުންކުރާ ފަރާތުގެ ޕްރޮފައިލް ބައްލަވާ / Click to view profile, accesses & logout"
         >
-          <span>{t('logout') || 'ލޮގްއައުޓް (Logout)'}</span>
-          <LogOut className="h-4 w-4" />
-        </Button>
+          <div className="flex items-center gap-1.5 text-muted-foreground group-hover/user:text-foreground">
+            <ChevronLeft className="h-4 w-4 transition-transform group-hover/user:-translate-x-0.5" />
+          </div>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="text-right flex-1 min-w-0">
+              <div className="flex items-center justify-end gap-1.5">
+                <span className="text-[10px] text-primary font-black uppercase tracking-wider">{currentUser?.role || 'User'}</span>
+              </div>
+              <p className="text-sm font-black text-foreground truncate max-w-[130px] leading-tight">
+                {currentUser?.name_dv || currentUser?.name_en || currentUser?.username}
+              </p>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/25 shadow-xs flex items-center justify-center relative shrink-0">
+              <Users className="h-4 w-4 text-primary" />
+              <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-background" />
+            </div>
+          </div>
+        </button>
       </div>
     </div>
   );
@@ -218,6 +275,162 @@ const Sidebar = () => {
           {renderNavContent(false)}
         </div>
       </div>
+
+      {/* User Profile Modal with Name Editing, Granted Accesses & Logout */}
+      <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
+        <DialogContent 
+          className="sm:max-w-[34rem] w-[95vw] font-faruma apple-glass-dialog text-foreground border border-white/20 dark:border-white/10 text-right p-6 sm:p-7 shadow-2xl rounded-3xl overflow-hidden [&>button]:left-4 [&>button]:right-auto" 
+          dir="rtl"
+        >
+          <DialogHeader className="pb-3 text-right space-y-1.5 border-b border-border/60 pl-10 pr-1">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary shrink-0 shadow-xs">
+                <Users className="h-5 w-5" />
+              </div>
+              <div className="text-right flex-1 min-w-0">
+                <DialogTitle className="text-xl sm:text-2xl font-black text-foreground">
+                  ބޭނުންކުރާ ފަރާތުގެ ޕްރޮފައިލް (User Profile)
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground text-right mt-0.5">
+                  ތިބާގެ އެކައުންޓް މަޢުލޫމާތާއި ލިބިފައިވާ ހުއްދަތައް ބައްލަވައި ނަން ބަދަލުކުރައްވާ
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[70vh] pr-1 pl-1">
+            <div className="py-2 space-y-4">
+              {/* Profile Card Header */}
+              <div className="bg-gradient-to-l from-primary/15 via-primary/5 to-transparent border border-primary/20 rounded-2xl p-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Active Now
+                  </Badge>
+                  <Badge className="bg-primary/20 text-primary border border-primary/30 font-black text-xs uppercase px-2.5 py-0.5 rounded-full">
+                    {currentUser?.role || 'User'}
+                  </Badge>
+                </div>
+                <div className="text-right">
+                  <p className="font-mono text-xs text-muted-foreground">@{currentUser?.username || 'user'}</p>
+                  <p className="font-black text-base text-foreground mt-0.5">
+                    {currentUser?.name_dv || currentUser?.name_en || currentUser?.username}
+                  </p>
+                </div>
+              </div>
+
+              {/* Edit Name Section */}
+              <form onSubmit={handleSaveName} className="space-y-3 bg-muted/40 border border-border/80 rounded-2xl p-4">
+                <div className="flex items-center justify-between border-b border-border/50 pb-2">
+                  <span className="text-[10px] text-muted-foreground font-mono">Dhivehi & English Name</span>
+                  <div className="flex items-center gap-1.5 text-xs font-black text-foreground">
+                    <span>ނަން ބަދަލުކުރުން (Edit Name)</span>
+                    <Edit3 className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="space-y-1 text-right">
+                    <Label htmlFor="editNameDv" className="text-xs font-bold text-muted-foreground block">
+                      ނަން (ދިވެހިން) - Dhivehi Name
+                    </Label>
+                    <Input
+                      id="editNameDv"
+                      value={editNameDv}
+                      onChange={(e) => setEditNameDv(e.target.value)}
+                      placeholder="މުޙައްމަދު ޢަލީ"
+                      className="h-10 text-right bg-background border-border font-bold text-sm rounded-xl"
+                      dir="rtl"
+                    />
+                  </div>
+
+                  <div className="space-y-1 text-right">
+                    <Label htmlFor="editNameEn" className="text-xs font-bold text-muted-foreground block">
+                      Name (English)
+                    </Label>
+                    <Input
+                      id="editNameEn"
+                      value={editNameEn}
+                      onChange={(e) => setEditNameEn(e.target.value)}
+                      placeholder="Mohamed Ali"
+                      className="h-10 text-left bg-background border-border font-bold text-sm rounded-xl font-sans"
+                      dir="ltr"
+                    />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={isSavingName || (!editNameDv.trim() && !editNameEn.trim())}
+                    className="w-full h-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs uppercase gap-2 transition-all shadow-sm active:scale-95"
+                  >
+                    <Save className="h-3.5 w-3.5" />
+                    <span>{isSavingName ? 'ރައްކާކުރަނީ...' : 'ނަން ސޭވްކުރޭ (Save Changes)'}</span>
+                  </Button>
+                </div>
+              </form>
+
+              {/* Accesses & Permissions Section */}
+              <div className="space-y-2.5 bg-muted/40 border border-border/80 rounded-2xl p-4">
+                <div className="flex items-center justify-between border-b border-border/50 pb-2">
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    {permissionsList.filter(p => p.granted).length} / {permissionsList.length} Granted
+                  </span>
+                  <div className="flex items-center gap-1.5 text-xs font-black text-foreground">
+                    <span>ލިބިފައިވާ ހުއްދަތައް (Access & Permissions)</span>
+                    <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  {permissionsList.map((perm) => (
+                    <div 
+                      key={perm.key}
+                      className={cn(
+                        "flex items-center justify-between p-2.5 rounded-xl border text-right transition-all",
+                        perm.granted 
+                          ? "bg-emerald-500/5 border-emerald-500/20 text-foreground" 
+                          : "bg-muted/30 border-border/50 text-muted-foreground/60 opacity-60"
+                      )}
+                    >
+                      <div className="shrink-0 pl-1">
+                        {perm.granted ? (
+                          <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                            <Check className="h-3 w-3 stroke-[3]" />
+                          </div>
+                        ) : (
+                          <div className="w-5 h-5 rounded-full bg-muted text-muted-foreground flex items-center justify-center">
+                            <Lock className="h-3 w-3" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right flex-1 pr-2 min-w-0">
+                        <p className="text-xs font-black truncate">{perm.labelDv}</p>
+                        <p className="text-[10px] text-muted-foreground font-mono truncate">{perm.labelEn}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Prominent Logout Button Inside Profile */}
+              <div className="pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsProfileOpen(false);
+                    handleLogout();
+                  }}
+                  className="w-full h-12 rounded-2xl border-2 border-red-500/30 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white font-black text-sm flex items-center justify-center gap-2 transition-all shadow-md shadow-red-500/10 active:scale-[0.98]"
+                >
+                  <LogOut className="h-4.5 w-4.5" />
+                  <span>ލޮގްއައުޓް (Logout from System)</span>
+                </Button>
+              </div>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

@@ -383,15 +383,12 @@ const POS = () => {
     isAnyModalOpenRef.current = isAnyModalOpen;
   }, [isAnyModalOpen]);
 
-  const openCashDialogRef = useRef(openCashDialog);
+  const openCashDialogRef = useRef<() => void>(openCashDialog);
   useEffect(() => {
     openCashDialogRef.current = openCashDialog;
   });
 
-  const processCashPaymentRef = useRef(processCashPayment);
-  useEffect(() => {
-    processCashPaymentRef.current = processCashPayment;
-  });
+  const processCashPaymentRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   const isCashDialogOpenRef = useRef(isCashDialogOpen);
   useEffect(() => {
@@ -1054,6 +1051,7 @@ const POS = () => {
       setIsProcessing(false);
     }
   };
+  processCashPaymentRef.current = processCashPayment;
 
   const processCreditPayment = async () => {
     if (!activeCart || activeCart.items.length === 0) {

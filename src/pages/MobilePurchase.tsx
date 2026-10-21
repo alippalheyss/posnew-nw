@@ -66,7 +66,7 @@ const MobilePurchase: React.FC = () => {
   const [description, setDescription] = useState('');
   const [billImage, setBillImage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [shouldUpdateStock, setShouldUpdateStock] = useState<boolean>(true);
+  const [shouldUpdateStock, setShouldUpdateStock] = useState<boolean>(false);
 
   // Product Line Items State
   const [mobileItems, setMobileItems] = useState<MobileItem[]>([]);
@@ -347,7 +347,7 @@ const MobilePurchase: React.FC = () => {
       setMobileItems([]);
       setVendorId('');
       setVendorSearch('');
-      setShouldUpdateStock(true);
+      setShouldUpdateStock(false);
     } catch (error) {
       console.error('Failed to save mobile purchase:', error);
       showError(editingPurchaseId ? 'Failed to update purchase' : 'Failed to record purchase');
@@ -795,6 +795,7 @@ const MobilePurchase: React.FC = () => {
                             };
                           }));
                         }
+                        setShouldUpdateStock(false);
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                         showSuccess(`Editing bill #${p.billNumber}`);
                       }}

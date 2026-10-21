@@ -182,7 +182,7 @@ const POS = () => {
 
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState<boolean>(false);
-  const [visibleCatalogueCount, setVisibleCatalogueCount] = useState<number>(60);
+  const [visibleCatalogueCount, setVisibleCatalogueCount] = useState<number>(100);
 
   const cartCounter = useRef(openCarts.size);
   const [searchTerm, setSearchTerm] = useState('');
@@ -1456,7 +1456,7 @@ const POS = () => {
               <span>Print (F9)</span>
             </Button>
             
-            <Select value={selectedCategory} onValueChange={(val) => { setSelectedCategory(val); setVisibleCatalogueCount(60); }}>
+            <Select value={selectedCategory} onValueChange={(val) => { setSelectedCategory(val); setVisibleCatalogueCount(100); }}>
               <SelectTrigger className="w-[150px] sm:w-[170px] h-10 rounded-xl bg-muted border-border text-[10px] font-black uppercase text-foreground">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
@@ -1472,7 +1472,7 @@ const POS = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => { setShowFavoritesOnly(!showFavoritesOnly); setVisibleCatalogueCount(60); }}
+              onClick={() => { setShowFavoritesOnly(!showFavoritesOnly); setVisibleCatalogueCount(100); }}
               className={cn(
                 "h-10 w-10 rounded-xl border border-border transition-all",
                 showFavoritesOnly ? "bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30" : "bg-muted hover:bg-muted/80 text-muted-foreground"
@@ -1524,7 +1524,7 @@ const POS = () => {
                 ref={searchInputRef}
                 placeholder="Search name, code, barcode... (Enter to add)"
                 value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setVisibleCatalogueCount(60); }}
+                onChange={(e) => { setSearchTerm(e.target.value); setVisibleCatalogueCount(100); }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -1540,7 +1540,7 @@ const POS = () => {
                     type="button"
                     onClick={() => {
                       setSearchTerm('');
-                      setVisibleCatalogueCount(60);
+                      setVisibleCatalogueCount(100);
                       searchInputRef.current?.focus();
                     }}
                     className="text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted-foreground/10 transition-colors"
@@ -1558,8 +1558,8 @@ const POS = () => {
           </div>
         </div>
 
-        <ScrollArea className="flex-1 p-4 custom-scrollbar">
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+        <ScrollArea className="flex-1 p-3 sm:p-4 custom-scrollbar">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 min-[1850px]:grid-cols-9 min-[2150px]:grid-cols-10 gap-2.5 xl:gap-3">
             {displayProducts.map((product) => {
               const isLowStock = product.stock_shop < LOW_STOCK_THRESHOLD;
               const cardColors = [
@@ -1577,10 +1577,10 @@ const POS = () => {
                 <div
                   key={product.id}
                   onClick={() => handleProductSelection(product)}
-                  className="group apple-glass-card hover:-translate-y-1 hover:shadow-xl border border-white/25 dark:border-white/10 rounded-2xl p-2.5 transition-all duration-300 cursor-pointer relative active:scale-[0.98]"
+                  className="group apple-glass-card hover:-translate-y-1 hover:shadow-xl border border-white/25 dark:border-white/10 rounded-2xl p-2 sm:p-2.5 transition-all duration-300 cursor-pointer relative active:scale-[0.98]"
                 >
                   <div className={cn(
-                    "aspect-square rounded-xl mb-2 flex items-center justify-center overflow-hidden relative border border-white/20 dark:border-white/10 shadow-xs",
+                    "aspect-square max-h-36 2xl:max-h-32 rounded-xl mb-1.5 sm:mb-2 flex items-center justify-center overflow-hidden relative border border-white/20 dark:border-white/10 shadow-xs",
                     product.image ? "bg-muted/30" : colorClass
                   )}>
                     {product.image ? (
@@ -1593,30 +1593,30 @@ const POS = () => {
                         }}
                       />
                     ) : (
-                      <div className="font-black text-lg uppercase tracking-tighter text-center px-2 leading-tight drop-shadow-sm">
+                      <div className="font-black text-sm 2xl:text-xs uppercase tracking-tighter text-center px-1.5 leading-tight drop-shadow-sm line-clamp-2">
                         {product.name_en}
                       </div>
                     )}
                     {isLowStock && (
-                      <Badge className="absolute top-2 right-2 bg-red-500 text-foreground border-none text-[8px] font-black px-1.5 py-0 rounded-full shadow-lg uppercase tracking-widest">
+                      <Badge className="absolute top-1.5 right-1.5 bg-red-500 text-foreground border-none text-[8px] font-black px-1.5 py-0 rounded-full shadow-lg uppercase tracking-widest">
                         LOW
                       </Badge>
                     )}
                     {(productSalesFrequencyMap[product.id] || 0) >= 5 && (
-                      <Badge className="absolute top-2 left-2 bg-amber-500 text-black border-none text-[8px] font-black px-1.5 py-0 rounded-full shadow-md uppercase tracking-wider font-mono">
+                      <Badge className="absolute top-1.5 left-1.5 bg-amber-500 text-black border-none text-[8px] font-black px-1.5 py-0 rounded-full shadow-md uppercase tracking-wider font-mono">
                         🔥 HOT
                       </Badge>
                     )}
                   </div>
 
-                  <div className="text-center px-1">
-                    <h3 className="text-sm font-black text-foreground leading-tight truncate mb-0.5">{product.name_dv}</h3>
-                    <p className="text-[11px] font-bold text-muted-foreground truncate uppercase tracking-normal mb-1.5 font-mono">{product.name_en}</p>
+                  <div className="text-center px-0.5">
+                    <h3 className="text-xs sm:text-sm 2xl:text-xs font-black text-foreground leading-tight truncate mb-0.5">{product.name_dv}</h3>
+                    <p className="text-[10px] sm:text-[11px] 2xl:text-[10px] font-bold text-muted-foreground truncate uppercase tracking-normal mb-1 font-mono">{product.name_en}</p>
 
                     <div className="flex items-center justify-center gap-1.5">
-                      <span className="text-xs font-black text-primary font-mono leading-none">{settings.shop.currency} {product.price.toFixed(2)}</span>
-                      <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white scale-0 group-hover:scale-100 transition-transform shadow-[0_0_15px_rgba(0,132,255,0.5)]">
-                        <PlusCircle className="h-4 w-4" />
+                      <span className="text-xs sm:text-sm font-black text-primary font-mono leading-none">{settings.shop.currency} {product.price.toFixed(2)}</span>
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary flex items-center justify-center text-white scale-0 group-hover:scale-100 transition-transform shadow-[0_0_15px_rgba(0,132,255,0.5)]">
+                        <PlusCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </div>
                     </div>
                   </div>
@@ -1629,7 +1629,7 @@ const POS = () => {
             <div className="py-6 flex flex-col items-center justify-center gap-2">
               <Button
                 variant="outline"
-                onClick={() => setVisibleCatalogueCount(prev => prev + 60)}
+                onClick={() => setVisibleCatalogueCount(prev => prev + 80)}
                 className="apple-glass-card hover:bg-muted border border-white/20 text-foreground font-black px-8 py-3 rounded-2xl text-xs tracking-wider shadow-md hover:border-primary/50 transition-all gap-2 apple-glass-pill"
               >
                 <span>Load More Products</span>
@@ -1645,7 +1645,7 @@ const POS = () => {
         </ScrollArea>
       </div>
 
-      <div className="w-[32rem] xl:w-[36rem] 2xl:w-[40rem] max-w-[45vw] flex flex-col apple-liquid-glass glass3d border-l border-white/20 dark:border-white/10 shadow-2xl z-20">
+      <div className="w-[30rem] xl:w-[34rem] 2xl:w-[36rem] max-w-[42vw] flex flex-col apple-liquid-glass glass3d border-l border-white/20 dark:border-white/10 shadow-2xl z-20">
         <div className="p-6 pb-2">
           <div className="flex items-center gap-1 bg-muted p-1 rounded-2xl border border-border mb-6">
             <div className="flex items-center gap-3 px-4 py-1.5 bg-primary/20 rounded-xl text-primary border border-primary/20">

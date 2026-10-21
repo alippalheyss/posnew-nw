@@ -78,11 +78,12 @@ const LocalPurchaseWindow = () => {
   const [productSearchQueries, setProductSearchQueries] = useState<Record<string, string>>({});
   const [activeSearchRowId, setActiveSearchRowId] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [shouldUpdateStock, setShouldUpdateStock] = useState<boolean>(true);
+  const [shouldUpdateStock, setShouldUpdateStock] = useState<boolean>(false);
 
   // Sync form when editingPurchase is supplied
   useEffect(() => {
     if (editingPurchase) {
+      setShouldUpdateStock(false);
       setVendorId(editingPurchase.vendorId || '');
       setBillNumber(editingPurchase.billNumber || '');
       setDate(editingPurchase.date ? editingPurchase.date.split('T')[0] : new Date().toISOString().split('T')[0]);
@@ -452,7 +453,7 @@ const LocalPurchaseWindow = () => {
     setBillNumber('');
     setDate(new Date().toISOString().split('T')[0]);
     setDescription('');
-    setShouldUpdateStock(true);
+    setShouldUpdateStock(false);
     setItems([{ id: crypto.randomUUID(), productId: '', quantity: 1, unitPrice: '', subtotal: '', isZeroTax: false }]);
     setProductSearchQueries({});
     setActiveSearchRowId(null);

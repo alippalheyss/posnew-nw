@@ -90,7 +90,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                 setExpiryDate(cloned.expiry_date ? parseISO(cloned.expiry_date) : undefined);
                 setUnits(cloned.units && Array.isArray(cloned.units) ? cloned.units : []);
             } else {
-                const newId = `prod-${Date.now()}`;
+                const newId = crypto.randomUUID();
                 const autoBarcode = Math.floor(Math.random() * 900000000000 + 100000000000).toString();
                 setEditedProduct({
                     id: newId,

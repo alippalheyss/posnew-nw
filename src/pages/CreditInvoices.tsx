@@ -51,7 +51,119 @@ const CreditInvoices = () => {
     }
   };
 
-  const handlePrintInvoice = (sale: Sale) => {
+  const handlePrintReceipt = (sale: Sale) => {
+    const currency = settings.shop.currency;
+    const itemsHtml = sale.items.map((item: any) => `
+      <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+        <div style="flex: 1; text-align: left;">
+          ${item.name_dv || item.name_en || ''}${item.selected_unit && item.selected_unit !== 'Piece' ? ` (${item.selected_unit})` : ''}<br/><small style="color: #444;">${item.name_en || ''}${item.selected_unit && item.selected_unit !== 'Piece' ? ` (${item.selected_unit})` : ''}</small>
+        </div>
+        <div style="width: 60px; text-align: right;">${item.qty} x ${item.price.toFixed(2)}</div>
+        <div style="width: 70px; text-align: right;">${(item.qty * item.price).toFixed(2)}</div>
+      </div>
+    `).join('');
+
+    const gstRate = settings.shop.taxRate || 0;
+    const subtotal = sale.grandTotal / (1 + (gstRate / 100));
+    const gstAmount = sale.grandTotal - subtotal;
+
+    const logoHtml = settings.shop.logo ? `
+      <div style="margin-bottom: 10px; text-align: center;">
+        <img src="${settings.shop.logo}" style="max-height: 60px; object-fit: contain;" />
+      </div>
+    ` : '';
+
+    const paid = Number(sale.paidAmount) || 0;
+    const balanceDue = Math.max(0, sale.grandTotal - paid);
+
+    const customerHtml = sale.customer ? `
+      <div style="font-size: 11px; margin-top: 6px; text-align: left; border: 1px dashed #ccc; padding: 4px 6px; border-radius: 4px;">
+        <div><strong>Customer:</strong> ${sale.customer.name_dv || ''} (${sale.customer.name_en || ''})</div>
+        ${sale.customer.code ? `<div><strong>Code:</strong> ${sale.customer.code}</div>` : ''}
+        ${sale.customer.phone ? `<div><strong>Phone:</strong> ${sale.customer.phone}</div>` : ''}
+      </div>
+    ` : '';
+
+    const printerWidth = settings.printing?.thermalPrinterWidth === '58mm' ? '58mm' : '80mm';
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Credit Receipt ${sale.invoiceNumber || sale.id}</title>
+          <style>
+            @media print {
+              @page {
+                margin: 0;
+                size: ${printerWidth} auto;
+              }
+              html, body {
+                margin: 0 !important;
+                padding: 6px !important;
+                width: ${printerWidth} !important;
+                height: auto !important;
+                overflow: visible !important;
+              }
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+              padding: 10px;
+              margin: 0;
+              text-align: center;
+              box-sizing: border-box;
+            }
+          </style>
+        </head>
+        <body>
+          ${logoHtml}
+          <div style="font-weight: bold; font-size: 15px;">${settings.shop.shopName}</div>
+          <div style="font-size: 12px;">${settings.shop.shopAddress}</div>
+          <div style="font-size: 10px; margin-top: 4px;">Tel: ${settings.shop.shopPhone}<br/>${formatDate(sale.date)} ${formatTime(sale.date)} | ${sale.invoiceNumber || sale.id}</div>
+          <div style="margin: 6px auto; display: inline-block; padding: 2px 8px; border: 1px solid #000; font-weight: 900; font-size: 11px; letter-spacing: 1px;">
+            CREDIT INVOICE
+          </div>
+          ${customerHtml}
+          <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+          ${itemsHtml}
+          <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px;">
+            <span>Subtotal:</span>
+            <span>${currency} ${subtotal.toFixed(2)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 2px;">
+            <span>GST (${gstRate}%):</span>
+            <span>${currency} ${gstAmount.toFixed(2)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; margin-top: 4px; padding-top: 4px; border-top: 1px solid #000;">
+            <span>TOTAL:</span>
+            <span>${currency} ${sale.grandTotal.toFixed(2)}</span>
+          </div>
+          <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 3px;">
+            <span>Payment Method:</span>
+            <span style="font-weight: bold; text-transform: uppercase;">CREDIT</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 3px;">
+            <span>Paid Amount:</span>
+            <span style="font-weight: bold;">${currency} ${paid.toFixed(2)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 13px; margin-top: 4px; padding-top: 4px; border-top: 1px dotted #888;">
+            <span style="font-weight: 900;">Balance Due:</span>
+            <span style="font-weight: 900; font-size: 14px;">${currency} ${balanceDue.toFixed(2)}</span>
+          </div>
+          <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+          <div style="font-size: 10px; margin-top: 8px; font-style: italic;">
+            Terms: Credit invoice payment is due within the agreed period.<br/>
+            Thank you for your business!
+          </div>
+        </body>
+      </html>
+    `;
+    printContent(htmlContent, settings);
+  };
+
+  const handlePrintA4Invoice = (sale: Sale) => {
     const currency = settings.shop.currency;
     const itemsHtml = sale.items.map(item => `
       <tr style="border-bottom: 1px solid #eee;">
@@ -79,21 +191,19 @@ const CreditInvoices = () => {
         <head>
           <title>Credit Invoice ${sale.invoiceNumber || sale.id}</title>
           <style>
-            body { font-family: sans-serif; padding: 40px; color: #333; }
-            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
-            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; text-align: left; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+            body { font-family: sans-serif; padding: 20px; color: #333; margin: 0; }
+            .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; text-align: left; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
             th { background: #f9f9f9; padding: 10px; border-bottom: 2px solid #eee; text-align: right; }
             th:first-child { text-align: left; }
             .totals { float: right; width: 300px; }
-            .total-row { display: flex; justify-content: space-between; padding: 5px 0; }
-            .grand-total { font-weight: bold; font-size: 1.2em; border-top: 2px solid #eee; margin-top: 10px; padding-top: 10px; }
-            .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #777; border-top: 1px solid #eee; padding-top: 10px; }
+            .total-row { display: flex; justify-content: space-between; padding: 4px 0; }
+            .grand-total { font-weight: bold; font-size: 1.2em; border-top: 2px solid #eee; margin-top: 8px; padding-top: 8px; }
+            .footer { clear: both; margin-top: 30px; text-align: center; font-size: 12px; color: #777; border-top: 1px solid #eee; padding-top: 10px; }
             @media print {
-              body { padding: 20px; }
-              .no-print { display: none; }
-              @page { margin: 15mm; size: A4; }
-              html, body { height: auto !important; }
+              @page { margin: 10mm; size: A4 portrait; }
+              html, body { margin: 0; padding: 0; height: auto !important; }
               .footer { page-break-after: avoid; }
             }
           </style>
@@ -101,8 +211,8 @@ const CreditInvoices = () => {
         <body>
           <div class="header">
             ${logoHtml}
-            <h1 style="margin: 0; color: #000;">CREDIT INVOICE</h1>
-            <p>${settings.shop.shopName}</p>
+            <h1 style="margin: 0; color: #000; font-size: 24px;">CREDIT INVOICE</h1>
+            <p style="margin: 4px 0 0 0;">${settings.shop.shopName}</p>
           </div>
           <div class="info-grid">
             <div>
@@ -532,16 +642,27 @@ const CreditInvoices = () => {
                          <Button 
                            variant="ghost" 
                            size="icon" 
-                           onClick={() => handlePrintInvoice(sale)}
-                           className="h-11 w-11 rounded-xl bg-muted border border-border hover:bg-orange-500 hover:text-foreground transition-all text-muted-foreground"
+                           title="Print Thermal Receipt"
+                           onClick={() => handlePrintReceipt(sale)}
+                           className="h-11 w-11 rounded-xl bg-muted border border-border hover:bg-orange-500 hover:text-white transition-all text-muted-foreground"
                          >
                            <Printer className="h-4 w-4" />
                          </Button>
                          <Button 
                            variant="ghost" 
                            size="icon" 
+                           title="Print A4 Invoice"
+                           onClick={() => handlePrintA4Invoice(sale)}
+                           className="h-11 w-11 rounded-xl bg-muted border border-border hover:bg-slate-700 hover:text-white transition-all text-muted-foreground"
+                         >
+                           <FileText className="h-4 w-4" />
+                         </Button>
+                         <Button 
+                           variant="ghost" 
+                           size="icon" 
+                           title="Edit Invoice"
                            onClick={() => handleEditClick(sale)}
-                           className="h-11 w-11 rounded-xl bg-muted border border-border hover:bg-blue-500 hover:text-foreground transition-all text-muted-foreground"
+                           className="h-11 w-11 rounded-xl bg-muted border border-border hover:bg-blue-500 hover:text-white transition-all text-muted-foreground"
                          >
                            <PencilLine className="h-4 w-4" />
                          </Button>

@@ -599,18 +599,72 @@ const DailySales = () => {
                  No sales recorded for this period
               </div>
             ) : (
-              filteredSales.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale) => (
-                <Card key={sale.id} className="apple-glass-card border border-white/15 dark:border-white/10 hover:border-primary/50 transition-all duration-300 rounded-3xl p-6 group shadow-sm hover:shadow-md">
+              filteredSales.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale) => {
+              const method = (sale.paymentMethod || '').toLowerCase();
+              const isCredit = method === 'credit' || (method === 'split' && (sale.balance || 0) > 0);
+              const isCash = method === 'cash';
+              const isTransfer = method === 'transfer';
+
+              const cardBorderClass = isCredit
+                ? "border-amber-500/40 dark:border-amber-500/30 bg-amber-500/[0.04] dark:bg-amber-950/20 hover:border-amber-500 border-l-[6px] border-l-amber-500 shadow-amber-500/5"
+                : isCash
+                ? "border-emerald-500/30 dark:border-emerald-500/20 bg-emerald-500/[0.03] dark:bg-emerald-950/15 hover:border-emerald-500 border-l-[6px] border-l-emerald-500 shadow-emerald-500/5"
+                : "border-sky-500/30 dark:border-sky-500/20 bg-sky-500/[0.03] dark:bg-sky-950/15 hover:border-sky-500 border-l-[6px] border-l-sky-500 shadow-sky-500/5";
+
+              const iconBgClass = isCredit
+                ? "bg-amber-500/15 border-amber-500/30 text-amber-600 dark:text-amber-400"
+                : isCash
+                ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                : "bg-sky-500/15 border-sky-500/30 text-sky-600 dark:text-sky-400";
+
+              const badgeClass = isCredit
+                ? "bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40"
+                : isCash
+                ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40"
+                : "bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-500/40";
+
+              const amountColorClass = isCredit
+                ? "text-amber-600 dark:text-amber-400"
+                : isCash
+                ? "text-emerald-600 dark:text-emerald-400"
+                : "text-sky-600 dark:text-sky-400";
+
+              const printHoverClass = isCredit
+                ? "hover:bg-amber-500 hover:text-white"
+                : isCash
+                ? "hover:bg-emerald-500 hover:text-white"
+                : "hover:bg-sky-500 hover:text-white";
+
+              return (
+                <Card key={sale.id} className={cn("apple-glass-card border transition-all duration-300 rounded-3xl p-6 group shadow-sm hover:shadow-md", cardBorderClass)}>
                   <div className="flex items-center justify-between gap-6">
                      <div className="flex items-center gap-6">
-                        <div className="h-14 w-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                           <Receipt className="h-7 w-7" />
+                        <div className={cn("h-14 w-14 rounded-2xl border flex items-center justify-center group-hover:scale-110 transition-transform shadow-xs shrink-0", iconBgClass)}>
+                           {isCredit ? (
+                             <CreditCard className="h-7 w-7" />
+                           ) : isCash ? (
+                             <DollarSign className="h-7 w-7" />
+                           ) : (
+                             <ArrowRightLeft className="h-7 w-7" />
+                           )}
                         </div>
                         <div className="text-right">
-                           <div className="flex items-center justify-end gap-3 mb-1">
-                              <span className="text-lg font-black text-foreground">{sale.invoiceNumber || sale.id}</span>
-                              <Badge className="bg-primary/20 text-primary border-none text-[8px] font-black uppercase tracking-widest px-2 py-0.5">
-                                 {sale.paymentMethod}
+                           <div className="flex items-center justify-end gap-2.5 mb-1 flex-wrap">
+                              {sale.customer && (
+                                <span className={cn(
+                                  "text-[11px] font-bold px-2.5 py-0.5 rounded-lg border flex items-center gap-1",
+                                  isCredit 
+                                    ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30" 
+                                    : "bg-muted text-muted-foreground border-border"
+                                )}>
+                                  <span>👤</span>
+                                  <span>{sale.customer.name_dv || sale.customer.name_en}</span>
+                                  {sale.customer.code && <span className="opacity-75 font-mono text-[10px]">({sale.customer.code})</span>}
+                                </span>
+                              )}
+                              <span className="text-lg font-black text-foreground font-mono">{sale.invoiceNumber || sale.id}</span>
+                              <Badge className={cn("text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5", badgeClass)}>
+                                 {isCredit ? 'CREDIT' : isCash ? 'CASH' : (sale.paymentMethod || 'OTHER').toUpperCase()}
                               </Badge>
                            </div>
                            <div className="flex items-center justify-end gap-2 text-xs font-bold text-muted-foreground">
@@ -634,23 +688,29 @@ const DailySales = () => {
 
                      <div className="flex items-center gap-8">
                         <div className="text-right">
-                           <p className="text-xs font-black text-muted-foreground uppercase tracking-wider mb-1">Grand Total</p>
-                           <p className="text-2xl font-black text-primary">{settings.shop.currency} {sale.grandTotal.toFixed(2)}</p>
+                           <p className="text-xs font-black text-muted-foreground uppercase tracking-wider mb-1">
+                             {isCredit ? 'Credit Amount' : 'Grand Total'}
+                           </p>
+                           <p className={cn("text-2xl font-black font-mono", amountColorClass)}>
+                             {settings.shop.currency} {sale.grandTotal.toFixed(2)}
+                           </p>
                         </div>
                         <div className="flex gap-2">
                            <Button 
                              variant="ghost" 
                              size="icon" 
+                             title="Print Receipt"
                              onClick={() => handlePrintReceipt(sale)}
-                             className="h-11 w-11 rounded-xl bg-muted border border-border hover:bg-primary hover:text-foreground transition-all text-muted-foreground"
+                             className={cn("h-11 w-11 rounded-xl bg-muted border border-border transition-all text-muted-foreground", printHoverClass)}
                            >
                              <Printer className="h-4 w-4" />
                            </Button>
                            <Button 
                              variant="ghost" 
                              size="icon" 
+                             title="Edit Sale"
                              onClick={() => handleEditSale(sale)}
-                             className="h-11 w-11 rounded-xl bg-muted border border-border hover:bg-blue-500 hover:text-foreground transition-all text-muted-foreground"
+                             className="h-11 w-11 rounded-xl bg-muted border border-border hover:bg-blue-500 hover:text-white transition-all text-muted-foreground"
                            >
                              <PencilLine className="h-4 w-4" />
                            </Button>
@@ -658,7 +718,8 @@ const DailySales = () => {
                      </div>
                   </div>
                 </Card>
-              ))
+              );
+            })
             )
           ) : (
             pendingTransfers.length === 0 ? (

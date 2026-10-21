@@ -318,6 +318,7 @@ const POS = () => {
     }
     setPaidAmount(grandTotal);
     setShouldPrintCashReceipt(false); // Off by default for each new transaction
+    cashDialogOpenedAt.current = Date.now();
     setIsCashDialogOpen(true);
   };
 
@@ -423,6 +424,7 @@ const POS = () => {
       // If Cash Dialog is currently open: Enter confirms cash payment, Escape closes it
       if (isCashDialogOpenRef.current) {
         if (e.key === 'Enter') {
+          if (Date.now() - cashDialogOpenedAt.current < 400) return;
           e.preventDefault();
           processCashPaymentRef.current();
           return;
@@ -2048,12 +2050,6 @@ const POS = () => {
             el?.focus();
             el?.select();
           }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              processCashPayment();
-            }
-          }}
           className="sm:max-w-[38rem] 2xl:max-w-[44rem] w-[94vw] font-faruma apple-glass-dialog text-foreground border border-white/20 dark:border-white/10 text-right p-5 sm:p-7 shadow-2xl rounded-3xl box-border overflow-hidden [&>button]:left-4 [&>button]:right-auto" 
           dir="rtl"
         >
@@ -2109,6 +2105,7 @@ const POS = () => {
                   onFocus={handleFocus}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
+                      if (Date.now() - cashDialogOpenedAt.current < 400) return;
                       e.preventDefault();
                       processCashPayment();
                     }

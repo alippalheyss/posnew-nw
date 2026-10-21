@@ -3199,15 +3199,17 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   const getNextProductCode = useCallback(() => {
-    const MIN_CODE = 3201; // Start from 03201 (stored as number, displayed with leading zero)
+    const MIN_CODE = 3206; // Start from 03206 (stored as number, displayed with leading zero)
     const lastItemCode = products.reduce((maxCode, product) => {
       // Extract digits only from code
-      const digits = (product.item_code || '').replace(/\D/g, '');
-      const codeNum = digits ? parseInt(digits, 10) : 0;
-      return isNaN(codeNum) ? maxCode : Math.max(maxCode, codeNum);
+      const rawCode = (product.item_code || '').trim();
+      const digits = rawCode.replace(/\D/g, '');
+      if (!digits || digits.length > 6) return maxCode;
+      const codeNum = parseInt(digits, 10);
+      return isNaN(codeNum) || codeNum > 99999 ? maxCode : Math.max(maxCode, codeNum);
     }, MIN_CODE - 1);
     const nextNum = Math.max(lastItemCode + 1, MIN_CODE);
-    // Always pad to 5 digits to preserve leading zero (e.g. 03201)
+    // Always pad to 5 digits to preserve leading zero (e.g. 03206)
     return String(nextNum).padStart(5, '0');
   }, [products]);
 
@@ -3317,6 +3319,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const addProduct = async (product: Product) => {
     try {
+      const isUuid = (val?: string) => Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));
+      const finalId = isUuid(product.id) ? product.id : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : '00000000-0000-4000-8000-' + Date.now().toString(16).padStart(12, '0'));
+
       const itemCode = product.item_code !== undefined && product.item_code !== null && String(product.item_code).trim() !== ''
         ? String(product.item_code).trim()
         : getNextProductCode();
@@ -3326,12 +3331,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
       const productToStore: Product = {
         ...product,
+        id: finalId,
         item_code: itemCode,
         barcode: barcode
       };
 
       const cleanData: any = {
-        id: productToStore.id,
+        id: finalId,
         name_dv: productToStore.name_dv,
         name_en: productToStore.name_en,
         price: Number(productToStore.price) || 0,

@@ -9,8 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Product, useAppContext } from '@/context/AppContext';
-import { Plus, Trash2, Save, Upload, CalendarIcon, Package, DollarSign, Barcode, Hash, ListTree, Image as ImageIcon, Boxes, Layers, Pencil, X, Sparkles, Check, Loader2, Printer } from 'lucide-react';
+import { Product, ProductFlavour, useAppContext } from '@/context/AppContext';
+import { Plus, Trash2, Save, Upload, CalendarIcon, Package, DollarSign, Barcode, Hash, ListTree, Image as ImageIcon, Boxes, Layers, Pencil, X, Sparkles, Check, Loader2, Printer, Type, Tag } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -25,6 +25,7 @@ import { printContent } from '@/utils/printHelper';
 import PulsatingDots from '@/components/PulsatingDots';
 import OnlineImageSearchDialog from '@/components/OnlineImageSearchDialog';
 import { saveOnlineImageToBucket } from '@/services/productImageService';
+import { ImageTextStampDialog } from '@/components/ImageTextStampDialog';
 
 interface ProductDialogProps {
     isOpen: boolean;
@@ -42,6 +43,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
     const [isUploadingImage, setIsUploadingImage] = useState(false);
     const [expiryDate, setExpiryDate] = useState<Date | undefined>(undefined);
     const [isOnlineSearchOpen, setIsOnlineSearchOpen] = useState(false);
+    const [isImageTextStampOpen, setIsImageTextStampOpen] = useState(false);
     const localDataUrlRef = useRef<string | null>(null);
 
     const handleOnlineImageSelect = async (url: string) => {
@@ -62,6 +64,23 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
             }
         } catch {}
     };
+
+    // Sub-tab switcher between Flavours and Packaging Units
+    const [activeSubTab, setActiveSubTab] = useState<'flavours' | 'units'>('flavours');
+
+    // Flavours / Variant Barcodes state
+    const [flavours, setFlavours] = useState<ProductFlavour[]>([]);
+    const [isFlavourFormOpen, setIsFlavourFormOpen] = useState(false);
+    const [editingFlavourIndex, setEditingFlavourIndex] = useState<number | null>(null);
+    const [flavourForm, setFlavourForm] = useState<{
+        name: string;
+        barcode: string;
+        price: string;
+    }>({
+        name: '',
+        barcode: '',
+        price: ''
+    });
 
     // Units / Packaging state
     const [units, setUnits] = useState<Array<{ name: string; price: number; conversion_factor: number; barcode: string }>>([]);
@@ -89,6 +108,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                 setImagePreviewUrl(cloned.image);
                 setExpiryDate(cloned.expiry_date ? parseISO(cloned.expiry_date) : undefined);
                 setUnits(cloned.units && Array.isArray(cloned.units) ? cloned.units : []);
+                setFlavours(cloned.flavours && Array.isArray(cloned.flavours) ? cloned.flavours : []);
             } else {
                 const newId = crypto.randomUUID();
                 const autoBarcode = Math.floor(Math.random() * 900000000000 + 100000000000).toString();
@@ -104,17 +124,23 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                     stock_godown: 0,
                     category: 'OTHER',
                     is_zero_tax: false,
-                    units: []
+                    units: [],
+                    flavours: []
                 });
                 localDataUrlRef.current = null;
                 setUploadedBucketPath(null);
                 setImagePreviewUrl(null);
                 setExpiryDate(undefined);
                 setUnits([]);
+                setFlavours([]);
             }
             setIsUnitFormOpen(false);
             setEditingUnitIndex(null);
             setUnitForm({ name: 'Box', price: '', conversion_factor: '', barcode: '' });
+            setIsFlavourFormOpen(false);
+            setEditingFlavourIndex(null);
+            setFlavourForm({ name: '', barcode: '', price: '' });
+            setActiveSubTab('flavours');
         }
     }, [isOpen, product?.id]);
 
@@ -190,6 +216,109 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
         setIsUnitFormOpen(false);
         setEditingUnitIndex(null);
         setUnitForm({ name: 'Box', price: '', conversion_factor: '', barcode: '' });
+    };
+
+    const handleOpenAddFlavour = () => {
+        setFlavourForm({
+            name: '',
+            barcode: '',
+            price: editedProduct?.price ? String(editedProduct.price) : ''
+        });
+        setEditingFlavourIndex(null);
+        setIsFlavourFormOpen(true);
+    };
+
+    const handleEditFlavour = (index: number) => {
+        const f = flavours[index];
+        setFlavourForm({
+            name: f.name,
+            barcode: f.barcode || '',
+            price: f.price !== undefined ? String(f.price) : (editedProduct?.price ? String(editedProduct.price) : '')
+        });
+        setEditingFlavourIndex(index);
+        setIsFlavourFormOpen(true);
+    };
+
+    const handleDeleteFlavour = (index: number) => {
+        setFlavours(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleSaveFlavour = () => {
+        if (!flavourForm.name.trim()) {
+            showError('Please enter a flavour / variant name (e.g. Chocolate, Vanilla)');
+            return;
+        }
+
+        const priceNum = flavourForm.price.trim() !== '' ? parseFloat(flavourForm.price) : (editedProduct?.price || 0);
+        const newFlavour: ProductFlavour = {
+            id: editingFlavourIndex !== null ? flavours[editingFlavourIndex].id || crypto.randomUUID() : crypto.randomUUID(),
+            name: flavourForm.name.trim(),
+            barcode: flavourForm.barcode.trim(),
+            price: !isNaN(priceNum) ? priceNum : (editedProduct?.price || 0)
+        };
+
+        if (editingFlavourIndex !== null) {
+            setFlavours(prev => prev.map((f, i) => i === editingFlavourIndex ? newFlavour : f));
+        } else {
+            if (flavours.some(f => f.name.toLowerCase() === newFlavour.name.toLowerCase())) {
+                showError(`A flavour named "${newFlavour.name}" already exists for this product.`);
+                return;
+            }
+            if (newFlavour.barcode && flavours.some(f => f.barcode && f.barcode === newFlavour.barcode)) {
+                showError(`A flavour with barcode "${newFlavour.barcode}" already exists.`);
+                return;
+            }
+            setFlavours(prev => [...prev, newFlavour]);
+        }
+
+        setIsFlavourFormOpen(false);
+        setEditingFlavourIndex(null);
+        setFlavourForm({ name: '', barcode: '', price: '' });
+    };
+
+    const generateFlavourBarcode = () => {
+        let code = '';
+        let attempts = 0;
+        do {
+            const randomPart = Math.floor(100000000 + Math.random() * 900000000).toString();
+            code = `200${randomPart}`;
+            attempts++;
+        } while (
+            (products.some(p => p.barcode === code || p.flavours?.some(f => f.barcode === code)) ||
+            flavours.some(f => f.barcode === code)) && 
+            attempts < 100
+        );
+        setFlavourForm(prev => ({ ...prev, barcode: code }));
+        showSuccess(`Generated barcode: ${code}`);
+    };
+
+    const handleApplyStampedImage = async (stampedDataUrl: string) => {
+        try {
+            setIsUploadingImage(true);
+            localDataUrlRef.current = stampedDataUrl;
+            setImagePreviewUrl(stampedDataUrl);
+            setEditedProduct(prev => prev ? ({ ...prev, image: stampedDataUrl }) : null);
+
+            // Upload in background to Supabase Storage
+            const res = await fetch(stampedDataUrl);
+            const blob = await res.blob();
+            const file = new File([blob], `stamped_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            const targetCode = (editedProduct?.item_code || '').replace(/\D/g, '') || 'prod';
+            const uploadRes = await uploadProductImage(file, targetCode);
+            if (uploadRes.bucketPath) setUploadedBucketPath(uploadRes.bucketPath);
+            if (uploadRes.url) {
+                setImagePreviewUrl(uploadRes.url);
+                setEditedProduct(prev => prev ? ({ ...prev, image: uploadRes.url }) : null);
+                showSuccess('Text stamped & photo saved! 🎨');
+            } else {
+                showSuccess('Text stamped onto photo! 🎨');
+            }
+        } catch (err: any) {
+            console.error('Error applying stamped image:', err);
+            showError('Failed to save stamped image');
+        } finally {
+            setIsUploadingImage(false);
+        }
     };
 
     const generateBarcodeSvgString = (barcodeValue: string) => {
@@ -366,6 +495,22 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
             }
         }
 
+        let finalFlavours = [...flavours];
+        if (isFlavourFormOpen && flavourForm.name.trim()) {
+            const priceNum = flavourForm.price.trim() !== '' ? parseFloat(flavourForm.price) : (editedProduct?.price || 0);
+            const pendingFlavour: ProductFlavour = {
+                id: editingFlavourIndex !== null ? flavours[editingFlavourIndex].id || crypto.randomUUID() : crypto.randomUUID(),
+                name: flavourForm.name.trim(),
+                barcode: flavourForm.barcode.trim(),
+                price: !isNaN(priceNum) ? priceNum : (editedProduct?.price || 0)
+            };
+            if (editingFlavourIndex !== null) {
+                finalFlavours[editingFlavourIndex] = pendingFlavour;
+            } else if (!finalFlavours.some(f => f.name.toLowerCase() === pendingFlavour.name.toLowerCase())) {
+                finalFlavours.push(pendingFlavour);
+            }
+        }
+
         const finalProduct: Product = {
             ...editedProduct,
             cost_price: (editedProduct.cost_price !== undefined && editedProduct.cost_price !== null && !isNaN(Number(editedProduct.cost_price)))
@@ -374,7 +519,8 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
             item_code: numericCode,
             image: uploadedBucketPath || editedProduct.image || imagePreviewUrl || generatePlaceholderImage(editedProduct.name_en || editedProduct.name_dv, numericCode),
             expiry_date: expiryDate ? format(expiryDate, 'yyyy-MM-dd') : undefined,
-            units: finalUnits.length > 0 ? finalUnits : []
+            units: finalUnits.length > 0 ? finalUnits : [],
+            flavours: finalFlavours.length > 0 ? finalFlavours : []
         };
 
         onSave(finalProduct);
@@ -491,22 +637,47 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                 >
                                                     <Sparkles className="h-3 w-3" />
                                                 </button>
+                                                {imagePreviewUrl && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setIsImageTextStampOpen(true)}
+                                                        className="bg-indigo-600 p-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white hover:bg-indigo-700 transition-all flex items-center gap-1"
+                                                        title="Put text or flavour label on image"
+                                                    >
+                                                        <Type className="h-3 w-3" />
+                                                    </button>
+                                                )}
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* Dedicated 1-Click Online Image Search Button */}
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => setIsOnlineSearchOpen(true)}
-                                        className="h-6 w-24 px-1 text-[8.5px] font-black border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 rounded-lg gap-1 shadow-xs"
-                                        title="Find product image on Google or online"
-                                    >
-                                        <Sparkles className="h-2.5 w-2.5 text-amber-500" />
-                                        <span>Google Image</span>
-                                    </Button>
+                                    {/* Action Buttons: Online Search + Stamp Text */}
+                                    <div className="flex gap-1 w-24">
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => setIsOnlineSearchOpen(true)}
+                                            className="h-6 flex-1 px-1 text-[8px] font-black border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 rounded-lg gap-0.5 shadow-xs"
+                                            title="Find product image on Google"
+                                        >
+                                            <Sparkles className="h-2 w-2 text-amber-500" />
+                                            <span>Google</span>
+                                        </Button>
+                                        {imagePreviewUrl && (
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => setIsImageTextStampOpen(true)}
+                                                className="h-6 flex-1 px-1 text-[8px] font-black border-indigo-500/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10 rounded-lg gap-0.5 shadow-xs"
+                                                title="Put text/flavour label on photo"
+                                            >
+                                                <Type className="h-2 w-2 text-indigo-500" />
+                                                <span>Text</span>
+                                            </Button>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* Names */}
@@ -751,233 +922,466 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                             </div>
                         </div>
 
-                        {/* Left Panel: Units & Packaging (5 cols) */}
-                        <div className="lg:col-span-5 apple-glass-card p-4 rounded-3xl border border-white/20 dark:border-white/10 flex flex-col min-h-[310px]">
-                            <div className="flex items-center justify-between pb-3 border-b border-white/15 dark:border-white/10">
-                                <Button 
-                                    type="button"
-                                    size="sm" 
-                                    onClick={handleOpenAddUnit}
-                                    className="h-8 px-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs gap-1 shadow-sm apple-glass-pill"
-                                >
-                                    <Plus className="h-3.5 w-3.5" />
-                                    {renderBoth('add_unit')}
-                                </Button>
-                                <div className="text-right">
-                                    <h4 className="text-xs font-black uppercase tracking-wider text-foreground flex items-center justify-end gap-1.5">
-                                        {units.length > 0 && (
-                                            <Badge variant="outline" className="text-[10px] font-black h-4 px-1.5 bg-primary/15 text-primary border-primary/30">
-                                                {units.length}
-                                            </Badge>
+                        {/* Left Panel: Flavours & Packaging Units (5 cols) */}
+                        <div className="lg:col-span-5 apple-glass-card p-4 rounded-3xl border border-white/20 dark:border-white/10 flex flex-col min-h-[340px]">
+                            {/* Tab Switcher & Action Header */}
+                            <div className="flex items-center justify-between pb-3 border-b border-white/15 dark:border-white/10 gap-2">
+                                <div className="flex bg-muted/80 p-0.5 rounded-xl border border-white/10 shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveSubTab('flavours')}
+                                        className={cn(
+                                            "px-2.5 py-1 rounded-lg text-[10.5px] font-black transition-all flex items-center gap-1",
+                                            activeSubTab === 'flavours'
+                                                ? "bg-primary text-white shadow-xs"
+                                                : "text-muted-foreground hover:text-foreground"
                                         )}
-                                        {renderBoth('product_units')}
-                                        <Boxes className="h-4 w-4 text-primary" />
-                                    </h4>
-                                    <span className="text-[10px] text-muted-foreground">
-                                        Box, Case, Pack pricing
-                                    </span>
+                                    >
+                                        <span>Flavours</span>
+                                        {flavours.length > 0 && (
+                                            <span className="h-4 min-w-[16px] px-1 rounded-full text-[9px] font-black bg-white/20 text-white flex items-center justify-center">
+                                                {flavours.length}
+                                            </span>
+                                        )}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveSubTab('units')}
+                                        className={cn(
+                                            "px-2.5 py-1 rounded-lg text-[10.5px] font-black transition-all flex items-center gap-1",
+                                            activeSubTab === 'units'
+                                                ? "bg-primary text-white shadow-xs"
+                                                : "text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
+                                        <span>Box / Units</span>
+                                        {units.length > 0 && (
+                                            <span className="h-4 min-w-[16px] px-1 rounded-full text-[9px] font-black bg-white/20 text-white flex items-center justify-center">
+                                                {units.length}
+                                            </span>
+                                        )}
+                                    </button>
                                 </div>
+
+                                {activeSubTab === 'flavours' ? (
+                                    <Button 
+                                        type="button"
+                                        size="sm" 
+                                        onClick={handleOpenAddFlavour}
+                                        className="h-8 px-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs gap-1 shadow-sm apple-glass-pill"
+                                    >
+                                        <Plus className="h-3.5 w-3.5" />
+                                        Add Flavour
+                                    </Button>
+                                ) : (
+                                    <Button 
+                                        type="button"
+                                        size="sm" 
+                                        onClick={handleOpenAddUnit}
+                                        className="h-8 px-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs gap-1 shadow-sm apple-glass-pill"
+                                    >
+                                        <Plus className="h-3.5 w-3.5" />
+                                        {renderBoth('add_unit')}
+                                    </Button>
+                                )}
                             </div>
 
-                            {/* Inline Unit Form */}
-                            {isUnitFormOpen && (
-                                <div className="p-3 apple-glass-card border border-primary/40 rounded-2xl space-y-3 mt-3 animate-in fade-in-50 duration-150 shadow-sm">
-                                    <div className="flex items-center justify-between border-b border-white/15 dark:border-white/10 pb-1.5">
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => setIsUnitFormOpen(false)}
-                                            className="h-6 w-6 rounded-md text-muted-foreground hover:text-foreground"
-                                        >
-                                            <X className="h-3.5 w-3.5" />
-                                        </Button>
-                                        <span className="text-[11px] font-black uppercase text-primary tracking-wider">
-                                            {editingUnitIndex !== null ? renderBoth('edit_unit') : renderBoth('add_unit')}
-                                        </span>
-                                    </div>
+                            {/* TAB 1: FLAVOURS & ALTERNATE BARCODES */}
+                            {activeSubTab === 'flavours' && (
+                                <div className="flex-1 flex flex-col">
+                                    {/* Inline Flavour Form */}
+                                    {isFlavourFormOpen && (
+                                        <div className="p-3 apple-glass-card border border-primary/40 rounded-2xl space-y-2.5 mt-3 animate-in fade-in-50 duration-150 shadow-sm">
+                                            <div className="flex items-center justify-between border-b border-white/15 dark:border-white/10 pb-1.5">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => setIsFlavourFormOpen(false)}
+                                                    className="h-6 w-6 rounded-md text-muted-foreground hover:text-foreground"
+                                                >
+                                                    <X className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <span className="text-[11px] font-black uppercase text-primary tracking-wider">
+                                                    {editingFlavourIndex !== null ? 'Edit Flavour' : 'Add Flavour / Alternate Barcode'}
+                                                </span>
+                                            </div>
 
-                                    {/* Quick Preset Pills */}
-                                    <div className="flex flex-wrap gap-1 justify-end">
-                                        {['Box', 'Case', 'Pack', 'Carton', 'Dozen'].map((preset) => (
-                                            <button
-                                                key={preset}
-                                                type="button"
-                                                onClick={() => setUnitForm(prev => ({ ...prev, name: preset }))}
-                                                className={cn(
-                                                    "px-2.5 py-0.5 rounded-lg text-[10px] font-bold border transition-all apple-glass-pill",
-                                                    (unitForm.name || '').toLowerCase() === preset.toLowerCase()
-                                                        ? "bg-primary text-white border-primary shadow-xs"
-                                                        : "bg-white/40 dark:bg-white/10 text-muted-foreground border-white/20 hover:border-primary/40 hover:text-foreground"
-                                                )}
-                                            >
-                                                {preset}
-                                            </button>
-                                        ))}
-                                    </div>
+                                            {/* Quick Preset Chips */}
+                                            <div className="flex flex-wrap gap-1 justify-end">
+                                                {['Chocolate', 'Vanilla', 'Strawberry', 'Lemon', 'Orange', 'Spicy', 'Original', 'Mint'].map((preset) => (
+                                                    <button
+                                                        key={preset}
+                                                        type="button"
+                                                        onClick={() => setFlavourForm(prev => ({ ...prev, name: preset }))}
+                                                        className={cn(
+                                                            "px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all apple-glass-pill",
+                                                            (flavourForm.name || '').toLowerCase() === preset.toLowerCase()
+                                                                ? "bg-primary text-white border-primary shadow-xs"
+                                                                : "bg-white/40 dark:bg-white/10 text-muted-foreground border-white/20 hover:border-primary/40 hover:text-foreground"
+                                                        )}
+                                                    >
+                                                        {preset}
+                                                    </button>
+                                                ))}
+                                            </div>
 
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div className="space-y-1">
-                                            <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
-                                                {renderBoth('unit_name')}*
-                                            </Label>
-                                            <Input
-                                                dir="ltr"
-                                                value={unitForm.name}
-                                                onChange={(e) => setUnitForm(prev => ({ ...prev, name: e.target.value }))}
-                                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
-                                                placeholder="e.g. Box"
-                                                className="h-9 apple-glass-input rounded-xl text-left font-bold text-xs"
-                                            />
-                                        </div>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div className="space-y-1">
+                                                    <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
+                                                        Flavour / Scent Name*
+                                                    </Label>
+                                                    <Input
+                                                        dir="ltr"
+                                                        value={flavourForm.name}
+                                                        onChange={(e) => setFlavourForm(prev => ({ ...prev, name: e.target.value }))}
+                                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveFlavour(); } }}
+                                                        placeholder="e.g. Chocolate"
+                                                        className="h-9 apple-glass-input rounded-xl text-left font-bold text-xs"
+                                                        autoFocus
+                                                    />
+                                                </div>
 
-                                        <div className="space-y-1">
-                                            <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
-                                                {renderBoth('conversion_factor')}*
-                                            </Label>
-                                            <Input
-                                                dir="ltr"
-                                                type="number"
-                                                value={unitForm.conversion_factor}
-                                                onChange={(e) => setUnitForm(prev => ({ ...prev, conversion_factor: e.target.value }))}
-                                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
-                                                placeholder="12"
-                                                className="h-9 apple-glass-input rounded-xl text-left font-mono font-bold text-xs"
-                                            />
-                                        </div>
-                                    </div>
+                                                <div className="space-y-1">
+                                                    <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
+                                                        Price (Optional)
+                                                    </Label>
+                                                    <Input
+                                                        dir="ltr"
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={flavourForm.price}
+                                                        onChange={(e) => setFlavourForm(prev => ({ ...prev, price: e.target.value }))}
+                                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveFlavour(); } }}
+                                                        placeholder={editedProduct.price ? String(editedProduct.price) : '0.00'}
+                                                        className="h-9 apple-glass-input rounded-xl text-left font-mono font-bold text-xs text-primary"
+                                                    />
+                                                </div>
+                                            </div>
 
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div className="space-y-1">
-                                            <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
-                                                {renderBoth('unit_price')} ({settings?.shop?.currency || 'MVR'})*
-                                            </Label>
-                                            <Input
-                                                dir="ltr"
-                                                type="number"
-                                                step="0.01"
-                                                value={unitForm.price}
-                                                onChange={(e) => setUnitForm(prev => ({ ...prev, price: e.target.value }))}
-                                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
-                                                placeholder="0.00"
-                                                className="h-9 apple-glass-input rounded-xl text-left font-mono font-bold text-xs text-primary"
-                                            />
-                                        </div>
+                                            <div className="space-y-1">
+                                                <div className="flex items-center justify-between">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={generateFlavourBarcode}
+                                                        className="h-5 px-1.5 text-[9px] font-black text-primary border-primary/30 hover:bg-primary/10 rounded-md gap-0.5"
+                                                    >
+                                                        <Sparkles className="h-2.5 w-2.5" />
+                                                        <span>Auto Barcode</span>
+                                                    </Button>
+                                                    <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
+                                                        Flavour Barcode
+                                                    </Label>
+                                                </div>
+                                                <Input
+                                                    dir="ltr"
+                                                    value={flavourForm.barcode}
+                                                    onChange={(e) => setFlavourForm(prev => ({ ...prev, barcode: e.target.value }))}
+                                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveFlavour(); } }}
+                                                    placeholder="Scan flavour barcode or auto-generate"
+                                                    className="h-9 apple-glass-input rounded-xl text-left font-mono text-[11px]"
+                                                />
+                                            </div>
 
-                                        <div className="space-y-1">
-                                            <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
-                                                {renderBoth('unit_barcode')}
-                                            </Label>
-                                            <Input
-                                                dir="ltr"
-                                                value={unitForm.barcode}
-                                                onChange={(e) => setUnitForm(prev => ({ ...prev, barcode: e.target.value }))}
-                                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
-                                                placeholder="Optional"
-                                                className="h-9 apple-glass-input rounded-xl text-left font-mono text-[11px]"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {parseFloat(unitForm.price) > 0 && parseFloat(unitForm.conversion_factor) > 0 && (
-                                        <div className="p-1.5 rounded-xl bg-white/40 dark:bg-white/10 text-[10px] text-muted-foreground text-center font-mono border border-white/10">
-                                            = {settings?.shop?.currency || 'MVR'} {(parseFloat(unitForm.price) / parseFloat(unitForm.conversion_factor)).toFixed(2)} / pc
+                                            <div className="flex justify-end gap-1.5 pt-1">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => setIsFlavourFormOpen(false)}
+                                                    className="h-8 px-3 rounded-lg text-xs font-bold apple-glass-pill"
+                                                >
+                                                    Cancel
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    onClick={handleSaveFlavour}
+                                                    className="h-8 px-4 rounded-xl bg-primary text-white text-xs font-black apple-glass-pill"
+                                                >
+                                                    <Check className="h-3 w-3 mr-1" />
+                                                    {editingFlavourIndex !== null ? 'Update Flavour' : 'Save Flavour'}
+                                                </Button>
+                                            </div>
                                         </div>
                                     )}
 
-                                    <div className="flex justify-end gap-1.5 pt-1">
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => setIsUnitFormOpen(false)}
-                                            className="h-8 px-3 rounded-lg text-xs font-bold apple-glass-pill"
-                                        >
-                                            {renderBoth('cancel')}
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            onClick={handleSaveUnit}
-                                            className="h-8 px-4 rounded-xl bg-primary text-white text-xs font-black apple-glass-pill"
-                                        >
-                                            <Check className="h-3 w-3 mr-1" />
-                                            {editingUnitIndex !== null ? 'Update' : 'Save Unit'}
-                                        </Button>
+                                    {/* Flavours List */}
+                                    <div className="flex-1 mt-3 space-y-2 overflow-y-auto max-h-[260px] custom-scrollbar">
+                                        {flavours.length > 0 ? (
+                                            flavours.map((f, index) => {
+                                                const price = f.price !== undefined ? Number(f.price) : Number(editedProduct.price || 0);
+                                                return (
+                                                    <div
+                                                        key={index}
+                                                        className="p-2.5 apple-glass-card border border-white/20 dark:border-white/10 hover:border-primary/40 rounded-2xl flex items-center justify-between gap-2 transition-all shadow-xs"
+                                                    >
+                                                        <div className="flex items-center gap-0.5">
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => handleEditFlavour(index)}
+                                                                className="h-7 w-7 rounded-lg text-blue-400 hover:bg-blue-500/10"
+                                                                title="Edit flavour"
+                                                            >
+                                                                <Pencil className="h-3 w-3" />
+                                                            </Button>
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => handleDeleteFlavour(index)}
+                                                                className="h-7 w-7 rounded-lg text-red-400 hover:bg-red-500/10"
+                                                                title="Delete flavour"
+                                                            >
+                                                                <Trash2 className="h-3 w-3" />
+                                                            </Button>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-2.5 flex-1 justify-end text-right">
+                                                            <div className="text-left font-mono">
+                                                                <span className="text-xs font-black text-primary block">
+                                                                    {settings?.shop?.currency || 'MVR'} {price.toFixed(2)}
+                                                                </span>
+                                                                {f.barcode && (
+                                                                    <span className="text-[9px] text-muted-foreground font-mono block">
+                                                                        {f.barcode}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <Badge className="bg-primary/20 text-primary border-primary/30 text-[10.5px] font-black uppercase tracking-wider px-2 py-0.5">
+                                                                    {f.name}
+                                                                </Badge>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                        ) : (
+                                            !isFlavourFormOpen && (
+                                                <div className="h-full min-h-[160px] flex flex-col items-center justify-center p-4 border border-dashed border-white/20 rounded-2xl bg-white/10 dark:bg-white/5 text-center">
+                                                    <Tag className="h-6 w-6 text-muted-foreground/40 mb-1.5" />
+                                                    <p className="text-xs font-bold text-muted-foreground">
+                                                        No flavours added yet
+                                                    </p>
+                                                    <p className="text-[10px] text-muted-foreground/60 mt-1 max-w-[220px]">
+                                                        Have multiple flavours (e.g. Chocolate, Vanilla, Strawberry)? Add them here with their barcodes without creating duplicate products!
+                                                    </p>
+                                                </div>
+                                            )
+                                        )}
                                     </div>
                                 </div>
                             )}
 
-                            {/* Units List */}
-                            <div className="flex-1 mt-3 space-y-2 overflow-y-auto max-h-[260px] custom-scrollbar">
-                                {units.length > 0 ? (
-                                    units.map((u, index) => {
-                                        const conv = Number(u.conversion_factor || 0);
-                                        const price = Number(u.price || 0);
-                                        const perPiece = conv > 0 ? (price / conv).toFixed(2) : '0.00';
-                                        return (
-                                            <div
-                                                key={index}
-                                                className="p-2.5 apple-glass-card border border-white/20 dark:border-white/10 hover:border-primary/40 rounded-2xl flex items-center justify-between gap-2 transition-all shadow-xs"
-                                            >
-                                                <div className="flex items-center gap-0.5">
-                                                    <Button
+                            {/* TAB 2: PACKAGING UNITS (BOX / CASE / PACK) */}
+                            {activeSubTab === 'units' && (
+                                <div className="flex-1 flex flex-col">
+                                    {/* Inline Unit Form */}
+                                    {isUnitFormOpen && (
+                                        <div className="p-3 apple-glass-card border border-primary/40 rounded-2xl space-y-3 mt-3 animate-in fade-in-50 duration-150 shadow-sm">
+                                            <div className="flex items-center justify-between border-b border-white/15 dark:border-white/10 pb-1.5">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => setIsUnitFormOpen(false)}
+                                                    className="h-6 w-6 rounded-md text-muted-foreground hover:text-foreground"
+                                                >
+                                                    <X className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <span className="text-[11px] font-black uppercase text-primary tracking-wider">
+                                                    {editingUnitIndex !== null ? renderBoth('edit_unit') : renderBoth('add_unit')}
+                                                </span>
+                                            </div>
+
+                                            {/* Quick Preset Pills */}
+                                            <div className="flex flex-wrap gap-1 justify-end">
+                                                {['Box', 'Case', 'Pack', 'Carton', 'Dozen'].map((preset) => (
+                                                    <button
+                                                        key={preset}
                                                         type="button"
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => handleEditUnit(index)}
-                                                        className="h-7 w-7 rounded-lg text-blue-400 hover:bg-blue-500/10"
+                                                        onClick={() => setUnitForm(prev => ({ ...prev, name: preset }))}
+                                                        className={cn(
+                                                            "px-2.5 py-0.5 rounded-lg text-[10px] font-bold border transition-all apple-glass-pill",
+                                                            (unitForm.name || '').toLowerCase() === preset.toLowerCase()
+                                                                ? "bg-primary text-white border-primary shadow-xs"
+                                                                : "bg-white/40 dark:bg-white/10 text-muted-foreground border-white/20 hover:border-primary/40 hover:text-foreground"
+                                                        )}
                                                     >
-                                                        <Pencil className="h-3 w-3" />
-                                                    </Button>
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => handleDeleteUnit(index)}
-                                                        className="h-7 w-7 rounded-lg text-red-400 hover:bg-red-500/10"
-                                                    >
-                                                        <Trash2 className="h-3 w-3" />
-                                                    </Button>
+                                                        {preset}
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div className="space-y-1">
+                                                    <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
+                                                        {renderBoth('unit_name')}*
+                                                    </Label>
+                                                    <Input
+                                                        dir="ltr"
+                                                        value={unitForm.name}
+                                                        onChange={(e) => setUnitForm(prev => ({ ...prev, name: e.target.value }))}
+                                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
+                                                        placeholder="e.g. Box"
+                                                        className="h-9 apple-glass-input rounded-xl text-left font-bold text-xs"
+                                                    />
                                                 </div>
 
-                                                <div className="flex items-center gap-2.5 flex-1 justify-end text-right">
-                                                    <div className="text-left font-mono">
-                                                        <span className="text-xs font-black text-primary block">
-                                                            {settings?.shop?.currency || 'MVR'} {price.toFixed(2)}
-                                                        </span>
-                                                        <span className="text-[9px] text-muted-foreground block">
-                                                            ~ {settings?.shop?.currency || 'MVR'} {perPiece} / pc
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <div className="flex items-center gap-1 justify-end">
-                                                            <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-primary/10 text-primary border-primary/30 px-1.5 py-0">
-                                                                {u.name}
-                                                            </Badge>
-                                                        </div>
-                                                        <span className="text-[10px] text-muted-foreground font-bold block mt-0.5">
-                                                            {u.conversion_factor} pcs
-                                                        </span>
-                                                    </div>
+                                                <div className="space-y-1">
+                                                    <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
+                                                        {renderBoth('conversion_factor')}*
+                                                    </Label>
+                                                    <Input
+                                                        dir="ltr"
+                                                        type="number"
+                                                        value={unitForm.conversion_factor}
+                                                        onChange={(e) => setUnitForm(prev => ({ ...prev, conversion_factor: e.target.value }))}
+                                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
+                                                        placeholder="12"
+                                                        className="h-9 apple-glass-input rounded-xl text-left font-mono font-bold text-xs"
+                                                    />
                                                 </div>
                                             </div>
-                                        );
-                                    })
-                                ) : (
-                                    !isUnitFormOpen && (
-                                        <div className="h-full min-h-[160px] flex flex-col items-center justify-center p-4 border border-dashed border-white/20 rounded-2xl bg-white/10 dark:bg-white/5 text-center">
-                                            <Layers className="h-6 w-6 text-muted-foreground/40 mb-1.5" />
-                                            <p className="text-xs font-bold text-muted-foreground">
-                                                {renderBoth('no_units_added')}
-                                            </p>
-                                            <p className="text-[10px] text-muted-foreground/60 mt-1 max-w-[220px]">
-                                                Click "+ Add Unit" to add wholesale/box pricing (Box, Case, Pack).
-                                            </p>
+
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div className="space-y-1">
+                                                    <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
+                                                        {renderBoth('unit_price')} ({settings?.shop?.currency || 'MVR'})*
+                                                    </Label>
+                                                    <Input
+                                                        dir="ltr"
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={unitForm.price}
+                                                        onChange={(e) => setUnitForm(prev => ({ ...prev, price: e.target.value }))}
+                                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
+                                                        placeholder="0.00"
+                                                        className="h-9 apple-glass-input rounded-xl text-left font-mono font-bold text-xs text-primary"
+                                                    />
+                                                </div>
+
+                                                <div className="space-y-1">
+                                                    <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
+                                                        {renderBoth('unit_barcode')}
+                                                    </Label>
+                                                    <Input
+                                                        dir="ltr"
+                                                        value={unitForm.barcode}
+                                                        onChange={(e) => setUnitForm(prev => ({ ...prev, barcode: e.target.value }))}
+                                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
+                                                        placeholder="Optional"
+                                                        className="h-9 apple-glass-input rounded-xl text-left font-mono text-[11px]"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {parseFloat(unitForm.price) > 0 && parseFloat(unitForm.conversion_factor) > 0 && (
+                                                <div className="p-1.5 rounded-xl bg-white/40 dark:bg-white/10 text-[10px] text-muted-foreground text-center font-mono border border-white/10">
+                                                    = {settings?.shop?.currency || 'MVR'} {(parseFloat(unitForm.price) / parseFloat(unitForm.conversion_factor)).toFixed(2)} / pc
+                                                </div>
+                                            )}
+
+                                            <div className="flex justify-end gap-1.5 pt-1">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => setIsUnitFormOpen(false)}
+                                                    className="h-8 px-3 rounded-lg text-xs font-bold apple-glass-pill"
+                                                >
+                                                    {renderBoth('cancel')}
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    onClick={handleSaveUnit}
+                                                    className="h-8 px-4 rounded-xl bg-primary text-white text-xs font-black apple-glass-pill"
+                                                >
+                                                    <Check className="h-3 w-3 mr-1" />
+                                                    {editingUnitIndex !== null ? 'Update' : 'Save Unit'}
+                                                </Button>
+                                            </div>
                                         </div>
-                                    )
-                                )}
-                            </div>
+                                    )}
+
+                                    {/* Units List */}
+                                    <div className="flex-1 mt-3 space-y-2 overflow-y-auto max-h-[260px] custom-scrollbar">
+                                        {units.length > 0 ? (
+                                            units.map((u, index) => {
+                                                const conv = Number(u.conversion_factor || 0);
+                                                const price = Number(u.price || 0);
+                                                const perPiece = conv > 0 ? (price / conv).toFixed(2) : '0.00';
+                                                return (
+                                                    <div
+                                                        key={index}
+                                                        className="p-2.5 apple-glass-card border border-white/20 dark:border-white/10 hover:border-primary/40 rounded-2xl flex items-center justify-between gap-2 transition-all shadow-xs"
+                                                    >
+                                                        <div className="flex items-center gap-0.5">
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => handleEditUnit(index)}
+                                                                className="h-7 w-7 rounded-lg text-blue-400 hover:bg-blue-500/10"
+                                                            >
+                                                                <Pencil className="h-3 w-3" />
+                                                            </Button>
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => handleDeleteUnit(index)}
+                                                                className="h-7 w-7 rounded-lg text-red-400 hover:bg-red-500/10"
+                                                            >
+                                                                <Trash2 className="h-3 w-3" />
+                                                            </Button>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-2.5 flex-1 justify-end text-right">
+                                                            <div className="text-left font-mono">
+                                                                <span className="text-xs font-black text-primary block">
+                                                                    {settings?.shop?.currency || 'MVR'} {price.toFixed(2)}
+                                                                </span>
+                                                                <span className="text-[9px] text-muted-foreground block">
+                                                                    ~ {settings?.shop?.currency || 'MVR'} {perPiece} / pc
+                                                                </span>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <div className="flex items-center gap-1 justify-end">
+                                                                    <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-primary/10 text-primary border-primary/30 px-1.5 py-0">
+                                                                        {u.name}
+                                                                    </Badge>
+                                                                </div>
+                                                                <span className="text-[10px] text-muted-foreground font-bold block mt-0.5">
+                                                                    {u.conversion_factor} pcs
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                        ) : (
+                                            !isUnitFormOpen && (
+                                                <div className="h-full min-h-[160px] flex flex-col items-center justify-center p-4 border border-dashed border-white/20 rounded-2xl bg-white/10 dark:bg-white/5 text-center">
+                                                    <Layers className="h-6 w-6 text-muted-foreground/40 mb-1.5" />
+                                                    <p className="text-xs font-bold text-muted-foreground">
+                                                        {renderBoth('no_units_added')}
+                                                    </p>
+                                                    <p className="text-[10px] text-muted-foreground/60 mt-1 max-w-[220px]">
+                                                        Click "+ Add Unit" to add wholesale/box pricing (Box, Case, Pack).
+                                                    </p>
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -1015,6 +1419,18 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                 productName={editedProduct.name_en || editedProduct.name_dv || ''}
                 barcode={editedProduct.barcode || ''}
                 onSelectImage={handleOnlineImageSelect}
+            />
+        )}
+
+        {/* Text on Image Stamp Tool */}
+        {editedProduct && imagePreviewUrl && (
+            <ImageTextStampDialog
+                isOpen={isImageTextStampOpen}
+                onClose={() => setIsImageTextStampOpen(false)}
+                imageUrl={imagePreviewUrl}
+                productName={editedProduct.name_en || editedProduct.name_dv || ''}
+                flavourNames={flavours.map(f => f.name)}
+                onApplyImage={handleApplyStampedImage}
             />
         )}
         </>

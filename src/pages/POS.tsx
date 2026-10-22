@@ -26,6 +26,7 @@ import { useAuth } from '@/context/AuthContext';
 import { showSuccess, showError, showInfo } from '@/utils/toast';
 import LoyaltyRedemptionDialog from '@/components/LoyaltyRedemptionDialog';
 import UnitSelectionDialog from '@/components/UnitSelectionDialog';
+import FlavourSelectionDialog from '@/components/FlavourSelectionDialog';
 import CustomerAddDialog from '@/components/CustomerAddDialog';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from "@/components/ui/progress";
@@ -55,8 +56,8 @@ const CartQtyStepper = ({
   focusSearchBar
 }: {
   item: CartItem;
-  onUpdate: (id: string, delta: number, unit?: string) => void;
-  onSet: (id: string, qty: number, unit?: string) => void;
+  onUpdate: (id: string, delta: number, unit?: string, flavour?: string) => void;
+  onSet: (id: string, qty: number, unit?: string, flavour?: string) => void;
   isLast?: boolean;
   lastQtyInputRef?: React.RefObject<HTMLInputElement | null>;
   onFocus?: (e: React.FocusEvent<HTMLInputElement>) => void;
@@ -80,7 +81,7 @@ const CartQtyStepper = ({
       if (text !== '' && text !== '.') {
         const parsed = parseFloat(text);
         if (!isNaN(parsed) && parsed >= 0) {
-          onSet(item.id, parsed, item.selected_unit);
+          onSet(item.id, parsed, item.selected_unit, item.selected_flavour);
         }
       }
     }
@@ -91,10 +92,10 @@ const CartQtyStepper = ({
     const parsed = parseFloat(localVal);
     if (isNaN(parsed) || parsed <= 0) {
       setLocalVal('1');
-      onSet(item.id, 1, item.selected_unit);
+      onSet(item.id, 1, item.selected_unit, item.selected_flavour);
     } else {
       setLocalVal(String(parsed));
-      onSet(item.id, parsed, item.selected_unit);
+      onSet(item.id, parsed, item.selected_unit, item.selected_flavour);
     }
   };
 
@@ -105,7 +106,7 @@ const CartQtyStepper = ({
         size="icon"
         type="button"
         className="h-5 w-5 text-muted-foreground hover:text-foreground rounded-full p-0 shrink-0"
-        onClick={() => onUpdate(item.id, -1, item.selected_unit)}
+        onClick={() => onUpdate(item.id, -1, item.selected_unit, item.selected_flavour)}
       >
         <Minus className="h-3 w-3" />
       </Button>
@@ -141,7 +142,7 @@ const CartQtyStepper = ({
         size="icon"
         type="button"
         className="h-5 w-5 text-muted-foreground hover:text-foreground rounded-full p-0 shrink-0"
-        onClick={() => onUpdate(item.id, 1, item.selected_unit)}
+        onClick={() => onUpdate(item.id, 1, item.selected_unit, item.selected_flavour)}
       >
         <Plus className="h-3 w-3" />
       </Button>
@@ -247,6 +248,8 @@ const POS = () => {
   const [selectedProductForExpiry, setSelectedProductForExpiry] = useState<Product | null>(null);
   const [isUnitSelectionDialogOpen, setIsUnitSelectionDialogOpen] = useState(false);
   const [productForUnitSelection, setProductForUnitSelection] = useState<Product | null>(null);
+  const [isFlavourSelectionDialogOpen, setIsFlavourSelectionDialogOpen] = useState(false);
+  const [productForFlavourSelection, setProductForFlavourSelection] = useState<Product | null>(null);
 
   const [splitStep, setSplitStep] = useState<1 | 2>(1);
   const [selectedSplitCustomerIds, setSelectedSplitCustomerIds] = useState<string[]>([]);
@@ -378,6 +381,7 @@ const POS = () => {
                          isAwaitingTransferDialogOpen || isPendingTransfersDialogOpen || 
                          isExpiryDialogOpen || isConfirmRemoveCartDialogOpen || isConfirmClearCartDialogOpen ||
                          isLoyaltyRedemptionDialogOpen || isUnitSelectionDialogOpen || 
+                         isFlavourSelectionDialogOpen ||
                          isAddCustomerDialogOpen;
   const isAnyModalOpenRef = useRef(isAnyModalOpen);
   useEffect(() => {
@@ -605,7 +609,7 @@ const POS = () => {
     }
   };
 
-  const handleProductSelection = (product: Product) => {
+  const handleProductSelection = (product: Product, bypassFlavourModal: boolean = false) => {
     // Immediately clear search if product was searched
     if (searchTerm) {
       setSearchTerm('');
@@ -628,17 +632,29 @@ const POS = () => {
       }
     }
 
+    // If product has multiple flavours and we are not bypassing, prompt user with flavour picker
+    if (!bypassFlavourModal && product.flavours && product.flavours.length > 0) {
+      setProductForFlavourSelection(product);
+      setIsFlavourSelectionDialogOpen(true);
+      return;
+    }
+
     // Add with default unit (Piece) directly to cart - unit can be switched anytime in the cart
     addToCart(product);
     focusSearchBar();
   };
 
-  const addToCart = (product: Product, discountFactor: number = 1, selectedUnit?: string) => {
+  const addToCart = (product: Product, discountFactor: number = 1, selectedUnit?: string, selectedFlavour?: string) => {
     const unitName = selectedUnit || 'Piece';
     let price = product.price * discountFactor;
     let conversion = 1;
 
-    if (selectedUnit && selectedUnit !== 'Piece') {
+    if (selectedFlavour) {
+      const fl = product.flavours?.find(f => f.name === selectedFlavour);
+      if (fl && fl.price) {
+        price = fl.price * discountFactor;
+      }
+    } else if (selectedUnit && selectedUnit !== 'Piece') {
       const unit = product.units?.find(u => u.name === selectedUnit);
       if (unit) {
         price = unit.price * discountFactor;
@@ -647,12 +663,20 @@ const POS = () => {
     }
 
     updateActiveCart(prevCart => {
-      const existingItem = prevCart.items.find((item) => item.id === product.id && (item.selected_unit === unitName));
+      const existingItem = prevCart.items.find((item) => 
+        item.id === product.id && 
+        (item.selected_unit || 'Piece') === unitName &&
+        (item.selected_flavour || undefined) === (selectedFlavour || undefined)
+      );
       if (existingItem) {
         return {
           ...prevCart,
           items: prevCart.items.map((item) =>
-            item.id === product.id && (item.selected_unit === unitName) ? { ...item, qty: item.qty + 1 } : item
+            item.id === product.id && 
+            (item.selected_unit || 'Piece') === unitName &&
+            (item.selected_flavour || undefined) === (selectedFlavour || undefined)
+              ? { ...item, qty: item.qty + 1 } 
+              : item
           ),
         };
       } else {
@@ -665,6 +689,7 @@ const POS = () => {
               qty: 1,
               price: price,
               selected_unit: unitName,
+              selected_flavour: selectedFlavour,
               unit_price: price,
               unit_conversion: conversion
             }
@@ -781,35 +806,35 @@ const POS = () => {
     showSuccess(t('unit_switched_to', { defaultValue: `Unit switched to ${newUnitName}` }));
   };
 
-  const updateCartItemQty = (id: string, delta: number, selectedUnit?: string) => {
+  const updateCartItemQty = (id: string, delta: number, selectedUnit?: string, selectedFlavour?: string) => {
     const unitName = selectedUnit || 'Piece';
     updateActiveCart(prevCart => ({
       ...prevCart,
       items: prevCart.items.map((item) =>
-        item.id === id && (item.selected_unit || 'Piece') === unitName
+        item.id === id && (item.selected_unit || 'Piece') === unitName && (item.selected_flavour || undefined) === (selectedFlavour || undefined)
           ? { ...item, qty: Math.max(0, parseFloat((item.qty + delta).toFixed(4))) }
           : item
       ).filter(item => item.qty > 0),
     }));
   };
 
-  const setCartItemQty = (id: string, qty: number, selectedUnit?: string) => {
+  const setCartItemQty = (id: string, qty: number, selectedUnit?: string, selectedFlavour?: string) => {
     const unitName = selectedUnit || 'Piece';
     updateActiveCart(prevCart => ({
       ...prevCart,
       items: prevCart.items.map((item) =>
-        item.id === id && (item.selected_unit || 'Piece') === unitName
+        item.id === id && (item.selected_unit || 'Piece') === unitName && (item.selected_flavour || undefined) === (selectedFlavour || undefined)
           ? { ...item, qty: Math.max(0, qty) }
           : item
       ),
     }));
   };
 
-  const removeFromCart = (id: string, selectedUnit?: string) => {
+  const removeFromCart = (id: string, selectedUnit?: string, selectedFlavour?: string) => {
     const unitName = selectedUnit || 'Piece';
     updateActiveCart(prevCart => ({
       ...prevCart,
-      items: prevCart.items.filter(item => !(item.id === id && (item.selected_unit || 'Piece') === unitName)),
+      items: prevCart.items.filter(item => !(item.id === id && (item.selected_unit || 'Piece') === unitName && (item.selected_flavour || undefined) === (selectedFlavour || undefined))),
     }));
   };
 
@@ -888,11 +913,13 @@ const POS = () => {
 
   const filteredCatalogueProducts = useMemo(() => {
     const list = products.filter(product => {
+      const termLower = searchTerm.toLowerCase();
       const matchesSearch = !searchTerm ||
-        product.name_dv.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.name_dv.toLowerCase().includes(termLower) ||
+        product.name_en.toLowerCase().includes(termLower) ||
         product.barcode.includes(searchTerm) ||
-        product.item_code.toLowerCase().includes(searchTerm.toLowerCase());
+        product.item_code.toLowerCase().includes(termLower) ||
+        product.flavours?.some(f => f.name.toLowerCase().includes(termLower) || (f.barcode && f.barcode.includes(searchTerm)));
 
       const matchesCategory = selectedCategory === 'ALL' || product.category === selectedCategory;
       const matchesFavorite = !showFavoritesOnly || favoriteProductIds.includes(product.id);
@@ -926,10 +953,16 @@ const POS = () => {
     const term = rawTerm.toLowerCase();
     const strippedTerm = term.replace(/^0+/, '');
     let matchedUnit: string | undefined = undefined;
+    let matchedFlavour: string | undefined = undefined;
 
-    // 1. Try exact barcode match (product barcode or unit barcode)
+    // 1. Try exact barcode match (product barcode, flavour barcode, or unit barcode)
     let exactMatch = products.find(p => {
       if (p.barcode && p.barcode.trim() === rawTerm) return true;
+      const foundFlavour = p.flavours?.find(f => f.barcode && f.barcode.trim() === rawTerm);
+      if (foundFlavour) {
+        matchedFlavour = foundFlavour.name;
+        return true;
+      }
       const foundUnit = p.units?.find(u => u.barcode && u.barcode.trim() === rawTerm);
       if (foundUnit) {
         matchedUnit = foundUnit.name;
@@ -960,14 +993,16 @@ const POS = () => {
     }
 
     if (exactMatch) {
-      if (matchedUnit) {
+      if (matchedFlavour) {
+        addToCart(exactMatch, 1, 'Piece', matchedFlavour);
+      } else if (matchedUnit) {
         addToCart(exactMatch, 1, matchedUnit);
       } else {
-        handleProductSelection(exactMatch);
+        handleProductSelection(exactMatch, true);
       }
       playScanSuccessSound();
       setSearchTerm('');
-      showSuccess(t('product_added_via_barcode', { name: exactMatch.name_dv }));
+      showSuccess(t('product_added_via_barcode', { name: `${exactMatch.name_dv}${matchedFlavour ? ` (${matchedFlavour})` : ''}` }));
       focusSearchBar();
     } else {
       playScanErrorSound();
@@ -1134,15 +1169,19 @@ const POS = () => {
 
   const handlePrintReceipt = (sale: Sale | any) => {
     const currency = settings.shop.currency;
-    const itemsHtml = sale.items.map((item: any) => `
+    const itemsHtml = sale.items.map((item: any) => {
+      const unitTag = item.selected_unit && item.selected_unit !== 'Piece' ? ` (${item.selected_unit})` : '';
+      const flavourTag = item.selected_flavour ? ` [${item.selected_flavour}]` : '';
+      return `
       <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
         <div style="flex: 1; text-align: left;">
-          ${item.name_dv || item.name_en || ''}${item.selected_unit && item.selected_unit !== 'Piece' ? ` (${item.selected_unit})` : ''}<br/><small style="color: #444;">${item.name_en || ''}${item.selected_unit && item.selected_unit !== 'Piece' ? ` (${item.selected_unit})` : ''}</small>
+          ${item.name_dv || item.name_en || ''}${flavourTag}${unitTag}<br/><small style="color: #444;">${item.name_en || ''}${flavourTag}${unitTag}</small>
         </div>
         <div style="width: 60px; text-align: right;">${item.qty} x ${item.price.toFixed(2)}</div>
         <div style="width: 70px; text-align: right;">${(item.qty * item.price).toFixed(2)}</div>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
     const gstRate = settings.shop.taxRate || 0;
     const subtotalPrint = sale.grandTotal / (1 + (gstRate / 100));
@@ -1609,6 +1648,11 @@ const POS = () => {
                         🔥 HOT
                       </Badge>
                     )}
+                    {product.flavours && product.flavours.length > 0 && (
+                      <Badge className="absolute bottom-1.5 left-1.5 bg-amber-500/90 text-black border-none text-[8px] font-black px-1.5 py-0 rounded-full shadow-md font-mono">
+                        ✨ {product.flavours.length} Flavours
+                      </Badge>
+                    )}
                   </div>
 
                   <div className="text-center px-0.5">
@@ -1844,7 +1888,7 @@ const POS = () => {
             <div className="space-y-1.5 pb-4">
               {activeCart.items.map((item, idx) => (
                 <div
-                  key={`${item.id}-${item.selected_unit || 'Piece'}`}
+                  key={`${item.id}-${item.selected_unit || 'Piece'}-${item.selected_flavour || 'base'}`}
                   className="group relative bg-card/70 hover:bg-card border border-border/80 hover:border-border rounded-xl p-2 sm:p-2.5 transition-all shadow-sm flex items-center justify-between gap-2.5"
                 >
                   {/* Left Side: [Trash] [Total MVR] [Unit Price MVR] [Unit Pill] [- Qty +] */}
@@ -1852,7 +1896,7 @@ const POS = () => {
                     {/* Trash Button */}
                     <button
                       type="button"
-                      onClick={() => removeFromCart(item.id, item.selected_unit)}
+                      onClick={() => removeFromCart(item.id, item.selected_unit, item.selected_flavour)}
                       className="text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors p-1 rounded-lg shrink-0 -ml-1"
                       title={t('remove_item') || 'Remove Item'}
                     >
@@ -1927,6 +1971,13 @@ const POS = () => {
                       );
                     })()}
 
+                    {/* Flavour Tag Pill */}
+                    {item.selected_flavour && (
+                      <span className="text-[9px] sm:text-[10px] font-mono font-bold bg-amber-500/15 text-amber-500 dark:text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                        ✨ {item.selected_flavour}
+                      </span>
+                    )}
+
                     {/* Stepper Capsule: [- 0.2 +] */}
                     <CartQtyStepper
                       item={item}
@@ -1941,7 +1992,12 @@ const POS = () => {
 
                   {/* Right Side: Product Names and Item Code Badge */}
                   <div className="flex-1 text-right min-w-0 pl-2">
-                    <div className="flex items-center justify-end gap-1.5 leading-tight">
+                    <div className="flex items-center justify-end gap-1.5 leading-tight flex-wrap">
+                      {item.selected_flavour && (
+                        <span className="text-[10px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.2 rounded tracking-wide shrink-0">
+                          {item.selected_flavour}
+                        </span>
+                      )}
                       {item.item_code && (
                         <span className="font-mono text-[10px] font-black text-primary bg-primary/10 border border-primary/25 px-1.5 py-0.5 rounded-md tracking-wider shrink-0 select-all">
                           #{item.item_code}
@@ -2040,6 +2096,23 @@ const POS = () => {
         onClose={() => setIsUnitSelectionDialogOpen(false)}
         product={productForUnitSelection}
         onSelect={(unit) => handleUnitSelection(unit ? unit.name : 'Piece')}
+      />
+
+      <FlavourSelectionDialog
+        isOpen={isFlavourSelectionDialogOpen}
+        onClose={() => {
+          setIsFlavourSelectionDialogOpen(false);
+          setProductForFlavourSelection(null);
+        }}
+        product={productForFlavourSelection}
+        onSelect={(flavourName) => {
+          if (productForFlavourSelection) {
+            addToCart(productForFlavourSelection, 1, 'Piece', flavourName);
+          }
+          setIsFlavourSelectionDialogOpen(false);
+          setProductForFlavourSelection(null);
+          focusSearchBar();
+        }}
       />
 
       <Dialog open={isCashDialogOpen} onOpenChange={setIsCashDialogOpen}>

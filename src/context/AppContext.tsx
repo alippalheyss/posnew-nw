@@ -16,6 +16,21 @@ import {
 } from '@/services/telegramService';
 import { putStoreBatch, getStoreAll, STORES } from '@/lib/indexedDb';
 
+export interface ProductFlavour {
+  id?: string;
+  name: string;
+  barcode: string;
+  price?: number;
+}
+
+export interface ProductUnit {
+  name: string;
+  price: number;
+  conversion_factor: number;
+  barcode: string;
+  is_flavour?: boolean;
+}
+
 export interface Product {
   id: string;
   name_dv: string;
@@ -32,7 +47,8 @@ export interface Product {
   stock_godown: number;
   category: string;
   is_zero_tax: boolean;
-  units?: { name: string; price: number; conversion_factor: number; barcode: string }[];
+  units?: ProductUnit[];
+  flavours?: ProductFlavour[];
 }
 
 export interface Settlement {
@@ -78,6 +94,7 @@ export interface Customer {
 export interface CartItem extends Product {
   qty: number;
   selected_unit?: string;
+  selected_flavour?: string;
   unit_price?: number;
   unit_conversion?: number;
 }
@@ -1006,11 +1023,20 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           if (typeof units === 'string') {
             try { units = JSON.parse(units); } catch (e) { units = []; }
           }
+          const rawUnits = Array.isArray(units) ? units : [];
+          const packagingUnits = rawUnits.filter((u: any) => !u.is_flavour);
+          const flavours = rawUnits.filter((u: any) => !!u.is_flavour).map((f: any) => ({
+            id: f.id || f.barcode || f.name,
+            name: f.name,
+            barcode: f.barcode || '',
+            price: f.price
+          }));
           return {
             ...p,
             item_code: p.item_code !== undefined && p.item_code !== null ? String(p.item_code).trim() : '',
             barcode: p.barcode !== undefined && p.barcode !== null ? String(p.barcode).trim() : '',
-            units: Array.isArray(units) ? units : []
+            units: packagingUnits,
+            flavours: flavours
           };
         });
         setProducts(sanitizedProducts);
@@ -1201,11 +1227,20 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           if (typeof units === 'string') {
             try { units = JSON.parse(units); } catch (e) { units = []; }
           }
+          const rawUnits = Array.isArray(units) ? units : [];
+          const packagingUnits = rawUnits.filter((u: any) => !u.is_flavour);
+          const flavours = rawUnits.filter((u: any) => !!u.is_flavour).map((f: any) => ({
+            id: f.id || f.barcode || f.name,
+            name: f.name,
+            barcode: f.barcode || '',
+            price: f.price
+          }));
           return {
             ...p,
             item_code: p.item_code !== undefined && p.item_code !== null ? String(p.item_code).trim() : '',
             barcode: p.barcode !== undefined && p.barcode !== null ? String(p.barcode).trim() : '',
-            units: Array.isArray(units) ? units : []
+            units: packagingUnits,
+            flavours: flavours
           };
         });
         setProducts(sanitizedProducts);
@@ -3246,6 +3281,17 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         ? String(updatedProduct.barcode).trim()
         : '';
       
+      const combinedUnits = [
+        ...(updatedProduct.units || []).filter((u: any) => !u.is_flavour),
+        ...(updatedProduct.flavours || []).map((f: any) => ({
+          name: f.name,
+          barcode: f.barcode || '',
+          price: f.price !== undefined && f.price !== null && !isNaN(Number(f.price)) ? Number(f.price) : Number(updatedProduct.price || 0),
+          conversion_factor: 1,
+          is_flavour: true
+        }))
+      ];
+
       // Clean data for Supabase update - convert undefined to null and ensure numbers
       const cleanData: any = {
         name_dv: updatedProduct.name_dv,
@@ -3261,7 +3307,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         image: updatedProduct.image || '',
         cost_price: updatedProduct.cost_price ? Number(updatedProduct.cost_price) : null,
         last_purchase_date: updatedProduct.last_purchase_date || null,
-        units: updatedProduct.units || null,
+        units: combinedUnits.length > 0 ? combinedUnits : null,
         updated_at: new Date().toISOString()
       };
 
@@ -3336,6 +3382,17 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         barcode: barcode
       };
 
+      const combinedUnits = [
+        ...(productToStore.units || []).filter((u: any) => !u.is_flavour),
+        ...(productToStore.flavours || []).map((f: any) => ({
+          name: f.name,
+          barcode: f.barcode || '',
+          price: f.price !== undefined && f.price !== null && !isNaN(Number(f.price)) ? Number(f.price) : Number(productToStore.price || 0),
+          conversion_factor: 1,
+          is_flavour: true
+        }))
+      ];
+
       const cleanData: any = {
         id: finalId,
         name_dv: productToStore.name_dv,
@@ -3351,7 +3408,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         image: productToStore.image || '',
         cost_price: productToStore.cost_price ? Number(productToStore.cost_price) : null,
         last_purchase_date: productToStore.last_purchase_date || null,
-        units: productToStore.units || null
+        units: combinedUnits.length > 0 ? combinedUnits : null
       };
 
       let { error } = await supabase

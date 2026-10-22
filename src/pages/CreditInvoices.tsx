@@ -53,15 +53,19 @@ const CreditInvoices = () => {
 
   const handlePrintReceipt = (sale: Sale) => {
     const currency = settings.shop.currency;
-    const itemsHtml = sale.items.map((item: any) => `
+    const itemsHtml = sale.items.map((item: any) => {
+      const unitTag = item.selected_unit && item.selected_unit !== 'Piece' ? ` (${item.selected_unit})` : '';
+      const flavourTag = item.selected_flavour ? ` [${item.selected_flavour}]` : '';
+      return `
       <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
         <div style="flex: 1; text-align: left;">
-          ${item.name_dv || item.name_en || ''}${item.selected_unit && item.selected_unit !== 'Piece' ? ` (${item.selected_unit})` : ''}<br/><small style="color: #444;">${item.name_en || ''}${item.selected_unit && item.selected_unit !== 'Piece' ? ` (${item.selected_unit})` : ''}</small>
+          ${item.name_dv || item.name_en || ''}${flavourTag}${unitTag}<br/><small style="color: #444;">${item.name_en || ''}${flavourTag}${unitTag}</small>
         </div>
         <div style="width: 60px; text-align: right;">${item.qty} x ${item.price.toFixed(2)}</div>
         <div style="width: 70px; text-align: right;">${(item.qty * item.price).toFixed(2)}</div>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
     const gstRate = settings.shop.taxRate || 0;
     const subtotal = sale.grandTotal / (1 + (gstRate / 100));

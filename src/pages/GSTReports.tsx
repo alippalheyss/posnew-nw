@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Download, PlusCircle, Receipt, Building2, Calculator, ArrowUpRight, ArrowDownLeft, Landmark, X, ShoppingCart, Archive, Play, Trash2, Save, Package, FileText, Info, TrendingDown, TrendingUp, Smartphone, Pencil } from 'lucide-react';
+import { Download, PlusCircle, Receipt, Building2, Calculator, ArrowUpRight, ArrowDownLeft, Landmark, X, ShoppingCart, Archive, Play, Trash2, Save, Package, FileText, Info, TrendingDown, TrendingUp, Smartphone, Pencil, RefreshCw } from 'lucide-react';
 import { useAppContext, Purchase, Vendor, PurchaseItem, Product } from '@/context/AppContext';
 import { Badge } from '@/components/ui/badge';
 import { showSuccess, showError } from '@/utils/toast';
@@ -22,9 +22,10 @@ import * as XLSX from 'xlsx';
 const GSTReports = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const { sales, purchases, vendors, settings, setIsPurchaseWindowOpen, deletePurchase, setEditingPurchase } = useAppContext();
+    const { sales, purchases, vendors, settings, setIsPurchaseWindowOpen, deletePurchase, setEditingPurchase, refreshGSTData } = useAppContext();
     const [timeRange, setTimeRange] = useState('this_month');
     const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     
     const renderBoth = (key: string, options?: any) => (
         <>
@@ -173,19 +174,29 @@ const GSTReports = () => {
         showSuccess('MIRA Input Tax Statement downloaded successfully');
     };
 
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            await refreshGSTData(true);
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
     return (
-        <div className="p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-8">
+        <div className="p-4 sm:p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
+            {/* Header with auto-scale layout and refresh button */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 shrink-0">
                 <div className="text-right">
-                    <h1 className="text-3xl font-black text-foreground flex items-center justify-end gap-3">
-                        {renderBoth('gst_reports')} <Landmark className="h-8 w-8 text-primary" />
+                    <h1 className="text-2xl sm:text-3xl font-black text-foreground flex items-center justify-end gap-3">
+                        {renderBoth('gst_reports')} <Landmark className="h-7 w-7 sm:h-8 sm:w-8 text-primary shrink-0" />
                     </h1>
-                    <p className="text-sm text-muted-foreground mt-1">{renderBoth('gst_reports_description')}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{renderBoth('gst_reports_description')}</p>
                 </div>
-                <div className="flex gap-3">
+
+                <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 justify-start lg:justify-end">
                     <Select value={timeRange} onValueChange={setTimeRange}>
-                        <SelectTrigger className="w-[180px] bg-muted border-border text-right h-11 rounded-xl">
+                        <SelectTrigger className="w-[140px] sm:w-[160px] bg-muted border-border text-right h-10 rounded-xl text-xs sm:text-sm font-bold shadow-xs">
                             <SelectValue placeholder="Time Period" />
                         </SelectTrigger>
                         <SelectContent className="bg-card border-border text-foreground">
@@ -198,27 +209,46 @@ const GSTReports = () => {
                             <SelectItem value="q4" className="text-right">Q4 (Oct-Dec)</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Button onClick={exportToExcel} variant="outline" className="gap-2 border-border hover:bg-muted h-11 px-6 rounded-xl">
-                        <Download className="h-4 w-4" /> {renderBoth('download_excel')}
+
+                    <Button 
+                        onClick={handleRefresh} 
+                        variant="outline" 
+                        disabled={isRefreshing}
+                        className="gap-2 border-border hover:bg-muted h-10 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs"
+                        title="Refresh GST and Purchases data from cloud / އައުކުރުން"
+                    >
+                        <RefreshCw className={cn("h-4 w-4 text-primary", isRefreshing && "animate-spin")} />
+                        <span className="hidden sm:inline">Refresh</span>
                     </Button>
+
+                    <Button onClick={exportToExcel} variant="outline" className="gap-2 border-border hover:bg-muted h-10 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold shadow-xs">
+                        <Download className="h-4 w-4" /> 
+                        <span className="hidden sm:inline">{renderBoth('download_excel')}</span>
+                        <span className="sm:hidden">Excel</span>
+                    </Button>
+
                     <Button 
                         onClick={() => navigate('/vendors')} 
                         variant="outline" 
-                        className="gap-2 border-primary/30 hover:border-primary/60 bg-primary/10 hover:bg-primary/20 text-primary h-11 px-5 rounded-xl font-black transition-all"
+                        className="gap-2 border-primary/30 hover:border-primary/60 bg-primary/10 hover:bg-primary/20 text-primary h-10 px-3 sm:px-4 rounded-xl font-black text-xs sm:text-sm transition-all shadow-xs"
                     >
                         <Building2 className="h-4 w-4" />
                         <span>{renderBoth('vendors')}</span>
                     </Button>
+
                     <Button 
                         onClick={() => navigate('/mobile-purchase')} 
                         variant="outline" 
-                        className="gap-2 border-emerald-500/30 hover:border-emerald-500/60 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 h-11 px-5 rounded-xl font-black transition-all"
+                        className="gap-2 border-emerald-500/30 hover:border-emerald-500/60 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 h-10 px-3 sm:px-4 rounded-xl font-black text-xs sm:text-sm transition-all shadow-xs"
                     >
                         <Smartphone className="h-4 w-4" />
-                        <span>ބިލް އެޅުން (Mobile) (Purchase Bill Mobile)</span>
+                        <span className="hidden md:inline">ބިލް އެޅުން (Mobile) (Purchase Bill Mobile)</span>
+                        <span className="md:hidden">ބިލް އެޅުން (Mobile)</span>
                     </Button>
-                    <Button onClick={() => setIsPurchaseWindowOpen(true)} className="gap-2 bg-primary hover:bg-primary/90 h-11 px-6 rounded-xl font-black shadow-[0_0_20px_rgba(0,132,255,0.3)]">
-                        <PlusCircle className="h-4 w-4" /> {renderBoth('record_local_purchase')}
+
+                    <Button onClick={() => setIsPurchaseWindowOpen(true)} className="gap-2 bg-primary hover:bg-primary/90 h-10 px-4 sm:px-5 rounded-xl font-black text-xs sm:text-sm shadow-[0_0_20px_rgba(0,132,255,0.3)]">
+                        <PlusCircle className="h-4 w-4" /> 
+                        <span>{renderBoth('record_local_purchase')}</span>
                     </Button>
                 </div>
             </div>

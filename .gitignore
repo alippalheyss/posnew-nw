@@ -30,3 +30,6 @@ yarn.lock
 
 # Supabase temp
 supabase/.temp/
+
+# Electron release artifacts
+release/

@@ -100,6 +100,7 @@ export const printViaIframe = (htmlContent: string) => {
  * Universal print function that chooses the method based on settings.
  */
 export const printContent = async (htmlContent: string, settings?: any) => {
+  // 1. QZ Tray option (if explicitly configured)
   if (settings?.printing?.useQzTray && settings?.printing?.printerName) {
     try {
       await printViaQz(htmlContent, settings.printing.printerName);
@@ -108,8 +109,36 @@ export const printContent = async (htmlContent: string, settings?: any) => {
       console.error('QZ Tray print failed, falling back to iframe', error);
     }
   }
-  
-  // Fallback to standard iframe printing
+
+  // 2. Specific non-default printer designated in Electron app
+  if (
+    typeof window !== 'undefined' &&
+    (window as any).electronAPI?.isElectron &&
+    settings?.printing?.printerName &&
+    settings.printing.printerName.trim() !== ''
+  ) {
+    try {
+      const res = await (window as any).electronAPI.printSilent({
+        html: htmlContent,
+        deviceName: settings.printing.printerName.trim(),
+        silent: true,
+      });
+      if (res && res.success) {
+        window.dispatchEvent(new CustomEvent('pos-print-finished'));
+        return;
+      }
+    } catch (error) {
+      console.warn('Native Electron silent print failed, falling back to iframe:', error);
+    }
+  }
+
+  // 3. Proven Iframe Printing (Default for both Web and Windows App):
+  // - In Web Browser: Prints cleanly via browser print engine.
+  // - In Native Windows App: With --kiosk-printing and --disable-print-preview flags
+  //   configured at Electron startup, iframe.print() prints 100% silently to the
+  //   default thermal printer without showing any preview or dialog.
+  //   This uses the exact same rendering pipeline as the webapp, eliminating the
+  //   8-inch blank paper lead-in bug entirely.
   printViaIframe(htmlContent);
 };
 

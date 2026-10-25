@@ -2,7 +2,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, HashRouter, Routes, Route, Navigate } from "react-router-dom";
+
+// Use HashRouter when running locally inside Electron under file://, otherwise BrowserRouter on Web
+const Router = typeof window !== 'undefined' && window.location.protocol === 'file:' ? HashRouter : BrowserRouter;
 import { AuthProvider } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Layout from "./components/Layout";
@@ -38,7 +41,7 @@ const App = () => (
         <Sonner />
         <AuthProvider>
           <LocalPurchaseWindow />
-          <BrowserRouter>
+          <Router>
             <Routes>
               {/* Public Route */}
               <Route path="/login" element={<Login />} />
@@ -92,6 +95,7 @@ const App = () => (
                         <Route path="/gst-reports" element={<GSTReports />} />
                         <Route path="/shrinkage-report" element={<ShrinkageReport />} />
                         <Route path="/mobile-purchase" element={<MobilePurchase />} />
+                        <Route path="/purchases" element={<Navigate to="/gst-reports" replace />} />
                         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                         <Route path="*" element={<NotFound />} />
                       </Routes>
@@ -100,7 +104,7 @@ const App = () => (
                 }
               />
             </Routes>
-          </BrowserRouter>
+          </Router>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>

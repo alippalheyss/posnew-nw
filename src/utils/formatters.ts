@@ -38,9 +38,8 @@ export const extractDateOnly = (date: string | Date | undefined | null): string 
 
 export const formatDate = (date: string | Date): string => {
   if (!date) return '';
-  const d = new Date(date);
+  const d = typeof date === 'string' && !date.includes('T') && !date.includes(' ') ? new Date(`${date}T12:00:00`) : new Date(date);
   if (isNaN(d.getTime())) {
-    // If it's already DD-MM-YYYY or similar
     const extracted = extractDateOnly(date);
     if (extracted.includes('-')) {
       const [y, m, d_part] = extracted.split('-');
@@ -49,11 +48,20 @@ export const formatDate = (date: string | Date): string => {
     return String(date);
   }
   
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const year = d.getFullYear();
-  
-  return `${day}-${month}-${year}`;
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Indian/Maldives',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }).format(d);
+    return parts.replace(/\//g, '-');
+  } catch (e) {
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
+  }
 };
 
 /**
@@ -158,22 +166,21 @@ export const formatTime = (date: string | Date, use12Hour: boolean = true): stri
 export const formatDateTime = (date: string | Date): string => {
   if (!date) return '';
   
-  // If it's our standard YYYY-MM-DD HH:mm:ss string
-  if (typeof date === 'string' && date.includes(' ')) {
+  // If it's our standard YYYY-MM-DD HH:mm:ss string without timezone (already local)
+  if (typeof date === 'string' && date.includes(' ') && !date.includes('Z') && !date.includes('+')) {
     const [datePart, timePart] = date.split(' ');
-    const [y, m, d] = datePart.split('-');
-    return `${d}-${m}-${y} ${timePart}`;
+    const parts = datePart.split('-');
+    const formattedDate = parts[0].length === 4 ? `${parts[2]}-${parts[1]}-${parts[0]}` : datePart;
+    const timeFormatted = formatTime(date);
+    return `${formattedDate} ${timeFormatted || timePart}`;
   }
 
-  // Handle ISO T format
-  if (typeof date === 'string' && date.includes('T')) {
-    const [datePart, timePartFull] = date.split('T');
-    const timePart = timePartFull.split('.')[0];
-    const [y, m, d] = datePart.split('-');
-    return `${d}-${m}-${y} ${timePart}`;
+  const timeFormatted = formatTime(date);
+  const dateFormatted = formatDate(date);
+  if (timeFormatted) {
+    return `${dateFormatted} ${timeFormatted}`;
   }
-  
-  return `${formatDate(date)} ${formatTime(date)}`;
+  return dateFormatted;
 };
 
 // Strict ISO format for DB (YYYY-MM-DD)

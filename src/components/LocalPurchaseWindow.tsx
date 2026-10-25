@@ -521,20 +521,6 @@ const LocalPurchaseWindow = () => {
             >
               <X className="h-4 w-4 stroke-[2.5]" />
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-              className="h-9 px-3 rounded-xl border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-black gap-1.5 shadow-sm"
-              title="Purchase History (ފަހުގެ ބިލްތައް)"
-            >
-              <History className="h-4 w-4" />
-              <span className="hidden sm:inline">ބިލްތަކުގެ ތާރީޚް</span>
-              <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-mono h-4">
-                {purchases.length}
-              </Badge>
-            </Button>
           </div>
           <div className="text-right flex-1 min-w-0">
             <div className="flex items-center justify-end gap-3 flex-wrap">
@@ -613,7 +599,7 @@ const LocalPurchaseWindow = () => {
                   <ScrollArea className="h-48">
                     {filteredVendors.map(v => (
                       <SelectItem key={v.id} value={v.id} className="text-right hover:bg-white/10 font-bold text-xs">
-                        {v.name_dv || v.name_en} {v.tin_number ? `(TIN: ${v.tin_number})` : ''}
+                        {v.name_en || v.name_dv} {v.tin_number ? `(TIN: ${v.tin_number})` : ''}
                       </SelectItem>
                     ))}
                   </ScrollArea>

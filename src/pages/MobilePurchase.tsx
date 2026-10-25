@@ -368,7 +368,13 @@ const MobilePurchase: React.FC = () => {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate('/purchases')}
+          onClick={() => {
+            if (window.history.length > 1) {
+              navigate(-1);
+            } else {
+              navigate('/gst-reports');
+            }
+          }}
           className="h-9 w-9 rounded-xl hover:bg-muted text-foreground"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -484,7 +490,7 @@ const MobilePurchase: React.FC = () => {
           <div className="relative">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
             <Input
-              value={selectedVendor ? `${selectedVendor.name_dv} (${selectedVendor.name_en})` : vendorSearch}
+              value={selectedVendor ? (selectedVendor.name_en || selectedVendor.name_dv) : vendorSearch}
               onChange={(e) => {
                 setVendorSearch(e.target.value);
                 setVendorId('');
@@ -523,7 +529,7 @@ const MobilePurchase: React.FC = () => {
                     : "bg-muted text-muted-foreground border-border hover:border-primary/40"
                 )}
               >
-                {v.name_dv || v.name_en}
+                {v.name_en || v.name_dv}
               </button>
             ))}
           </div>
@@ -547,7 +553,7 @@ const MobilePurchase: React.FC = () => {
                       {v.tin_number && <span className="text-[9px] font-mono text-primary font-bold">TIN: {v.tin_number}</span>}
                       <span className="text-[10px] text-muted-foreground font-mono">{v.code}</span>
                     </div>
-                    <span>{v.name_dv} ({v.name_en})</span>
+                    <span>{v.name_en || v.name_dv}</span>
                   </button>
                 ))
               ) : (

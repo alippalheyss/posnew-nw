@@ -226,14 +226,14 @@ CREATE POLICY "Allow authenticated users full access to expenses" ON public.expe
     FOR ALL USING (auth.role() = 'authenticated');
 
 -- Settings policies
-CREATE POLICY "Allow users to read their own settings" ON public.settings
-    FOR SELECT USING (auth.uid() = user_id);
-
-CREATE POLICY "Allow users to insert their own settings" ON public.settings
-    FOR INSERT WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Allow users to update their own settings" ON public.settings
-    FOR UPDATE USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Allow public read access to shop settings" ON public.settings;
+DROP POLICY IF EXISTS "Allow users to read their own settings" ON public.settings;
+DROP POLICY IF EXISTS "Allow users to insert their own settings" ON public.settings;
+DROP POLICY IF EXISTS "Allow users to update their own settings" ON public.settings;
+DROP POLICY IF EXISTS "Allow all access to settings" ON public.settings;
+CREATE POLICY "Allow all access to settings" ON public.settings
+    FOR ALL USING (true) WITH CHECK (true);
+GRANT ALL ON TABLE public.settings TO anon, authenticated;
 
 -- Create a function to handle new user creation
 CREATE OR REPLACE FUNCTION public.handle_new_user()

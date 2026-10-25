@@ -379,6 +379,7 @@ interface AppContextType {
   setIsPurchaseWindowMinimized: React.Dispatch<React.SetStateAction<boolean>>;
   refreshCustomers: () => Promise<void>;
   refreshProducts: (showToast?: boolean) => Promise<Product[] | undefined>;
+  refreshGSTData: (showToast?: boolean) => Promise<void>;
   expenses: Expense[];
   setExpenses: React.Dispatch<React.SetStateAction<Expense[]>>;
   addExpense: (expense: Expense) => Promise<void>;
@@ -1053,6 +1054,74 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   };
 
+  const refreshGSTData = async (showToast = true) => {
+    if (!supabase) return;
+    try {
+      const [purchasesRes, vendorsRes, salesRes] = await Promise.all([
+        supabase.from('purchases').select('*').order('date', { ascending: false }).limit(500),
+        supabase.from('vendors').select('*').order('name_en', { ascending: true }),
+        supabase.from('sales').select('*').order('date', { ascending: false }).limit(600),
+      ]);
+
+      if (vendorsRes.data && vendorsRes.data.length > 0) {
+        setVendors(vendorsRes.data);
+      }
+
+      if (purchasesRes.data) {
+        const vList = vendorsRes.data || vendors;
+        const mappedPurchases: Purchase[] = purchasesRes.data.map((p: any) => {
+          const matchedVendor = vList.find((v: any) => v.id === p.vendor_id || v.id === p.vendorId);
+          return {
+            id: p.id,
+            date: p.date,
+            vendor: p.vendor || p.vendor_name || matchedVendor?.name_en || matchedVendor?.name_dv || '',
+            vendorId: p.vendor_id || p.vendorId || matchedVendor?.id,
+            billNumber: p.bill_number || p.billNumber || '',
+            description: p.description || '',
+            amount: Number(p.amount || 0),
+            gstAmount: Number(p.gst_amount || p.gstAmount || 0),
+            totalAmount: Number(p.total_amount || p.totalAmount || 0),
+            items: typeof p.items === 'string' ? JSON.parse(p.items) : (p.items || []),
+            notes: p.notes,
+            receipt_photo: p.receipt_photo
+          };
+        });
+        setPurchases(mappedPurchases);
+      }
+
+      if (salesRes.data && salesRes.data.length > 0) {
+        setSales(prev => {
+          const map = new Map<string, Sale>(prev.map(s => [s.id, s]));
+          salesRes.data.forEach((s: any) => {
+            let items = s.items;
+            if (typeof items === 'string') {
+              try { items = JSON.parse(items); } catch { items = []; }
+            }
+            map.set(s.id, {
+              ...s,
+              items: Array.isArray(items) ? items : [],
+              grandTotal: Number(s.grand_total || 0),
+              paidAmount: Number(s.paid_amount || 0),
+              balance: Number(s.balance || 0),
+            });
+          });
+          return Array.from(map.values()).sort(
+            (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+          );
+        });
+      }
+
+      if (showToast) {
+        showSuccess('GST and Purchase data refreshed from cloud (އައުކުރެވިއްޖެ)');
+      }
+    } catch (err: any) {
+      console.error('Error refreshing GST data:', err);
+      if (showToast) {
+        showError('Failed to refresh data: ' + (err.message || 'Network error'));
+      }
+    }
+  };
+
   // Robust helper to fetch all rows across pages (bypasses Supabase 1000-row PostgREST default limit)
   const fetchAllFromTable = async (tableName: string, selectFields = '*', orderBy?: { column: string; ascending?: boolean }) => {
     if (!supabase) return [];
@@ -1211,8 +1280,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         fetchTableDelta('products', currentProducts, 'updated_at', '*', 'id'),
         fetchTableDelta('customers', currentCustomers, 'updated_at', '*', 'name_en'),
         latestSaleTime
-          ? supabase.from('sales').select('*').gt('created_at', latestSaleTime).order('date', { ascending: false }).limit(200)
-          : supabase.from('sales').select('*').gte('date', fortyFiveDaysAgo).order('date', { ascending: false }).limit(350),
+          ? supabase.from('sales').select('*').gt('created_at', latestSaleTime).order('date', { ascending: false }).limit(300)
+          : supabase.from('sales').select('*').gte('date', fortyFiveDaysAgo).order('date', { ascending: false }).limit(1000),
         fetchTableDelta('vendors', currentVendors, 'updated_at', '*', 'id'),
         fetchTableDelta('purchases', currentPurchases, 'created_at', '*', 'date'),
         latestSettlementTime
@@ -1287,7 +1356,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
           salesMap.set(s.id, {
             ...s,
-            date: s.date,
+            date: (s.date && s.date.includes(':')) ? s.date : (s.created_at || s.date),
             items: Array.isArray(items) ? items : [],
             customer: customer,
             grandTotal: Number(s.grand_total || 0),
@@ -4201,6 +4270,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       setIsPurchaseWindowMinimized,
       refreshCustomers,
       refreshProducts,
+      refreshGSTData,
       expenses,
       setExpenses,
       addExpense,

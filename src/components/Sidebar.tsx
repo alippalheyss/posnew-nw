@@ -19,7 +19,6 @@ import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { showSuccess, showError } from '@/utils/toast';
-import { PWAInstallButton } from './PWAInstallButton';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 
 const Sidebar = () => {
@@ -106,8 +105,8 @@ const Sidebar = () => {
       {/* Branding */}
       <div className="p-6 pb-4">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-11 h-11 flex-shrink-0 bg-primary rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(249,115,22,0.4)]">
-            <span className="text-foreground text-lg font-black tracking-tighter">MV</span>
+          <div className="w-11 h-11 flex-shrink-0 bg-white rounded-2xl flex items-center justify-center p-1.5 shadow-[0_4px_16px_rgba(0,132,255,0.25)] border border-white/20 overflow-hidden">
+            <img src="/pwa-192x192.png" alt="MVPOS" className="w-full h-full object-contain" />
           </div>
           <div className="text-right whitespace-nowrap">
             <h1 className="text-xl font-black text-foreground leading-tight tracking-tight">
@@ -175,9 +174,8 @@ const Sidebar = () => {
         </ul>
       </div>
 
-      {/* Bottom Install & User Section */}
+      {/* Bottom User Section */}
       <div className="p-4 mt-auto border-t border-white/10 bg-background/40 backdrop-blur-md rounded-b-[2.5rem] flex flex-col gap-3">
-        <PWAInstallButton />
         <button
           type="button"
           onClick={() => {

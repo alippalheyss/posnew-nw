@@ -97,25 +97,21 @@ const CreditInvoices = () => {
           <meta charset="utf-8" />
           <title>Credit Receipt ${sale.invoiceNumber || sale.id}</title>
           <style>
-            @media print {
-              @page {
-                margin: 0;
-                size: ${printerWidth} auto;
-              }
-              html, body {
-                margin: 0 !important;
-                padding: 6px !important;
-                width: ${printerWidth} !important;
-                height: auto !important;
-                overflow: visible !important;
-              }
-            }
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-              padding: 10px;
+            @page {
               margin: 0;
+            }
+            html, body {
+              margin: 0 !important;
+              padding: 4px 6px !important;
+              width: ${printerWidth} !important;
+              box-sizing: border-box !important;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+              color: #000 !important;
+              background: #fff !important;
               text-align: center;
-              box-sizing: border-box;
+            }
+            * {
+              box-sizing: border-box !important;
             }
           </style>
         </head>
@@ -627,7 +623,14 @@ const CreditInvoices = () => {
                       <div className="flex items-center gap-6 text-muted-foreground">
                          <div className="flex flex-col items-center">
                             <Clock className="h-4 w-4 mb-1" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">{new Date(sale.date).toLocaleDateString()}</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest font-mono">
+                              {formatDate(sale.date || (sale as any).created_at)}
+                            </span>
+                            {formatTime(sale.date || (sale as any).created_at) && (
+                              <span className="text-[9px] font-bold text-muted-foreground font-mono">
+                                {formatTime(sale.date || (sale as any).created_at)}
+                              </span>
+                            )}
                          </div>
                          <div className="h-8 w-[1px] bg-white/20 dark:bg-white/10" />
                          <div className="flex flex-col items-center">

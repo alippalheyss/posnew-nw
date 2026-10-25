@@ -872,9 +872,20 @@ const POS = () => {
   const productSalesFrequencyMap = useMemo(() => {
     const map: Record<string, number> = {};
     (sales || []).forEach(sale => {
-      (sale.items || []).forEach(item => {
-        map[item.id] = (map[item.id] || 0) + (item.qty || 1);
-      });
+      let items = sale.items;
+      if (typeof items === 'string') {
+        try { items = JSON.parse(items); } catch { items = []; }
+      }
+      if (Array.isArray(items)) {
+        items.forEach((item: any) => {
+          const qty = Number(item.qty || item.quantity || 1);
+          if (item.id) map[item.id] = (map[item.id] || 0) + qty;
+          if (item.product_id) map[item.product_id] = (map[item.product_id] || 0) + qty;
+          if (item.productId) map[item.productId] = (map[item.productId] || 0) + qty;
+          if (item.item_code) map[`code:${String(item.item_code).trim().toLowerCase()}`] = (map[`code:${String(item.item_code).trim().toLowerCase()}`] || 0) + qty;
+          if (item.barcode) map[`barcode:${String(item.barcode).trim()}`] = (map[`barcode:${String(item.barcode).trim()}`] || 0) + qty;
+        });
+      }
     });
     return map;
   }, [sales]);
@@ -927,14 +938,32 @@ const POS = () => {
       return matchesSearch && matchesCategory && matchesFavorite;
     });
 
-    // Sort automatically by Best Sellers first (most frequently sold first)
-    return list.sort((a, b) => {
-      const salesA = productSalesFrequencyMap[a.id] || 0;
-      const salesB = productSalesFrequencyMap[b.id] || 0;
+    const getProductSales = (p: Product) => {
+      let count = productSalesFrequencyMap[p.id] || 0;
+      if (p.item_code) {
+        const byCode = productSalesFrequencyMap[`code:${String(p.item_code).trim().toLowerCase()}`] || 0;
+        if (byCode > count) count = byCode;
+      }
+      if (p.barcode) {
+        const byBarcode = productSalesFrequencyMap[`barcode:${String(p.barcode).trim()}`] || 0;
+        if (byBarcode > count) count = byBarcode;
+      }
+      return count;
+    };
+
+    // Sort automatically by Best Sellers first (most frequently sold first),
+    // followed by deterministic tie-breakers so order is identical on Web and Windows app
+    return [...list].sort((a, b) => {
+      const salesA = getProductSales(a);
+      const salesB = getProductSales(b);
       if (salesB !== salesA) {
         return salesB - salesA;
       }
-      return (a.name_dv || '').localeCompare(b.name_dv || '');
+      const nameCompare = (a.name_en || a.name_dv || '').localeCompare(b.name_en || b.name_dv || '');
+      if (nameCompare !== 0) return nameCompare;
+      const codeCompare = (a.item_code || '').localeCompare(b.item_code || '');
+      if (codeCompare !== 0) return codeCompare;
+      return (a.id || '').localeCompare(b.id || '');
     });
   }, [products, searchTerm, selectedCategory, showFavoritesOnly, favoriteProductIds, productSalesFrequencyMap]);
 
@@ -1034,7 +1063,7 @@ const POS = () => {
 
     const newSale = {
       id: crypto.randomUUID(),
-      date: toISODate(),
+      date: toISODatetime(),
       customer: activeCart.customer,
       items: activeCart.items,
       grandTotal: grandTotal,
@@ -1106,7 +1135,7 @@ const POS = () => {
 
     const newSale = {
       id: crypto.randomUUID(),
-      date: toISODate(),
+      date: toISODatetime(),
       customer: activeCart.customer!,
       items: activeCart.items,
       grandTotal: grandTotal,
@@ -1261,11 +1290,22 @@ const POS = () => {
         <head>
           <title>Receipt ${sale.invoiceNumber || sale.id}</title>
           <style>
-            @media print {
-              @page { margin: 0; size: ${settings.printing.thermalPrinterWidth === '58mm' ? '58mm' : '80mm'} auto; }
-              body { margin: 0; padding: 10px; font-family: sans-serif; width: ${settings.printing.thermalPrinterWidth === '58mm' ? '58mm' : '80mm'}; }
+            @page {
+              margin: 0;
             }
-            body { font-family: sans-serif; padding: 20px; text-align: center; }
+            html, body {
+              margin: 0 !important;
+              padding: 4px 6px !important;
+              width: ${settings.printing.thermalPrinterWidth === '58mm' ? '58mm' : '80mm'} !important;
+              box-sizing: border-box !important;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+              color: #000 !important;
+              background: #fff !important;
+              text-align: center;
+            }
+            * {
+              box-sizing: border-box !important;
+            }
           </style>
         </head>
         <body>
@@ -1409,7 +1449,7 @@ const POS = () => {
 
     const newSale: Sale = {
       id: crypto.randomUUID(),
-      date: toISODate(),
+      date: toISODatetime(),
       customer: activeCart?.customer || null,
       items: activeCart?.items || [],
       grandTotal: grandTotal,

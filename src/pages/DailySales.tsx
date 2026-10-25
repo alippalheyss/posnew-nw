@@ -213,11 +213,22 @@ const DailySales = () => {
         <head>
           <title>Receipt ${sale.invoiceNumber || sale.id}</title>
           <style>
-            @media print {
-              @page { margin: 0; size: ${settings.printing.thermalPrinterWidth === '58mm' ? '58mm' : '80mm'} auto; }
-              body { margin: 0; padding: 10px; font-family: sans-serif; width: ${settings.printing.thermalPrinterWidth === '58mm' ? '58mm' : '80mm'}; }
+            @page {
+              margin: 0;
             }
-            body { font-family: sans-serif; padding: 20px; text-align: center; }
+            html, body {
+              margin: 0 !important;
+              padding: 4px 6px !important;
+              width: ${settings.printing.thermalPrinterWidth === '58mm' ? '58mm' : '80mm'} !important;
+              box-sizing: border-box !important;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+              color: #000 !important;
+              background: #fff !important;
+              text-align: center;
+            }
+            * {
+              box-sizing: border-box !important;
+            }
           </style>
         </head>
         <body>
@@ -672,7 +683,7 @@ const DailySales = () => {
                               </Badge>
                            </div>
                            <div className="flex items-center justify-end gap-2 text-xs font-bold text-muted-foreground">
-                              <span>{formatDateTime(sale.date)}</span>
+                              <span>{formatDateTime(sale.date || (sale as any).created_at)}</span>
                               <span className="h-1 w-1 rounded-full bg-muted/80" />
                               <span>{sale.items.length} ITEMS</span>
                            </div>

@@ -110,35 +110,32 @@ export const printContent = async (htmlContent: string, settings?: any) => {
     }
   }
 
-  // 2. Specific non-default printer designated in Electron app
-  if (
-    typeof window !== 'undefined' &&
-    (window as any).electronAPI?.isElectron &&
-    settings?.printing?.printerName &&
-    settings.printing.printerName.trim() !== ''
-  ) {
+  // 2. Native Windows Electron App: Always use Electron's native printSilent API
+  // In Electron, calling window.print() or iframe.print() triggers the Win32 OS print dialogue.
+  // Using electronAPI.printSilent invokes webContents.print({ silent: true }) which prints 100% silently with zero prompts!
+  if (typeof window !== 'undefined' && (window as any).electronAPI?.isElectron) {
     try {
+      const printerName = settings?.printing?.printerName?.trim() || '';
       const res = await (window as any).electronAPI.printSilent({
         html: htmlContent,
-        deviceName: settings.printing.printerName.trim(),
+        deviceName: printerName,
         silent: true,
       });
       if (res && res.success) {
         window.dispatchEvent(new CustomEvent('pos-print-finished'));
-        return;
+      } else {
+        console.warn('Native Electron silent print returned error:', res?.error);
+        window.dispatchEvent(new CustomEvent('pos-print-finished'));
       }
     } catch (error) {
-      console.warn('Native Electron silent print failed, falling back to iframe:', error);
+      console.warn('Native Electron silent print failed:', error);
+      window.dispatchEvent(new CustomEvent('pos-print-finished'));
     }
+    // In Electron, NEVER fall through to iframe.print() which triggers the Win32 dialog
+    return;
   }
 
-  // 3. Proven Iframe Printing (Default for both Web and Windows App):
-  // - In Web Browser: Prints cleanly via browser print engine.
-  // - In Native Windows App: With --kiosk-printing and --disable-print-preview flags
-  //   configured at Electron startup, iframe.print() prints 100% silently to the
-  //   default thermal printer without showing any preview or dialog.
-  //   This uses the exact same rendering pipeline as the webapp, eliminating the
-  //   8-inch blank paper lead-in bug entirely.
+  // 3. Web Browser: Proven Iframe Printing
   printViaIframe(htmlContent);
 };
 

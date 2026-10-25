@@ -391,7 +391,7 @@ serve(async (req: Request) => {
     } catch {}
 
     // Direct API Invocation (Cron or POS trigger: action = "nightly_briefing")
-    if (update?.action === "nightly_briefing" || update?.action === "send_briefing") {
+    if (update?.action === "nightly_briefing" || update?.action === "send_briefing" || update?.action === "scheduled_nightly_briefing") {
       const targetChatId = update.chat_id || update.chatId || (await getGroupOrOwnerChatId());
       if (targetChatId) {
         const briefingMsg = await generateExecutiveBriefingMessage(update.date);

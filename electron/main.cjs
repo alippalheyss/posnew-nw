@@ -5,6 +5,7 @@ const url = require('url');
 // Enable kiosk printing so window.print() and iframe.print() print silently without any dialog
 // In Chromium, kiosk-printing automatically suppresses the print dialog and sends directly to printer
 app.commandLine.appendSwitch('kiosk-printing');
+app.commandLine.appendSwitch('disable-print-preview');
 
 let mainWindow = null;
 
@@ -157,32 +158,40 @@ ipcMain.handle('print-silent', async (event, { html, deviceName, silent = true }
       printWin.webContents.on('did-finish-load', () => {
         // Wait 300ms for layout & fonts to fully compute before printing
         setTimeout(async () => {
-          let heightMicrons = 150000;
+          let targetDevice = '';
           try {
-            const heightPx = await printWin.webContents.executeJavaScript(
-              'Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, document.body.offsetHeight, 100)'
-            );
-            // Convert px to microns (96 DPI = 264.58 microns/pixel) + 5mm safety buffer
-            heightMicrons = Math.max(30000, Math.ceil(heightPx * 265) + 5000);
-          } catch (e) {
-            console.warn('Could not measure content height, using default:', e);
+            const printers = await printWin.webContents.getPrintersAsync();
+            if (deviceName && printers.length > 0) {
+              const cleanReq = String(deviceName).trim().toLowerCase();
+              const match = printers.find(p => p.name.trim().toLowerCase() === cleanReq);
+              if (match) {
+                targetDevice = match.name;
+              }
+            }
+            // If requested device wasn't matched or not provided, pick Windows default printer
+            if (!targetDevice && printers.length > 0) {
+              const defaultP = printers.find(p => p.isDefault) || printers[0];
+              if (defaultP) {
+                targetDevice = defaultP.name;
+              }
+            }
+          } catch (pErr) {
+            console.warn('Could not query printersAsync:', pErr);
           }
 
-          const is58 = typeof html === 'string' && html.includes('58mm');
-          const widthMicrons = is58 ? 58000 : 80000;
+          const printOptions = {
+            silent: true,
+            printBackground: true,
+            margins: { marginType: 'none' },
+            usePrinterDefaultPageSize: true,
+          };
+
+          if (targetDevice) {
+            printOptions.deviceName = targetDevice;
+          }
 
           printWin.webContents.print(
-            {
-              silent: silent,
-              printBackground: true,
-              deviceName: deviceName || '',
-              margins: { marginType: 'none' },
-              pageSize: {
-                width: widthMicrons,
-                height: heightMicrons,
-              },
-              usePrinterDefaultPageSize: false,
-            },
+            printOptions,
             (success, failureReason) => {
               // Delay window destruction so Windows spooler can finish reading print buffer
               setTimeout(() => {

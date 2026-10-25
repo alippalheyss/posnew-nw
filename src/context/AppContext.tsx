@@ -2554,19 +2554,18 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
       const groupChat = settings.shop?.telegramGroupChatId || settings.telegram?.groupChatId || settings.telegram?.ownerChatId;
 
-      // 1. Midnight / Evening Store Close Executive Briefing to B BACK Group (always active)
+      // 1. Store Close Executive Briefing to B BACK Group (strictly at 23:59 of that day only)
       if (groupChat) {
-        const hours = now.getHours();
-        const isEveningOrNight = hours >= 21 || hours <= 4; // From 9:00 PM onwards through early morning
+        const isBriefingTime = now.getHours() === 23 && now.getMinutes() >= 59;
 
         const briefingKey = `telegram_briefing_sent_${todayIso}`;
         const briefingSendingKey = `telegram_briefing_sending_${todayIso}`;
 
-        // Fast local check: if this client already sent or recorded today's briefing, skip
+        // Send ONLY when it is exactly 23:59 of that day
         if (
+          isBriefingTime &&
           !localStorage.getItem(briefingKey) &&
           settings.telegram?.lastNightlyBriefingDate !== todayIso &&
-          isEveningOrNight &&
           !isBriefingSendingRef.current
         ) {
           // Centralized Cloud Lock: Always check Supabase settings table before dispatching!
@@ -2686,7 +2685,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
                     lastNightlyBriefingDate: todayIso,
                     briefingSentAt: new Date().toISOString()
                   });
-                  console.log('Nightly Store Close Briefing automatically sent to Telegram group!');
+                  console.log('Nightly Store Close Briefing automatically sent to Telegram group at 23:59!');
                 } else {
                   localStorage.removeItem(briefingSendingKey);
                 }
@@ -2696,65 +2695,6 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
               console.warn('Auto briefing error:', e);
             } finally {
               isBriefingSendingRef.current = false;
-            }
-          }
-        }
-
-        // B. Missed Yesterday/Recent Briefing Catch-Up (e.g. PC was shut down before 9 PM)
-        const yesterday = new Date(now);
-        yesterday.setDate(now.getDate() - 1);
-        const yesterdayIso = toISODate(yesterday);
-
-        if (
-          !isEveningOrNight &&
-          !isBriefingSendingRef.current
-        ) {
-          // Check cloud state to avoid relying on stale local memory
-          let cloudLastBriefing = '';
-          if (supabase) {
-            try {
-              const { data: cloudRow } = await supabase
-                .from('settings')
-                .select('settings')
-                .eq('category', 'telegram')
-                .maybeSingle();
-              cloudLastBriefing = cloudRow?.settings?.lastNightlyBriefingDate || '';
-            } catch (_) {}
-          }
-
-          const alreadySentYesterday =
-            cloudLastBriefing === yesterdayIso ||
-            cloudLastBriefing === todayIso ||
-            !!localStorage.getItem(`telegram_briefing_sent_${yesterdayIso}`);
-
-          if (!alreadySentYesterday) {
-            const yesterdaySales = (sales || []).filter(s => extractDateOnly(s.date) === yesterdayIso);
-            if (yesterdaySales.length > 0) {
-              try {
-                isBriefingSendingRef.current = true;
-                const allSettlements = customers.flatMap(c => c.settlement_history || []);
-                const res = await sendNightlyExecutiveBriefing({
-                  chatId: groupChat,
-                  sales,
-                  settlements: allSettlements,
-                  shopSettings: settings.shop,
-                  date: yesterday,
-                  token: settings.telegram?.botToken,
-                });
-                if (res?.ok) {
-                  localStorage.setItem(`telegram_briefing_sent_${yesterdayIso}`, Date.now().toString());
-                  setSettings(prev => ({
-                    ...prev,
-                    telegram: { ...prev.telegram, lastNightlyBriefingDate: yesterdayIso },
-                  }));
-                  await updateSettings('telegram', { lastNightlyBriefingDate: yesterdayIso });
-                  console.log("Yesterday's missed Store Close Briefing caught-up and sent!");
-                }
-              } catch (e) {
-                console.warn('Missed yesterday briefing auto-catchup error:', e);
-              } finally {
-                isBriefingSendingRef.current = false;
-              }
             }
           }
         }

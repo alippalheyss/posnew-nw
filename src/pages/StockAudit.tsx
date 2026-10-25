@@ -1014,15 +1014,34 @@ export default function StockAudit() {
             Html5QrcodeSupportedFormats.CODE_39,
             Html5QrcodeSupportedFormats.UPC_A,
             Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.UPC_EAN_EXTENSION,
+            Html5QrcodeSupportedFormats.ITF,
+            Html5QrcodeSupportedFormats.CODABAR,
             Html5QrcodeSupportedFormats.QR_CODE
           ],
-          verbose: false
+          verbose: false,
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+          }
         });
 
         isStarting = true;
         html5QrCode.start(
-          { facingMode: 'environment' },
-          { fps: 15, qrbox: { width: 250, height: 160 }, aspectRatio: 1.3333 },
+          { facingMode: { ideal: 'environment' } },
+          {
+            fps: 20,
+            qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+              // 1D barcodes require a wide aspect ratio so all bars fit within decoding frame
+              const width = Math.floor(Math.min(viewfinderWidth * 0.92, 360));
+              const height = Math.floor(Math.min(viewfinderHeight * 0.60, 220));
+              return { width, height };
+            },
+            videoConstraints: {
+              facingMode: { ideal: 'environment' },
+              width: { min: 640, ideal: 1280, max: 1920 },
+              height: { min: 480, ideal: 720, max: 1080 },
+            }
+          },
           (decodedText) => {
             if (!isStopped) {
               handleScannedBarcode(decodedText);
@@ -1084,16 +1103,40 @@ export default function StockAudit() {
     }
   }, [isScannerOpen]);
 
-  // Barcode scanned callback
+  // Barcode scanned callback with resilient matching (leading zeros, flavours, units)
   const handleScannedBarcode = useCallback((code: string) => {
     stopCameraScanner();
 
     setTimeout(() => {
       const cleanCode = code.trim().toLowerCase();
-      const matchedProduct = products.find(p => 
-        (p.barcode && p.barcode.trim().toLowerCase() === cleanCode) ||
-        (p.item_code && p.item_code.trim().toLowerCase() === cleanCode)
-      );
+      const strippedCode = cleanCode.replace(/^0+/, '');
+
+      const matchedProduct = products.find(p => {
+        const pBarcode = (p.barcode || '').trim().toLowerCase();
+        const pStrippedBarcode = pBarcode.replace(/^0+/, '');
+        const pItemCode = (p.item_code || '').trim().toLowerCase();
+        const pStrippedItemCode = pItemCode.replace(/^0+/, '');
+
+        if (pBarcode && (pBarcode === cleanCode || (strippedCode && pStrippedBarcode === strippedCode))) {
+          return true;
+        }
+        if (pItemCode && (pItemCode === cleanCode || (strippedCode && pStrippedItemCode === strippedCode))) {
+          return true;
+        }
+        if (p.flavours?.some(f => {
+          const fBar = (f.barcode || '').trim().toLowerCase();
+          return fBar && (fBar === cleanCode || (strippedCode && fBar.replace(/^0+/, '') === strippedCode));
+        })) {
+          return true;
+        }
+        if (p.units?.some(u => {
+          const uBar = (u.barcode || '').trim().toLowerCase();
+          return uBar && (uBar === cleanCode || (strippedCode && uBar.replace(/^0+/, '') === strippedCode));
+        })) {
+          return true;
+        }
+        return false;
+      });
 
       if (matchedProduct) {
         playScanSuccessSound();
@@ -2182,8 +2225,15 @@ export default function StockAudit() {
           </div>
 
           {/* Video Box - Always kept in DOM so html5-qrcode never fails on null element */}
-          <div className="relative overflow-hidden rounded-2xl bg-black aspect-4/3 flex items-center justify-center border border-white/20 dark:border-white/10 shadow-inner">
-            <div id="stock-audit-camera-box" className="w-full h-full" />
+          <div className="relative overflow-hidden rounded-2xl bg-black min-h-[260px] aspect-4/3 flex items-center justify-center border border-white/20 dark:border-white/10 shadow-inner">
+            <div id="stock-audit-camera-box" className="w-full h-full [&_video]:object-cover [&_video]:w-full [&_video]:h-full" />
+            
+            {/* Visual Barcode Aiming Reticle */}
+            {!scannerError && (
+              <div className="pointer-events-none absolute inset-x-6 inset-y-10 border-2 border-emerald-400/50 rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(52,211,153,0.2)]">
+                <div className="w-full h-0.5 bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
+              </div>
+            )}
             {scannerError && (
               <div className="absolute inset-0 bg-slate-950/90 p-4 flex flex-col items-center justify-center text-center text-rose-400 text-xs font-sans space-y-2">
                 <p className="font-bold">{scannerError}</p>

@@ -20,6 +20,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { showSuccess, showError } from '@/utils/toast';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
+import mvposIcon from '@/assets/icon.png';
 
 const Sidebar = () => {
   const { t } = useTranslation();
@@ -93,7 +94,7 @@ const Sidebar = () => {
     { name_dv: t('admin_settings'), name_en: t('admin_settings', { lng: 'en' }), icon: Settings, path: '/admin', permission: 'canAccessAdmin' as const },
   ];
 
-  const { sidebarCollapsed, setSidebarCollapsed, pendingSlipsCount } = useAppContext();
+  const { sidebarCollapsed, setSidebarCollapsed, pendingSlipsCount, settings } = useAppContext();
   const navItems = allNavItems.filter(item => can(item.permission));
 
   if (location.pathname === '/mobile-purchase' || location.pathname === '/stock-audit' || location.pathname === '/audit') {
@@ -106,7 +107,7 @@ const Sidebar = () => {
       <div className="p-6 pb-4">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-11 h-11 flex-shrink-0 bg-white rounded-2xl flex items-center justify-center p-1.5 shadow-[0_4px_16px_rgba(0,132,255,0.25)] border border-white/20 overflow-hidden">
-            <img src="/pwa-192x192.png" alt="MVPOS" className="w-full h-full object-contain" />
+            <img src={settings?.shop?.logo || mvposIcon} alt="MVPOS" className="w-full h-full object-contain" />
           </div>
           <div className="text-right whitespace-nowrap">
             <h1 className="text-xl font-black text-foreground leading-tight tracking-tight">

@@ -7,8 +7,8 @@
 CREATE EXTENSION IF NOT EXISTS pg_net;
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 
--- 2. Nightly Midnight Store Close Executive Briefing Cron Job
--- Runs every night at 19:00 UTC (which is 00:00 Maldives Time, UTC+5)
+-- 2. Nightly Store Close Executive Briefing Cron Job
+-- Runs every night at 18:59 UTC (which is exactly 23:59 Maldives Time, UTC+5)
 -- Calls the Supabase Edge Function directly in the cloud without needing any open browser tab!
 SELECT cron.unschedule('nightly_executive_briefing') WHERE EXISTS (
     SELECT 1 FROM cron.job WHERE jobname = 'nightly_executive_briefing'
@@ -16,7 +16,7 @@ SELECT cron.unschedule('nightly_executive_briefing') WHERE EXISTS (
 
 SELECT cron.schedule(
     'nightly_executive_briefing',
-    '0 19 * * *', -- At 00:00 Maldives Time (19:00 UTC) every day
+    '59 18 * * *', -- At 23:59 Maldives Time (18:59 UTC) every day
     $$
     SELECT net.http_post(
         url := (SELECT COALESCE(

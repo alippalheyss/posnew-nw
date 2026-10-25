@@ -24,11 +24,11 @@ import autoTable from 'jspdf-autotable';
 
 const CreditInvoices = () => {
   const { t } = useTranslation();
-  const { sales, setSales, updateSale, settings } = useAppContext();
+  const { sales, setSales, updateSale, settings, customers } = useAppContext();
   const [isEditSaleDialogOpen, setIsEditSaleDialogOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'custom'>('today');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'custom'>('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(),
     to: new Date()
@@ -274,7 +274,43 @@ const CreditInvoices = () => {
     printContent(htmlContent, settings);
   };
 
-  const creditSales = sales.filter(s => s.paymentMethod?.toLowerCase() === 'credit' || (s.paymentMethod?.toLowerCase() === 'split' && (s.balance || 0) > 0));
+  const getCustomer = (sale: Sale) => {
+    if (sale.customer && (sale.customer.name_en || sale.customer.name_dv)) return sale.customer;
+    const custId = sale.customerId || (sale as any).customer_id;
+    if (custId && customers && customers.length > 0) {
+      return customers.find(c => String(c.id).toLowerCase() === String(custId).toLowerCase()) || sale.customer;
+    }
+    return sale.customer;
+  };
+
+  const getInvoiceDisplay = (sale: Sale) => {
+    if (sale.invoiceNumber && !sale.invoiceNumber.includes('-') && sale.invoiceNumber.length < 25) {
+      return sale.invoiceNumber;
+    }
+    if (sale.invoiceNumber && (sale.invoiceNumber.startsWith('CRINV') || sale.invoiceNumber.startsWith('INV'))) {
+      return sale.invoiceNumber;
+    }
+    const d = new Date(sale.date || (sale as any).created_at || Date.now());
+    const validD = isNaN(d.getTime()) ? new Date() : d;
+    const yr = validD.getFullYear().toString().slice(-2);
+    const mo = (validD.getMonth() + 1).toString().padStart(2, '0');
+    const seq = String(sale.id || '').replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase() || '1001';
+    return `CRINV/${yr}/${mo}/${seq}`;
+  };
+
+  const creditSales = sales.filter(s => {
+    const pMethod = String(s.paymentMethod || (s as any).payment_method || '').toLowerCase();
+    const balance = Number(s.balance ?? (s as any).balance ?? 0);
+    const paidAmount = Number(s.paidAmount ?? (s as any).paid_amount ?? 0);
+    const grandTotal = Number(s.grandTotal ?? (s as any).grand_total ?? 0);
+    const hasCustomer = !!(s.customerId || (s as any).customer_id || s.customer);
+    return (
+      pMethod === 'credit' ||
+      (pMethod === 'split' && balance > 0) ||
+      (balance > 0 && hasCustomer) ||
+      (grandTotal > paidAmount && hasCustomer)
+    );
+  });
   
   const filterSalesByDate = (salesList: Sale[]) => {
     const now = new Date();
@@ -289,9 +325,10 @@ const CreditInvoices = () => {
     const yesterdayD = yesterday.getDate();
 
     return salesList.filter(sale => {
-      if (!sale.date) return false;
-      const saleDateStr = extractDateOnly(sale.date);
-      const saleDate = new Date(saleDateStr);
+      const dateVal = sale.date || (sale as any).created_at;
+      if (!dateVal) return dateFilter === 'all';
+      const saleDate = new Date(dateVal);
+      if (isNaN(saleDate.getTime())) return true;
       const sY = saleDate.getFullYear();
       const sM = saleDate.getMonth();
       const sD = saleDate.getDate();
@@ -307,22 +344,25 @@ const CreditInvoices = () => {
         from.setHours(0, 0, 0, 0);
         const to = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
         to.setHours(23, 59, 59, 999);
-        
-        const sFullDate = new Date(sale.date);
-        const targetTime = isNaN(sFullDate.getTime()) ? saleDate.getTime() : sFullDate.getTime();
-        return targetTime >= from.getTime() && targetTime <= to.getTime();
+        return saleDate.getTime() >= from.getTime() && saleDate.getTime() <= to.getTime();
       }
       return true; // 'all'
     });
   };
 
-  const filteredSales = filterSalesByDate(creditSales).filter(s => 
-    s.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (s.invoiceNumber && s.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (s.customer?.name_dv && s.customer.name_dv.includes(searchTerm)) ||
-    (s.customer?.name_en && s.customer.name_en.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (s.customer?.code && s.customer.code.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredSales = filterSalesByDate(creditSales).filter(s => {
+    const cust = getCustomer(s);
+    const invNo = getInvoiceDisplay(s);
+    const term = searchTerm.toLowerCase();
+    return (
+      String(s.id).toLowerCase().includes(term) ||
+      invNo.toLowerCase().includes(term) ||
+      (s.invoiceNumber && s.invoiceNumber.toLowerCase().includes(term)) ||
+      (cust?.name_dv && cust.name_dv.includes(searchTerm)) ||
+      (cust?.name_en && cust.name_en.toLowerCase().includes(term)) ||
+      (cust?.code && cust.code.toLowerCase().includes(term))
+    );
+  });
 
   const getDateFilterLabel = () => {
     if (dateFilter === 'today') return 'Today';
@@ -599,53 +639,60 @@ const CreditInvoices = () => {
                No credit invoices found
             </div>
           ) : (
-            filteredSales.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale) => (
-              <Card key={sale.id} className="apple-glass-card border border-white/20 dark:border-white/10 hover:border-orange-500/40 transition-all rounded-3xl p-6 group shadow-sm hover:shadow-lg">
-                <div className="flex items-center justify-between gap-6">
-                   <div className="flex items-center gap-6">
-                      <div className="h-14 w-14 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 group-hover:scale-110 transition-transform">
-                         <FileText className="h-7 w-7" />
-                      </div>
-                      <div className="text-right">
-                         <div className="flex items-center justify-end gap-3 mb-1">
-                            <span className="text-lg font-black text-foreground">{sale.invoiceNumber || sale.id}</span>
-                            <Badge className="bg-orange-500 text-white border-none text-[8px] font-black uppercase tracking-widest px-2 py-0.5">
-                               CREDIT
-                            </Badge>
-                         </div>
-                         <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                            {sale.customer?.name_dv} ({sale.customer?.name_en})
-                         </div>
-                      </div>
-                   </div>
+            filteredSales.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale) => {
+              const cust = getCustomer(sale);
+              const invNo = getInvoiceDisplay(sale);
+              const balanceDue = Number(sale.balance !== undefined && Number(sale.balance) > 0 
+                ? sale.balance 
+                : Math.max(0, (sale.grandTotal || 0) - Number(sale.paidAmount || 0)));
 
-                   <div className="flex-1 flex justify-center">
-                      <div className="flex items-center gap-6 text-muted-foreground">
-                         <div className="flex flex-col items-center">
-                            <Clock className="h-4 w-4 mb-1" />
-                            <span className="text-[10px] font-black uppercase tracking-widest font-mono">
-                              {formatDate(sale.date || (sale as any).created_at)}
-                            </span>
-                            {formatTime(sale.date || (sale as any).created_at) && (
-                              <span className="text-[9px] font-bold text-muted-foreground font-mono">
-                                {formatTime(sale.date || (sale as any).created_at)}
+              return (
+                <Card key={sale.id} className="apple-glass-card border border-white/20 dark:border-white/10 hover:border-orange-500/40 transition-all rounded-3xl p-6 group shadow-sm hover:shadow-lg">
+                  <div className="flex items-center justify-between gap-6">
+                     <div className="flex items-center gap-6">
+                        <div className="h-14 w-14 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 group-hover:scale-110 transition-transform">
+                           <FileText className="h-7 w-7" />
+                        </div>
+                        <div className="text-right">
+                           <div className="flex items-center justify-end gap-3 mb-1">
+                              <span className="text-lg font-black text-foreground font-mono">{invNo}</span>
+                              <Badge className="bg-orange-500 text-white border-none text-[8px] font-black uppercase tracking-widest px-2 py-0.5">
+                                 CREDIT
+                              </Badge>
+                           </div>
+                           <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
+                              {cust?.name_dv || cust?.name_en || 'Customer'} {cust?.name_en && cust?.name_dv ? `(${cust.name_en})` : ''} {cust?.code ? `[${cust.code}]` : ''}
+                           </div>
+                        </div>
+                     </div>
+
+                     <div className="flex-1 flex justify-center">
+                        <div className="flex items-center gap-6 text-muted-foreground">
+                           <div className="flex flex-col items-center">
+                              <Clock className="h-4 w-4 mb-1" />
+                              <span className="text-[10px] font-black uppercase tracking-widest font-mono">
+                                {formatDate(sale.date || (sale as any).created_at)}
                               </span>
-                            )}
-                         </div>
-                         <div className="h-8 w-[1px] bg-white/20 dark:bg-white/10" />
-                         <div className="flex flex-col items-center">
-                            <Receipt className="h-4 w-4 mb-1" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">{sale.items.length} ITEMS</span>
-                         </div>
-                      </div>
-                   </div>
+                              {formatTime(sale.date || (sale as any).created_at) && (
+                                <span className="text-[9px] font-bold text-muted-foreground font-mono">
+                                  {formatTime(sale.date || (sale as any).created_at)}
+                                </span>
+                              )}
+                           </div>
+                           <div className="h-8 w-[1px] bg-white/20 dark:bg-white/10" />
+                           <div className="flex flex-col items-center">
+                              <Receipt className="h-4 w-4 mb-1" />
+                              <span className="text-[10px] font-black uppercase tracking-widest">{(sale.items || []).length} ITEMS</span>
+                           </div>
+                        </div>
+                     </div>
 
-                   <div className="flex items-center gap-8">
-                      <div className="text-right">
-                         <p className="text-xs font-black text-muted-foreground uppercase tracking-wider mb-1">Balance Due</p>
-                         <p className="text-2xl font-black text-orange-500">{settings.shop.currency} {sale.grandTotal.toFixed(2)}</p>
-                      </div>
-                      <div className="flex gap-2">
+                     <div className="flex items-center gap-8">
+                        <div className="text-right">
+                           <p className="text-xs font-black text-muted-foreground uppercase tracking-wider mb-1">Balance Due</p>
+                           <p className="text-2xl font-black text-orange-500">{settings.shop.currency} {balanceDue.toFixed(2)}</p>
+                        </div>
+                        <div className="flex gap-2">
                          <Button 
                            variant="ghost" 
                            size="icon" 
@@ -677,7 +724,8 @@ const CreditInvoices = () => {
                    </div>
                 </div>
               </Card>
-            ))
+              );
+            })
           )}
         </div>
       </ScrollArea>

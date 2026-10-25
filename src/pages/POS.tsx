@@ -255,6 +255,7 @@ const POS = () => {
   const [selectedSplitCustomerIds, setSelectedSplitCustomerIds] = useState<string[]>([]);
   const [splitSearchTerm, setSplitSearchTerm] = useState('');
   const [splitEntries, setSplitEntries] = useState<Array<{ id: string, amount: number, method: 'Cash' | 'Card' | 'Transfer' | 'Credit', customerId?: string }>>([]);
+  const [selectedCartItemKey, setSelectedCartItemKey] = useState<string | null>(null);
 
   const activeCart = openCarts.get(activeCartId);
 
@@ -376,6 +377,35 @@ const POS = () => {
       window.removeEventListener('pos-print-finished', handlePrintDone);
     };
   }, []);
+
+  // Keyboard shortcut: Delete or Backspace key removes the currently selected cart product
+  useEffect(() => {
+    const handleCartItemDeleteKey = (e: KeyboardEvent) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        const activeEl = document.activeElement;
+        const isTyping = activeEl && (
+          activeEl.tagName === 'INPUT' ||
+          activeEl.tagName === 'TEXTAREA' ||
+          (activeEl as HTMLElement).isContentEditable
+        );
+
+        if (!isTyping && selectedCartItemKey && activeCart) {
+          const itemToDelete = activeCart.items.find(
+            item => `${item.id}-${item.selected_unit || 'Piece'}-${item.selected_flavour || 'base'}` === selectedCartItemKey
+          );
+          if (itemToDelete) {
+            e.preventDefault();
+            removeFromCart(itemToDelete.id, itemToDelete.selected_unit, itemToDelete.selected_flavour);
+            setSelectedCartItemKey(null);
+            showSuccess(t('item_removed') || 'Item removed from cart');
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleCartItemDeleteKey);
+    return () => window.removeEventListener('keydown', handleCartItemDeleteKey);
+  }, [selectedCartItemKey, activeCart, removeFromCart, t]);
 
   const isAnyModalOpen = isCashDialogOpen || isCreditDialogOpen || isSplitDialogOpen || 
                          isAwaitingTransferDialogOpen || isPendingTransfersDialogOpen || 
@@ -1926,22 +1956,51 @@ const POS = () => {
             </div>
           ) : (
             <div className="space-y-1.5 pb-4">
-              {activeCart.items.map((item, idx) => (
-                <div
-                  key={`${item.id}-${item.selected_unit || 'Piece'}-${item.selected_flavour || 'base'}`}
-                  className="group relative bg-card/70 hover:bg-card border border-border/80 hover:border-border rounded-xl p-2 sm:p-2.5 transition-all shadow-sm flex items-center justify-between gap-2.5"
-                >
-                  {/* Left Side: [Trash] [Total MVR] [Unit Price MVR] [Unit Pill] [- Qty +] */}
-                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                    {/* Trash Button */}
-                    <button
-                      type="button"
-                      onClick={() => removeFromCart(item.id, item.selected_unit, item.selected_flavour)}
-                      className="text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors p-1 rounded-lg shrink-0 -ml-1"
-                      title={t('remove_item') || 'Remove Item'}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+              {activeCart.items.map((item, idx) => {
+                const itemKey = `${item.id}-${item.selected_unit || 'Piece'}-${item.selected_flavour || 'base'}`;
+                const isSelected = selectedCartItemKey === itemKey;
+
+                return (
+                  <div
+                    key={itemKey}
+                    onClick={() => setSelectedCartItemKey(prev => prev === itemKey ? null : itemKey)}
+                    className={cn(
+                      "group relative border rounded-xl p-2 sm:p-2.5 transition-all shadow-sm flex items-center justify-between gap-2.5 cursor-pointer select-none",
+                      isSelected 
+                        ? "bg-destructive/10 border-destructive ring-2 ring-destructive/60 shadow-md" 
+                        : "bg-card/70 hover:bg-card border-border/80 hover:border-border"
+                    )}
+                  >
+                    {/* Left Side: [Delete / Trash] [Total MVR] [Unit Price MVR] [Unit Pill] [- Qty +] */}
+                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                      {/* Prominent Delete Button when Selected, or Trash icon */}
+                      {isSelected ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFromCart(item.id, item.selected_unit, item.selected_flavour);
+                            setSelectedCartItemKey(null);
+                          }}
+                          className="bg-destructive hover:bg-destructive/90 text-destructive-foreground px-2 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-sm animate-in fade-in zoom-in-95 shrink-0 -ml-1"
+                          title="Delete selected item (or press Delete / Backspace key)"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          <span>DELETE</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFromCart(item.id, item.selected_unit, item.selected_flavour);
+                          }}
+                          className="text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors p-1 rounded-lg shrink-0 -ml-1"
+                          title={t('remove_item') || 'Remove Item'}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
 
                     {/* Total Price: e.g. 14 MVR */}
                     <div className="text-xs sm:text-sm font-black text-primary font-mono whitespace-nowrap">
@@ -2052,7 +2111,8 @@ const POS = () => {
                     </p>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </ScrollArea>

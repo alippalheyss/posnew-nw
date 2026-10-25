@@ -1,12 +1,11 @@
-"use client";
-
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, History, DollarSign, ShoppingBag, PlusCircle, Download, FileText, User, Activity, TrendingDown, Clock, CheckCircle2, AlertCircle, Edit, X } from 'lucide-react';
+import { Search, History, DollarSign, ShoppingBag, PlusCircle, Download, FileText, User, Activity, TrendingDown, Clock, CheckCircle2, AlertCircle, Edit, X, Filter, ArrowUpDown } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -102,13 +101,70 @@ const CreditOutstanding = () => {
     }
   };
 
-  const filteredCustomers = customers.filter(customer =>
-    (customer.outstanding_balance > 0 || searchTerm) && (
-      customer.name_dv.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.code.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
+  // --- Dedicated Filters for Credit Outstanding: Name, Code, Credit Amount ---
+  const [filterName, setFilterName] = useState('');
+  const [filterCode, setFilterCode] = useState('');
+  const [amountFilter, setAmountFilter] = useState<'has_due' | 'all' | 'gt_500' | 'gt_1000' | 'gt_5000' | 'zero_balance' | 'custom'>('has_due');
+  const [customMinAmount, setCustomMinAmount] = useState<string>('');
+  const [customMaxAmount, setCustomMaxAmount] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'due_desc' | 'due_asc' | 'name_asc' | 'code_asc'>('due_desc');
+
+  const filteredCustomers = useMemo(() => {
+    return customers.filter(customer => {
+      // 1. Filter by Name (Dhivehi or English)
+      if (filterName.trim()) {
+        const qName = filterName.trim().toLowerCase();
+        const matchName = (customer.name_dv && customer.name_dv.toLowerCase().includes(qName)) ||
+                          (customer.name_en && customer.name_en.toLowerCase().includes(qName));
+        if (!matchName) return false;
+      }
+
+      // 2. Filter by Code
+      if (filterCode.trim()) {
+        const qCode = filterCode.trim().toLowerCase();
+        const matchCode = customer.code && customer.code.toLowerCase().includes(qCode);
+        if (!matchCode) return false;
+      }
+
+      // 3. Fallback Unified Search (if user typed in legacy search bar)
+      if (searchTerm.trim()) {
+        const q = searchTerm.trim().toLowerCase();
+        const matchAny = (customer.name_dv && customer.name_dv.toLowerCase().includes(q)) ||
+                         (customer.name_en && customer.name_en.toLowerCase().includes(q)) ||
+                         (customer.code && customer.code.toLowerCase().includes(q));
+        if (!matchAny) return false;
+      }
+
+      // 4. Filter by Credit Amount
+      const balance = Number(customer.outstanding_balance || 0);
+      if (amountFilter === 'has_due') {
+        if (balance <= 0 && !searchTerm && !filterName && !filterCode) return false;
+      } else if (amountFilter === 'gt_500') {
+        if (balance < 500) return false;
+      } else if (amountFilter === 'gt_1000') {
+        if (balance < 1000) return false;
+      } else if (amountFilter === 'gt_5000') {
+        if (balance < 5000) return false;
+      } else if (amountFilter === 'zero_balance') {
+        if (balance > 0) return false;
+      } else if (amountFilter === 'custom') {
+        const min = customMinAmount ? parseFloat(customMinAmount) : 0;
+        const max = customMaxAmount ? parseFloat(customMaxAmount) : Infinity;
+        if (balance < min || balance > max) return false;
+      }
+      // 'all' includes everyone
+
+      return true;
+    }).sort((a, b) => {
+      const balA = Number(a.outstanding_balance || 0);
+      const balB = Number(b.outstanding_balance || 0);
+      if (sortBy === 'due_desc') return balB - balA;
+      if (sortBy === 'due_asc') return balA - balB;
+      if (sortBy === 'name_asc') return (a.name_en || a.name_dv).localeCompare(b.name_en || b.name_dv);
+      if (sortBy === 'code_asc') return a.code.localeCompare(b.code, undefined, { numeric: true });
+      return 0;
+    });
+  }, [customers, filterName, filterCode, searchTerm, amountFilter, customMinAmount, customMaxAmount, sortBy]);
 
   const selectedCustomerCreditSales = sales.filter(s =>
     (s.customer?.id === selectedCustomerForAction?.id && s.paymentMethod?.toLowerCase() === 'credit') ||
@@ -660,42 +716,161 @@ const CreditOutstanding = () => {
         </Card>
       </div>
 
-      {/* Search & Actions Bar */}
-      <div className="flex flex-row-reverse gap-4 mb-8">
-        <div className="relative flex-1" dir="ltr">
-           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 pointer-events-none" />
-           <Input 
-             dir="ltr"
-             placeholder="Search by customer name or ID code..."
-             value={searchTerm}
-             onChange={(e) => setSearchTerm(e.target.value)}
-             className="w-full apple-glass-input rounded-2xl pl-12 pr-10 h-14 text-left font-bold transition-all text-lg shadow-sm"
-           />
-           {searchTerm && (
-             <button
-               onClick={() => setSearchTerm('')}
-               className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors"
-               title="Clear search"
-             >
-               <X className="h-4 w-4" />
-             </button>
-           )}
-        </div>
-        <Button
-          onClick={handleOpenBatchRemindersDialog}
-          className="h-14 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs gap-2 shadow-lg hover:shadow-emerald-500/20 transition-all flex items-center active:scale-[0.98]"
-        >
-          <BellRing className="h-4 w-4" />
-          <span>AUTOMATED REMINDERS</span>
-          {linkedCustomersWithDue.length > 0 && (
-            <Badge className="bg-white/20 text-white border-none text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">
-              {linkedCustomersWithDue.length}
-            </Badge>
+      {/* Comprehensive Filter & Actions Bar */}
+      <div className="flex flex-col gap-3 mb-6" dir="ltr">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* 1. Filter by Name */}
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60 pointer-events-none" />
+            <Input 
+              dir="ltr"
+              placeholder="Filter by customer name (English / ދިވެހި)..."
+              value={filterName}
+              onChange={(e) => setFilterName(e.target.value)}
+              className="w-full apple-glass-input rounded-2xl pl-10 pr-9 h-12 text-left font-bold transition-all text-sm shadow-xs"
+            />
+            {filterName && (
+              <button
+                onClick={() => setFilterName('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted"
+                title="Clear name filter"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* 2. Filter by Code */}
+          <div className="relative w-full sm:w-48">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-muted-foreground/60 pointer-events-none">#</span>
+            <Input 
+              dir="ltr"
+              placeholder="Code (e.g. C01)..."
+              value={filterCode}
+              onChange={(e) => setFilterCode(e.target.value)}
+              className="w-full apple-glass-input rounded-2xl pl-9 pr-8 h-12 text-left font-bold font-mono transition-all text-sm shadow-xs"
+            />
+            {filterCode && (
+              <button
+                onClick={() => setFilterCode('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted"
+                title="Clear code filter"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* 3. Filter by Credit Amount */}
+          <div className="w-full sm:w-56">
+            <Select value={amountFilter} onValueChange={(val: any) => setAmountFilter(val)}>
+              <SelectTrigger className="h-12 rounded-2xl apple-glass-input border-border font-bold text-xs">
+                <div className="flex items-center gap-2 truncate">
+                  <DollarSign className="h-4 w-4 text-primary shrink-0" />
+                  <SelectValue placeholder="Credit Amount" />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="apple-glass-dialog border-white/20 dark:border-white/10 z-[120]">
+                <SelectItem value="has_due" className="text-xs font-bold">Active Debts (Due &gt; 0)</SelectItem>
+                <SelectItem value="all" className="text-xs font-bold">All Customers (Any Balance)</SelectItem>
+                <SelectItem value="gt_500" className="text-xs font-bold">Due &gt; MVR 500</SelectItem>
+                <SelectItem value="gt_1000" className="text-xs font-bold">Due &gt; MVR 1,000</SelectItem>
+                <SelectItem value="gt_5000" className="text-xs font-bold">Due &gt; MVR 5,000</SelectItem>
+                <SelectItem value="zero_balance" className="text-xs font-bold">Zero Balance (Settled)</SelectItem>
+                <SelectItem value="custom" className="text-xs font-bold">Custom Min/Max Range</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 4. Sort By */}
+          <div className="w-full sm:w-52">
+            <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
+              <SelectTrigger className="h-12 rounded-2xl apple-glass-input border-border font-bold text-xs">
+                <div className="flex items-center gap-2 truncate">
+                  <ArrowUpDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <SelectValue placeholder="Sort By" />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="apple-glass-dialog border-white/20 dark:border-white/10 z-[120]">
+                <SelectItem value="due_desc" className="text-xs font-bold">Highest Due First</SelectItem>
+                <SelectItem value="due_asc" className="text-xs font-bold">Lowest Due First</SelectItem>
+                <SelectItem value="name_asc" className="text-xs font-bold">Name (A to Z)</SelectItem>
+                <SelectItem value="code_asc" className="text-xs font-bold">Customer Code</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Clear Filters Button (shown when active) */}
+          {(filterName || filterCode || searchTerm || amountFilter !== 'has_due' || customMinAmount || customMaxAmount) && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setFilterName('');
+                setFilterCode('');
+                setSearchTerm('');
+                setAmountFilter('has_due');
+                setCustomMinAmount('');
+                setCustomMaxAmount('');
+                setSortBy('due_desc');
+              }}
+              className="h-12 px-3 rounded-2xl text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-muted"
+              title="Reset all filters"
+            >
+              <X className="h-4 w-4 mr-1" /> Reset
+            </Button>
           )}
-        </Button>
-        <Button onClick={exportAllOutstanding} variant="outline" className="h-14 px-6 rounded-2xl border-white/20 dark:border-white/10 hover:bg-white/10 gap-2 font-bold">
-           <Download className="h-4 w-4" /> EXPORT REPORT
-        </Button>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 ml-auto">
+            <Button
+              onClick={handleOpenBatchRemindersDialog}
+              className="h-12 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs gap-2 shadow-md hover:shadow-emerald-500/20 transition-all flex items-center active:scale-[0.98]"
+            >
+              <BellRing className="h-4 w-4" />
+              <span className="hidden sm:inline">REMINDERS</span>
+              {linkedCustomersWithDue.length > 0 && (
+                <Badge className="bg-white/20 text-white border-none text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
+                  {linkedCustomersWithDue.length}
+                </Badge>
+              )}
+            </Button>
+            <Button onClick={exportAllOutstanding} variant="outline" className="h-12 px-4 rounded-2xl border-white/20 dark:border-white/10 hover:bg-white/10 gap-2 font-bold text-xs">
+              <Download className="h-4 w-4" /> <span className="hidden sm:inline">EXPORT</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Custom Min/Max Amount Row when custom is selected */}
+        {amountFilter === 'custom' && (
+          <div className="flex items-center gap-3 bg-muted/40 p-3 rounded-2xl border border-border text-xs font-bold">
+            <Filter className="h-4 w-4 text-primary shrink-0" />
+            <span>Custom Credit Amount:</span>
+            <Input
+              type="number"
+              placeholder="Min MVR..."
+              value={customMinAmount}
+              onChange={(e) => setCustomMinAmount(e.target.value)}
+              className="w-32 h-9 rounded-xl text-xs font-mono"
+            />
+            <span>to</span>
+            <Input
+              type="number"
+              placeholder="Max MVR..."
+              value={customMaxAmount}
+              onChange={(e) => setCustomMaxAmount(e.target.value)}
+              className="w-32 h-9 rounded-xl text-xs font-mono"
+            />
+          </div>
+        )}
+
+        <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+          <span>Showing <strong className="text-foreground font-mono">{filteredCustomers.length}</strong> of <strong className="text-foreground font-mono">{customers.length}</strong> customers</span>
+          {amountFilter !== 'all' && (
+            <span className="text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-md font-bold">
+              Filter: {amountFilter === 'has_due' ? 'Active Due > 0' : amountFilter.toUpperCase()}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Customers List */}

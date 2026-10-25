@@ -5,9 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Button } from '@/components/ui/button';
-import { PencilLine, CalendarDays, Printer, Trash2, Filter, ChevronRight, Receipt, DollarSign, CreditCard, ArrowRightLeft, TrendingUp, Download, Calendar as CalendarIcon, FileSpreadsheet, Moon, Send, Loader2 } from 'lucide-react';
+import { PencilLine, CalendarDays, Printer, Trash2, Filter, ChevronRight, Receipt, DollarSign, CreditCard, ArrowRightLeft, TrendingUp, Download, Calendar as CalendarIcon, FileSpreadsheet, Moon, Send, Loader2, RefreshCw } from 'lucide-react';
 import { useAppContext, Product, Customer, CartItem, Sale } from '@/context/AppContext';
+import { supabase } from '@/lib/supabase';
 import { formatDate, formatTime, formatDateTime, toISODate, extractDateOnly } from '@/utils/formatters';
 import SaleEditDialog from '@/components/SaleEditDialog'; 
 import { showSuccess, showError } from '@/utils/toast';
@@ -38,7 +38,70 @@ const DailySales = () => {
     to: new Date()
   });
   const [activeTab, setActiveTab] = useState<'sales' | 'pending'>('sales');
+  const [isSyncing, setIsSyncing] = useState(false);
   const { pendingTransfers, resolvePendingTransfer, convertAllPendingToCredit } = useAppContext();
+
+  const handleSyncCloudSales = async () => {
+    if (!supabase) {
+      showError('Supabase is not connected');
+      return;
+    }
+    setIsSyncing(true);
+    try {
+      const { data, error } = await supabase.from('sales').select('*').order('date', { ascending: false }).limit(1000);
+      if (error) throw error;
+      if (data) {
+        const normalizedCloudSales: Sale[] = data.map((s: any) => {
+          const method = String(s.paymentMethod || s.payment_method || 'cash').toLowerCase() as any;
+          const isCredit = method === 'credit' || (method === 'split' && Number(s.balance ?? 0) > 0);
+          const rawDate = s.date || s.created_at || new Date().toISOString();
+          let invNum = s.invoiceNumber || s.invoice_number;
+          if (!invNum || (invNum.length > 25 && invNum.includes('-'))) {
+            const d = new Date(rawDate);
+            const validDate = isNaN(d.getTime()) ? new Date() : d;
+            const yr = validDate.getFullYear().toString().slice(-2);
+            const mo = (validDate.getMonth() + 1).toString().padStart(2, '0');
+            const seq = String(s.id || '').replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase() || '001';
+            invNum = `${isCredit ? 'CRINV' : 'INV'}/${yr}/${mo}/${seq}`;
+          }
+          let items = s.items;
+          if (typeof items === 'string') {
+            try { items = JSON.parse(items); } catch { items = []; }
+          }
+          let cust = s.customer;
+          if (!cust && (s.customer_id || s.customerId) && customers) {
+            const cId = s.customer_id || s.customerId;
+            cust = customers.find(c => c.id.toLowerCase() === String(cId).toLowerCase()) || null;
+          }
+          return {
+            ...s,
+            id: s.id,
+            date: rawDate,
+            customer: cust,
+            items: Array.isArray(items) ? items : [],
+            grandTotal: Number(s.grandTotal ?? s.grand_total ?? 0),
+            paymentMethod: method,
+            paidAmount: s.paidAmount !== undefined ? Number(s.paidAmount) : (s.paid_amount !== undefined ? Number(s.paid_amount) : 0),
+            balance: s.balance !== undefined ? Number(s.balance) : 0,
+            invoiceNumber: invNum
+          };
+        });
+
+        setSales(normalizedCloudSales);
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('cached_pos_sales', JSON.stringify(normalizedCloudSales));
+          } catch {}
+        }
+        showSuccess(`Cloud synced: ${normalizedCloudSales.length} transaction(s) loaded`);
+      }
+    } catch (err: any) {
+      console.error('Error syncing sales from cloud:', err);
+      showError(err.message || 'Failed to sync sales from cloud');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   useEffect(() => {
     const todayStr = toISODate();
@@ -541,6 +604,17 @@ const DailySales = () => {
              <Button
                variant="outline"
                size="sm"
+               disabled={isSyncing}
+               onClick={handleSyncCloudSales}
+               className="apple-glass-card border-white/20 dark:border-white/10 hover:bg-sky-500/15 hover:border-sky-500/30 hover:text-sky-500 text-foreground gap-2 h-9 px-3 rounded-2xl text-xs font-bold transition-all shadow-xs"
+               title="Sync sales transactions from Supabase cloud database"
+             >
+               <RefreshCw className={cn("h-4 w-4 text-sky-500", isSyncing && "animate-spin")} />
+               Sync Cloud
+             </Button>
+             <Button
+               variant="outline"
+               size="sm"
                onClick={() => setIsBriefingDialogOpen(true)}
                className="apple-glass-card border-white/20 dark:border-white/10 hover:bg-[#229ED9]/15 hover:border-[#229ED9]/30 hover:text-[#229ED9] text-foreground gap-2 h-9 px-3 rounded-2xl text-xs font-bold transition-all shadow-xs"
              >
@@ -615,10 +689,25 @@ const DailySales = () => {
               </div>
             ) : (
               filteredSales.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale) => {
-              const method = (sale.paymentMethod || '').toLowerCase();
-              const isCredit = method === 'credit' || (method === 'split' && (sale.balance || 0) > 0);
+              const method = (sale.paymentMethod || (sale as any).payment_method || '').toLowerCase();
+              const isCredit = method === 'credit' || (method === 'split' && Number(sale.balance ?? (sale as any).balance ?? 0) > 0);
               const isCash = method === 'cash';
-              const isTransfer = method === 'transfer';
+              const isTransfer = method === 'transfer' || method === 'mobile';
+
+              const customer = sale.customer || customers.find(c => c.id === (sale as any).customer_id);
+
+              const displayInvoiceNumber = (() => {
+                const inv = sale.invoiceNumber || (sale as any).invoice_number;
+                if (inv && (!inv.includes('-') || inv.length < 25) && !inv.startsWith('test-')) {
+                  return inv;
+                }
+                const prefix = isCredit ? 'CRINV' : 'INV';
+                const d = new Date(sale.date || (sale as any).created_at);
+                const yr = isNaN(d.getTime()) ? '26' : d.getFullYear().toString().slice(-2);
+                const mo = isNaN(d.getTime()) ? '10' : (d.getMonth() + 1).toString().padStart(2, '0');
+                const seq = String(sale.id || '').replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase() || '001';
+                return `${prefix}/${yr}/${mo}/${seq}`;
+              })();
 
               const cardBorderClass = isCredit
                 ? "border-amber-500/40 dark:border-amber-500/30 bg-amber-500/[0.04] dark:bg-amber-950/20 hover:border-amber-500 border-l-[6px] border-l-amber-500 shadow-amber-500/5"
@@ -665,7 +754,7 @@ const DailySales = () => {
                         </div>
                         <div className="text-right">
                            <div className="flex items-center justify-end gap-2.5 mb-1 flex-wrap">
-                              {sale.customer && (
+                              {customer && (
                                 <span className={cn(
                                   "text-[11px] font-bold px-2.5 py-0.5 rounded-lg border flex items-center gap-1",
                                   isCredit 
@@ -673,13 +762,13 @@ const DailySales = () => {
                                     : "bg-muted text-muted-foreground border-border"
                                 )}>
                                   <span>👤</span>
-                                  <span>{sale.customer.name_dv || sale.customer.name_en}</span>
-                                  {sale.customer.code && <span className="opacity-75 font-mono text-[10px]">({sale.customer.code})</span>}
+                                  <span>{customer.name_dv || customer.name_en}</span>
+                                  {customer.code && <span className="opacity-75 font-mono text-[10px]">({customer.code})</span>}
                                 </span>
                               )}
-                              <span className="text-lg font-black text-foreground font-mono">{sale.invoiceNumber || sale.id}</span>
+                              <span className="text-lg font-black text-foreground font-mono">{displayInvoiceNumber}</span>
                               <Badge className={cn("text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5", badgeClass)}>
-                                 {isCredit ? 'CREDIT' : isCash ? 'CASH' : (sale.paymentMethod || 'OTHER').toUpperCase()}
+                                 {isCredit ? 'CREDIT' : isCash ? 'CASH' : (sale.paymentMethod || (sale as any).payment_method || 'OTHER').toUpperCase()}
                               </Badge>
                            </div>
                            <div className="flex items-center justify-end gap-2 text-xs font-bold text-muted-foreground">

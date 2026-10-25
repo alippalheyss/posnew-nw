@@ -423,11 +423,87 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     return [];
   });
 
+  const normalizeSaleRecord = (s: any, allCustomers?: Customer[]): Sale => {
+    const method = String(s.paymentMethod || s.payment_method || 'cash').toLowerCase() as any;
+    const isCredit = method === 'credit' || (method === 'split' && Number(s.balance ?? s.paidAmount !== undefined ? (Number(s.grandTotal ?? s.grand_total ?? 0) - Number(s.paidAmount || 0)) : 0) > 0);
+    const rawDate = s.date || s.created_at || new Date().toISOString();
+    
+    let invNum = s.invoiceNumber || s.invoice_number;
+    // If invoice number is missing or is a raw UUID, format clean invoice number
+    if (!invNum || (invNum.length > 25 && invNum.includes('-'))) {
+      const d = new Date(rawDate);
+      const validDate = isNaN(d.getTime()) ? new Date() : d;
+      const yr = validDate.getFullYear().toString().slice(-2);
+      const mo = (validDate.getMonth() + 1).toString().padStart(2, '0');
+      const seq = String(s.id || '').replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase() || '001';
+      invNum = `${isCredit ? 'CRINV' : 'INV'}/${yr}/${mo}/${seq}`;
+    }
+
+    let items = s.items;
+    if (typeof items === 'string') {
+      try { items = JSON.parse(items); } catch { items = []; }
+    }
+
+    let splitDetails = s.splitDetails || s.split_details;
+    if (typeof splitDetails === 'string') {
+      try { splitDetails = JSON.parse(splitDetails); } catch { splitDetails = null; }
+    }
+
+    let customer = s.customer;
+    if (!customer && (s.customer_id || s.customerId) && allCustomers) {
+      const cId = s.customer_id || s.customerId;
+      customer = allCustomers.find(c => c.id.toLowerCase() === String(cId).toLowerCase()) || null;
+    }
+
+    return {
+      ...s,
+      id: s.id || crypto.randomUUID(),
+      date: rawDate,
+      customer,
+      items: Array.isArray(items) ? items : [],
+      grandTotal: Number(s.grandTotal ?? s.grand_total ?? 0),
+      paymentMethod: method,
+      paidAmount: s.paidAmount !== undefined ? Number(s.paidAmount) : (s.paid_amount !== undefined ? Number(s.paid_amount) : 0),
+      balance: s.balance !== undefined ? Number(s.balance) : (s.paid_amount !== undefined ? Math.max(0, Number(s.grand_total || 0) - Number(s.paid_amount || 0)) : 0),
+      invoiceNumber: invNum,
+      splitDetails,
+    };
+  };
+
   const [sales, setSales] = useState<Sale[]>(() => {
     if (typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem('cached_pos_sales');
-        if (saved) return JSON.parse(saved);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            return parsed.map(s => {
+              const method = String(s.paymentMethod || s.payment_method || 'cash').toLowerCase() as any;
+              const isCredit = method === 'credit' || (method === 'split' && Number(s.balance ?? 0) > 0);
+              const rawDate = s.date || s.created_at || new Date().toISOString();
+              let invNum = s.invoiceNumber || s.invoice_number;
+              if (!invNum || (invNum.length > 25 && invNum.includes('-'))) {
+                const d = new Date(rawDate);
+                const validDate = isNaN(d.getTime()) ? new Date() : d;
+                const yr = validDate.getFullYear().toString().slice(-2);
+                const mo = (validDate.getMonth() + 1).toString().padStart(2, '0');
+                const seq = String(s.id || '').replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase() || '001';
+                invNum = `${isCredit ? 'CRINV' : 'INV'}/${yr}/${mo}/${seq}`;
+              }
+              return {
+                ...s,
+                id: s.id || crypto.randomUUID(),
+                date: rawDate,
+                paymentMethod: method,
+                invoiceNumber: invNum,
+                grandTotal: Number(s.grandTotal ?? s.grand_total ?? 0),
+                paidAmount: Number(s.paidAmount ?? s.paid_amount ?? 0),
+                balance: Number(s.balance ?? 0),
+                items: Array.isArray(s.items) ? s.items : (typeof s.items === 'string' ? JSON.parse(s.items || '[]') : []),
+              };
+            });
+          }
+        }
       } catch (e) {
         console.error('Error reading cached_pos_sales', e);
       }
@@ -1279,9 +1355,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       ] = await Promise.all([
         fetchTableDelta('products', currentProducts, 'updated_at', '*', 'id'),
         fetchTableDelta('customers', currentCustomers, 'updated_at', '*', 'name_en'),
-        latestSaleTime
-          ? supabase.from('sales').select('*').gt('created_at', latestSaleTime).order('date', { ascending: false }).limit(300)
-          : supabase.from('sales').select('*').gte('date', fortyFiveDaysAgo).order('date', { ascending: false }).limit(1000),
+        supabase.from('sales').select('*').order('date', { ascending: false }).limit(1000),
         fetchTableDelta('vendors', currentVendors, 'updated_at', '*', 'id'),
         fetchTableDelta('purchases', currentPurchases, 'created_at', '*', 'date'),
         latestSettlementTime
@@ -1340,32 +1414,24 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         setCustomers(formattedCustomers);
       }
 
-      if (freshSalesData && freshSalesData.length > 0) {
-        const salesMap = new Map<string, Sale>(currentSales.map(s => [s.id, s]));
+      if (freshSalesData) {
+        const salesMap = new Map<string, Sale>();
 
+        // 1. First add cloud sales (cloud is source of truth for synced data)
         freshSalesData.forEach((s: any) => {
-          let items = s.items;
-          if (typeof items === 'string') {
-            try { items = JSON.parse(items); } catch (e) { items = []; }
-          }
-          let splitDetails = s.split_details;
-          if (typeof splitDetails === 'string') {
-            try { splitDetails = JSON.parse(splitDetails); } catch (e) { splitDetails = null; }
-          }
-          const customer = updatedCustomers?.find((c: any) => c.id.toLowerCase() === s.customer_id?.toLowerCase()) || null;
+          const norm = normalizeSaleRecord(s, updatedCustomers || currentCustomers);
+          salesMap.set(norm.id, norm);
+        });
 
-          salesMap.set(s.id, {
-            ...s,
-            date: (s.date && s.date.includes(':')) ? s.date : (s.created_at || s.date),
-            items: Array.isArray(items) ? items : [],
-            customer: customer,
-            grandTotal: Number(s.grand_total || 0),
-            paymentMethod: String(s.payment_method || 'cash').toLowerCase() as any,
-            paidAmount: Number(s.paid_amount || 0),
-            balance: Number(s.balance || 0),
-            invoiceNumber: s.invoice_number || `INV-${String(s.id).slice(-6)}`,
-            splitDetails: splitDetails
-          });
+        // 2. If cloud has zero sales yet, keep local sales normalized; otherwise, only keep recent un-pushed local sales
+        currentSales.forEach((s: any) => {
+          if (!salesMap.has(s.id)) {
+            // Keep if cloud is empty or if sale was created recently (offline created)
+            const isRecent = s.date && (Date.now() - new Date(s.date).getTime()) < 3 * 24 * 60 * 60 * 1000;
+            if (freshSalesData.length === 0 || isRecent) {
+              salesMap.set(s.id, normalizeSaleRecord(s, updatedCustomers || currentCustomers));
+            }
+          }
         });
 
         const mergedSales = Array.from(salesMap.values()).sort(

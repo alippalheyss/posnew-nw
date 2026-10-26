@@ -14,7 +14,7 @@ import { ChevronDown, ChevronUp, Upload, Image as ImageIcon, Trash2, Settings, L
 import { testTelegramBot, setTelegramWebhook, getTelegramWebhookInfo, deleteTelegramWebhook, setBotCommands, BOT_COMMANDS, TelegramBotInfo, DEFAULT_TELEGRAM_BOT_TOKEN, DEFAULT_TELEGRAM_BOT_USERNAME, sendTelegramMessage, sendNightlyExecutiveBriefing } from '@/services/telegramService';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseUrl } from '@/lib/supabase';
 import { useAppContext } from '@/context/AppContext';
 import { useAuth, User } from '@/context/AuthContext';
 import UserDialog from '@/components/UserDialog';
@@ -53,7 +53,7 @@ const Admin = () => {
   const [botInfo, setBotInfo] = useState<TelegramBotInfo | null>(null);
   const [isTestingBot, setIsTestingBot] = useState(false);
   const [isSendingTestBriefing, setIsSendingTestBriefing] = useState(false);
-  const [webhookUrlInput, setWebhookUrlInput] = useState(telegramSettings.webhookUrl || 'https://zmbbgfpzgfcsoexybrle.supabase.co/functions/v1/telegram-webhook');
+  const [webhookUrlInput, setWebhookUrlInput] = useState(telegramSettings.webhookUrl || 'https://uooqzukgdzxlvhqggmwa.supabase.co/functions/v1/telegram-webhook');
   const [isRegisteringWebhook, setIsRegisteringWebhook] = useState(false);
 
   // Cloudflare CDN State & Helper

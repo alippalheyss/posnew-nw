@@ -3,7 +3,9 @@ import path from 'path';
 import { createClient } from '@supabase/supabase-js';
 
 // Usage: node scripts/restore-to-new-supabase.mjs <NEW_SUPABASE_URL> <NEW_SERVICE_ROLE_KEY_OR_ANON_KEY>
-const [newUrl, newKey] = process.argv.slice(2);
+let [rawUrl, rawKey] = process.argv.slice(2);
+const newUrl = rawUrl ? rawUrl.replace(/^[<"']+|[>"']+$/g, '').trim() : '';
+const newKey = rawKey ? rawKey.replace(/^[<"']+|[>"']+$/g, '').trim() : '';
 
 if (!newUrl || !newKey) {
   console.error('\nUsage: node scripts/restore-to-new-supabase.mjs <NEW_SUPABASE_URL> <NEW_SUPABASE_KEY>\n');
@@ -29,8 +31,14 @@ async function restoreTable(tableName) {
   console.log(`Restoring ${tableName} (${rows.length} rows)...`);
   const CHUNK_SIZE = 100;
   for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
-    const chunk = rows.slice(i, i + CHUNK_SIZE);
-    const { error } = await supabase.from(tableName).upsert(chunk, { onConflict: 'id' });
+    let chunk = rows.slice(i, i + CHUNK_SIZE);
+    let { error } = await supabase.from(tableName).upsert(chunk, { onConflict: 'id' });
+    if (error && tableName === 'customers' && error.message.includes('telegram_chat_id')) {
+      console.log('Notice: telegram_chat_id column missing on customers table. Retrying with base customer fields...');
+      const strippedChunk = chunk.map(({ telegram_chat_id, ...rest }) => rest);
+      const res = await supabase.from(tableName).upsert(strippedChunk, { onConflict: 'id' });
+      error = res.error;
+    }
     if (error) {
       console.error(`Error inserting chunk ${i} - ${i + chunk.length} into ${tableName}:`, error.message);
     }

@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://zmbbgfpzgfcsoexybrle.supabase.co';
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InptYmJnZnB6Z2Zjc29leHlicmxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1NzA2OTksImV4cCI6MjA4NTE0NjY5OX0.hN7hEElA0nn2ncbKSYEmObIuSypLBvB2lp4VwmX2x_s';
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://uooqzukgdzxlvhqggmwa.supabase.co';
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvb3F6dWtnZHp4bHZocWdnbXdhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5OTkxOTgsImV4cCI6MjEwODU3NTE5OH0.6lf8xw7o7NStJwNGBcCtVU1p_0eNLI36IkMcX9sA9_o';
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8815725998:AAHVMSujW5JM-ND4CJAzPr_Qsj_enXm2cYQ';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);

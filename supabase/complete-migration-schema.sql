@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS public.customers (
     credit_limit DECIMAL(10, 2) NOT NULL DEFAULT 0,
     loyalty_points INTEGER NOT NULL DEFAULT 0,
     outstanding_balance DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    telegram_chat_id BIGINT UNIQUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

@@ -60,10 +60,11 @@ const Admin = () => {
   const [testingCdn, setTestingCdn] = useState(false);
   const [cdnTestResult, setCdnTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
+  const currentOrigin = supabaseUrl || "https://zmbbgfpzgfcsoexybrle.supabase.co";
   const CLOUDFLARE_WORKER_CODE = `export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    const SUPABASE_ORIGIN = "https://zmbbgfpzgfcsoexybrle.supabase.co";
+    const SUPABASE_ORIGIN = "${currentOrigin}";
     const targetUrl = SUPABASE_ORIGIN + url.pathname + url.search;
 
     const response = await fetch(targetUrl, {

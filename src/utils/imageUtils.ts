@@ -111,13 +111,13 @@ export const getAdaptedImageUrl = (
         }
 
         // Direct Supabase Storage fallback
-        const baseOrigin = supabaseUrl || 'https://zmbbgfpzgfcsoexybrle.supabase.co';
+        const baseOrigin = supabaseUrl || 'https://uooqzukgdzxlvhqggmwa.supabase.co';
         return `${baseOrigin}/storage/v1/object/public/product-images/${fileName}`;
     }
 
     // Auto-fix any dummy, template, or broken worker domain left in old URLs
     if (typeof image === 'string' && (image.includes('<') || image.includes('>') || image.includes('your-subdomain') || image.includes('pos-image-cdn'))) {
-        const origin = supabaseUrl || 'https://zmbbgfpzgfcsoexybrle.supabase.co';
+        const origin = supabaseUrl || 'https://uooqzukgdzxlvhqggmwa.supabase.co';
         if (image.includes('/storage/v1/object/public/')) {
             const pathPart = image.substring(image.indexOf('/storage/v1/object/public/'));
             return `${origin}${pathPart}`;

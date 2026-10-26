@@ -378,34 +378,6 @@ const POS = () => {
     };
   }, []);
 
-  // Keyboard shortcut: Delete or Backspace key removes the currently selected cart product
-  useEffect(() => {
-    const handleCartItemDeleteKey = (e: KeyboardEvent) => {
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        const activeEl = document.activeElement;
-        const isTyping = activeEl && (
-          activeEl.tagName === 'INPUT' ||
-          activeEl.tagName === 'TEXTAREA' ||
-          (activeEl as HTMLElement).isContentEditable
-        );
-
-        if (!isTyping && selectedCartItemKey && activeCart) {
-          const itemToDelete = activeCart.items.find(
-            item => `${item.id}-${item.selected_unit || 'Piece'}-${item.selected_flavour || 'base'}` === selectedCartItemKey
-          );
-          if (itemToDelete) {
-            e.preventDefault();
-            removeFromCart(itemToDelete.id, itemToDelete.selected_unit, itemToDelete.selected_flavour);
-            setSelectedCartItemKey(null);
-            showSuccess(t('item_removed') || 'Item removed from cart');
-          }
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleCartItemDeleteKey);
-    return () => window.removeEventListener('keydown', handleCartItemDeleteKey);
-  }, [selectedCartItemKey, activeCart, removeFromCart, t]);
 
   const isAnyModalOpen = isCashDialogOpen || isCreditDialogOpen || isSplitDialogOpen || 
                          isAwaitingTransferDialogOpen || isPendingTransfersDialogOpen || 
@@ -867,6 +839,35 @@ const POS = () => {
       items: prevCart.items.filter(item => !(item.id === id && (item.selected_unit || 'Piece') === unitName && (item.selected_flavour || undefined) === (selectedFlavour || undefined))),
     }));
   };
+
+  // Keyboard shortcut: Delete or Backspace key removes the currently selected cart product
+  useEffect(() => {
+    const handleCartItemDeleteKey = (e: KeyboardEvent) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        const activeEl = document.activeElement;
+        const isTyping = activeEl && (
+          activeEl.tagName === 'INPUT' ||
+          activeEl.tagName === 'TEXTAREA' ||
+          (activeEl as HTMLElement).isContentEditable
+        );
+
+        if (!isTyping && selectedCartItemKey && activeCart) {
+          const itemToDelete = activeCart.items.find(
+            item => `${item.id}-${item.selected_unit || 'Piece'}-${item.selected_flavour || 'base'}` === selectedCartItemKey
+          );
+          if (itemToDelete) {
+            e.preventDefault();
+            removeFromCart(itemToDelete.id, itemToDelete.selected_unit, itemToDelete.selected_flavour);
+            setSelectedCartItemKey(null);
+            showSuccess(t('item_removed') || 'Item removed from cart');
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleCartItemDeleteKey);
+    return () => window.removeEventListener('keydown', handleCartItemDeleteKey);
+  }, [selectedCartItemKey, activeCart, removeFromCart, t]);
 
   useEffect(() => {
     if (activeCart) {

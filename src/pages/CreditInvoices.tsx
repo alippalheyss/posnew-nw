@@ -276,7 +276,7 @@ const CreditInvoices = () => {
 
   const getCustomer = (sale: Sale) => {
     if (sale.customer && (sale.customer.name_en || sale.customer.name_dv)) return sale.customer;
-    const custId = sale.customerId || (sale as any).customer_id;
+    const custId = sale.customer?.id || sale.customerId || sale.customer_id;
     if (custId && customers && customers.length > 0) {
       return customers.find(c => String(c.id).toLowerCase() === String(custId).toLowerCase()) || sale.customer;
     }
@@ -303,7 +303,7 @@ const CreditInvoices = () => {
     const balance = Number(s.balance ?? (s as any).balance ?? 0);
     const paidAmount = Number(s.paidAmount ?? (s as any).paid_amount ?? 0);
     const grandTotal = Number(s.grandTotal ?? (s as any).grand_total ?? 0);
-    const hasCustomer = !!(s.customerId || (s as any).customer_id || s.customer);
+    const hasCustomer = !!(s.customer || s.customerId || s.customer_id);
     return (
       pMethod === 'credit' ||
       (pMethod === 'split' && balance > 0) ||

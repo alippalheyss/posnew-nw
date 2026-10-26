@@ -117,6 +117,8 @@ export interface Sale {
   id: string;
   date: string;
   customer: Customer | null;
+  customerId?: string;
+  customer_id?: string;
   items: CartItem[];
   grandTotal: number;
   paymentMethod: 'cash' | 'credit' | 'card' | 'mobile';
@@ -124,6 +126,7 @@ export interface Sale {
   balance?: number;
   invoiceNumber?: string;
   splitDetails?: any[];
+  created_at?: string;
 }
 
 export interface Vendor {
@@ -137,6 +140,8 @@ export interface Vendor {
   tin_number: string;
   address: string;
   notes: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface ProductPriceUpdate {

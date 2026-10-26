@@ -852,13 +852,15 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         }
       }
 
-      let query = supabase.from('sales').select('*').order('date', { ascending: false }).limit(50);
-      if (latestTimestamp) {
+      // If device has fewer than 50 sales, fetch full recent batch to heal stale or partial device cache
+      let query = supabase.from('sales').select('*').order('date', { ascending: false });
+      if (sales.length < 50) {
+        query = query.limit(200);
+      } else if (latestTimestamp) {
         // Delta sync: only fetch new sales after latest local date (returns 0 rows when idle = 0 egress!)
-        query = query.gt('date', latestTimestamp);
+        query = query.gt('date', latestTimestamp).limit(50);
       } else {
-        const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
-        query = query.gte('date', twoDaysAgo);
+        query = query.limit(200);
       }
 
       const { data, error } = await query;
@@ -1372,12 +1374,28 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       ] = await Promise.all([
         fetchTableDelta('products', currentProducts, 'updated_at', '*', 'id'),
         fetchTableDelta('customers', currentCustomers, 'updated_at', '*', 'name_en'),
-        fetchTableDelta('sales', currentSales, 'date', '*', 'date'),
+        // On app startup, fetch all sales from cloud (up to 1,000) so all computers and browsers have identical sales counts
+        (async () => {
+          if (!supabase) return currentSales;
+          try {
+            const { data, error } = await supabase
+              .from('sales')
+              .select('*')
+              .order('date', { ascending: false })
+              .limit(1000);
+            if (!error && data) return data;
+          } catch (e) {
+            console.warn('Failed to load cloud sales, using local cache:', e);
+          }
+          return currentSales;
+        })(),
         fetchTableDelta('vendors', currentVendors, 'updated_at', '*', 'id'),
         fetchTableDelta('purchases', currentPurchases, 'created_at', '*', 'date'),
-        latestSettlementTime
-          ? supabase.from('settlements').select('id, customer_id, amount_paid, date, previous_outstanding, new_outstanding, created_at').gt('created_at', latestSettlementTime).limit(200)
-          : supabase.from('settlements').select('id, customer_id, amount_paid, date, previous_outstanding, new_outstanding, created_at').gte('date', sixtyDaysAgo).limit(500),
+        supabase
+          .from('settlements')
+          .select('id, customer_id, amount_paid, date, previous_outstanding, new_outstanding, created_at')
+          .order('date', { ascending: false })
+          .limit(500),
         supabase.from('settings').select('*')
       ]);
 

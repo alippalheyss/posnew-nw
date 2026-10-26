@@ -795,14 +795,14 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   const fetchTransferSlips = useCallback(async () => {
     try {
       if (!supabase) return;
-      // Optimize: Only fetch slips from the last 30 days or pending slips, avoiding full historical table transfer
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      // Egress optimization: Only fetch pending slips or slips from the last 7 days
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from('transfer_slips')
         .select('*')
-        .or(`created_at.gte.${thirtyDaysAgo},status.eq.pending,status.eq.system_config`)
+        .or(`created_at.gte.${sevenDaysAgo},status.eq.pending,status.eq.system_config`)
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(30);
 
       if (!error && data) {
         // Extract group config if stored in transfer_slips
@@ -832,17 +832,31 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   }, []);
 
-  // Live Sync Recent Sales Helper
+  // Live Sync Recent Sales Helper with Delta Sync (Massive Egress Reduction)
   const syncRecentSales = useCallback(async () => {
     if (!supabase || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
     try {
-      const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
-      const { data, error } = await supabase
-        .from('sales')
-        .select('*')
-        .gte('date', twoDaysAgo)
-        .order('date', { ascending: false })
-        .limit(200);
+      // Find latest known sale timestamp in memory/cache
+      let latestTimestamp: string | null = null;
+      if (sales && sales.length > 0) {
+        for (const s of sales) {
+          const t = s.date || (s as any).created_at;
+          if (t && (!latestTimestamp || t > latestTimestamp)) {
+            latestTimestamp = t;
+          }
+        }
+      }
+
+      let query = supabase.from('sales').select('*').order('date', { ascending: false }).limit(50);
+      if (latestTimestamp) {
+        // Delta sync: only fetch new sales after latest local date (returns 0 rows when idle = 0 egress!)
+        query = query.gt('date', latestTimestamp);
+      } else {
+        const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+        query = query.gte('date', twoDaysAgo);
+      }
+
+      const { data, error } = await query;
 
       if (!error && data && data.length > 0) {
         setSales(prev => {
@@ -851,39 +865,26 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           data.forEach((s: any) => {
             if (!map.has(s.id)) {
               hasNew = true;
-              let items = s.items;
-              if (typeof items === 'string') {
-                try { items = JSON.parse(items); } catch { items = []; }
-              }
-              let splitDetails = s.split_details;
-              if (typeof splitDetails === 'string') {
-                try { splitDetails = JSON.parse(splitDetails); } catch { splitDetails = null; }
-              }
-              const cust = customers.find(c => c.id.toLowerCase() === s.customer_id?.toLowerCase()) || null;
-              map.set(s.id, {
-                ...s,
-                date: s.date,
-                items: Array.isArray(items) ? items : [],
-                customer: cust,
-                grandTotal: Number(s.grand_total || 0),
-                paymentMethod: String(s.payment_method || 'cash').toLowerCase() as any,
-                paidAmount: Number(s.paid_amount || 0),
-                balance: Number(s.balance || 0),
-                invoiceNumber: s.invoice_number || `INV-${String(s.id).slice(-6)}`,
-                splitDetails
-              });
+              const norm = normalizeSaleRecord(s, customers);
+              map.set(s.id, norm);
             }
           });
           if (!hasNew) return prev;
-          return Array.from(map.values()).sort(
+          const merged = Array.from(map.values()).sort(
             (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
           );
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('cached_pos_sales', JSON.stringify(merged));
+            } catch {}
+          }
+          return merged;
         });
       }
     } catch (err) {
       console.warn('[Sync Recent Sales] Warning:', err);
     }
-  }, [customers]);
+  }, [sales, customers]);
 
   // Live Sync Recent Vendors Helper
   const syncRecentVendors = useCallback(async () => {
@@ -988,36 +989,34 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   useEffect(() => {
     fetchTransferSlips();
     syncRecentSales();
-    syncRecentVendors();
     syncPendingTransfers();
 
     const handleFocus = () => {
       if (typeof document !== 'undefined' && !document.hidden && navigator.onLine) {
         fetchTransferSlips();
         syncRecentSales();
-        syncRecentVendors();
         syncPendingTransfers();
       }
     };
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleFocus);
 
-    // Active background heartbeat every 20 seconds (ensures devices without WebSocket still stay live)
+    // Active background heartbeat every 3 minutes (fallback for edge cases/reconnection)
+    // Live multi-device synchronization is handled instantly via Realtime WebSocket mesh
     const interval = setInterval(() => {
       if (typeof document !== 'undefined' && !document.hidden && navigator.onLine) {
         fetchTransferSlips();
         syncRecentSales();
-        syncRecentVendors();
         syncPendingTransfers();
       }
-    }, 20 * 1000);
+    }, 3 * 60 * 1000);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleFocus);
     };
-  }, [fetchTransferSlips, syncRecentSales, syncRecentVendors, syncPendingTransfers]);
+  }, [fetchTransferSlips, syncRecentSales, syncPendingTransfers]);
 
   // Automatically enrich cached purchases with vendor names once vendors list is loaded
   useEffect(() => {
@@ -1134,9 +1133,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     if (!supabase) return;
     try {
       const [purchasesRes, vendorsRes, salesRes] = await Promise.all([
-        supabase.from('purchases').select('*').order('date', { ascending: false }).limit(500),
+        supabase.from('purchases').select('*').order('date', { ascending: false }).limit(250),
         supabase.from('vendors').select('*').order('name_en', { ascending: true }),
-        supabase.from('sales').select('*').order('date', { ascending: false }).limit(600),
+        supabase.from('sales').select('*').order('date', { ascending: false }).limit(250),
       ]);
 
       if (vendorsRes.data && vendorsRes.data.length > 0) {
@@ -1280,6 +1279,19 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
 
     // Cold start / first launch: load all records once
+    // For sales on cold start, limit to recent 300 to avoid downloading huge historical table
+    if (tableName === 'sales' && !latestTimestamp) {
+      try {
+        const { data, error } = await supabase
+          .from('sales')
+          .select(selectFields)
+          .order('date', { ascending: false })
+          .limit(300);
+        return error || !data ? [] : data;
+      } catch (e) {
+        return [];
+      }
+    }
     return await fetchAllFromTable(tableName, selectFields, { column: orderByField, ascending: true });
   };
 
@@ -1347,7 +1359,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       const [
         updatedProducts,
         updatedCustomers,
-        { data: freshSalesData },
+        updatedSales,
         updatedVendors,
         updatedPurchases,
         { data: freshSettlementsData },
@@ -1355,7 +1367,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       ] = await Promise.all([
         fetchTableDelta('products', currentProducts, 'updated_at', '*', 'id'),
         fetchTableDelta('customers', currentCustomers, 'updated_at', '*', 'name_en'),
-        supabase.from('sales').select('*').order('date', { ascending: false }).limit(1000),
+        fetchTableDelta('sales', currentSales, 'date', '*', 'date'),
         fetchTableDelta('vendors', currentVendors, 'updated_at', '*', 'id'),
         fetchTableDelta('purchases', currentPurchases, 'created_at', '*', 'date'),
         latestSettlementTime
@@ -1414,11 +1426,11 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         setCustomers(formattedCustomers);
       }
 
-      if (freshSalesData) {
+      if (updatedSales) {
         const salesMap = new Map<string, Sale>();
 
         // 1. First add cloud sales (cloud is source of truth for synced data)
-        freshSalesData.forEach((s: any) => {
+        updatedSales.forEach((s: any) => {
           const norm = normalizeSaleRecord(s, updatedCustomers || currentCustomers);
           salesMap.set(norm.id, norm);
         });
@@ -1428,7 +1440,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           if (!salesMap.has(s.id)) {
             // Keep if cloud is empty or if sale was created recently (offline created)
             const isRecent = s.date && (Date.now() - new Date(s.date).getTime()) < 3 * 24 * 60 * 60 * 1000;
-            if (freshSalesData.length === 0 || isRecent) {
+            if (updatedSales.length === 0 || isRecent) {
               salesMap.set(s.id, normalizeSaleRecord(s, updatedCustomers || currentCustomers));
             }
           }
@@ -1438,6 +1450,11 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
         );
         setSales(mergedSales);
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('cached_pos_sales', JSON.stringify(mergedSales));
+          } catch {}
+        }
       }
 
       if (updatedVendors) setVendors(updatedVendors);

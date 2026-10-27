@@ -33,3 +33,6 @@ supabase/.temp/
 
 # Electron release artifacts
 release/
+
+# Local backup data
+backup/

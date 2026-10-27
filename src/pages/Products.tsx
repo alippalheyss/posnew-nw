@@ -367,14 +367,19 @@ const Products = () => {
     setIsDialogOpen(true);
   };
 
-  const handleSaveProduct = (savedProduct: Product) => {
-    if (editingProduct) {
-      updateProduct(savedProduct);
-    } else {
-      addProduct(savedProduct);
+  const handleSaveProduct = async (savedProduct: Product) => {
+    try {
+      if (editingProduct) {
+        await updateProduct(savedProduct);
+        showSuccess(t('product_updated_successfully') || 'Product details updated successfully.');
+      } else {
+        await addProduct(savedProduct);
+      }
+      setIsDialogOpen(false);
+      setEditingProduct(null);
+    } catch (err: any) {
+      console.error('Error saving product:', err);
     }
-    setIsDialogOpen(false);
-    setEditingProduct(null);
   };
 
   const handleDeleteProduct = (productId: string) => {
@@ -795,6 +800,16 @@ const Products = () => {
                       </div>
 
                       <div className="p-3 text-right cursor-pointer" onClick={() => handleEditClick(product)}>
+                         <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                            <span className="font-mono text-[10px] font-black text-primary bg-primary/10 border border-primary/25 px-1.5 py-0.5 rounded-md tracking-wider shrink-0 select-all" title={t('item_code') || "Item Code"}>
+                              #{product.item_code || '---'}
+                            </span>
+                            {product.barcode && product.barcode !== product.item_code && (
+                              <span className="text-[9px] font-mono text-muted-foreground/80 truncate max-w-[100px]" title={`Barcode: ${product.barcode}`}>
+                                {product.barcode}
+                              </span>
+                            )}
+                         </div>
                          <h3 className="text-xs sm:text-sm font-black text-foreground leading-tight mb-0.5 truncate">{product.name_dv}</h3>
                          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider truncate font-mono">{product.name_en}</p>
                          

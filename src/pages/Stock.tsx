@@ -14,6 +14,7 @@ import ProductDialog from '@/components/ProductDialog';
 import QuickStockDialog from '@/components/QuickStockDialog';
 import { useAppContext, Product } from '@/context/AppContext';
 import { Badge } from '@/components/ui/badge';
+import { showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 
 const Stock = () => {
@@ -80,10 +81,15 @@ const Stock = () => {
     setIsProductDialog(true);
   };
 
-  const handleSaveProduct = (updatedProduct: Product) => {
-    updateProduct(updatedProduct);
-    setIsProductDialog(false);
-    setEditingProduct(null);
+  const handleSaveProduct = async (updatedProduct: Product) => {
+    try {
+      await updateProduct(updatedProduct);
+      showSuccess(t('product_updated_successfully') || 'Product details updated successfully.');
+      setIsProductDialog(false);
+      setEditingProduct(null);
+    } catch (err: any) {
+      console.error('Error updating product:', err);
+    }
   };
 
   const handleTransfer = (id: string, from: 'shop' | 'godown', to: 'shop' | 'godown', amount: number) => {

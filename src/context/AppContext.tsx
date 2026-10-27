@@ -2,6 +2,7 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback, useRef } from 'react';
 import { showError, showSuccess } from '@/utils/toast';
+import i18n from '@/lib/i18n';
 import { supabase, DEFAULT_SETTINGS_USER_ID } from '@/lib/supabase';
 import { useTheme } from '@/components/ThemeProvider';
 
@@ -3543,9 +3544,11 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       if (error) throw error;
 
       setProducts(prev => [...prev, productToStore]);
+      showSuccess(i18n.t('product_added_successfully', { defaultValue: 'Product added successfully.' }));
     } catch (error) {
       console.error('Error adding product:', error);
       showError('Failed to add product to database');
+      throw error;
     }
   };
 

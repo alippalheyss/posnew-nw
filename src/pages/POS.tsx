@@ -2071,13 +2071,6 @@ const POS = () => {
                       );
                     })()}
 
-                    {/* Flavour Tag Pill */}
-                    {item.selected_flavour && (
-                      <span className="text-[9px] sm:text-[10px] font-mono font-bold bg-amber-500/15 text-amber-500 dark:text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                        ✨ {item.selected_flavour}
-                      </span>
-                    )}
-
                     {/* Stepper Capsule: [- 0.2 +] */}
                     <CartQtyStepper
                       item={item}

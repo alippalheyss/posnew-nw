@@ -383,7 +383,7 @@ interface AppContextType {
   setIsPurchaseWindowOpen: (open: boolean) => void;
   isPurchaseWindowMinimized: boolean;
   setIsPurchaseWindowMinimized: React.Dispatch<React.SetStateAction<boolean>>;
-  refreshCustomers: () => Promise<void>;
+  refreshCustomers: (showToast?: boolean) => Promise<void>;
   refreshProducts: (showToast?: boolean) => Promise<Product[] | undefined>;
   refreshGSTData: (showToast?: boolean) => Promise<void>;
   expenses: Expense[];
@@ -763,7 +763,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           } else if (item.type === 'update_stock') {
             await supabase.from('products').update({ stock_shop: item.payload.stock_shop, updated_at: new Date().toISOString() }).eq('id', item.payload.id);
           } else if (item.type === 'update_customer_balance') {
-            await supabase.from('customers').update({ outstanding_balance: item.payload.newBalance }).eq('id', item.payload.customerId);
+            await supabase.from('customers').update({ outstanding_balance: item.payload.newBalance, updated_at: item.payload.updatedAt || new Date().toISOString() }).eq('id', item.payload.customerId);
           } else if (item.type === 'add_settlement') {
             await supabase.from('settlements').insert([item.payload]);
           } else if (item.type === 'sync_favorites') {
@@ -1059,7 +1059,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     localStorage.setItem('sidebar_collapsed', String(sidebarCollapsed));
   }, [sidebarCollapsed]);
 
-  const refreshCustomers = async () => {
+  const refreshCustomers = async (showToast: boolean = false) => {
     try {
       const { data, error } = await supabase
         .from('customers')
@@ -1090,11 +1090,15 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           })
         }));
         setCustomers(formatted);
-        showSuccess('Customers synchronized with database');
+        if (showToast) {
+          showSuccess('Customers synchronized with database');
+        }
       }
     } catch (error: any) {
       console.error('Error refreshing customers:', error);
-      showError('Failed to refresh customers: ' + (error.message || 'Unknown error'));
+      if (showToast) {
+        showError('Failed to refresh customers: ' + (error.message || 'Unknown error'));
+      }
     }
   };
 
@@ -1814,7 +1818,70 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         }
       })
 
+      // --- CUSTOMERS REALTIME BROADCAST ---
+      .on('broadcast', { event: 'customer_balance_updated' }, ({ payload }) => {
+        if (payload?.customerId && payload?.newBalance !== undefined) {
+          console.log('[Live Mesh] Customer balance update received from peer computer:', payload.customerId, payload.newBalance);
+          setCustomers(prev => prev.map(c =>
+            c.id === payload.customerId
+              ? { ...c, outstanding_balance: Number(payload.newBalance), updated_at: payload.updatedAt || new Date().toISOString() }
+              : c
+          ));
+        }
+      })
+      .on('broadcast', { event: 'customer_created' }, ({ payload }) => {
+        if (payload?.customer) {
+          console.log('[Live Mesh] Live customer received from peer computer:', payload.customer.name_en || payload.customer.id);
+          setCustomers(prev => {
+            if (prev.some(c => c.id === payload.customer.id)) return prev;
+            return [...prev, payload.customer];
+          });
+        }
+      })
+      .on('broadcast', { event: 'customer_updated' }, ({ payload }) => {
+        if (payload?.customer) {
+          console.log('[Live Mesh] Customer update received from peer computer:', payload.customer.name_en || payload.customer.id);
+          setCustomers(prev => prev.map(c =>
+            c.id === payload.customer.id ? { ...c, ...payload.customer } : c
+          ));
+        }
+      })
+      .on('broadcast', { event: 'settlement_created' }, ({ payload }) => {
+        if (payload?.customerId && payload?.settlement) {
+          console.log('[Live Mesh] Settlement received from peer computer for customer:', payload.customerId);
+          setCustomers(prev => prev.map(c => {
+            if (c.id !== payload.customerId) return c;
+            const history = c.settlement_history || [];
+            if (history.some(s => s.id === payload.settlement.id)) return c;
+            return {
+              ...c,
+              outstanding_balance: payload.settlement.new_outstanding !== undefined ? payload.settlement.new_outstanding : c.outstanding_balance,
+              settlement_history: [payload.settlement, ...history]
+            };
+          }));
+        }
+      })
+
       // --- DATABASE POSTGRES_CHANGES FALLBACK ---
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, (payload) => {
+        const row = payload.new as any;
+        if (!row || !row.id) return;
+        if (payload.eventType === 'INSERT') {
+          setCustomers(prev => {
+            if (prev.some(c => c.id === row.id)) return prev;
+            return [...prev, { ...row, settlement_history: [] }];
+          });
+        } else if (payload.eventType === 'UPDATE') {
+          setCustomers(prev => prev.map(c =>
+            c.id === row.id ? { ...c, ...row, settlement_history: c.settlement_history || [] } : c
+          ));
+        } else if (payload.eventType === 'DELETE') {
+          const oldRow = payload.old as any;
+          if (oldRow?.id) {
+            setCustomers(prev => prev.filter(c => c.id !== oldRow.id));
+          }
+        }
+      })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sales' }, (payload) => {
         const row = payload.new as any;
         if (!row) return;
@@ -2169,31 +2236,35 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
 
     const newBalance = (customer.outstanding_balance || 0) + amount;
+    const nowIso = new Date().toISOString();
 
     // 1. Immediately update local state
     setCustomers(prev => prev.map(c =>
-      c.id === customerId ? { ...c, outstanding_balance: newBalance } : c
+      c.id === customerId ? { ...c, outstanding_balance: newBalance, updated_at: nowIso } : c
     ));
 
-    // 2. Persist to cloud or queue offline
+    // 2. Realtime peer broadcast to all open computers/windows
+    broadcastLiveSync('customer_balance_updated', { customerId, newBalance, updatedAt: nowIso });
+
+    // 3. Persist to cloud or queue offline
     try {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        queueOfflineAction('update_customer_balance', { customerId, newBalance });
+        queueOfflineAction('update_customer_balance', { customerId, newBalance, updatedAt: nowIso });
         return;
       }
 
       const { error } = await supabase
         .from('customers')
-        .update({ outstanding_balance: newBalance })
+        .update({ outstanding_balance: newBalance, updated_at: nowIso })
         .eq('id', customerId);
 
       if (error) {
         console.warn('Network error updating balance, queued for offline sync:', error);
-        queueOfflineAction('update_customer_balance', { customerId, newBalance });
+        queueOfflineAction('update_customer_balance', { customerId, newBalance, updatedAt: nowIso });
       }
     } catch (error) {
       console.warn('Exception updating customer balance, queued for offline sync:', error);
-      queueOfflineAction('update_customer_balance', { customerId, newBalance });
+      queueOfflineAction('update_customer_balance', { customerId, newBalance, updatedAt: nowIso });
     }
   };
 
@@ -2478,6 +2549,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
       if (data) {
         setCustomers(prev => [...prev, data]);
+        broadcastLiveSync('customer_created', { customer: data });
         showSuccess('Customer added successfully');
         return data;
       }
@@ -2498,6 +2570,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
             if (prev.some(c => c.id === fullCustomer.id)) return prev;
             return [...prev, fullCustomer];
           });
+          broadcastLiveSync('customer_created', { customer: fullCustomer });
           showSuccess('Customer already exists, using existing details');
           return fullCustomer;
         } else if (fetchError) {
@@ -2533,16 +2606,30 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         payload.telegram_chat_id = customer.telegram_chat_id ? Number(customer.telegram_chat_id) : null;
       }
 
-      const { error } = await supabase
+      let { error } = await supabase
         .from('customers')
         .update(payload)
         .eq('id', customer.id);
 
+      // Defensive fallback if telegram_chat_id column is not in schema cache on older or delayed schema cache instances
+      if (error && error.message?.includes('telegram_chat_id')) {
+        console.warn('telegram_chat_id schema cache warning, retrying without telegram_chat_id:', error);
+        const fallbackPayload = { ...payload };
+        delete fallbackPayload.telegram_chat_id;
+        const retryResult = await supabase
+          .from('customers')
+          .update(fallbackPayload)
+          .eq('id', customer.id);
+        error = retryResult.error;
+      }
+
       if (error) throw error;
 
+      const merged = { ...customer, ...payload };
       setCustomers(prev => prev.map(c =>
-        c.id === customer.id ? { ...c, ...customer, ...payload } : c
+        c.id === customer.id ? merged : c
       ));
+      broadcastLiveSync('customer_updated', { customer: merged });
       showSuccess('Customer updated successfully');
     } catch (error: any) {
       console.error('Error updating customer:', error);
@@ -2659,11 +2746,11 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       const now = new Date();
       const todayIso = toISODate(now);
       const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      const groupChat = settings.shop?.telegramGroupChatId || settings.telegram?.groupChatId || settings.telegram?.ownerChatId;
+      const groupChat = settings.shop?.telegramGroupChatId || settings.telegram?.groupChatId || settings.telegram?.ownerChatId || '-1003102434685';
 
-      // 1. Store Close Executive Briefing to B BACK Group (strictly at 23:59 of that day only)
+      // 1. Store Close Executive Briefing to B BACK Group (strictly at 23:58-23:59 of that day only)
       if (groupChat) {
-        const isBriefingTime = now.getHours() === 23 && now.getMinutes() >= 59;
+        const isBriefingTime = (now.getHours() === 23 && now.getMinutes() >= 58);
 
         const briefingKey = `telegram_briefing_sent_${todayIso}`;
         const briefingSendingKey = `telegram_briefing_sending_${todayIso}`;
@@ -2836,13 +2923,15 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
             ...prev,
             telegram: { ...prev.telegram, lastMonthlyReminderSentMonth: currentMonth },
           }));
+          await updateSettings('telegram', { lastMonthlyReminderSentMonth: currentMonth });
           showSuccess(`Monthly credit tab reminders sent to ${linkedDueCustomers.length} connected customers! 📅`);
         }
       }
     };
 
     const initialT = setTimeout(runScheduledAutomations, 5000);
-    const intervalT = setInterval(runScheduledAutomations, 5 * 60 * 1000);
+    // Poll every 30 seconds so the 23:58-23:59 briefing window is reliably hit every night
+    const intervalT = setInterval(runScheduledAutomations, 30 * 1000);
 
     return () => {
       clearTimeout(initialT);
@@ -3096,12 +3185,15 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
       if (settlementError) throw settlementError;
 
+      const nowIso = new Date().toISOString();
       const { error: customerError } = await supabase
         .from('customers')
-        .update({ outstanding_balance: settlement.new_outstanding })
+        .update({ outstanding_balance: settlement.new_outstanding, updated_at: nowIso })
         .eq('id', customerId);
 
       if (customerError) throw customerError;
+
+      broadcastLiveSync('customer_balance_updated', { customerId, newBalance: settlement.new_outstanding, updatedAt: nowIso });
 
       if (settings.general.enableLoyaltyProgram ?? true) {
         const loyaltyAmountPerPoint = settings.general.loyaltyAmountPerPoint || 20;
@@ -3116,9 +3208,11 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         c.id === customerId ? {
           ...c,
           outstanding_balance: settlement.new_outstanding,
-          settlement_history: [...c.settlement_history, fullSettlement]
+          settlement_history: [...c.settlement_history, fullSettlement],
+          updated_at: nowIso
         } : c
       ));
+      broadcastLiveSync('settlement_created', { customerId, settlement: fullSettlement });
     } catch (error) {
       console.error('Error adding settlement:', error);
       showError('Failed to record settlement');

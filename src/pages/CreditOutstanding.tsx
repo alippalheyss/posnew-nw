@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, History, DollarSign, ShoppingBag, PlusCircle, Download, FileText, User, Activity, TrendingDown, Clock, CheckCircle2, AlertCircle, Edit, X, Filter, ArrowUpDown } from 'lucide-react';
+import { Search, History, DollarSign, ShoppingBag, PlusCircle, Download, FileText, User, Activity, TrendingDown, Clock, CheckCircle2, AlertCircle, Edit, X, Filter, ArrowUpDown, RotateCw } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -42,10 +42,16 @@ interface Settlement {
 
 const CreditOutstanding = () => {
   const { t } = useTranslation();
-  const { customers, sales, setSales, updateSale, settings, addSettlement, updateCustomerBalance, addSale, pendingSlipsCount } = useAppContext();
+  const { customers, sales, setSales, updateSale, settings, addSettlement, updateCustomerBalance, addSale, pendingSlipsCount, refreshCustomers } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [isOutstandingVisible, setIsOutstandingVisible] = useState(false);
   const [isTransferSlipsDialogOpen, setIsTransferSlipsDialogOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // Automatically fetch fresh customer balances from cloud on page visit
+  React.useEffect(() => {
+    refreshCustomers(false).catch(() => {});
+  }, []);
 
   React.useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -836,6 +842,23 @@ const CreditOutstanding = () => {
             </Button>
             <Button onClick={exportAllOutstanding} variant="outline" className="h-12 px-4 rounded-2xl border-white/20 dark:border-white/10 hover:bg-white/10 gap-2 font-bold text-xs">
               <Download className="h-4 w-4" /> <span className="hidden sm:inline">EXPORT</span>
+            </Button>
+            <Button
+              onClick={async () => {
+                setIsSyncing(true);
+                try {
+                  await refreshCustomers(true);
+                } finally {
+                  setIsSyncing(false);
+                }
+              }}
+              disabled={isSyncing}
+              variant="outline"
+              className="h-12 px-4 rounded-2xl border-white/20 dark:border-white/10 hover:bg-white/10 gap-2 font-bold text-xs"
+              title="Sync customers and credit balances directly from cloud"
+            >
+              <RotateCw className={cn("h-4 w-4 text-primary", isSyncing && "animate-spin")} />
+              <span className="hidden sm:inline">SYNC</span>
             </Button>
           </div>
         </div>

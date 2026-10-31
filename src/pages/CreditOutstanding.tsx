@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, History, DollarSign, ShoppingBag, PlusCircle, Download, FileText, User, Activity, TrendingDown, Clock, CheckCircle2, AlertCircle, Edit, X, Filter, ArrowUpDown, RotateCw } from 'lucide-react';
+import { Search, History, DollarSign, ShoppingBag, PlusCircle, Download, FileText, User, Activity, TrendingDown, Clock, CheckCircle2, AlertCircle, Edit, X, Filter, ArrowUpDown, RotateCw, Printer } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import SaleEditDialog from '@/components/SaleEditDialog';
 import { supabase } from '@/lib/supabase';
 import { useAppContext, Product, Sale, Customer } from '@/context/AppContext';
+import { printContent } from '@/utils/printHelper';
 import { cn } from '@/lib/utils';
 import { showSuccess, showError } from '@/utils/toast';
 import * as XLSX from 'xlsx';
@@ -107,9 +108,8 @@ const CreditOutstanding = () => {
     }
   };
 
-  // --- Dedicated Filters for Credit Outstanding: Name, Code, Credit Amount ---
-  const [filterName, setFilterName] = useState('');
-  const [filterCode, setFilterCode] = useState('');
+  // --- Dedicated Filters for Credit Outstanding: Unified Search, Credit Amount, Sorting ---
+  const [searchQuery, setSearchQuery] = useState('');
   const [amountFilter, setAmountFilter] = useState<'has_due' | 'all' | 'gt_500' | 'gt_1000' | 'gt_5000' | 'zero_balance' | 'custom'>('has_due');
   const [customMinAmount, setCustomMinAmount] = useState<string>('');
   const [customMaxAmount, setCustomMaxAmount] = useState<string>('');
@@ -117,34 +117,30 @@ const CreditOutstanding = () => {
 
   const filteredCustomers = useMemo(() => {
     return customers.filter(customer => {
-      // 1. Filter by Name (Dhivehi or English)
-      if (filterName.trim()) {
-        const qName = filterName.trim().toLowerCase();
-        const matchName = (customer.name_dv && customer.name_dv.toLowerCase().includes(qName)) ||
-                          (customer.name_en && customer.name_en.toLowerCase().includes(qName));
-        if (!matchName) return false;
+      // 1. Unified Search: English Name, Dhivehi Name, and Customer Code ONLY (No mobile numbers)
+      if (searchQuery.trim()) {
+        const q = searchQuery.trim().toLowerCase();
+        
+        // Match English Name or Dhivehi Name
+        const matchName = (customer.name_en && customer.name_en.toLowerCase().includes(q)) ||
+                          (customer.name_dv && customer.name_dv.toLowerCase().includes(q));
+
+        // Match Customer Code (e.g. "C01", "01", "1", etc.)
+        const custCode = (customer.code || '').toLowerCase();
+        const codeDigits = custCode.replace(/\D/g, '');
+        const qDigits = q.replace(/\D/g, '');
+        
+        const matchCode = custCode.includes(q) || 
+                          (qDigits !== '' && (codeDigits === qDigits || codeDigits.endsWith(qDigits)));
+
+        // Strictly do NOT match mobile / phone numbers
+        if (!matchName && !matchCode) return false;
       }
 
-      // 2. Filter by Code
-      if (filterCode.trim()) {
-        const qCode = filterCode.trim().toLowerCase();
-        const matchCode = customer.code && customer.code.toLowerCase().includes(qCode);
-        if (!matchCode) return false;
-      }
-
-      // 3. Fallback Unified Search (if user typed in legacy search bar)
-      if (searchTerm.trim()) {
-        const q = searchTerm.trim().toLowerCase();
-        const matchAny = (customer.name_dv && customer.name_dv.toLowerCase().includes(q)) ||
-                         (customer.name_en && customer.name_en.toLowerCase().includes(q)) ||
-                         (customer.code && customer.code.toLowerCase().includes(q));
-        if (!matchAny) return false;
-      }
-
-      // 4. Filter by Credit Amount
+      // 2. Filter by Credit Amount
       const balance = Number(customer.outstanding_balance || 0);
       if (amountFilter === 'has_due') {
-        if (balance <= 0 && !searchTerm && !filterName && !filterCode) return false;
+        if (balance <= 0 && !searchQuery.trim()) return false;
       } else if (amountFilter === 'gt_500') {
         if (balance < 500) return false;
       } else if (amountFilter === 'gt_1000') {
@@ -170,7 +166,7 @@ const CreditOutstanding = () => {
       if (sortBy === 'code_asc') return a.code.localeCompare(b.code, undefined, { numeric: true });
       return 0;
     });
-  }, [customers, filterName, filterCode, searchTerm, amountFilter, customMinAmount, customMaxAmount, sortBy]);
+  }, [customers, searchQuery, amountFilter, customMinAmount, customMaxAmount, sortBy]);
 
   const selectedCustomerCreditSales = sales.filter(s =>
     (s.customer?.id === selectedCustomerForAction?.id && s.paymentMethod?.toLowerCase() === 'credit') ||
@@ -302,6 +298,125 @@ const CreditOutstanding = () => {
   const currentOutstandingAfterPayment = selectedCustomerForAction 
     ? Math.max(0, selectedCustomerForAction.outstanding_balance - (typeof paymentAmount === 'number' ? paymentAmount : 0))
     : 0;
+
+  const handlePrintCustomerTotal = (customer: Customer) => {
+    const currency = settings.shop.currency || 'MVR';
+    const printerWidth = settings.printing?.thermalPrinterWidth === '58mm' ? '58mm' : '80mm';
+
+    const logoHtml = settings.shop.logo ? `
+      <div style="margin-bottom: 8px; text-align: center;">
+        <img src="${settings.shop.logo}" style="max-height: 55px; object-fit: contain;" />
+      </div>
+    ` : '';
+
+    const customerSales = sales
+      .filter(s => s.customer?.id === customer.id && (s.paymentMethod === 'credit' || (s.paymentMethod === 'split' && Number(s.balance || 0) > 0)))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5);
+
+    const salesRowsHtml = customerSales.length > 0 ? `
+      <div style="margin-top: 6px; font-size: 11px; text-align: left;">
+        <div style="font-weight: bold; border-bottom: 1px dashed #000; padding-bottom: 2px; margin-bottom: 4px;">Recent Credit Invoices:</div>
+        ${customerSales.map(s => `
+          <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 3px;">
+            <span>${formatDate(s.date)} (${s.invoiceNumber || 'INV'})</span>
+            <span style="font-weight: bold;">${currency} ${Number(s.grandTotal).toFixed(2)}</span>
+          </div>
+        `).join('')}
+      </div>
+      <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+    ` : '';
+
+    const lastSettlement = customer.settlement_history && customer.settlement_history.length > 0
+      ? customer.settlement_history[customer.settlement_history.length - 1]
+      : null;
+
+    const settlementHtml = lastSettlement ? `
+      <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 3px;">
+        <span>Last Payment (${formatDate(lastSettlement.date)}):</span>
+        <span style="font-weight: bold; color: #16a34a;">-${currency} ${Number(lastSettlement.amount_paid).toFixed(2)}</span>
+      </div>
+    ` : '';
+
+    const creditLimitHtml = customer.credit_limit > 0 ? `
+      <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 3px;">
+        <span>Credit Limit:</span>
+        <span>${currency} ${customer.credit_limit.toFixed(2)}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 2px;">
+        <span>Available Credit:</span>
+        <span style="font-weight: bold;">${currency} ${Math.max(0, customer.credit_limit - (customer.outstanding_balance || 0)).toFixed(2)}</span>
+      </div>
+    ` : '';
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Customer Balance Slip - ${customer.code}</title>
+          <style>
+            @page { margin: 0; }
+            html, body {
+              margin: 0 !important;
+              padding: 4px 6px !important;
+              width: ${printerWidth} !important;
+              box-sizing: border-box !important;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+              color: #000 !important;
+              background: #fff !important;
+              text-align: center;
+            }
+            * { box-sizing: border-box !important; }
+          </style>
+        </head>
+        <body>
+          ${logoHtml}
+          <div style="font-weight: bold; font-size: 15px;">${settings.shop.shopName}</div>
+          <div style="font-size: 11px;">${settings.shop.shopAddress}</div>
+          <div style="font-size: 10px; margin-top: 2px;">Tel: ${settings.shop.shopPhone}</div>
+          <div style="margin: 6px auto; display: inline-block; padding: 2px 8px; border: 1.5px solid #000; font-weight: 900; font-size: 11px; letter-spacing: 0.5px;">
+            CREDIT STATEMENT / ކަސްޓަމަރުގެ ދަރަނި
+          </div>
+          <div style="font-size: 10px; margin-top: 2px; color: #555;">
+            ${formatDate(new Date())} ${formatTime(new Date())}
+          </div>
+          
+          <div style="font-size: 11px; margin-top: 6px; text-align: left; border: 1px dashed #777; padding: 5px; border-radius: 4px;">
+            <div><strong>Customer:</strong> ${customer.name_dv || ''} (${customer.name_en || ''})</div>
+            <div><strong>Code:</strong> #${customer.code}</div>
+            ${customer.phone ? `<div><strong>Phone:</strong> ${customer.phone}</div>` : ''}
+          </div>
+
+          <div style="border: 2px solid #000; border-radius: 6px; padding: 8px 4px; margin: 8px 0; background: #fafafa;">
+            <div style="font-size: 10px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase;">
+              TOTAL OUTSTANDING (ދައްކަންޖެހޭ ޖުމްލަ)
+            </div>
+            <div style="font-size: 22px; font-weight: 900; margin-top: 4px; color: #000;">
+              ${currency} ${(customer.outstanding_balance || 0).toFixed(2)}
+            </div>
+          </div>
+
+          ${creditLimitHtml}
+          ${settlementHtml}
+
+          <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
+          ${salesRowsHtml}
+
+          <div style="font-size: 10px; margin-top: 8px; font-style: italic;">
+            Please settle outstanding balance promptly.<br/>
+            Thank you for your business!
+          </div>
+          <div style="margin-top: 15px; border-top: 1px dotted #888; padding-top: 4px; font-size: 9px; display: flex; justify-content: space-between;">
+            <span>Cashier Signature: ________________</span>
+          </div>
+        </body>
+      </html>
+    `;
+
+    printContent(htmlContent, settings);
+    showSuccess(`Printing total slip for ${customer.name_en} (#${customer.code})`);
+  };
 
   const handleDownloadPdfReport = (customer: Customer) => {
     const customerSales = sales.filter(s => s.customer?.id === customer.id && s.paymentMethod === 'credit');
@@ -725,49 +840,28 @@ const CreditOutstanding = () => {
       {/* Comprehensive Filter & Actions Bar */}
       <div className="flex flex-col gap-3 mb-6" dir="ltr">
         <div className="flex flex-wrap items-center gap-3">
-          {/* 1. Filter by Name */}
-          <div className="relative flex-1 min-w-[200px]">
+          {/* 1. Unified Search: English Name, Dhivehi Name, or Customer Code (No mobile numbers) */}
+          <div className="relative flex-1 min-w-[260px]">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60 pointer-events-none" />
             <Input 
               dir="ltr"
-              placeholder="Filter by customer name (English / ދިވެހި)..."
-              value={filterName}
-              onChange={(e) => setFilterName(e.target.value)}
+              placeholder="Search customer by name or code (e.g. Ali, C01, 01)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full apple-glass-input rounded-2xl pl-10 pr-9 h-12 text-left font-bold transition-all text-sm shadow-xs"
             />
-            {filterName && (
+            {searchQuery && (
               <button
-                onClick={() => setFilterName('')}
+                onClick={() => setSearchQuery('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted"
-                title="Clear name filter"
+                title="Clear search"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
 
-          {/* 2. Filter by Code */}
-          <div className="relative w-full sm:w-48">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-muted-foreground/60 pointer-events-none">#</span>
-            <Input 
-              dir="ltr"
-              placeholder="Code (e.g. C01)..."
-              value={filterCode}
-              onChange={(e) => setFilterCode(e.target.value)}
-              className="w-full apple-glass-input rounded-2xl pl-9 pr-8 h-12 text-left font-bold font-mono transition-all text-sm shadow-xs"
-            />
-            {filterCode && (
-              <button
-                onClick={() => setFilterCode('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted"
-                title="Clear code filter"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-
-          {/* 3. Filter by Credit Amount */}
+          {/* 2. Filter by Credit Amount */}
           <div className="w-full sm:w-56">
             <Select value={amountFilter} onValueChange={(val: any) => setAmountFilter(val)}>
               <SelectTrigger className="h-12 rounded-2xl apple-glass-input border-border font-bold text-xs">
@@ -788,7 +882,7 @@ const CreditOutstanding = () => {
             </Select>
           </div>
 
-          {/* 4. Sort By */}
+          {/* 3. Sort By */}
           <div className="w-full sm:w-52">
             <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
               <SelectTrigger className="h-12 rounded-2xl apple-glass-input border-border font-bold text-xs">
@@ -807,13 +901,11 @@ const CreditOutstanding = () => {
           </div>
 
           {/* Clear Filters Button (shown when active) */}
-          {(filterName || filterCode || searchTerm || amountFilter !== 'has_due' || customMinAmount || customMaxAmount) && (
+          {(searchQuery || amountFilter !== 'has_due' || customMinAmount || customMaxAmount) && (
             <Button
               variant="ghost"
               onClick={() => {
-                setFilterName('');
-                setFilterCode('');
-                setSearchTerm('');
+                setSearchQuery('');
                 setAmountFilter('has_due');
                 setCustomMinAmount('');
                 setCustomMaxAmount('');
@@ -915,6 +1007,18 @@ const CreditOutstanding = () => {
                             </Badge>
                           )}
                           <Badge className="bg-primary/20 text-primary border-none text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">{customer.code}</Badge>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePrintCustomerTotal(customer);
+                            }}
+                            className="h-8 w-8 rounded-xl bg-muted/80 border border-border/70 hover:bg-primary hover:text-primary-foreground transition-all text-muted-foreground shadow-xs"
+                            title="Print Customer Total Slip (ކަސްޓަމަރުގެ ދަރަނި ސްލިޕް ޕްރިންޓްކުރައްވާ)"
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                      </div>
 

@@ -51,7 +51,27 @@ const ShrinkageReport = () => {
   const { products, settings, updateStock } = useAppContext();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [records, setRecords] = useState<ShrinkageRecord[]>([]);
+  const [records, setRecords] = useState<ShrinkageRecord[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('pos_shrinkage_records');
+        if (saved) return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error loading shrinkage records from storage', e);
+      }
+    }
+    return [];
+  });
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('pos_shrinkage_records', JSON.stringify(records));
+      } catch (e) {
+        console.error('Error saving shrinkage records to storage', e);
+      }
+    }
+  }, [records]);
 
   const [newRecord, setNewRecord] = useState({
     productId: '',

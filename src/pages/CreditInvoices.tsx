@@ -5,11 +5,12 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { Printer, FileText, Receipt, Search, Filter, PencilLine, AlertCircle, Clock, CheckCircle2, Download, Calendar as CalendarIcon, FileSpreadsheet, X } from 'lucide-react';
+import { Printer, FileText, Receipt, Search, Filter, PencilLine, AlertCircle, Clock, CheckCircle2, Download, Calendar as CalendarIcon, FileSpreadsheet, X, Eye } from 'lucide-react';
 import { printContent } from '@/utils/printHelper';
 import { useAppContext, Sale } from '@/context/AppContext';
 import { formatDate, formatTime, formatDateTime, extractDateOnly } from '@/utils/formatters';
 import SaleEditDialog from '@/components/SaleEditDialog';
+import InvoiceViewDialog from '@/components/InvoiceViewDialog';
 import { showSuccess, showError } from '@/utils/toast';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -27,12 +28,19 @@ const CreditInvoices = () => {
   const { sales, setSales, updateSale, settings, customers } = useAppContext();
   const [isEditSaleDialogOpen, setIsEditSaleDialogOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [viewingSale, setViewingSale] = useState<Sale | null>(null);
+  const [isViewInvoiceDialogOpen, setIsViewInvoiceDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'custom'>('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(),
     to: new Date()
   });
+
+  const handleViewInvoice = (sale: Sale) => {
+    setViewingSale(sale);
+    setIsViewInvoiceDialogOpen(true);
+  };
 
   const handleEditClick = (sale: Sale) => {
     setEditingSale({ ...sale });
@@ -696,6 +704,15 @@ const CreditInvoices = () => {
                          <Button 
                            variant="ghost" 
                            size="icon" 
+                           title="View Invoice Items"
+                           onClick={() => handleViewInvoice(sale)}
+                           className="h-11 w-11 rounded-xl bg-muted border border-border hover:bg-primary hover:text-primary-foreground transition-all text-muted-foreground shadow-xs"
+                         >
+                           <Eye className="h-4 w-4" />
+                         </Button>
+                         <Button 
+                           variant="ghost" 
+                           size="icon" 
                            title="Print Thermal Receipt"
                            onClick={() => handlePrintReceipt(sale)}
                            className="h-11 w-11 rounded-xl bg-muted border border-border hover:bg-orange-500 hover:text-white transition-all text-muted-foreground"
@@ -739,6 +756,18 @@ const CreditInvoices = () => {
           sale={editingSale}
         />
       )}
+
+      {/* Invoice View Dialog */}
+      <InvoiceViewDialog
+        isOpen={isViewInvoiceDialogOpen}
+        onClose={() => {
+          setIsViewInvoiceDialogOpen(false);
+          setViewingSale(null);
+        }}
+        sale={viewingSale}
+        onPrintThermal={handlePrintReceipt}
+        onPrintA4={handlePrintA4Invoice}
+      />
     </div>
   );
 };

@@ -5,12 +5,12 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { PencilLine, CalendarDays, Printer, Trash2, Filter, ChevronRight, Receipt, DollarSign, CreditCard, ArrowRightLeft, TrendingUp, Download, Calendar as CalendarIcon, FileSpreadsheet, Moon, Send, Loader2, RefreshCw } from 'lucide-react';
+import { PencilLine, CalendarDays, Printer, Trash2, Filter, ChevronRight, Receipt, DollarSign, CreditCard, ArrowRightLeft, TrendingUp, Download, Calendar as CalendarIcon, FileSpreadsheet, Moon, Send, Loader2, RefreshCw, Eye } from 'lucide-react';
 import { useAppContext, Product, Customer, CartItem, Sale } from '@/context/AppContext';
 import { supabase } from '@/lib/supabase';
 import { formatDate, formatTime, formatDateTime, toISODate, extractDateOnly } from '@/utils/formatters';
 import SaleEditDialog from '@/components/SaleEditDialog'; 
+import InvoiceViewDialog from '@/components/InvoiceViewDialog'; 
 import { showSuccess, showError } from '@/utils/toast';
 import { printContent } from '@/utils/printHelper';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +30,8 @@ const DailySales = () => {
   const { sales, setSales, updateSale, settings, customers } = useAppContext();
   const [isEditSaleDialogOpen, setIsEditSaleDialogOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [viewingSale, setViewingSale] = useState<Sale | null>(null);
+  const [isViewInvoiceDialogOpen, setIsViewInvoiceDialogOpen] = useState(false);
   const [isBriefingDialogOpen, setIsBriefingDialogOpen] = useState(false);
   const [briefingDateMode, setBriefingDateMode] = useState<'today' | 'yesterday'>('today');
   const [isSendingBriefing, setIsSendingBriefing] = useState(false);
@@ -41,6 +43,11 @@ const DailySales = () => {
   const [activeTab, setActiveTab] = useState<'sales' | 'pending'>('sales');
   const [isSyncing, setIsSyncing] = useState(false);
   const { pendingTransfers, resolvePendingTransfer, convertAllPendingToCredit } = useAppContext();
+
+  const handleViewInvoice = (sale: Sale) => {
+    setViewingSale(sale);
+    setIsViewInvoiceDialogOpen(true);
+  };
 
   const handleSyncCloudSales = async () => {
     if (!supabase) {
@@ -804,6 +811,15 @@ const DailySales = () => {
                            <Button 
                              variant="ghost" 
                              size="icon" 
+                             title="View Invoice Items"
+                             onClick={() => handleViewInvoice(sale)}
+                             className="h-11 w-11 rounded-xl bg-muted border border-border hover:bg-primary hover:text-primary-foreground transition-all text-muted-foreground shadow-xs"
+                           >
+                             <Eye className="h-4 w-4" />
+                           </Button>
+                           <Button 
+                             variant="ghost" 
+                             size="icon" 
                              title="Print Receipt"
                              onClick={() => handlePrintReceipt(sale)}
                              className={cn("h-11 w-11 rounded-xl bg-muted border border-border transition-all text-muted-foreground", printHoverClass)}
@@ -909,6 +925,17 @@ const DailySales = () => {
           sale={editingSale}
         />
       )}
+
+      {/* Invoice View Dialog */}
+      <InvoiceViewDialog
+        isOpen={isViewInvoiceDialogOpen}
+        onClose={() => {
+          setIsViewInvoiceDialogOpen(false);
+          setViewingSale(null);
+        }}
+        sale={viewingSale}
+        onPrintThermal={handlePrintReceipt}
+      />
 
       {/* Executive Briefing Dialog */}
       <Dialog open={isBriefingDialogOpen} onOpenChange={setIsBriefingDialogOpen}>

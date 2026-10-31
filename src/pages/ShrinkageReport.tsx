@@ -141,7 +141,7 @@ const ShrinkageReport = () => {
   };
 
   const exportToExcel = () => {
-    const data = [
+    const data: (string | number)[][] = [
       ["Shrinkage & Loss Report", settings.shop.shopName],
       ["Generated Date", new Date().toLocaleDateString()],
       [],

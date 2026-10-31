@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { PlusCircle, Building2, Pencil, Trash2, Search, Info, Phone, Mail, MapPin, Hash, User, ArrowLeft } from 'lucide-react';
+import { PlusCircle, Building2, Pencil, Trash2, Search, Info, Phone, Mail, MapPin, Hash, User, ArrowLeft, X } from 'lucide-react';
 import { useAppContext, Vendor } from '@/context/AppContext';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';

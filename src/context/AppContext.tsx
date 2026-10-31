@@ -336,7 +336,7 @@ interface AppContextType {
   getNextCustomerCode: () => string;
   getNextProductCode: () => string;
   clearCart: (cartId: string) => void;
-  updateStock: (productId: string, newStock: number) => void;
+  updateStock: (productId: string, newStock: number, location?: 'shop' | 'godown') => Promise<void>;
   updateProduct: (updatedProduct: Product) => Promise<void>;
   addProduct: (product: Product) => Promise<void>;
   deleteProduct: (productId: string) => Promise<void>;
@@ -2104,19 +2104,23 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     // Logic as before
   };
 
-  const updateStock = async (productId: string, newStock: number) => {
+  const updateStock = async (productId: string, newStock: number, location: 'shop' | 'godown' = 'shop') => {
     try {
       const intStock = Math.round(Number(newStock)) || 0;
       const nowIso = new Date().toISOString();
+      const payload = location === 'godown'
+        ? { stock_godown: intStock, updated_at: nowIso }
+        : { stock_shop: intStock, updated_at: nowIso };
+
       const { error } = await supabase
         .from('products')
-        .update({ stock_shop: intStock, updated_at: nowIso })
+        .update(payload)
         .eq('id', productId);
 
       if (error) throw error;
 
       setProducts(prev => prev.map(p =>
-        p.id === productId ? { ...p, stock_shop: intStock } : p
+        p.id === productId ? { ...p, ...(location === 'godown' ? { stock_godown: intStock } : { stock_shop: intStock }) } : p
       ));
 
       // Broadcast stock update so mobile audit app syncs immediately
@@ -2125,7 +2129,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           supabase.channel('stock_audit_realtime_channel').send({
             type: 'broadcast',
             event: 'audit_stock_committed',
-            payload: { productId, stock_shop: intStock }
+            payload: { productId, ...(location === 'godown' ? { stock_godown: intStock } : { stock_shop: intStock }) }
           });
         } catch (e) {}
       }

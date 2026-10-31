@@ -442,7 +442,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const addUser = async (userData: Omit<User, 'id' | 'createdAt'> & { password: string }) => {
         try {
-            let authUserId = crypto.randomUUID();
+            let authUserId: string = crypto.randomUUID();
             const cleanUsername = userData.username.trim();
             const cleanPassword = userData.password.trim();
             const authEmail = getAuthEmail(cleanUsername);

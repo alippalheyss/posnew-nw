@@ -163,9 +163,10 @@ const ExpiryAlerts = () => {
           await addExpense({
             id: crypto.randomUUID(),
             date: new Date().toISOString().split('T')[0],
-            category: 'Inventory Loss / Expiry',
+            category: 'disposal_charge',
+            title: `Expired Stock Loss: ${lossProduct.name_en} x${lossQty}`,
             amount: totalLossAmount,
-            description: `Expired Stock Loss: ${lossProduct.name_en} x${lossQty} (${lossLocation === 'shop' ? 'Shop' : 'Godown'})`,
+            notes: `Location: ${lossLocation === 'shop' ? 'Shop' : 'Godown'}. ${lossNotes || ''}`.trim(),
             paymentMethod: 'cash'
           });
         } catch (expErr) {

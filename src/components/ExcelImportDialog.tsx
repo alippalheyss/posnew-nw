@@ -420,7 +420,7 @@ const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({ isOpen, onClose }
                                                     {item.isValid ? (
                                                         <CheckCircle className="h-4 w-4 text-emerald-400 mx-auto" />
                                                     ) : (
-                                                        <XCircle className="h-4 w-4 text-red-400 mx-auto" title={item.errors.join(', ')} />
+                                                        <span title={item.errors.join(', ')}><XCircle className="h-4 w-4 text-red-400 mx-auto" /></span>
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="font-black text-foreground">{item.product.name_dv}</TableCell>

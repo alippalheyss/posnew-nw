@@ -310,7 +310,7 @@ const CreditOutstanding = () => {
     ` : '';
 
     const customerSales = sales
-      .filter(s => s.customer?.id === customer.id && (s.paymentMethod === 'credit' || (s.paymentMethod === 'split' && Number(s.balance || 0) > 0)))
+      .filter(s => s.customer?.id === customer.id && ((s.paymentMethod as any) === 'credit' || ((s.paymentMethod as any) === 'split' && Number(s.balance || 0) > 0)))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 5);
 

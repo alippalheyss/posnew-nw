@@ -36,3 +36,5 @@ release/
 
 # Local backup data
 backup/
+
+*.tsbuildinfo

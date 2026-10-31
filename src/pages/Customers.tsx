@@ -232,7 +232,7 @@ const Customers = () => {
         <div className="flex gap-3">
            <Button 
              variant="outline"
-             onClick={refreshCustomers}
+             onClick={() => refreshCustomers(true)}
              className="gap-2 border-border hover:bg-muted h-11 px-6 rounded-xl font-black text-foreground"
            >
              <RefreshCcw className="h-4 w-4" /> Sync All Customers

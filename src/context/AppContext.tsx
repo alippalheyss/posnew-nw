@@ -208,6 +208,7 @@ interface ShopSettings {
   accountNumber?: string;
   telegramGroupChatId?: string | number;
   telegramGroupTitle?: string;
+  posShortcuts?: Partial<Record<string, string>>; // Custom POS keyboard shortcuts (synced to cloud)
 }
 
 interface AccountingSettings {

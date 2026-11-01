@@ -37,6 +37,7 @@ import { TransferSlipsDialog } from '@/components/TransferSlipsDialog';
 import { sendTelegramSaleReceipt } from '@/services/telegramService';
 import PulsatingDots from '@/components/PulsatingDots';
 import { playScanSuccessSound, playScanErrorSound } from '@/utils/soundEffects';
+import { resolvePosShortcuts, matchPosShortcut } from '@/utils/posShortcuts';
 
 interface Cart {
   id: string;
@@ -402,17 +403,26 @@ const POS = () => {
     isCashDialogOpenRef.current = isCashDialogOpen;
   });
 
+  // Customisable POS shortcuts (Admin > Shop Settings), synced via cloud settings
+  const posShortcuts = useMemo(() => resolvePosShortcuts(settings.shop?.posShortcuts as any), [settings.shop?.posShortcuts]);
+  const posShortcutsRef = useRef(posShortcuts);
+  useEffect(() => {
+    posShortcutsRef.current = posShortcuts;
+  });
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Global F2 shortcut - focus product search anytime
-      if (e.key === 'F2') {
+      const shortcutAction = matchPosShortcut(e, posShortcutsRef.current);
+
+      // Global shortcut - focus product search anytime
+      if (shortcutAction === 'focusSearch') {
         e.preventDefault();
         focusSearchBar();
         return;
       }
 
-      // Global F10 shortcut - focus quantity of last cart item
-      if (e.key === 'F10') {
+      // Global shortcut - focus quantity of last cart item
+      if (shortcutAction === 'focusQuantity') {
         e.preventDefault();
         focusQuantityInputRef.current(); // always fresh, never stale
         return;
@@ -485,24 +495,24 @@ const POS = () => {
         searchInputRef.current?.focus();
       }
 
-      // Global F9 shortcut - instant print receipt without dialogue
-      if (e.key === 'F9') {
+      // Global shortcut - instant print receipt without dialogue
+      if (shortcutAction === 'printReceipt') {
         e.preventDefault();
         triggerInstantReceiptPrintRef.current();
         return;
       }
 
-      if (e.key === 'Enter') {
+      if (shortcutAction === 'cashPayment') {
         e.preventDefault();
         openCashDialogRef.current();
-      } else if (e.key === 'F11') {
+      } else if (shortcutAction === 'creditSale') {
         e.preventDefault();
         setCreditDialogStep(1);
         setIsCreditDialogOpen(true);
-      } else if (e.key === 'F4') {
+      } else if (shortcutAction === 'focusSearchAlt') {
         e.preventDefault();
         focusSearchBar();
-      } else if (e.key === 'F6') {
+      } else if (shortcutAction === 'splitPayment') {
         e.preventDefault();
         setIsSplitDialogOpen(true);
       }
@@ -1562,10 +1572,10 @@ const POS = () => {
               className="flex items-center gap-1 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 rounded-lg h-8 px-2 text-[9px] font-black shadow-none"
               onClick={triggerInstantReceiptPrint}
               onFocus={(e) => e.currentTarget.blur()}
-              title="Print latest receipt directly without dialogue (F9)"
+              title={`Print latest receipt directly without dialogue (${posShortcuts.printReceipt || 'no shortcut'})`}
             >
               <Printer className="h-3.5 w-3.5" />
-              <span>Print (F9)</span>
+              <span>Print{posShortcuts.printReceipt ? ` (${posShortcuts.printReceipt})` : ''}</span>
             </Button>
             
             <Select value={selectedCategory} onValueChange={(val) => { setSelectedCategory(val); setVisibleCatalogueCount(100); }}>
@@ -1660,11 +1670,11 @@ const POS = () => {
                   >
                     <X className="h-4 w-4" />
                   </button>
-                ) : (
-                  <kbd className="hidden sm:inline-flex items-center text-[10px] font-mono font-bold text-muted-foreground/70 bg-background/80 border border-border/80 px-1.5 py-0.5 rounded shadow-xs select-none" title="Press F2 anytime to focus">
-                    F2
+                ) : posShortcuts.focusSearch ? (
+                  <kbd className="hidden sm:inline-flex items-center text-[10px] font-mono font-bold text-muted-foreground/70 bg-background/80 border border-border/80 px-1.5 py-0.5 rounded shadow-xs select-none" title={`Press ${posShortcuts.focusSearch} anytime to focus`}>
+                    {posShortcuts.focusSearch}
                   </kbd>
-                )}
+                ) : null}
               </div>
             </div>
           </div>

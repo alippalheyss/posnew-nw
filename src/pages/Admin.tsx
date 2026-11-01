@@ -23,6 +23,7 @@ import { CustomerDisplayOffer } from '@/context/AppContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
 import { PWAInstallButton } from '@/components/PWAInstallButton';
+import PosShortcutSettings from '@/components/PosShortcutSettings';
 
 
 const Admin = () => {
@@ -569,6 +570,13 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                     />
                   </div>
                 </div>
+
+                <Separator className="bg-border" />
+
+                <PosShortcutSettings
+                  saved={shopSettings.posShortcuts}
+                  onSave={(shortcuts) => handleSettingsChange('shop', 'posShortcuts', shortcuts)}
+                />
 
               </div>
             )}

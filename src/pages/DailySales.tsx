@@ -27,9 +27,12 @@ import { calculateExecutiveBriefingData, sendNightlyExecutiveBriefing } from '@/
 
 const DailySales = () => {
   const { t } = useTranslation();
-  const { sales, setSales, updateSale, settings, customers } = useAppContext();
+  const { sales, setSales, updateSale, deleteSale, settings, customers } = useAppContext();
   const [isEditSaleDialogOpen, setIsEditSaleDialogOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
+  const [isDeletingSale, setIsDeletingSale] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(30);
   const [viewingSale, setViewingSale] = useState<Sale | null>(null);
   const [isViewInvoiceDialogOpen, setIsViewInvoiceDialogOpen] = useState(false);
   const [isBriefingDialogOpen, setIsBriefingDialogOpen] = useState(false);
@@ -675,7 +678,8 @@ const DailySales = () => {
                  No sales recorded for this period
               </div>
             ) : (
-              filteredSales.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((sale) => {
+              <>
+              {filteredSales.sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, visibleCount).map((sale) => {
               const method = (sale.paymentMethod || (sale as any).payment_method || '').toLowerCase();
               const isCredit = method === 'credit' || (method === 'split' && Number(sale.balance ?? (sale as any).balance ?? 0) > 0);
               const isCash = method === 'cash';
@@ -814,12 +818,33 @@ const DailySales = () => {
                            >
                              <PencilLine className="h-4 w-4" />
                            </Button>
+                           <Button 
+                             variant="ghost" 
+                             size="icon" 
+                             title="Delete Sale"
+                             onClick={() => setSaleToDelete(sale)}
+                             className="h-11 w-11 rounded-xl bg-muted border border-border hover:bg-red-500 hover:text-white transition-all text-red-500/80"
+                           >
+                             <Trash2 className="h-4 w-4" />
+                           </Button>
                         </div>
                      </div>
                   </div>
                 </Card>
               );
-            })
+            })}
+            {filteredSales.length > visibleCount && (
+              <div className="flex justify-center pt-2 pb-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setVisibleCount(prev => prev + 40)}
+                  className="rounded-2xl px-8 h-11 font-black text-xs uppercase tracking-widest border-border hover:bg-muted"
+                >
+                  Load More ({filteredSales.length - visibleCount} remaining)
+                </Button>
+              </div>
+            )}
+            </>
             )
           ) : (
             pendingTransfers.length === 0 ? (
@@ -1115,6 +1140,50 @@ const DailySales = () => {
               </div>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Sale Confirmation Dialog */}
+      <Dialog open={!!saleToDelete} onOpenChange={(open) => !open && setSaleToDelete(null)}>
+        <DialogContent className="sm:max-w-[26rem] font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground p-6 shadow-2xl rounded-3xl" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-right text-xl font-black text-red-500 flex items-center justify-end gap-2">
+              <span>Delete Sale (ވިޔަފާރި ފޮހެލުން)</span>
+              <Trash2 className="h-5 w-5" />
+            </DialogTitle>
+            <DialogDescription className="text-right text-muted-foreground text-xs pt-1">
+              Are you sure you want to delete invoice <strong className="text-foreground font-mono">{saleToDelete?.invoiceNumber || saleToDelete?.id}</strong> ({settings.shop.currency} {saleToDelete?.grandTotal.toFixed(2)})? Stock will be restored and customer credit balance (if any) will be adjusted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="pt-4 border-t border-white/10 dark:border-white/5 flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setSaleToDelete(null)}
+              disabled={isDeletingSale}
+              className="flex-1 h-11 rounded-2xl border-white/20 dark:border-white/10 hover:bg-white/10 font-bold"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={isDeletingSale}
+              onClick={async () => {
+                if (!saleToDelete) return;
+                setIsDeletingSale(true);
+                try {
+                  await deleteSale(saleToDelete.id);
+                  setSaleToDelete(null);
+                } finally {
+                  setIsDeletingSale(false);
+                }
+              }}
+              className="flex-1 h-11 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-black gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>{isDeletingSale ? 'Deleting...' : 'Confirm Delete'}</span>
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

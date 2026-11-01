@@ -133,7 +133,7 @@ const Sidebar = () => {
                   to={item.path}
                   onClick={() => isMobile && setMobileOpen(false)}
                   className={cn(
-                    "flex items-center justify-between p-3 rounded-2xl transition-all duration-300 group relative overflow-hidden apple-glass-pill",
+                    "flex items-center justify-between p-3 rounded-2xl transition-colors duration-100 group relative overflow-hidden",
                     isActive 
                       ? "bg-primary text-white font-bold shadow-[0_10px_25px_-5px_rgba(0,132,255,0.4)] border border-white/20" 
                       : "text-muted-foreground hover:text-foreground hover:bg-white/10 dark:hover:bg-white/5"

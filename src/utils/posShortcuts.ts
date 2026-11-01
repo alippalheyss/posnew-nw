@@ -11,6 +11,7 @@ export type PosShortcutAction =
   | 'cashPayment'
   | 'creditSale'
   | 'splitPayment'
+  | 'awaitingTransfer'
   | 'printReceipt';
 
 export type PosShortcutMap = Record<PosShortcutAction, string>;
@@ -22,6 +23,7 @@ export const POS_SHORTCUT_ACTIONS: { action: PosShortcutAction; label: string; d
   { action: 'cashPayment', label: 'Cash Payment', description: 'Open the cash payment dialog' },
   { action: 'creditSale', label: 'Credit Sale', description: 'Open the credit sale dialog' },
   { action: 'splitPayment', label: 'Split Payment', description: 'Open the split payment dialog' },
+  { action: 'awaitingTransfer', label: 'Awaiting Transfer', description: 'Open the awaiting bank transfer dialog' },
   { action: 'printReceipt', label: 'Print Last Receipt', description: 'Instantly print the latest receipt' },
 ];
 
@@ -32,6 +34,7 @@ export const DEFAULT_POS_SHORTCUTS: PosShortcutMap = {
   cashPayment: 'Enter',
   creditSale: 'F11',
   splitPayment: 'F6',
+  awaitingTransfer: 'F8',
   printReceipt: 'F9',
 };
 

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, History, DollarSign, ShoppingBag, PlusCircle, Download, FileText, User, Activity, TrendingDown, Clock, CheckCircle2, AlertCircle, Edit, X, Filter, ArrowUpDown, RotateCw, Printer } from 'lucide-react';
+import { Search, History, DollarSign, ShoppingBag, PlusCircle, Download, FileText, User, Activity, TrendingDown, Clock, CheckCircle2, AlertCircle, Edit, Trash2, X, Filter, ArrowUpDown, RotateCw, Printer } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -43,15 +43,19 @@ interface Settlement {
 
 const CreditOutstanding = () => {
   const { t } = useTranslation();
-  const { customers, sales, setSales, updateSale, settings, addSettlement, updateCustomerBalance, addSale, pendingSlipsCount, refreshCustomers } = useAppContext();
+  const { customers, sales, setSales, updateSale, deleteSale, settings, addSettlement, updateCustomerBalance, addSale, pendingSlipsCount, refreshCustomers } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
+  const [visibleCount, setVisibleCount] = useState(24);
   const [isOutstandingVisible, setIsOutstandingVisible] = useState(false);
   const [isTransferSlipsDialogOpen, setIsTransferSlipsDialogOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // Automatically fetch fresh customer balances from cloud on page visit
+  // Defer cloud customer balance refresh slightly so tab switch renders immediately
   React.useEffect(() => {
-    refreshCustomers(false).catch(() => {});
+    const timer = setTimeout(() => {
+      refreshCustomers(false).catch(() => {});
+    }, 300);
+    return () => clearTimeout(timer);
   }, []);
 
   React.useEffect(() => {
@@ -991,7 +995,7 @@ const CreditOutstanding = () => {
       {/* Customers List */}
       <ScrollArea className="flex-1 custom-scrollbar">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 pb-6">
-          {filteredCustomers.map((customer) => (
+          {filteredCustomers.slice(0, visibleCount).map((customer) => (
             <Card key={customer.id} className="apple-glass-card border border-white/20 dark:border-white/10 hover:border-primary/40 transition-all rounded-[2rem] overflow-hidden group shadow-sm hover:shadow-lg">
                <CardContent className="p-0">
                   <div className="p-6">
@@ -1103,6 +1107,17 @@ const CreditOutstanding = () => {
             </Card>
           ))}
         </div>
+        {filteredCustomers.length > visibleCount && (
+          <div className="flex justify-center pb-8">
+            <Button
+              variant="outline"
+              onClick={() => setVisibleCount(prev => prev + 36)}
+              className="rounded-2xl px-8 h-11 font-black text-xs uppercase tracking-widest border-border hover:bg-muted"
+            >
+              Load More Customers ({filteredCustomers.length - visibleCount} remaining)
+            </Button>
+          </div>
+        )}
       </ScrollArea>
 
       {/* Dialogs updated with Apple Liquid Glass styling (Settle Payment, Settlement History, Credit Purchases) */}
@@ -1319,10 +1334,24 @@ const CreditOutstanding = () => {
                         </div>
                       )}
                       <div className="flex justify-between items-center mb-3">
-                         <div className="flex items-center gap-2">
+                         <div className="flex items-center gap-1.5">
                            <Badge variant="outline" className="border-orange-500/30 text-orange-500 text-[8px] font-black rounded-lg">{sale.invoiceNumber || sale.id}</Badge>
-                           <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-white/10 rounded-full" onClick={(e) => { e.stopPropagation(); handleEditSale(sale); }}>
+                           <Button variant="ghost" size="icon" title="Edit Credit Sale" className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-white/10 rounded-full" onClick={(e) => { e.stopPropagation(); handleEditSale(sale); }}>
                              <Edit className="h-3 w-3" />
+                           </Button>
+                           <Button
+                             variant="ghost"
+                             size="icon"
+                             title="Delete Credit Sale"
+                             className="h-6 w-6 text-red-500/70 hover:text-red-500 hover:bg-red-500/10 rounded-full"
+                             onClick={async (e) => {
+                               e.stopPropagation();
+                               if (window.confirm(`Delete credit invoice ${sale.invoiceNumber || sale.id} (${settings.shop.currency} ${displayAmount.toFixed(2)})?`)) {
+                                 await deleteSale(sale.id);
+                               }
+                             }}
+                           >
+                             <Trash2 className="h-3 w-3" />
                            </Button>
                          </div>
                          <span className="text-[10px] font-mono text-muted-foreground">{formatDate(sale.date)} {formatTime(sale.date)}</span>

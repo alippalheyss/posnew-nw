@@ -369,6 +369,7 @@ interface AppContextType {
   calculateProfitMargin: (product: Product) => number;
   addSale: (sale: Sale) => Promise<Sale>;
   updateSale: (sale: Sale) => Promise<void>;
+  deleteSale: (saleId: string) => Promise<void>;
   broadcastLiveSync: (event: string, payload: any) => void;
   processReturn: (originalSale: Sale, returnItems: ReturnItem[]) => Promise<void>;
   addCustomer: (customer: Customer) => Promise<Customer | void>;
@@ -4196,6 +4197,74 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     broadcastLiveSync('sale_updated', { sale: updatedSale });
   };
 
+  const deleteSale = async (saleId: string) => {
+    const targetSale = sales.find(s => s.id === saleId);
+    setSales(prev => prev.filter(s => s.id !== saleId));
+
+    // Restore product shop stock if applicable
+    if (targetSale && Array.isArray(targetSale.items) && String(targetSale.paymentMethod).toLowerCase() !== 'return' && Number(targetSale.grandTotal) >= 0) {
+      const stockRestorations = new Map<string, number>();
+      targetSale.items.forEach((item: any) => {
+        const qtyToRestore = Number(item.qty || 1) * Number(item.unit_conversion || 1);
+        if (item.id && qtyToRestore > 0) {
+          stockRestorations.set(item.id, (stockRestorations.get(item.id) || 0) + qtyToRestore);
+        }
+      });
+
+      if (stockRestorations.size > 0) {
+        setProducts(prev => prev.map(p => {
+          const restore = stockRestorations.get(p.id);
+          if (restore !== undefined) {
+            return { ...p, stock_shop: Math.round((p.stock_shop || 0) + restore) };
+          }
+          return p;
+        }));
+
+        Promise.all(Array.from(stockRestorations.entries()).map(async ([productId, restore]) => {
+          const prod = products.find(p => p.id === productId);
+          if (prod) {
+            const intStock = Math.round((prod.stock_shop || 0) + restore);
+            const nowIso = new Date().toISOString();
+            await supabase.from('products').update({ stock_shop: intStock, updated_at: nowIso }).eq('id', productId).catch(() => {});
+          }
+        })).catch(() => {});
+      }
+    }
+
+    // Reverse customer outstanding balance if credit or split-credit sale
+    if (targetSale) {
+      const splitDetails = targetSale.splitDetails || (targetSale as any).split_details;
+      if (Array.isArray(splitDetails) && splitDetails.length > 0) {
+        for (const entry of splitDetails) {
+          if (String(entry.method || '').toLowerCase() === 'credit' && entry.customerId && Number(entry.amount) > 0) {
+            await updateCustomerBalance(entry.customerId, -Math.abs(Number(entry.amount)));
+          }
+        }
+      } else {
+        const method = String(targetSale.paymentMethod || (targetSale as any).payment_method || '').toLowerCase();
+        const isCredit = method === 'credit' || Number(targetSale.balance || 0) > 0;
+        const custId = targetSale.customer?.id || (targetSale as any).customer_id || (targetSale as any).customerId;
+        if (isCredit && custId) {
+          const creditAmount = method === 'credit' ? Number(targetSale.grandTotal || 0) : Number(targetSale.balance || 0);
+          if (creditAmount > 0) {
+            await updateCustomerBalance(custId, -Math.abs(creditAmount));
+          }
+        }
+      }
+    }
+
+    try {
+      if (supabase) {
+        await supabase.from('sales').delete().eq('id', saleId);
+      }
+    } catch (err) {
+      console.warn('Error deleting sale from cloud:', err);
+    }
+
+    broadcastLiveSync('sale_deleted', { saleId });
+    showSuccess('Sale deleted successfully (ވިޔަފާރި ފޮހެލެވިއްޖެ)');
+  };
+
   const clearAllData = async () => {
     try {
       // Delete in correct order to respect potential foreign keys
@@ -4401,6 +4470,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       calculateProfitMargin,
       addSale,
       updateSale,
+      deleteSale,
       broadcastLiveSync,
       processReturn,
       addCustomer,

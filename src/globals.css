@@ -265,19 +265,15 @@
     box-shadow: var(--glass-dark-shadow-3d) !important;
   }
 
-  /* 3D Liquid Glass - Cards */
+  /* 3D Liquid Glass - Cards (optimized without per-card backdrop-filter for smooth tab switching) */
   .apple-glass-card {
     background: var(--glass-light-bg) !important;
-    -webkit-backdrop-filter: blur(10px) saturate(180%) !important;
-    backdrop-filter: blur(10px) saturate(180%) !important;
     border: var(--glass-light-border) !important;
     box-shadow: 0 1px 3px rgba(0, 30, 80, 0.06), 0 6px 16px -3px rgba(0, 30, 80, 0.08) !important;
   }
 
   .dark .apple-glass-card {
     background: var(--glass-dark-bg) !important;
-    -webkit-backdrop-filter: blur(10px) saturate(180%) !important;
-    backdrop-filter: blur(10px) saturate(180%) !important;
     border: var(--glass-dark-border) !important;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 6px 20px -3px rgba(0, 0, 0, 0.5) !important;
   }
@@ -318,24 +314,20 @@
   }
 
   .apple-glass-input {
-    background: rgba(255, 255, 255, 0.70) !important;
-    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
-    backdrop-filter: blur(16px) saturate(180%) !important;
+    background: rgba(255, 255, 255, 0.85) !important;
     border: 1px solid rgba(0, 30, 80, 0.12) !important;
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(255, 255, 255, 0.7) inset !important;
-    transition: all 0.2s ease;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
   }
 
   .apple-glass-input:focus {
-    background: rgba(255, 255, 255, 0.95) !important;
+    background: rgba(255, 255, 255, 0.98) !important;
     border-color: rgba(0, 113, 227, 0.7) !important;
     box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.20), inset 0 1px 2px rgba(0, 0, 0, 0.02) !important;
   }
 
   .dark .apple-glass-input {
-    background: rgba(255, 255, 255, 0.06) !important;
-    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
-    backdrop-filter: blur(16px) saturate(180%) !important;
+    background: rgba(255, 255, 255, 0.07) !important;
     border: 1px solid rgba(255, 255, 255, 0.14) !important;
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
   }
@@ -445,17 +437,10 @@
     contain: strict;
   }
 
-  .ambient-orb-1 {
-    animation: ambient-orbs-float 45s ease-in-out infinite;
-    will-change: transform;
-  }
-  .ambient-orb-2 {
-    animation: ambient-orbs-float 55s ease-in-out infinite reverse;
-    will-change: transform;
-  }
+  .ambient-orb-1,
+  .ambient-orb-2,
   .ambient-orb-3 {
-    animation: ambient-orbs-float 50s ease-in-out infinite 3s;
-    will-change: transform;
+    transform: translateZ(0);
   }
 }
 

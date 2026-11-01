@@ -195,7 +195,7 @@ const POS = () => {
 
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState<boolean>(false);
-  const [visibleCatalogueCount, setVisibleCatalogueCount] = useState<number>(100);
+  const [visibleCatalogueCount, setVisibleCatalogueCount] = useState<number>(48);
 
   const cartCounter = useRef(openCarts.size);
   const [searchTerm, setSearchTerm] = useState('');
@@ -414,6 +414,11 @@ const POS = () => {
     isCashDialogOpenRef.current = isCashDialogOpen;
   });
 
+  const grandTotalRef = useRef(grandTotal);
+  useEffect(() => {
+    grandTotalRef.current = grandTotal;
+  });
+
   // Customisable POS shortcuts (Admin > Shop Settings), synced via cloud settings
   const posShortcuts = useMemo(() => resolvePosShortcuts(settings.shop?.posShortcuts as any), [settings.shop?.posShortcuts]);
   const posShortcutsRef = useRef(posShortcuts);
@@ -486,6 +491,13 @@ const POS = () => {
       if (shortcutAction === 'splitPayment') {
         e.preventDefault();
         setIsSplitDialogOpen(true);
+        return;
+      }
+
+      if (shortcutAction === 'awaitingTransfer') {
+        e.preventDefault();
+        setTransferAmount(grandTotalRef.current);
+        setIsAwaitingTransferDialogOpen(true);
         return;
       }
 
@@ -1015,18 +1027,22 @@ const POS = () => {
     };
 
     // Sort automatically by Best Sellers first (most frequently sold first),
-    // followed by deterministic tie-breakers so order is identical on Web and Windows app
+    // followed by fast deterministic tie-breakers so order is identical on Web and Windows app
     return [...list].sort((a, b) => {
       const salesA = getProductSales(a);
       const salesB = getProductSales(b);
       if (salesB !== salesA) {
         return salesB - salesA;
       }
-      const nameCompare = (a.name_en || a.name_dv || '').localeCompare(b.name_en || b.name_dv || '');
-      if (nameCompare !== 0) return nameCompare;
-      const codeCompare = (a.item_code || '').localeCompare(b.item_code || '');
-      if (codeCompare !== 0) return codeCompare;
-      return (a.id || '').localeCompare(b.id || '');
+      const nameA = a.name_en || a.name_dv || '';
+      const nameB = b.name_en || b.name_dv || '';
+      if (nameA !== nameB) return nameA < nameB ? -1 : 1;
+      const codeA = a.item_code || '';
+      const codeB = b.item_code || '';
+      if (codeA !== codeB) return codeA < codeB ? -1 : 1;
+      const idA = a.id || '';
+      const idB = b.id || '';
+      return idA < idB ? -1 : idA > idB ? 1 : 0;
     });
   }, [products, searchTerm, selectedCategory, showFavoritesOnly, favoriteProductIds, productSalesFrequencyMap]);
 
@@ -2202,8 +2218,9 @@ const POS = () => {
                 setIsAwaitingTransferDialogOpen(true);
               }}
               className="h-10 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-[10px] font-black uppercase tracking-widest gap-2"
+              title={posShortcuts.awaitingTransfer ? `Shortcut: ${posShortcuts.awaitingTransfer}` : undefined}
             >
-              <Receipt className="h-4 w-4" /> AWAITING TRANSFER
+              <Receipt className="h-4 w-4" /> AWAITING TRANSFER{posShortcuts.awaitingTransfer ? ` (${posShortcuts.awaitingTransfer})` : ''}
             </Button>
             <Button
               onClick={() => { setCreditDialogStep(1); setIsCreditDialogOpen(true); }}

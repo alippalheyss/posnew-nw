@@ -30,6 +30,7 @@ const Customers = () => {
   const { t } = useTranslation();
   const { customers, setCustomers, settings, addCustomer, updateCustomer, refreshCustomers, sales } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
+  const [visibleCount, setVisibleCount] = useState(24);
   const [filterType, setFilterType] = useState<'ALL' | 'BY_NAME' | 'BY_CODE'>('ALL');
   const [sortBy, setSortBy] = useState<'DEFAULT' | 'NAME_ASC' | 'CODE_ASC' | 'BALANCE_DESC'>('DEFAULT');
   const [isEditCustomerDialogOpen, setIsEditCustomerDialogOpen] = useState(false);
@@ -382,7 +383,7 @@ const Customers = () => {
       {/* Customers Grid */}
       <ScrollArea className="flex-1 custom-scrollbar">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-6">
-          {filteredCustomers.map((customer) => (
+          {filteredCustomers.slice(0, visibleCount).map((customer) => (
             <Card key={customer.id} className="apple-glass-card border border-white/20 dark:border-white/10 hover:border-primary/50 transition-all duration-300 rounded-3xl overflow-hidden group shadow-sm hover:shadow-lg">
               <CardContent className="p-0">
                  <div className="p-6">
@@ -519,6 +520,17 @@ const Customers = () => {
             </Card>
           ))}
         </div>
+        {filteredCustomers.length > visibleCount && (
+          <div className="flex justify-center pb-8">
+            <Button
+              variant="outline"
+              onClick={() => setVisibleCount(prev => prev + 36)}
+              className="rounded-2xl px-8 h-11 font-black text-xs uppercase tracking-widest border-border hover:bg-muted"
+            >
+              Load More Customers ({filteredCustomers.length - visibleCount} remaining)
+            </Button>
+          </div>
+        )}
       </ScrollArea>
 
       {/* Edit Customer Dialog */}

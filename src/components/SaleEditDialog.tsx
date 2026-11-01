@@ -23,14 +23,16 @@ interface SaleEditDialogProps {
 
 const SaleEditDialog: React.FC<SaleEditDialogProps> = ({ isOpen, onClose, sale, onSave }) => {
   const { t } = useTranslation();
-  const { customers, settings, products } = useAppContext();
+  const { customers, settings, products, deleteSale } = useAppContext();
   const [editedSale, setEditedSale] = useState<Sale | null>(sale);
   const [paidAmount, setPaidAmount] = useState<number | ''>(sale?.paidAmount || '');
   const [productSearch, setProductSearch] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     setEditedSale(sale);
     setPaidAmount(sale?.paidAmount || '');
+    setConfirmDelete(false);
   }, [sale, isOpen]);
 
   if (!editedSale) return null;
@@ -267,12 +269,46 @@ const SaleEditDialog: React.FC<SaleEditDialogProps> = ({ isOpen, onClose, sale, 
         </div>
 
         <DialogFooter className="gap-3 pt-3 border-t border-white/10 flex flex-row">
-          <Button variant="ghost" onClick={onClose} className="flex-1 h-12 border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-black uppercase tracking-widest rounded-2xl">
-            {renderBoth('cancel')}
-          </Button>
-          <Button onClick={handleSave} className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-widest shadow-lg shadow-primary/25 rounded-2xl">
-             <Receipt className="ml-2 h-4 w-4" /> {renderBoth('save_changes')}
-          </Button>
+          {confirmDelete ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setConfirmDelete(false)}
+                className="flex-1 h-12 border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-black uppercase tracking-widest rounded-2xl"
+              >
+                {renderBoth('cancel')}
+              </Button>
+              <Button
+                type="button"
+                onClick={async () => {
+                  await deleteSale(editedSale.id);
+                  onClose();
+                }}
+                className="flex-1 h-12 bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-widest shadow-lg shadow-red-600/25 rounded-2xl gap-2"
+              >
+                <Trash2 className="h-4 w-4" /> Confirm Delete
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setConfirmDelete(true)}
+                className="h-12 px-4 border-red-500/30 text-red-500 hover:bg-red-500 hover:text-white font-black uppercase tracking-widest rounded-2xl gap-2"
+                title="Delete Sale"
+              >
+                <Trash2 className="h-4 w-4" /> Delete
+              </Button>
+              <Button variant="ghost" onClick={onClose} className="flex-1 h-12 border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-black uppercase tracking-widest rounded-2xl">
+                {renderBoth('cancel')}
+              </Button>
+              <Button onClick={handleSave} className="flex-1 h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-widest shadow-lg shadow-primary/25 rounded-2xl">
+                 <Receipt className="ml-2 h-4 w-4" /> {renderBoth('save_changes')}
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -171,7 +171,7 @@ const Products = () => {
       if (Array.isArray(sale.items)) {
         sale.items.forEach(item => {
           const prev = map.get(item.id) || { totalQty: 0, lastSoldDate: null };
-          const isMoreRecent = !prev.lastSoldDate || (saleDate && new Date(saleDate) > new Date(prev.lastSoldDate));
+          const isMoreRecent = !prev.lastSoldDate || (saleDate && saleDate > prev.lastSoldDate);
           map.set(item.id, {
             totalQty: prev.totalQty + (item.qty || 0),
             lastSoldDate: isMoreRecent ? saleDate : prev.lastSoldDate
@@ -230,61 +230,63 @@ const Products = () => {
       return matchesSearch && matchesCategory && matchesFilter && matchesTax;
     });
 
-    // Sorting logic
-    list.sort((a, b) => {
-      switch (sortKey) {
-        case 'NAME_ASC':
-          return (a.name_dv || a.name_en).localeCompare(b.name_dv || b.name_en);
-        case 'NAME_DESC':
-          return (b.name_dv || b.name_en).localeCompare(a.name_dv || a.name_en);
-        case 'NAME_EN_ASC':
-          return (a.name_en || a.name_dv).localeCompare(b.name_en || b.name_dv);
-        case 'NAME_EN_DESC':
-          return (b.name_en || b.name_dv).localeCompare(a.name_en || a.name_dv);
-        case 'STOCK_ASC':
-          return (Number(a.stock_shop) || 0) - (Number(b.stock_shop) || 0);
-        case 'STOCK_DESC':
-          return (Number(b.stock_shop) || 0) - (Number(a.stock_shop) || 0);
-        case 'PRICE_ASC':
-          return (Number(a.price) || 0) - (Number(b.price) || 0);
-        case 'PRICE_DESC':
-          return (Number(b.price) || 0) - (Number(a.price) || 0);
-        case 'CODE_ASC': {
-          const numA = Number(a.item_code);
-          const numB = Number(b.item_code);
-          if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-          return String(a.item_code || '').localeCompare(String(b.item_code || ''));
+    // Sorting logic (skip when DEFAULT to keep initial render instant)
+    if (sortKey !== 'DEFAULT') {
+      list.sort((a, b) => {
+        switch (sortKey) {
+          case 'NAME_ASC':
+            return (a.name_dv || a.name_en).localeCompare(b.name_dv || b.name_en);
+          case 'NAME_DESC':
+            return (b.name_dv || b.name_en).localeCompare(a.name_dv || a.name_en);
+          case 'NAME_EN_ASC':
+            return (a.name_en || a.name_dv).localeCompare(b.name_en || b.name_dv);
+          case 'NAME_EN_DESC':
+            return (b.name_en || b.name_dv).localeCompare(a.name_en || a.name_dv);
+          case 'STOCK_ASC':
+            return (Number(a.stock_shop) || 0) - (Number(b.stock_shop) || 0);
+          case 'STOCK_DESC':
+            return (Number(b.stock_shop) || 0) - (Number(a.stock_shop) || 0);
+          case 'PRICE_ASC':
+            return (Number(a.price) || 0) - (Number(b.price) || 0);
+          case 'PRICE_DESC':
+            return (Number(b.price) || 0) - (Number(a.price) || 0);
+          case 'CODE_ASC': {
+            const numA = Number(a.item_code);
+            const numB = Number(b.item_code);
+            if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+            return String(a.item_code || '').localeCompare(String(b.item_code || ''));
+          }
+          case 'CODE_DESC': {
+            const numA = Number(a.item_code);
+            const numB = Number(b.item_code);
+            if (!isNaN(numA) && !isNaN(numB)) return numB - numA;
+            return String(b.item_code || '').localeCompare(String(a.item_code || ''));
+          }
+          case 'ACTIVITY_ACTIVE': {
+            const aSales = productSalesMap.get(a.id)?.totalQty || 0;
+            const bSales = productSalesMap.get(b.id)?.totalQty || 0;
+            return bSales - aSales;
+          }
+          case 'ACTIVITY_NEVER': {
+            const aNever = isNeverSold(a.id) ? 1 : 0;
+            const bNever = isNeverSold(b.id) ? 1 : 0;
+            return bNever - aNever;
+          }
+          case 'ACTIVITY_UNSOLD': {
+            const aUnsold = isUnsoldIn30Days(a.id) ? 1 : 0;
+            const bUnsold = isUnsoldIn30Days(b.id) ? 1 : 0;
+            return bUnsold - aUnsold;
+          }
+          case 'ACTIVITY_UNSTOCKED': {
+            const aUnstocked = isNeverUpdatedStock(a) ? 1 : 0;
+            const bUnstocked = isNeverUpdatedStock(b) ? 1 : 0;
+            return bUnstocked - aUnstocked;
+          }
+          default:
+            return 0;
         }
-        case 'CODE_DESC': {
-          const numA = Number(a.item_code);
-          const numB = Number(b.item_code);
-          if (!isNaN(numA) && !isNaN(numB)) return numB - numA;
-          return String(b.item_code || '').localeCompare(String(a.item_code || ''));
-        }
-        case 'ACTIVITY_ACTIVE': {
-          const aSales = productSalesMap.get(a.id)?.totalQty || 0;
-          const bSales = productSalesMap.get(b.id)?.totalQty || 0;
-          return bSales - aSales;
-        }
-        case 'ACTIVITY_NEVER': {
-          const aNever = isNeverSold(a.id) ? 1 : 0;
-          const bNever = isNeverSold(b.id) ? 1 : 0;
-          return bNever - aNever;
-        }
-        case 'ACTIVITY_UNSOLD': {
-          const aUnsold = isUnsoldIn30Days(a.id) ? 1 : 0;
-          const bUnsold = isUnsoldIn30Days(b.id) ? 1 : 0;
-          return bUnsold - aUnsold;
-        }
-        case 'ACTIVITY_UNSTOCKED': {
-          const aUnstocked = isNeverUpdatedStock(a) ? 1 : 0;
-          const bUnstocked = isNeverUpdatedStock(b) ? 1 : 0;
-          return bUnstocked - aUnstocked;
-        }
-        default:
-          return 0;
-      }
-    });
+      });
+    }
 
     return list;
   }, [products, searchTerm, selectedCategory, inventoryFilter, taxFilter, favoriteProductIds, productSalesMap, sortKey]);
@@ -715,6 +717,8 @@ const Products = () => {
                         {product.image ? (
                           <img 
                             src={getAdaptedImageUrl(product.image, product.name_en || product.name_dv, product.item_code)} 
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
                             onError={(e) => {
                               (e.target as HTMLImageElement).src = generatePlaceholderImage(product.name_en || product.name_dv, product.item_code);

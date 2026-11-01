@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Printer, FileText, Receipt, Search, Filter, PencilLine, AlertCircle, Clock, CheckCircle2, Download, Calendar as CalendarIcon, FileSpreadsheet, X, Eye } from 'lucide-react';
 import { printContent } from '@/utils/printHelper';
 import { useAppContext, Sale } from '@/context/AppContext';
-import { formatDate, formatTime, formatDateTime, extractDateOnly } from '@/utils/formatters';
+import { formatDate, formatTime, formatDateTime, extractDateOnly, toISODate } from '@/utils/formatters';
 import SaleEditDialog from '@/components/SaleEditDialog';
 import InvoiceViewDialog from '@/components/InvoiceViewDialog';
 import { showSuccess, showError } from '@/utils/toast';
@@ -322,37 +322,25 @@ const CreditInvoices = () => {
   
   const filterSalesByDate = (salesList: Sale[]) => {
     const now = new Date();
-    const todayY = now.getFullYear();
-    const todayM = now.getMonth();
-    const todayD = now.getDate();
-
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayY = yesterday.getFullYear();
-    const yesterdayM = yesterday.getMonth();
-    const yesterdayD = yesterday.getDate();
+    const todayStr = toISODate(now);
+    const yesterdayStr = toISODate(new Date(now.getTime() - 24 * 60 * 60 * 1000));
 
     return salesList.filter(sale => {
       const dateVal = sale.date || (sale as any).created_at;
       if (!dateVal) return dateFilter === 'all';
-      const saleDate = new Date(dateVal);
-      if (isNaN(saleDate.getTime())) return true;
-      const sY = saleDate.getFullYear();
-      const sM = saleDate.getMonth();
-      const sD = saleDate.getDate();
+      const saleDateStr = extractDateOnly(dateVal);
+      if (!saleDateStr) return true;
       
       if (dateFilter === 'today') {
-        return sY === todayY && sM === todayM && sD === todayD;
+        return saleDateStr === todayStr;
       }
       if (dateFilter === 'yesterday') {
-        return sY === yesterdayY && sM === yesterdayM && sD === yesterdayD;
+        return saleDateStr === yesterdayStr;
       }
       if (dateFilter === 'custom' && dateRange?.from) {
-        const from = new Date(dateRange.from);
-        from.setHours(0, 0, 0, 0);
-        const to = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
-        to.setHours(23, 59, 59, 999);
-        return saleDate.getTime() >= from.getTime() && saleDate.getTime() <= to.getTime();
+        const fromStr = extractDateOnly(dateRange.from);
+        const toStr = extractDateOnly(dateRange.to || dateRange.from);
+        return saleDateStr >= fromStr && saleDateStr <= toStr;
       }
       return true; // 'all'
     });

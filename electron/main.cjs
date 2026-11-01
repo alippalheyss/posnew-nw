@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, Menu } = require('electron');
 const path = require('path');
 const url = require('url');
 
@@ -43,6 +43,7 @@ function createWindow() {
   });
 
   // Remove default application menu for a sleek kiosk POS look
+  Menu.setApplicationMenu(null);
   mainWindow.setMenuBarVisibility(false);
   mainWindow.removeMenu();
 

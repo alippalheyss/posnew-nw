@@ -2275,10 +2275,10 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const generateInvoiceNumber = (dateStr: string, isCredit: boolean, existingSales: Sale[]) => {
     const prefix = isCredit ? 'CRINV/' : 'INV/';
-    const date = dateStr ? new Date(dateStr) : new Date();
-    const validDate = isNaN(date.getTime()) ? new Date() : date;
-    const year = validDate.getFullYear().toString().slice(-2);
-    const month = (validDate.getMonth() + 1).toString().padStart(2, '0');
+    const extracted = extractDateOnly(dateStr || new Date());
+    const parts = extracted.includes('-') ? extracted.split('-') : [];
+    const year = parts[0]?.length === 4 ? parts[0].slice(-2) : new Date().getFullYear().toString().slice(-2);
+    const month = parts[1] ? parts[1].padStart(2, '0') : (new Date().getMonth() + 1).toString().padStart(2, '0');
     
     const prefixStr = `${prefix}${year}/${month}/`;
     
@@ -2967,7 +2967,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     if (!transfer) return;
 
     const saleDate = transfer.date
-      ? (transfer.date.includes(' ') ? transfer.date : `${transfer.date} 23:59:59`)
+      ? (transfer.date.includes(' ') || transfer.date.includes('T') ? transfer.date : `${transfer.date}T23:59:59+05:00`)
       : toISODatetime();
 
     if (action === 'cash') {

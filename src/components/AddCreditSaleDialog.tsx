@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { cn } from '@/lib/utils';
 import { getAdaptedImageUrl } from '@/utils/imageUtils';
+import { toISODatetime } from '@/utils/formatters';
 
 interface NewCreditSale {
   id: string;
@@ -113,7 +114,7 @@ const AddCreditSaleDialog: React.FC<AddCreditSaleDialogProps> = ({ isOpen, onClo
 
     const newSale: NewCreditSale = {
       id: `sale-${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
+      date: toISODatetime(),
       customer: selectedCustomer,
       items: cartItems,
       grandTotal: grandTotal,

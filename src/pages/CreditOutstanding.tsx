@@ -20,7 +20,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from "@/components/ui/progress";
-import { formatDate, formatTime, formatCurrency, toISODate } from '@/utils/formatters';
+import { formatDate, formatTime, formatCurrency, toISODate, toISODatetime } from '@/utils/formatters';
 import { formatCreditStatementViberMessage, shareViaViber } from '@/utils/viberHelper';
 import { TelegramConnectDialog } from '@/components/TelegramConnectDialog';
 import { TransferSlipsDialog } from '@/components/TransferSlipsDialog';
@@ -197,7 +197,7 @@ const CreditOutstanding = () => {
       const settlement: Settlement = {
         id: `set-${Date.now()}`,
         amount_paid: paymentAmount,
-        date: new Date().toISOString(),
+        date: toISODatetime(),
         previous_outstanding: previousOutstanding,
         new_outstanding: newOutstanding,
       };

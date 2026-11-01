@@ -127,48 +127,27 @@ const DailySales = () => {
 
   const filterSalesByDate = (salesList: Sale[]) => {
     const now = new Date();
-    const todayY = now.getFullYear();
-    const todayM = now.getMonth();
-    const todayD = now.getDate();
-
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayY = yesterday.getFullYear();
-    const yesterdayM = yesterday.getMonth();
-    const yesterdayD = yesterday.getDate();
-
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    thirtyDaysAgo.setHours(0, 0, 0, 0);
+    const todayStr = toISODate(now);
+    const yesterdayStr = toISODate(new Date(now.getTime() - 24 * 60 * 60 * 1000));
+    const thirtyDaysAgoStr = toISODate(new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000));
 
     return salesList.filter(sale => {
       if (!sale.date) return false;
       const saleDateStr = extractDateOnly(sale.date);
-      const saleDate = new Date(saleDateStr);
-      
-      const sY = saleDate.getFullYear();
-      const sM = saleDate.getMonth();
-      const sD = saleDate.getDate();
       
       if (dateFilter === 'today') {
-        return sY === todayY && sM === todayM && sD === todayD;
+        return saleDateStr === todayStr;
       }
       if (dateFilter === 'yesterday') {
-        return sY === yesterdayY && sM === yesterdayM && sD === yesterdayD;
+        return saleDateStr === yesterdayStr;
       }
       if (dateFilter === 'last30') {
-        saleDate.setHours(0, 0, 0, 0);
-        return saleDate.getTime() >= thirtyDaysAgo.getTime();
+        return saleDateStr >= thirtyDaysAgoStr;
       }
       if (dateFilter === 'custom' && dateRange?.from) {
-        const from = new Date(dateRange.from);
-        from.setHours(0, 0, 0, 0);
-        const to = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
-        to.setHours(23, 59, 59, 999);
-        
-        const sFullDate = new Date(sale.date);
-        const targetTime = isNaN(sFullDate.getTime()) ? saleDate.getTime() : sFullDate.getTime();
-        return targetTime >= from.getTime() && targetTime <= to.getTime();
+        const fromStr = extractDateOnly(dateRange.from);
+        const toStr = extractDateOnly(dateRange.to || dateRange.from);
+        return saleDateStr >= fromStr && saleDateStr <= toStr;
       }
       return true; // 'all'
     });

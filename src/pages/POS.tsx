@@ -426,26 +426,17 @@ const POS = () => {
       const shortcutAction = matchPosShortcut(e, posShortcutsRef.current);
 
       // Global shortcut - focus product search anytime
-      if (shortcutAction === 'focusSearch') {
+      if (shortcutAction === 'focusSearch' || shortcutAction === 'focusSearchAlt') {
         e.preventDefault();
         focusSearchBar();
         return;
       }
 
       // Global shortcut - focus quantity of last cart item
-      if (shortcutAction === 'focusQuantity') {
+      if (shortcutAction === 'focusQuantity' && !isAnyModalOpenRef.current) {
         e.preventDefault();
         focusQuantityInputRef.current(); // always fresh, never stale
         return;
-      }
-
-      // If user is focused in a cart-qty-input, Enter or Escape must move back to product search
-      if (document.activeElement?.classList.contains('cart-qty-input')) {
-        if (e.key === 'Enter' || e.key === 'Escape') {
-          e.preventDefault();
-          focusSearchBar();
-          return;
-        }
       }
 
       // If Cash Dialog is currently open: Enter confirms cash payment, Escape closes it
@@ -464,13 +455,6 @@ const POS = () => {
         return;
       }
 
-      if (document.activeElement?.tagName === 'INPUT' && document.activeElement !== searchInputRef.current) {
-        if (e.key === 'Escape') {
-          (document.activeElement as HTMLElement).blur();
-        }
-        return;
-      }
-
       if (isAnyModalOpenRef.current) {
         if (e.key === 'Escape') {
           setIsCashDialogOpen(false);
@@ -481,6 +465,55 @@ const POS = () => {
           setIsExpiryDialogOpen(false);
           setIsConfirmRemoveCartDialogOpen(false);
           setIsConfirmClearCartDialogOpen(false);
+        }
+        return;
+      }
+
+      // POS action shortcuts work anywhere on the POS screen (even while product search or qty input is focused)
+      if (shortcutAction === 'printReceipt') {
+        e.preventDefault();
+        triggerInstantReceiptPrintRef.current();
+        return;
+      }
+
+      if (shortcutAction === 'creditSale') {
+        e.preventDefault();
+        setCreditDialogStep(1);
+        setIsCreditDialogOpen(true);
+        return;
+      }
+
+      if (shortcutAction === 'splitPayment') {
+        e.preventDefault();
+        setIsSplitDialogOpen(true);
+        return;
+      }
+
+      if (shortcutAction === 'cashPayment') {
+        // When cashPayment is mapped to 'Enter', let cart-qty-input and non-empty product search handle Enter first
+        const isInQtyInput = document.activeElement?.classList.contains('cart-qty-input');
+        const isInSearchWithText =
+          document.activeElement === searchInputRef.current &&
+          Boolean(searchInputRef.current?.value?.trim());
+        if (!(e.key === 'Enter' && (isInQtyInput || isInSearchWithText))) {
+          e.preventDefault();
+          openCashDialogRef.current();
+          return;
+        }
+      }
+
+      // If user is focused in a cart-qty-input, Enter or Escape must move back to product search
+      if (document.activeElement?.classList.contains('cart-qty-input')) {
+        if (e.key === 'Enter' || e.key === 'Escape') {
+          e.preventDefault();
+          focusSearchBar();
+          return;
+        }
+      }
+
+      if (document.activeElement?.tagName === 'INPUT' && document.activeElement !== searchInputRef.current) {
+        if (e.key === 'Escape') {
+          (document.activeElement as HTMLElement).blur();
         }
         return;
       }
@@ -504,28 +537,6 @@ const POS = () => {
         document.activeElement?.tagName !== 'TEXTAREA'
       ) {
         searchInputRef.current?.focus();
-      }
-
-      // Global shortcut - instant print receipt without dialogue
-      if (shortcutAction === 'printReceipt') {
-        e.preventDefault();
-        triggerInstantReceiptPrintRef.current();
-        return;
-      }
-
-      if (shortcutAction === 'cashPayment') {
-        e.preventDefault();
-        openCashDialogRef.current();
-      } else if (shortcutAction === 'creditSale') {
-        e.preventDefault();
-        setCreditDialogStep(1);
-        setIsCreditDialogOpen(true);
-      } else if (shortcutAction === 'focusSearchAlt') {
-        e.preventDefault();
-        focusSearchBar();
-      } else if (shortcutAction === 'splitPayment') {
-        e.preventDefault();
-        setIsSplitDialogOpen(true);
       }
     };
 
@@ -1659,8 +1670,9 @@ const POS = () => {
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setVisibleCatalogueCount(100); }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === 'Enter' && searchTerm.trim()) {
                     e.preventDefault();
+                    e.stopPropagation();
                     handleSearchSubmit();
                   }
                 }}
@@ -2174,8 +2186,9 @@ const POS = () => {
             <Button
               onClick={() => setIsSplitDialogOpen(true)}
               className="h-10 bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 dark:text-teal-400 border border-teal-500/20 text-[10px] font-black uppercase tracking-widest gap-2"
+              title={posShortcuts.splitPayment ? `Shortcut: ${posShortcuts.splitPayment}` : undefined}
             >
-              <Users className="h-4 w-4" /> SPLIT BILL
+              <Users className="h-4 w-4" /> SPLIT BILL{posShortcuts.splitPayment ? ` (${posShortcuts.splitPayment})` : ''}
             </Button>
             <Button
               onClick={handleClearCartClick}
@@ -2195,16 +2208,18 @@ const POS = () => {
             <Button
               onClick={() => { setCreditDialogStep(1); setIsCreditDialogOpen(true); }}
               className="h-10 bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/20 text-[10px] font-black uppercase tracking-widest gap-2"
+              title={posShortcuts.creditSale ? `Shortcut: ${posShortcuts.creditSale}` : undefined}
             >
-              CREDIT SALE
+              CREDIT SALE{posShortcuts.creditSale ? ` (${posShortcuts.creditSale})` : ''}
             </Button>
           </div>
 
           <Button
             onClick={openCashDialog}
             className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground text-lg font-black uppercase tracking-[0.2em] shadow-xl shadow-primary/30"
+            title={posShortcuts.cashPayment ? `Shortcut: ${posShortcuts.cashPayment}` : undefined}
           >
-            {renderBoth('checkout')}
+            {renderBoth('checkout')}{posShortcuts.cashPayment ? ` (${posShortcuts.cashPayment})` : ''}
           </Button>
         </div>
       </div>

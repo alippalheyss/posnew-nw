@@ -44,6 +44,7 @@ function createWindow() {
 
   // Remove default application menu for a sleek kiosk POS look
   mainWindow.setMenuBarVisibility(false);
+  mainWindow.removeMenu();
 
   const isDev = process.env.NODE_ENV === 'development' || process.argv.includes('--dev');
 
@@ -72,9 +73,9 @@ function createWindow() {
     mainWindow = null;
   });
 
-  // Global F11 key toggle for True Fullscreen / Kiosk mode
+  // Global Ctrl+F11 key toggle for True Fullscreen / Kiosk mode (leaves bare F11 free for POS shortcuts)
   mainWindow.webContents.on('before-input-event', (event, input) => {
-    if (input.key === 'F11' && input.type === 'keyDown') {
+    if (input.key === 'F11' && input.control && input.type === 'keyDown') {
       const isFull = mainWindow.isFullScreen();
       mainWindow.setFullScreen(!isFull);
       event.preventDefault();

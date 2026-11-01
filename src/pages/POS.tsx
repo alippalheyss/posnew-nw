@@ -101,13 +101,20 @@ const CartQtyStepper = ({
   };
 
   return (
-    <div className="flex items-center bg-background/90 dark:bg-black/40 rounded-full px-1 py-0.5 border border-border h-6 shadow-xs shrink-0">
+    <div
+      className="cart-qty-stepper flex items-center bg-background/90 dark:bg-black/40 rounded-full px-1 py-0.5 border border-border h-6 shadow-xs shrink-0"
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
       <Button
         variant="ghost"
         size="icon"
         type="button"
         className="h-5 w-5 text-muted-foreground hover:text-foreground rounded-full p-0 shrink-0"
-        onClick={() => onUpdate(item.id, -1, item.selected_unit, item.selected_flavour)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onUpdate(item.id, -1, item.selected_unit, item.selected_flavour);
+        }}
       >
         <Minus className="h-3 w-3" />
       </Button>
@@ -118,6 +125,7 @@ const CartQtyStepper = ({
         value={localVal}
         placeholder="1"
         onChange={handleChange}
+        onClick={(e) => e.stopPropagation()}
         onFocus={(e) => {
           setIsFocused(true);
           e.target.select();
@@ -143,7 +151,10 @@ const CartQtyStepper = ({
         size="icon"
         type="button"
         className="h-5 w-5 text-muted-foreground hover:text-foreground rounded-full p-0 shrink-0"
-        onClick={() => onUpdate(item.id, 1, item.selected_unit, item.selected_flavour)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onUpdate(item.id, 1, item.selected_unit, item.selected_flavour);
+        }}
       >
         <Plus className="h-3 w-3" />
       </Button>
@@ -1974,7 +1985,11 @@ const POS = () => {
                 return (
                   <div
                     key={itemKey}
-                    onClick={() => setSelectedCartItemKey(prev => prev === itemKey ? null : itemKey)}
+                    onClick={(e) => {
+                      const target = e.target as HTMLElement;
+                      if (target.closest('button, input, [role="menuitem"], .cart-qty-stepper')) return;
+                      setSelectedCartItemKey(prev => prev === itemKey ? null : itemKey);
+                    }}
                     className={cn(
                       "group relative border rounded-xl p-2 sm:p-2.5 transition-all shadow-sm flex items-center justify-between gap-2.5 cursor-pointer select-none",
                       isSelected 
@@ -2042,6 +2057,7 @@ const POS = () => {
                           <DropdownMenuTrigger asChild>
                             <button
                               type="button"
+                              onClick={(e) => e.stopPropagation()}
                               className="flex items-center gap-0.5 text-[9px] sm:text-[10px] font-mono font-bold uppercase bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 px-1.5 py-0.5 rounded-full transition-all cursor-pointer shadow-xs active:scale-95"
                               title={t('switch_unit') || 'Switch Unit'}
                             >
@@ -2049,12 +2065,15 @@ const POS = () => {
                               <ChevronDown className="h-2.5 w-2.5 opacity-70" />
                             </button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="bg-card border-border text-foreground font-faruma text-right min-w-[190px] z-[120] shadow-2xl rounded-xl p-1">
+                          <DropdownMenuContent align="start" onClick={(e) => e.stopPropagation()} className="bg-card border-border text-foreground font-faruma text-right min-w-[190px] z-[120] shadow-2xl rounded-xl p-1">
                             <div className="px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-muted-foreground border-b border-border text-right">
                               {t('switch_unit') || 'Switch Unit (ޔުނިޓް ބަދަލުކުރޭ)'}
                             </div>
                             <DropdownMenuItem
-                              onClick={() => switchCartItemUnit(item, 'Piece')}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                switchCartItemUnit(item, 'Piece');
+                              }}
                               className={cn(
                                 "flex items-center justify-between text-xs py-1.5 px-2.5 rounded-lg cursor-pointer hover:bg-muted transition-colors",
                                 currentUnit === 'Piece' && "font-black text-primary bg-primary/10"
@@ -2066,7 +2085,10 @@ const POS = () => {
                             {prod.units!.map((u, uIdx) => (
                               <DropdownMenuItem
                                 key={uIdx}
-                                onClick={() => switchCartItemUnit(item, u.name)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  switchCartItemUnit(item, u.name);
+                                }}
                                 className={cn(
                                   "flex items-center justify-between text-xs py-1.5 px-2.5 rounded-lg cursor-pointer hover:bg-muted transition-colors",
                                   currentUnit === u.name && "font-black text-primary bg-primary/10"

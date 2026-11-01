@@ -102,11 +102,6 @@ const PosShortcutSettings: React.FC<PosShortcutSettingsProps> = ({ saved, onSave
               <div className="min-w-0 text-left" dir="ltr">
                 <div className="text-sm font-bold">{label}</div>
                 <div className="text-[11px] text-muted-foreground">{description}</div>
-                {value === 'F11' && (
-                  <div className="text-[10px] text-amber-500 font-bold mt-0.5">
-                    Note: in the Windows app F11 toggles fullscreen.
-                  </div>
-                )}
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <Button

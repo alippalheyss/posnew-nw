@@ -466,14 +466,34 @@ const CreditOutstanding = () => {
           isSplit: boolean;
         }>,
         totalQty: 0,
-        totalPurchased: 0,
-        totalSettled: 0,
         outstandingBalance: 0,
       };
     }
 
-    const customerSales = getCustomerCreditSales(customer);
-    const itemRows: Array<{
+    const allCustomerSalesDesc = getCustomerCreditSales(customer);
+
+    // Find the most recent full settlement (where new_outstanding <= 0) if any,
+    // so sales on or before that timestamp are guaranteed settled.
+    const settlements = Array.isArray(customer.settlement_history) ? customer.settlement_history : [];
+    let lastFullSettlementTime = 0;
+    settlements.forEach(st => {
+      if (Number(st.new_outstanding ?? 0) <= 0.009 && st.date) {
+        const t = new Date(st.date).getTime();
+        if (!isNaN(t) && t > lastFullSettlementTime) {
+          lastFullSettlementTime = t;
+        }
+      }
+    });
+
+    // Keep only credit sales after the last full settlement, sorted newest-first
+    const candidateSalesDesc = allCustomerSalesDesc.filter(sale => {
+      if (!lastFullSettlementTime) return true;
+      const saleTime = new Date(sale.date).getTime();
+      return isNaN(saleTime) || saleTime > lastFullSettlementTime;
+    });
+
+    // Flatten candidate sales into itemized rows (newest-first)
+    const allCandidateRowsNewestFirst: Array<{
       saleId: string;
       invoiceNumber: string;
       date: string;
@@ -489,10 +509,7 @@ const CreditOutstanding = () => {
       isSplit: boolean;
     }> = [];
 
-    let totalQty = 0;
-    let totalPurchased = 0;
-
-    customerSales.forEach(sale => {
+    candidateSalesDesc.forEach(sale => {
       const splitEntry = sale.splitDetails?.find(
         (d: any) => String(d.customerId || '').toLowerCase() === String(customer.id || '').toLowerCase() && String(d.method || '').toLowerCase() === 'credit'
       );
@@ -509,13 +526,12 @@ const CreditOutstanding = () => {
       }
 
       const items = Array.isArray(sale.items) ? sale.items : [];
-      if (items.length > 0) {
+      if (items.length > 0 && !isSplit) {
         items.forEach((item: any) => {
           const qty = Number(item.qty || 1);
           const price = Number(item.price || 0);
           const lineTotal = qty * price;
-          totalQty += qty;
-          itemRows.push({
+          allCandidateRowsNewestFirst.push({
             saleId: sale.id,
             invoiceNumber,
             date: sale.date,
@@ -533,16 +549,17 @@ const CreditOutstanding = () => {
         });
       } else {
         const fallbackTotal = isSplit ? Number(splitEntry.amount || 0) : Number(sale.grandTotal || 0);
-        totalQty += 1;
-        itemRows.push({
+        const itemSummaryEn = items.length > 0 ? items.map((i: any) => `${i.name_en || i.name_dv} x${i.qty}`).join(', ') : 'Credit Purchase';
+        const itemSummaryDv = items.length > 0 ? items.map((i: any) => `${i.name_dv || i.name_en} x${i.qty}`).join('، ') : 'ކްރެޑިޓް ވިޔަފާރި';
+        allCandidateRowsNewestFirst.push({
           saleId: sale.id,
           invoiceNumber,
           date: sale.date,
           formattedDate: formatDate(sale.date),
           formattedTime: formatTime(sale.date),
           itemCode: '-',
-          nameEn: 'Credit Purchase',
-          nameDv: 'ކްރެޑިޓް ވިޔަފާރި',
+          nameEn: itemSummaryEn,
+          nameDv: itemSummaryDv,
           unit: '',
           qty: 1,
           price: fallbackTotal,
@@ -550,32 +567,48 @@ const CreditOutstanding = () => {
           isSplit,
         });
       }
-
-      totalPurchased += isSplit ? Number(splitEntry.amount || 0) : Number(sale.grandTotal || 0);
     });
 
-    const totalSettled = (customer.settlement_history || []).reduce(
-      (sum, s) => sum + Number(s.amount_paid || 0),
-      0
-    );
+    const outstandingBalance = Math.max(0, Number(customer.outstanding_balance || 0));
 
-    const outstandingBalance =
-      Number(customer.outstanding_balance || 0) > 0
-        ? Number(customer.outstanding_balance || 0)
-        : Math.max(0, totalPurchased - totalSettled);
+    // Select only the UNSETTLED items (FIFO: oldest purchases were settled first,
+    // so the newest purchases up to `outstandingBalance` are the unsettled items).
+    const unsettledRows: typeof allCandidateRowsNewestFirst = [];
+    let remainingUnsettledToMatch = outstandingBalance;
+
+    if (remainingUnsettledToMatch > 0.009) {
+      for (const row of allCandidateRowsNewestFirst) {
+        if (remainingUnsettledToMatch <= 0.009) break;
+        if (row.lineTotal <= remainingUnsettledToMatch + 0.009) {
+          unsettledRows.push(row);
+          remainingUnsettledToMatch -= row.lineTotal;
+        } else {
+          // Partially settled item at the boundary: include only the unsettled portion
+          unsettledRows.push({
+            ...row,
+            nameEn: `${row.nameEn} (Balance Due)`,
+            nameDv: `${row.nameDv} (ބާކީ)`,
+            qty: 1,
+            price: remainingUnsettledToMatch,
+            lineTotal: remainingUnsettledToMatch,
+          });
+          remainingUnsettledToMatch = 0;
+        }
+      }
+    }
+
+    const totalQty = unsettledRows.reduce((sum, r) => sum + r.qty, 0);
 
     return {
-      customerSales,
-      itemRows,
+      customerSales: candidateSalesDesc,
+      itemRows: unsettledRows,
       totalQty,
-      totalPurchased,
-      totalSettled,
       outstandingBalance,
     };
   };
 
   const buildCustomerOutstandingPdf = (customer: Customer) => {
-    const { itemRows, totalQty, totalPurchased, totalSettled, outstandingBalance } = getCustomerStatementData(customer);
+    const { itemRows, totalQty, outstandingBalance } = getCustomerStatementData(customer);
     const currency = settings.shop.currency || 'MVR';
     const doc = new jsPDF();
     let yPos = 16;
@@ -633,14 +666,14 @@ const CreditOutstanding = () => {
 
     doc.setFont('helvetica', 'normal');
     doc.text(`Statement Date: ${formatDate(new Date())} ${formatTime(new Date())}`, 192, yPos + 7, { align: 'right' });
-    doc.text(`Total Credit Purchases: ${currency} ${totalPurchased.toFixed(2)}`, 192, yPos + 13, { align: 'right' });
+    doc.text(`Unsettled Items: ${totalQty}`, 192, yPos + 13, { align: 'right' });
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(220, 38, 38);
-    doc.text(`Total Outstanding Due: ${currency} ${outstandingBalance.toFixed(2)}`, 192, yPos + 19, { align: 'right' });
+    doc.text(`Total Outstanding: ${currency} ${outstandingBalance.toFixed(2)}`, 192, yPos + 19, { align: 'right' });
 
     yPos += 30;
 
-    // Itemized Purchases Table
+    // Unsettled Items Table
     if (itemRows.length > 0) {
       const tableBody = itemRows.map((row, idx) => [
         (idx + 1).toString(),
@@ -653,18 +686,12 @@ const CreditOutstanding = () => {
       ]);
 
       const tableFoot: string[][] = [
-        ['', '', '', 'TOTAL ITEMS PURCHASED', totalQty.toString(), '', `${currency} ${totalPurchased.toFixed(2)}`],
+        ['', '', '', 'TOTAL OUTSTANDING', totalQty.toString(), '', `${currency} ${outstandingBalance.toFixed(2)}`],
       ];
-
-      if (totalSettled > 0) {
-        tableFoot.push(['', '', '', 'LESS: PAYMENTS SETTLED', '', '', `- ${currency} ${totalSettled.toFixed(2)}`]);
-      }
-
-      tableFoot.push(['', '', '', 'TOTAL OUTSTANDING BALANCE', '', '', `${currency} ${outstandingBalance.toFixed(2)}`]);
 
       autoTable(doc, {
         startY: yPos,
-        head: [['#', 'Date & Time', 'Invoice #', 'Purchased Item', 'Qty', 'Price', 'Total']],
+        head: [['#', 'Date & Time', 'Invoice #', 'Unsettled Item', 'Qty', 'Price', 'Total']],
         body: tableBody,
         foot: tableFoot,
         theme: 'grid',
@@ -681,9 +708,9 @@ const CreditOutstanding = () => {
           textColor: [30, 41, 59],
         },
         footStyles: {
-          fillColor: [241, 245, 249],
-          textColor: [15, 23, 42],
-          fontSize: 8.5,
+          fillColor: [254, 242, 242],
+          textColor: [185, 28, 28],
+          fontSize: 9,
           fontStyle: 'bold',
         },
         columnStyles: {
@@ -703,7 +730,7 @@ const CreditOutstanding = () => {
       doc.setFontSize(10);
       doc.setFont('helvetica', 'italic');
       doc.setTextColor(100, 116, 139);
-      doc.text('No itemized credit invoices found in current history.', 14, yPos + 6);
+      doc.text('No unsettled credit items found for this customer.', 14, yPos + 6);
       yPos += 16;
     }
 
@@ -719,7 +746,7 @@ const CreditOutstanding = () => {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(185, 28, 28);
-    doc.text('TOTAL OUTSTANDING BALANCE DUE:', 20, yPos + 9);
+    doc.text('TOTAL OUTSTANDING:', 20, yPos + 9);
     doc.text(`${currency} ${outstandingBalance.toFixed(2)}`, 190, yPos + 9, { align: 'right' });
     yPos += 22;
 
@@ -764,7 +791,7 @@ const CreditOutstanding = () => {
   };
 
   const handlePrintA4CustomerStatement = (customer: Customer) => {
-    const { itemRows, totalQty, totalPurchased, totalSettled, outstandingBalance } = getCustomerStatementData(customer);
+    const { itemRows, totalQty, outstandingBalance } = getCustomerStatementData(customer);
     const currency = settings.shop.currency || 'MVR';
     const logoHtml = settings.reports?.showLogo && settings.shop.logo ? `
       <div style="margin-bottom: 10px; text-align: center;">
@@ -787,7 +814,7 @@ const CreditOutstanding = () => {
             <td style="padding: 7px 8px; text-align: right; font-size: 11px; font-weight: 700; font-family: monospace;">${currency} ${row.lineTotal.toFixed(2)}</td>
           </tr>
         `).join('')
-      : `<tr><td colspan="7" style="padding: 20px; text-align: center; color: #64748b;">No itemized credit purchases found.</td></tr>`;
+      : `<tr><td colspan="7" style="padding: 20px; text-align: center; color: #64748b;">No unsettled credit items found.</td></tr>`;
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -820,7 +847,7 @@ const CreditOutstanding = () => {
             </div>
             <div style="text-align: right;">
               <div><strong>Date:</strong> ${formatDate(new Date())} ${formatTime(new Date())}</div>
-              <div style="margin-top: 3px;"><strong>Total Purchased:</strong> ${currency} ${totalPurchased.toFixed(2)} (${totalQty} items)</div>
+              <div style="margin-top: 3px;"><strong>Unsettled Items:</strong> ${totalQty}</div>
               <div style="margin-top: 3px; color: #dc2626; font-size: 14px; font-weight: 900;"><strong>Total Outstanding:</strong> ${currency} ${outstandingBalance.toFixed(2)}</div>
             </div>
           </div>
@@ -831,7 +858,7 @@ const CreditOutstanding = () => {
                 <th>#</th>
                 <th>Date & Time</th>
                 <th>Invoice #</th>
-                <th style="text-align: left;">Purchased Item</th>
+                <th style="text-align: left;">Unsettled Item</th>
                 <th>Qty</th>
                 <th style="text-align: right;">Price</th>
                 <th style="text-align: right;">Total</th>
@@ -841,19 +868,10 @@ const CreditOutstanding = () => {
               ${rowsHtml}
             </tbody>
             <tfoot>
-              <tr style="background: #f1f5f9; font-weight: 800; font-size: 12px;">
-                <td colspan="4" style="padding: 8px; text-align: right;">TOTAL PURCHASED:</td>
-                <td style="padding: 8px; text-align: center;">${totalQty}</td>
-                <td></td>
-                <td style="padding: 8px; text-align: right; font-family: monospace;">${currency} ${totalPurchased.toFixed(2)}</td>
-              </tr>
-              ${totalSettled > 0 ? `
-              <tr style="background: #f0fdf4; font-weight: 700; font-size: 12px; color: #15803d;">
-                <td colspan="6" style="padding: 8px; text-align: right;">LESS: PAYMENTS SETTLED:</td>
-                <td style="padding: 8px; text-align: right; font-family: monospace;">- ${currency} ${totalSettled.toFixed(2)}</td>
-              </tr>` : ''}
               <tr style="background: #fef2f2; font-weight: 900; font-size: 13px; color: #dc2626; border-top: 2px solid #dc2626;">
-                <td colspan="6" style="padding: 10px 8px; text-align: right;">TOTAL OUTSTANDING BALANCE DUE:</td>
+                <td colspan="4" style="padding: 10px 8px; text-align: right;">TOTAL OUTSTANDING:</td>
+                <td style="padding: 10px 8px; text-align: center;">${totalQty}</td>
+                <td></td>
                 <td style="padding: 10px 8px; text-align: right; font-family: monospace;">${currency} ${outstandingBalance.toFixed(2)}</td>
               </tr>
             </tfoot>
@@ -1807,7 +1825,7 @@ const CreditOutstanding = () => {
           </DialogHeader>
 
           {pdfPreviewCustomer && (() => {
-            const { itemRows, totalQty, totalPurchased, totalSettled, outstandingBalance } = getCustomerStatementData(pdfPreviewCustomer);
+            const { itemRows, totalQty, outstandingBalance } = getCustomerStatementData(pdfPreviewCustomer);
             const currency = settings.shop.currency || 'MVR';
 
             return (
@@ -1873,19 +1891,11 @@ const CreditOutstanding = () => {
                             </span>
                           </div>
                           <div>
-                            <span className="text-slate-500 font-semibold">Total Purchased ({totalQty} items): </span>
+                            <span className="text-slate-500 font-semibold">Unsettled Items: </span>
                             <span className="font-mono font-bold text-slate-900">
-                              {currency} {totalPurchased.toFixed(2)}
+                              {totalQty}
                             </span>
                           </div>
-                          {totalSettled > 0 && (
-                            <div>
-                              <span className="text-emerald-700 font-semibold">Payments Settled: </span>
-                              <span className="font-mono font-bold text-emerald-700">
-                                - {currency} {totalSettled.toFixed(2)}
-                              </span>
-                            </div>
-                          )}
                           <div className="pt-1">
                             <span className="text-red-600 font-black uppercase">Total Outstanding: </span>
                             <span className="font-mono text-sm font-black text-red-600">
@@ -1895,7 +1905,7 @@ const CreditOutstanding = () => {
                         </div>
                       </div>
 
-                      {/* Purchased Items Table */}
+                      {/* Unsettled Items Table */}
                       <div className="overflow-x-auto rounded-xl border border-slate-200">
                         <table className="w-full text-xs border-collapse">
                           <thead>
@@ -1903,7 +1913,7 @@ const CreditOutstanding = () => {
                               <th className="py-2.5 px-2 text-center w-9">#</th>
                               <th className="py-2.5 px-3 text-left">Date & Time</th>
                               <th className="py-2.5 px-3 text-left">Invoice #</th>
-                              <th className="py-2.5 px-3 text-left">Item Purchased</th>
+                              <th className="py-2.5 px-3 text-left">Unsettled Item</th>
                               <th className="py-2.5 px-2 text-center">Qty</th>
                               <th className="py-2.5 px-3 text-right">Price</th>
                               <th className="py-2.5 px-3 text-right">Total</th>
@@ -1952,36 +1962,18 @@ const CreditOutstanding = () => {
                             ) : (
                               <tr>
                                 <td colSpan={7} className="py-10 text-center text-slate-400 italic">
-                                  No itemized credit purchases found for this customer.
+                                  No unsettled credit items found for this customer.
                                 </td>
                               </tr>
                             )}
                           </tbody>
                           <tfoot>
-                            <tr className="bg-slate-100 font-bold text-slate-800 border-t-2 border-slate-300">
-                              <td colSpan={4} className="py-2.5 px-3 text-right uppercase text-[11px]">
-                                Total Items Purchased:
-                              </td>
-                              <td className="py-2.5 px-2 text-center font-mono">{totalQty}</td>
-                              <td></td>
-                              <td className="py-2.5 px-3 text-right font-mono whitespace-nowrap">
-                                {currency} {totalPurchased.toFixed(2)}
-                              </td>
-                            </tr>
-                            {totalSettled > 0 && (
-                              <tr className="bg-emerald-50 font-bold text-emerald-700 border-t border-emerald-200">
-                                <td colSpan={6} className="py-2 px-3 text-right uppercase text-[11px]">
-                                  Less: Payments Settled:
-                                </td>
-                                <td className="py-2 px-3 text-right font-mono whitespace-nowrap">
-                                  - {currency} {totalSettled.toFixed(2)}
-                                </td>
-                              </tr>
-                            )}
                             <tr className="bg-red-50 font-black text-red-700 border-t-2 border-red-500 text-sm">
-                              <td colSpan={6} className="py-3 px-3 text-right uppercase">
-                                Total Outstanding Balance Due:
+                              <td colSpan={4} className="py-3 px-3 text-right uppercase">
+                                Total Outstanding:
                               </td>
+                              <td className="py-3 px-2 text-center font-mono">{totalQty}</td>
+                              <td></td>
                               <td className="py-3 px-3 text-right font-mono whitespace-nowrap">
                                 {currency} {outstandingBalance.toFixed(2)}
                               </td>

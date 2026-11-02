@@ -1283,7 +1283,7 @@ const POS = () => {
       return `
       <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
         <div style="flex: 1; text-align: left;">
-          ${item.name_dv || item.name_en || ''}${flavourTag}${unitTag}<br/><small style="color: #444;">${item.name_en || ''}${flavourTag}${unitTag}</small>
+          ${item.name_en || item.name_dv || ''}${flavourTag}${unitTag}
         </div>
         <div style="width: 60px; text-align: right;">${item.qty} x ${item.price.toFixed(2)}</div>
         <div style="width: 70px; text-align: right;">${(item.qty * item.price).toFixed(2)}</div>
@@ -1358,7 +1358,7 @@ const POS = () => {
 
     const customerHtml = sale.customer ? `
       <div style="font-size: 11px; margin-top: 6px; text-align: left; border: 1px dashed #ccc; padding: 4px 6px; border-radius: 4px;">
-        <div><strong>Customer:</strong> ${sale.customer.name_dv || ''} (${sale.customer.name_en || ''})</div>
+        <div><strong>Customer:</strong> ${sale.customer.name_en || sale.customer.name_dv || ''}</div>
         ${sale.customer.code ? `<div><strong>Code:</strong> ${sale.customer.code}</div>` : ''}
         ${sale.customer.phone ? `<div><strong>Phone:</strong> ${sale.customer.phone}</div>` : ''}
       </div>
@@ -2445,30 +2445,51 @@ const POS = () => {
             </div>
 
             {/* Print Receipt Toggle Option */}
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-muted/50 border border-border w-full box-border">
-              <div className="flex items-center gap-2.5">
+            <div
+              onClick={() => setShouldPrintCashReceipt((prev) => !prev)}
+              className={cn(
+                "flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer select-none w-full box-border",
+                shouldPrintCashReceipt
+                  ? "bg-primary/10 border-primary/40 shadow-xs"
+                  : "bg-muted/50 border-border hover:bg-muted/80"
+              )}
+            >
+              <div className="flex items-center gap-3">
                 <div className={cn(
-                  "w-8 h-8 rounded-xl flex items-center justify-center transition-colors shrink-0",
-                  shouldPrintCashReceipt ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                  "w-9 h-9 rounded-xl flex items-center justify-center transition-colors shrink-0",
+                  shouldPrintCashReceipt ? "bg-primary text-white shadow-sm shadow-primary/30" : "bg-muted text-muted-foreground border border-border"
                 )}>
                   <Printer className="h-4 w-4" />
                 </div>
                 <div className="text-right">
-                  <Label htmlFor="printCashReceipt" className="text-xs font-black text-foreground cursor-pointer block">
+                  <Label htmlFor="printCashReceipt" className="text-xs sm:text-sm font-black text-foreground cursor-pointer block leading-tight">
                     ރަސީދު ޕްރިންޓް ކުރޭ (Print Receipt)
                   </Label>
-                  <span className="text-[10px] text-muted-foreground block">
+                  <span className={cn(
+                    "text-[10px] font-bold block mt-0.5",
+                    shouldPrintCashReceipt ? "text-primary" : "text-muted-foreground"
+                  )}>
                     {shouldPrintCashReceipt ? 'ޕްރިންޓް ކުރެވޭނެ (Will print receipt)' : 'ޕްރިންޓެއް ނުކުރާނެ (No receipt print)'}
                   </span>
                 </div>
               </div>
-              <Switch
-                id="printCashReceipt"
-                checked={shouldPrintCashReceipt}
-                onCheckedChange={(checked) => {
-                  setShouldPrintCashReceipt(checked);
-                }}
-              />
+              <div className="flex items-center gap-2 shrink-0" dir="ltr" onClick={(e) => e.stopPropagation()}>
+                <span className={cn(
+                  "text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded-md border",
+                  shouldPrintCashReceipt
+                    ? "bg-primary/15 text-primary border-primary/30"
+                    : "bg-muted text-muted-foreground border-border"
+                )}>
+                  {shouldPrintCashReceipt ? 'ON' : 'OFF'}
+                </span>
+                <Switch
+                  id="printCashReceipt"
+                  checked={shouldPrintCashReceipt}
+                  onCheckedChange={(checked) => {
+                    setShouldPrintCashReceipt(checked);
+                  }}
+                />
+              </div>
             </div>
           </div>
 

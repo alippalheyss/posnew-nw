@@ -337,46 +337,6 @@ const CreditOutstanding = () => {
       </div>
     ` : '';
 
-    const customerSales = sales
-      .filter(s => s.customer?.id === customer.id && ((s.paymentMethod as any) === 'credit' || ((s.paymentMethod as any) === 'split' && Number(s.balance || 0) > 0)))
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 5);
-
-    const salesRowsHtml = customerSales.length > 0 ? `
-      <div style="margin-top: 6px; font-size: 11px; text-align: left;">
-        <div style="font-weight: bold; border-bottom: 1px dashed #000; padding-bottom: 2px; margin-bottom: 4px;">Recent Credit Invoices:</div>
-        ${customerSales.map(s => `
-          <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 3px;">
-            <span>${formatDate(s.date)} (${s.invoiceNumber || 'INV'})</span>
-            <span style="font-weight: bold;">${currency} ${Number(s.grandTotal).toFixed(2)}</span>
-          </div>
-        `).join('')}
-      </div>
-      <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
-    ` : '';
-
-    const lastSettlement = customer.settlement_history && customer.settlement_history.length > 0
-      ? customer.settlement_history[customer.settlement_history.length - 1]
-      : null;
-
-    const settlementHtml = lastSettlement ? `
-      <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 3px;">
-        <span>Last Payment (${formatDate(lastSettlement.date)}):</span>
-        <span style="font-weight: bold; color: #16a34a;">-${currency} ${Number(lastSettlement.amount_paid).toFixed(2)}</span>
-      </div>
-    ` : '';
-
-    const creditLimitHtml = customer.credit_limit > 0 ? `
-      <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 3px;">
-        <span>Credit Limit:</span>
-        <span>${currency} ${customer.credit_limit.toFixed(2)}</span>
-      </div>
-      <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 2px;">
-        <span>Available Credit:</span>
-        <span style="font-weight: bold;">${currency} ${Math.max(0, customer.credit_limit - (customer.outstanding_balance || 0)).toFixed(2)}</span>
-      </div>
-    ` : '';
-
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -404,32 +364,26 @@ const CreditOutstanding = () => {
           <div style="font-size: 11px;">${settings.shop.shopAddress}</div>
           <div style="font-size: 10px; margin-top: 2px;">Tel: ${settings.shop.shopPhone}</div>
           <div style="margin: 6px auto; display: inline-block; padding: 2px 8px; border: 1.5px solid #000; font-weight: 900; font-size: 11px; letter-spacing: 0.5px;">
-            CREDIT STATEMENT / ކަސްޓަމަރުގެ ދަރަނި
+            CREDIT STATEMENT
           </div>
           <div style="font-size: 10px; margin-top: 2px; color: #555;">
             ${formatDate(new Date())} ${formatTime(new Date())}
           </div>
           
           <div style="font-size: 11px; margin-top: 6px; text-align: left; border: 1px dashed #777; padding: 5px; border-radius: 4px;">
-            <div><strong>Customer:</strong> ${customer.name_dv || ''} (${customer.name_en || ''})</div>
+            <div><strong>Customer:</strong> ${customer.name_en || customer.name_dv || ''}</div>
             <div><strong>Code:</strong> #${customer.code}</div>
             ${customer.phone ? `<div><strong>Phone:</strong> ${customer.phone}</div>` : ''}
           </div>
 
           <div style="border: 2px solid #000; border-radius: 6px; padding: 8px 4px; margin: 8px 0; background: #fafafa;">
             <div style="font-size: 10px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase;">
-              TOTAL OUTSTANDING (ދައްކަންޖެހޭ ޖުމްލަ)
+              TOTAL OUTSTANDING
             </div>
             <div style="font-size: 22px; font-weight: 900; margin-top: 4px; color: #000;">
               ${currency} ${(customer.outstanding_balance || 0).toFixed(2)}
             </div>
           </div>
-
-          ${creditLimitHtml}
-          ${settlementHtml}
-
-          <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
-          ${salesRowsHtml}
 
           <div style="font-size: 10px; margin-top: 8px; font-style: italic;">
             Please settle outstanding balance promptly.<br/>
@@ -443,7 +397,7 @@ const CreditOutstanding = () => {
     `;
 
     printContent(htmlContent, settings);
-    showSuccess(`Printing total slip for ${customer.name_en} (#${customer.code})`);
+    showSuccess(`Printing total slip for ${customer.name_en || customer.code} (#${customer.code})`);
   };
 
   const getCustomerStatementData = (customer: Customer | null) => {
@@ -806,8 +760,7 @@ const CreditOutstanding = () => {
             <td style="padding: 7px 6px; text-align: center; font-size: 11px; white-space: nowrap;">${row.formattedDate}<br/><span style="color:#64748b;font-size:10px;">${row.formattedTime}</span></td>
             <td style="padding: 7px 6px; text-align: center; font-size: 11px; font-family: monospace;">${row.invoiceNumber}</td>
             <td style="padding: 7px 8px; text-align: left; font-size: 11px;">
-              <div style="font-weight: 700;">${row.nameDv}${row.unit}</div>
-              <div style="color: #64748b; font-size: 10px;">${row.nameEn} ${row.itemCode !== '-' ? `[${row.itemCode}]` : ''}</div>
+              <div style="font-weight: 700;">${row.nameEn}${row.unit} ${row.itemCode !== '-' ? `<span style="color: #64748b; font-size: 10px; font-weight: 400;">[${row.itemCode}]</span>` : ''}</div>
             </td>
             <td style="padding: 7px 6px; text-align: center; font-size: 11px; font-weight: 700;">${row.qty}</td>
             <td style="padding: 7px 6px; text-align: right; font-size: 11px; font-family: monospace;">${currency} ${row.price.toFixed(2)}</td>
@@ -841,7 +794,7 @@ const CreditOutstanding = () => {
 
           <div style="display: flex; justify-content: space-between; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-top: 14px; font-size: 12px;">
             <div>
-              <div><strong>Customer:</strong> ${customer.name_dv || ''} (${customer.name_en || ''})</div>
+              <div><strong>Customer:</strong> ${customer.name_en || customer.name_dv || ''}</div>
               <div style="margin-top: 3px;"><strong>Code:</strong> #${customer.code}</div>
               <div style="margin-top: 3px;"><strong>Phone:</strong> ${customer.phone || '-'}</div>
             </div>
@@ -1869,8 +1822,7 @@ const CreditOutstanding = () => {
                           <div>
                             <span className="text-slate-500 font-semibold">Customer Name: </span>
                             <span className="font-black text-slate-900">
-                              {pdfPreviewCustomer.name_en || pdfPreviewCustomer.name_dv}{' '}
-                              {pdfPreviewCustomer.name_dv && pdfPreviewCustomer.name_en ? `(${pdfPreviewCustomer.name_dv})` : ''}
+                              {pdfPreviewCustomer.name_en || pdfPreviewCustomer.name_dv}
                             </span>
                           </div>
                           <div>
@@ -1941,11 +1893,10 @@ const CreditOutstanding = () => {
                                   <td className="py-2 px-3">
                                     <div className="font-bold text-slate-900">
                                       {row.nameEn}
-                                      {row.unit}
-                                    </div>
-                                    <div className="text-[11px] text-slate-500">
-                                      {row.nameDv !== row.nameEn ? row.nameDv : ''}{' '}
-                                      {row.itemCode !== '-' ? `[${row.itemCode}]` : ''}
+                                      {row.unit}{' '}
+                                      {row.itemCode !== '-' ? (
+                                        <span className="text-[10px] font-normal text-slate-400">[{row.itemCode}]</span>
+                                      ) : null}
                                     </div>
                                   </td>
                                   <td className="py-2 px-2 text-center font-mono font-bold text-slate-800">

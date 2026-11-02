@@ -180,7 +180,7 @@ const DailySales = () => {
       return `
       <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
         <div style="flex: 1; text-align: left;">
-          ${item.name_dv || item.name_en || ''}${flavourTag}${unitTag}<br/><small style="color: #444;">${item.name_en || ''}${flavourTag}${unitTag}</small>
+          ${item.name_en || item.name_dv || ''}${flavourTag}${unitTag}
         </div>
         <div style="width: 60px; text-align: right;">${item.qty} x ${item.price.toFixed(2)}</div>
         <div style="width: 70px; text-align: right;">${(item.qty * item.price).toFixed(2)}</div>
@@ -255,7 +255,7 @@ const DailySales = () => {
 
     const customerHtml = sale.customer ? `
       <div style="font-size: 11px; margin-top: 6px; text-align: left; border: 1px dashed #ccc; padding: 4px 6px; border-radius: 4px;">
-        <div><strong>Customer:</strong> ${sale.customer.name_dv || ''} (${sale.customer.name_en || ''})</div>
+        <div><strong>Customer:</strong> ${sale.customer.name_en || sale.customer.name_dv || ''}</div>
         ${sale.customer.code ? `<div><strong>Code:</strong> ${sale.customer.code}</div>` : ''}
         ${sale.customer.phone ? `<div><strong>Phone:</strong> ${sale.customer.phone}</div>` : ''}
       </div>

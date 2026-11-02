@@ -71,7 +71,7 @@ const CreditInvoices = () => {
       return `
       <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
         <div style="flex: 1; text-align: left;">
-          ${item.name_dv || item.name_en || ''}${flavourTag}${unitTag}<br/><small style="color: #444;">${item.name_en || ''}${flavourTag}${unitTag}</small>
+          ${item.name_en || item.name_dv || ''}${flavourTag}${unitTag}
         </div>
         <div style="width: 60px; text-align: right;">${item.qty} x ${item.price.toFixed(2)}</div>
         <div style="width: 70px; text-align: right;">${(item.qty * item.price).toFixed(2)}</div>
@@ -94,7 +94,7 @@ const CreditInvoices = () => {
 
     const customerHtml = sale.customer ? `
       <div style="font-size: 11px; margin-top: 6px; text-align: left; border: 1px dashed #ccc; padding: 4px 6px; border-radius: 4px;">
-        <div><strong>Customer:</strong> ${sale.customer.name_dv || ''} (${sale.customer.name_en || ''})</div>
+        <div><strong>Customer:</strong> ${sale.customer.name_en || sale.customer.name_dv || ''}</div>
         ${sale.customer.code ? `<div><strong>Code:</strong> ${sale.customer.code}</div>` : ''}
         ${sale.customer.phone ? `<div><strong>Phone:</strong> ${sale.customer.phone}</div>` : ''}
       </div>
@@ -180,7 +180,7 @@ const CreditInvoices = () => {
     const itemsHtml = sale.items.map(item => `
       <tr style="border-bottom: 1px solid #eee;">
         <td style="padding: 8px; text-align: left;">
-          ${item.name_dv}<br/><small>${item.name_en}</small>
+          ${item.name_en || item.name_dv || ''}
         </td>
         <td style="padding: 8px; text-align: right;">${item.qty}</td>
         <td style="padding: 8px; text-align: right;">${item.price.toFixed(2)}</td>
@@ -235,7 +235,7 @@ const CreditInvoices = () => {
             </div>
             <div style="text-align: right;">
               <strong>To:</strong><br/>
-              ${sale.customer?.name_dv} (${sale.customer?.name_en})<br/>
+              ${sale.customer?.name_en || sale.customer?.name_dv || ''}<br/>
               Code: ${sale.customer?.code}<br/>
               Date: ${sale.date}<br/>
               Invoice #: ${sale.invoiceNumber || sale.id}

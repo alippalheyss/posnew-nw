@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, History, DollarSign, ShoppingBag, PlusCircle, Download, FileText, User, Activity, TrendingDown, Clock, CheckCircle2, AlertCircle, Edit, Trash2, X, Filter, ArrowUpDown, RotateCw, Printer } from 'lucide-react';
+import { Search, History, DollarSign, ShoppingBag, PlusCircle, Download, FileText, User, Activity, TrendingDown, Clock, CheckCircle2, AlertCircle, Edit, Trash2, X, Filter, ArrowUpDown, RotateCw, Printer, Eye } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -94,6 +94,10 @@ const CreditOutstanding = () => {
   
   const [isEditSaleDialogOpen, setIsEditSaleDialogOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [pdfPreviewCustomer, setPdfPreviewCustomer] = useState<Customer | null>(null);
+  const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [pdfPreviewMode, setPdfPreviewMode] = useState<'statement' | 'pdf'>('statement');
 
   const handleEditSale = (sale: Sale) => {
     setEditingSale(sale);
@@ -172,11 +176,31 @@ const CreditOutstanding = () => {
     });
   }, [customers, searchQuery, amountFilter, customMinAmount, customMaxAmount, sortBy]);
 
-  const selectedCustomerCreditSales = sales.filter(s =>
-    (s.customer?.id === selectedCustomerForAction?.id && s.paymentMethod?.toLowerCase() === 'credit') ||
-    ((s.paymentMethod?.toLowerCase() === 'split' || s.paymentMethod?.toLowerCase() === 'credit') && 
-     s.splitDetails?.some((d: any) => d.method?.toLowerCase() === 'credit' && d.customerId === selectedCustomerForAction?.id))
-  );
+  const getCustomerCreditSales = (customer: Customer | null): Sale[] => {
+    if (!customer) return [];
+    const targetId = String(customer.id || '').toLowerCase();
+    const targetCode = String(customer.code || '').trim().toLowerCase();
+
+    return sales
+      .filter(s => {
+        const sCustId = String(s.customer?.id || (s as any).customerId || (s as any).customer_id || '').toLowerCase();
+        const sCustCode = String(s.customer?.code || '').trim().toLowerCase();
+        const isCustomerMatch = (targetId && sCustId === targetId) || (targetCode && sCustCode && sCustCode === targetCode);
+        const method = String(s.paymentMethod || (s as any).payment_method || '').toLowerCase();
+
+        const isDirectCredit = isCustomerMatch && (
+          method === 'credit' ||
+          (method === 'split' && Number(s.balance ?? 0) > 0 && (!s.splitDetails || s.splitDetails.length === 0))
+        );
+        const isSplitCredit = Array.isArray(s.splitDetails) && s.splitDetails.some(
+          (d: any) => String(d.method || '').toLowerCase() === 'credit' && String(d.customerId || '').toLowerCase() === targetId
+        );
+        return isDirectCredit || isSplitCredit;
+      })
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  };
+
+  const selectedCustomerCreditSales = getCustomerCreditSales(selectedCustomerForAction);
 
   const handleSettlePaymentClick = (customer: Customer) => {
     setSelectedCustomerForAction(customer);
@@ -422,127 +446,422 @@ const CreditOutstanding = () => {
     showSuccess(`Printing total slip for ${customer.name_en} (#${customer.code})`);
   };
 
-  const handleDownloadPdfReport = (customer: Customer) => {
-    const customerSales = sales.filter(s => s.customer?.id === customer.id && s.paymentMethod === 'credit');
-    if (customerSales.length === 0) {
-      showError(t('no_credit_purchases'));
-      return;
+  const getCustomerStatementData = (customer: Customer | null) => {
+    if (!customer) {
+      return {
+        customerSales: [] as Sale[],
+        itemRows: [] as Array<{
+          saleId: string;
+          invoiceNumber: string;
+          date: string;
+          formattedDate: string;
+          formattedTime: string;
+          itemCode: string;
+          nameEn: string;
+          nameDv: string;
+          unit: string;
+          qty: number;
+          price: number;
+          lineTotal: number;
+          isSplit: boolean;
+        }>,
+        totalQty: 0,
+        totalPurchased: 0,
+        totalSettled: 0,
+        outstandingBalance: 0,
+      };
     }
 
-    try {
-      const doc = new jsPDF();
-      let yPos = 20;
+    const customerSales = getCustomerCreditSales(customer);
+    const itemRows: Array<{
+      saleId: string;
+      invoiceNumber: string;
+      date: string;
+      formattedDate: string;
+      formattedTime: string;
+      itemCode: string;
+      nameEn: string;
+      nameDv: string;
+      unit: string;
+      qty: number;
+      price: number;
+      lineTotal: number;
+      isSplit: boolean;
+    }> = [];
 
-      if (settings.reports.showLogo && settings.shop.logo) {
-        try {
-          doc.addImage(settings.shop.logo, 'PNG', 85, yPos, 40, 20);
-          yPos += 25;
-        } catch (e) {
-          console.log('Logo not added');
-        }
+    let totalQty = 0;
+    let totalPurchased = 0;
+
+    customerSales.forEach(sale => {
+      const splitEntry = sale.splitDetails?.find(
+        (d: any) => String(d.customerId || '').toLowerCase() === String(customer.id || '').toLowerCase() && String(d.method || '').toLowerCase() === 'credit'
+      );
+      const isSplit = !!splitEntry;
+
+      const invRaw = sale.invoiceNumber || (sale as any).invoice_number;
+      let invoiceNumber = invRaw;
+      if (!invoiceNumber || (invoiceNumber.includes('-') && invoiceNumber.length > 24)) {
+        const d = new Date(sale.date || Date.now());
+        const yr = isNaN(d.getTime()) ? '26' : d.getFullYear().toString().slice(-2);
+        const mo = isNaN(d.getTime()) ? '11' : (d.getMonth() + 1).toString().padStart(2, '0');
+        const seq = String(sale.id || '').replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase() || '001';
+        invoiceNumber = `CRINV/${yr}/${mo}/${seq}`;
       }
 
-      doc.setFontSize(18);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Credit Purchases Report', 105, yPos, { align: 'center' });
-      yPos += 8;
-
-      doc.setFontSize(14);
-      doc.text(settings.shop.shopName, 105, yPos, { align: 'center' });
-      yPos += 10;
-
-      if (settings.reports.showContactInfo) {
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.text(settings.shop.shopAddress, 105, yPos, { align: 'center' });
-        yPos += 5;
-        doc.text(`Tel: ${settings.shop.shopPhone} | Email: ${settings.shop.shopEmail}`, 105, yPos, { align: 'center' });
-        yPos += 10;
-      }
-
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Customer: ${customer.name_en}`, 14, yPos);
-      yPos += 6;
-      doc.text(`Code: ${customer.code}`, 14, yPos);
-      yPos += 6;
-      doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, yPos);
-      yPos += 10;
-
-      customerSales.forEach((transaction, index) => {
-        if (yPos > 250) {
-          doc.addPage();
-          yPos = 20;
-        }
-
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Transaction Date: ${transaction.date}`, 14, yPos);
-        doc.text(`Total: ${settings.shop.currency} ${transaction.grandTotal.toFixed(2)}`, 196, yPos, { align: 'right' });
-        yPos += 7;
-
-        const tableData = transaction.items.map(item => [
-          item.name_en,
-          item.item_code,
-          item.qty.toString(),
-          `${settings.shop.currency} ${item.price.toFixed(2)}`,
-          `${settings.shop.currency} ${(item.qty * item.price).toFixed(2)}`
-        ]);
-
-        autoTable(doc, {
-          startY: yPos,
-          head: [['Item', 'Code', 'Qty', 'Price', 'Total']],
-          body: tableData,
-          theme: 'grid',
-          headStyles: {
-            fillColor: [59, 130, 246],
-            fontSize: 9,
-            halign: 'center'
-          },
-          bodyStyles: {
-            fontSize: 8,
-            font: 'helvetica'
-          },
-          columnStyles: {
-            0: { cellWidth: 70, halign: 'left' },
-            1: { cellWidth: 30, halign: 'center' },
-            2: { cellWidth: 20, halign: 'center' },
-            3: { cellWidth: 35, halign: 'right' },
-            4: { cellWidth: 35, halign: 'right' }
-          },
-          margin: { left: 14, right: 14 }
+      const items = Array.isArray(sale.items) ? sale.items : [];
+      if (items.length > 0) {
+        items.forEach((item: any) => {
+          const qty = Number(item.qty || 1);
+          const price = Number(item.price || 0);
+          const lineTotal = qty * price;
+          totalQty += qty;
+          itemRows.push({
+            saleId: sale.id,
+            invoiceNumber,
+            date: sale.date,
+            formattedDate: formatDate(sale.date),
+            formattedTime: formatTime(sale.date),
+            itemCode: item.item_code || '-',
+            nameEn: item.name_en || item.name_dv || 'Item',
+            nameDv: item.name_dv || item.name_en || 'Item',
+            unit: item.selected_unit && item.selected_unit !== 'Piece' ? ` (${item.selected_unit})` : '',
+            qty,
+            price,
+            lineTotal,
+            isSplit,
+          });
         });
+      } else {
+        const fallbackTotal = isSplit ? Number(splitEntry.amount || 0) : Number(sale.grandTotal || 0);
+        totalQty += 1;
+        itemRows.push({
+          saleId: sale.id,
+          invoiceNumber,
+          date: sale.date,
+          formattedDate: formatDate(sale.date),
+          formattedTime: formatTime(sale.date),
+          itemCode: '-',
+          nameEn: 'Credit Purchase',
+          nameDv: 'ކްރެޑިޓް ވިޔަފާރި',
+          unit: '',
+          qty: 1,
+          price: fallbackTotal,
+          lineTotal: fallbackTotal,
+          isSplit,
+        });
+      }
 
-        yPos = (doc as any).lastAutoTable.finalY + 8;
+      totalPurchased += isSplit ? Number(splitEntry.amount || 0) : Number(sale.grandTotal || 0);
+    });
+
+    const totalSettled = (customer.settlement_history || []).reduce(
+      (sum, s) => sum + Number(s.amount_paid || 0),
+      0
+    );
+
+    const outstandingBalance =
+      Number(customer.outstanding_balance || 0) > 0
+        ? Number(customer.outstanding_balance || 0)
+        : Math.max(0, totalPurchased - totalSettled);
+
+    return {
+      customerSales,
+      itemRows,
+      totalQty,
+      totalPurchased,
+      totalSettled,
+      outstandingBalance,
+    };
+  };
+
+  const buildCustomerOutstandingPdf = (customer: Customer) => {
+    const { itemRows, totalQty, totalPurchased, totalSettled, outstandingBalance } = getCustomerStatementData(customer);
+    const currency = settings.shop.currency || 'MVR';
+    const doc = new jsPDF();
+    let yPos = 16;
+
+    if (settings.reports?.showLogo && settings.shop.logo) {
+      try {
+        doc.addImage(settings.shop.logo, 'PNG', 88, yPos, 34, 18);
+        yPos += 22;
+      } catch (e) {
+        // Ignore logo error if format unsupported
+      }
+    }
+
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(settings.shop.shopName || 'SHOP', 105, yPos, { align: 'center' });
+    yPos += 6;
+
+    if (settings.shop.shopAddress || settings.shop.shopPhone) {
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 116, 139);
+      if (settings.shop.shopAddress) {
+        doc.text(settings.shop.shopAddress, 105, yPos, { align: 'center' });
+        yPos += 4.5;
+      }
+      doc.text(
+        `Tel: ${settings.shop.shopPhone || '-'}${settings.shop.shopEmail ? ` | Email: ${settings.shop.shopEmail}` : ''}`,
+        105,
+        yPos,
+        { align: 'center' }
+      );
+      yPos += 7;
+    }
+
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 64, 175);
+    doc.text('CUSTOMER OUTSTANDING STATEMENT', 105, yPos, { align: 'center' });
+    yPos += 8;
+
+    // Customer & Summary Box
+    doc.setDrawColor(226, 232, 240);
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(14, yPos, 182, 24, 2, 2, 'FD');
+
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Customer: ${customer.name_en || customer.name_dv || 'Customer'}`, 18, yPos + 7);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Customer Code: #${customer.code || '-'}`, 18, yPos + 13);
+    doc.text(`Phone: ${customer.phone || '-'}`, 18, yPos + 19);
+
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Statement Date: ${formatDate(new Date())} ${formatTime(new Date())}`, 192, yPos + 7, { align: 'right' });
+    doc.text(`Total Credit Purchases: ${currency} ${totalPurchased.toFixed(2)}`, 192, yPos + 13, { align: 'right' });
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(220, 38, 38);
+    doc.text(`Total Outstanding Due: ${currency} ${outstandingBalance.toFixed(2)}`, 192, yPos + 19, { align: 'right' });
+
+    yPos += 30;
+
+    // Itemized Purchases Table
+    if (itemRows.length > 0) {
+      const tableBody = itemRows.map((row, idx) => [
+        (idx + 1).toString(),
+        `${row.formattedDate}${row.formattedTime ? ` ${row.formattedTime}` : ''}`,
+        row.invoiceNumber,
+        `${row.nameEn}${row.unit}${row.itemCode && row.itemCode !== '-' ? ` [${row.itemCode}]` : ''}`,
+        row.qty.toString(),
+        `${currency} ${row.price.toFixed(2)}`,
+        `${currency} ${row.lineTotal.toFixed(2)}`,
+      ]);
+
+      const tableFoot: string[][] = [
+        ['', '', '', 'TOTAL ITEMS PURCHASED', totalQty.toString(), '', `${currency} ${totalPurchased.toFixed(2)}`],
+      ];
+
+      if (totalSettled > 0) {
+        tableFoot.push(['', '', '', 'LESS: PAYMENTS SETTLED', '', '', `- ${currency} ${totalSettled.toFixed(2)}`]);
+      }
+
+      tableFoot.push(['', '', '', 'TOTAL OUTSTANDING BALANCE', '', '', `${currency} ${outstandingBalance.toFixed(2)}`]);
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [['#', 'Date & Time', 'Invoice #', 'Purchased Item', 'Qty', 'Price', 'Total']],
+        body: tableBody,
+        foot: tableFoot,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [37, 99, 235],
+          textColor: [255, 255, 255],
+          fontSize: 8.5,
+          fontStyle: 'bold',
+          halign: 'center',
+        },
+        bodyStyles: {
+          fontSize: 8,
+          font: 'helvetica',
+          textColor: [30, 41, 59],
+        },
+        footStyles: {
+          fillColor: [241, 245, 249],
+          textColor: [15, 23, 42],
+          fontSize: 8.5,
+          fontStyle: 'bold',
+        },
+        columnStyles: {
+          0: { cellWidth: 10, halign: 'center' },
+          1: { cellWidth: 32, halign: 'center' },
+          2: { cellWidth: 28, halign: 'center' },
+          3: { cellWidth: 54, halign: 'left' },
+          4: { cellWidth: 14, halign: 'center' },
+          5: { cellWidth: 22, halign: 'right' },
+          6: { cellWidth: 22, halign: 'right' },
+        },
+        margin: { left: 14, right: 14 },
       });
 
-      if (yPos > 260) {
-        doc.addPage();
-        yPos = 20;
-      }
+      yPos = (doc as any).lastAutoTable.finalY + 10;
+    } else {
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(100, 116, 139);
+      doc.text('No itemized credit invoices found in current history.', 14, yPos + 6);
+      yPos += 16;
+    }
 
-      doc.setDrawColor(0, 0, 0);
-      doc.setLineWidth(0.5);
-      doc.line(14, yPos, 196, yPos);
-      yPos += 8;
+    if (yPos > 255) {
+      doc.addPage();
+      yPos = 20;
+    }
 
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(59, 130, 246);
-      doc.text(`Total Outstanding: ${settings.shop.currency} ${(customer.outstanding_balance || 0).toFixed(2)}`, 196, yPos, { align: 'right' });
-      yPos += 15;
+    // Final Total Outstanding Highlight Box
+    doc.setDrawColor(220, 38, 38);
+    doc.setFillColor(254, 242, 242);
+    doc.roundedRect(14, yPos, 182, 14, 2, 2, 'FD');
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(185, 28, 28);
+    doc.text('TOTAL OUTSTANDING BALANCE DUE:', 20, yPos + 9);
+    doc.text(`${currency} ${outstandingBalance.toFixed(2)}`, 190, yPos + 9, { align: 'right' });
+    yPos += 22;
 
+    if (settings.reports?.customerOutstandingFooter) {
       doc.setFontSize(8);
       doc.setFont('helvetica', 'italic');
-      doc.setTextColor(150, 150, 150);
+      doc.setTextColor(120, 120, 120);
       doc.text(settings.reports.customerOutstandingFooter, 105, yPos, { align: 'center', maxWidth: 180 });
+    }
 
-      doc.save(`${customer.name_en}_Credit_Purchases_Report.pdf`);
-      showSuccess(t('download_report_successful'));
+    return doc;
+  };
+
+  const handleOpenPdfPreview = (customer: Customer) => {
+    setPdfPreviewCustomer(customer);
+    setPdfPreviewMode('statement');
+    try {
+      const doc = buildCustomerOutstandingPdf(customer);
+      const blob = doc.output('blob');
+      if (pdfPreviewUrl) {
+        URL.revokeObjectURL(pdfPreviewUrl);
+      }
+      const url = URL.createObjectURL(blob);
+      setPdfPreviewUrl(url);
+    } catch (err) {
+      console.error('Error building PDF preview:', err);
+      setPdfPreviewUrl(null);
+    }
+    setIsPdfPreviewOpen(true);
+  };
+
+  const handleDownloadPdfReport = (customer: Customer) => {
+    try {
+      const doc = buildCustomerOutstandingPdf(customer);
+      const safeName = (customer.name_en || customer.code || 'Customer').replace(/[^a-zA-Z0-9_-]/g, '_');
+      doc.save(`${safeName}_${customer.code}_Outstanding_Statement.pdf`);
+      showSuccess(t('download_report_successful') || `Downloaded PDF statement for ${customer.name_en || customer.name_dv}`);
     } catch (error) {
       console.error('PDF generation error:', error);
-      showError(t('error_generating_pdf_report'));
+      showError(t('error_generating_pdf_report') || 'Failed to generate PDF report');
     }
+  };
+
+  const handlePrintA4CustomerStatement = (customer: Customer) => {
+    const { itemRows, totalQty, totalPurchased, totalSettled, outstandingBalance } = getCustomerStatementData(customer);
+    const currency = settings.shop.currency || 'MVR';
+    const logoHtml = settings.reports?.showLogo && settings.shop.logo ? `
+      <div style="margin-bottom: 10px; text-align: center;">
+        <img src="${settings.shop.logo}" style="max-height: 65px; object-fit: contain;" />
+      </div>
+    ` : '';
+
+    const rowsHtml = itemRows.length > 0
+      ? itemRows.map((row, idx) => `
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 7px 6px; text-align: center; font-size: 11px;">${idx + 1}</td>
+            <td style="padding: 7px 6px; text-align: center; font-size: 11px; white-space: nowrap;">${row.formattedDate}<br/><span style="color:#64748b;font-size:10px;">${row.formattedTime}</span></td>
+            <td style="padding: 7px 6px; text-align: center; font-size: 11px; font-family: monospace;">${row.invoiceNumber}</td>
+            <td style="padding: 7px 8px; text-align: left; font-size: 11px;">
+              <div style="font-weight: 700;">${row.nameDv}${row.unit}</div>
+              <div style="color: #64748b; font-size: 10px;">${row.nameEn} ${row.itemCode !== '-' ? `[${row.itemCode}]` : ''}</div>
+            </td>
+            <td style="padding: 7px 6px; text-align: center; font-size: 11px; font-weight: 700;">${row.qty}</td>
+            <td style="padding: 7px 6px; text-align: right; font-size: 11px; font-family: monospace;">${currency} ${row.price.toFixed(2)}</td>
+            <td style="padding: 7px 8px; text-align: right; font-size: 11px; font-weight: 700; font-family: monospace;">${currency} ${row.lineTotal.toFixed(2)}</td>
+          </tr>
+        `).join('')
+      : `<tr><td colspan="7" style="padding: 20px; text-align: center; color: #64748b;">No itemized credit purchases found.</td></tr>`;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Outstanding Statement - ${customer.name_en || customer.code}</title>
+          <style>
+            @page { size: A4 portrait; margin: 12mm; }
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #0f172a; margin: 0; padding: 16px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+            th { background: #1d4ed8; color: #fff; font-size: 11px; padding: 8px 6px; text-transform: uppercase; letter-spacing: 0.4px; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px;">
+            ${logoHtml}
+            <h1 style="margin: 0; font-size: 20px;">${settings.shop.shopName}</h1>
+            <div style="font-size: 11px; color: #475569; margin-top: 3px;">${settings.shop.shopAddress || ''} | Tel: ${settings.shop.shopPhone || ''}</div>
+            <div style="margin-top: 8px; display: inline-block; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 4px 14px; border-radius: 6px; font-weight: 800; font-size: 12px;">
+              CUSTOMER OUTSTANDING STATEMENT
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-top: 14px; font-size: 12px;">
+            <div>
+              <div><strong>Customer:</strong> ${customer.name_dv || ''} (${customer.name_en || ''})</div>
+              <div style="margin-top: 3px;"><strong>Code:</strong> #${customer.code}</div>
+              <div style="margin-top: 3px;"><strong>Phone:</strong> ${customer.phone || '-'}</div>
+            </div>
+            <div style="text-align: right;">
+              <div><strong>Date:</strong> ${formatDate(new Date())} ${formatTime(new Date())}</div>
+              <div style="margin-top: 3px;"><strong>Total Purchased:</strong> ${currency} ${totalPurchased.toFixed(2)} (${totalQty} items)</div>
+              <div style="margin-top: 3px; color: #dc2626; font-size: 14px; font-weight: 900;"><strong>Total Outstanding:</strong> ${currency} ${outstandingBalance.toFixed(2)}</div>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Date & Time</th>
+                <th>Invoice #</th>
+                <th style="text-align: left;">Purchased Item</th>
+                <th>Qty</th>
+                <th style="text-align: right;">Price</th>
+                <th style="text-align: right;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+            <tfoot>
+              <tr style="background: #f1f5f9; font-weight: 800; font-size: 12px;">
+                <td colspan="4" style="padding: 8px; text-align: right;">TOTAL PURCHASED:</td>
+                <td style="padding: 8px; text-align: center;">${totalQty}</td>
+                <td></td>
+                <td style="padding: 8px; text-align: right; font-family: monospace;">${currency} ${totalPurchased.toFixed(2)}</td>
+              </tr>
+              ${totalSettled > 0 ? `
+              <tr style="background: #f0fdf4; font-weight: 700; font-size: 12px; color: #15803d;">
+                <td colspan="6" style="padding: 8px; text-align: right;">LESS: PAYMENTS SETTLED:</td>
+                <td style="padding: 8px; text-align: right; font-family: monospace;">- ${currency} ${totalSettled.toFixed(2)}</td>
+              </tr>` : ''}
+              <tr style="background: #fef2f2; font-weight: 900; font-size: 13px; color: #dc2626; border-top: 2px solid #dc2626;">
+                <td colspan="6" style="padding: 10px 8px; text-align: right;">TOTAL OUTSTANDING BALANCE DUE:</td>
+                <td style="padding: 10px 8px; text-align: right; font-family: monospace;">${currency} ${outstandingBalance.toFixed(2)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </body>
+      </html>
+    `;
+    printContent(htmlContent, settings);
   };
 
 
@@ -1016,6 +1335,18 @@ const CreditOutstanding = () => {
                             size="icon"
                             onClick={(e) => {
                               e.stopPropagation();
+                              handleOpenPdfPreview(customer);
+                            }}
+                            className="h-8 w-8 rounded-xl bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500 hover:text-white transition-all text-amber-600 dark:text-amber-400 shadow-xs"
+                            title="View & Download Customer Outstanding PDF (ޕީޑީއެފް ސްޓޭޓްމަންޓް ބައްލަވާ / ޑައުންލޯޑް)"
+                          >
+                            <FileText className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
                               handlePrintCustomerTotal(customer);
                             }}
                             className="h-8 w-8 rounded-xl bg-muted/80 border border-border/70 hover:bg-primary hover:text-primary-foreground transition-all text-muted-foreground shadow-xs"
@@ -1079,6 +1410,15 @@ const CreditOutstanding = () => {
                      </div>
 
                       <div className="space-y-1.5 mt-2">
+                        <Button
+                           type="button"
+                           onClick={() => handleOpenPdfPreview(customer)}
+                           className="w-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[10px] font-black h-9 rounded-xl transition-all gap-2 flex items-center justify-center active:scale-95"
+                        >
+                           <FileText className="h-3.5 w-3.5" />
+                           <span>View & Download PDF Statement (ޕީޑީއެފް ސްޓޭޓްމަންޓް)</span>
+                        </Button>
+
                         <Button
                            type="button"
                            onClick={() => handleSendCustomerTelegram(customer)}
@@ -1381,11 +1721,316 @@ const CreditOutstanding = () => {
               )}
             </div>
           </ScrollArea>
-          <DialogFooter className="pt-4 border-t border-white/10 dark:border-white/5">
-            <Button onClick={() => setIsCreditPurchasesDialogOpen(false)} variant="outline" className="w-full h-11 rounded-2xl border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold active:scale-[0.98] transition-all">
+          <DialogFooter className="pt-4 border-t border-white/10 dark:border-white/5 flex gap-2">
+            {selectedCustomerForAction && (
+              <Button
+                type="button"
+                onClick={() => {
+                  setIsCreditPurchasesDialogOpen(false);
+                  handleOpenPdfPreview(selectedCustomerForAction);
+                }}
+                className="flex-1 h-11 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs gap-2 active:scale-[0.98] transition-all"
+              >
+                <FileText className="h-4 w-4" />
+                <span>View & Download PDF</span>
+              </Button>
+            )}
+            <Button onClick={() => setIsCreditPurchasesDialogOpen(false)} variant="outline" className="flex-1 h-11 rounded-2xl border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold active:scale-[0.98] transition-all">
               {renderBoth('close')}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Customer Outstanding PDF Preview & Download Dialog */}
+      <Dialog
+        open={isPdfPreviewOpen}
+        onOpenChange={(open) => {
+          setIsPdfPreviewOpen(open);
+          if (!open && pdfPreviewUrl) {
+            URL.revokeObjectURL(pdfPreviewUrl);
+            setPdfPreviewUrl(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[56rem] 2xl:max-w-[66rem] w-[calc(100vw-2rem)] max-h-[92vh] flex flex-col font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+          <DialogHeader className="text-right pb-3 border-b border-white/10 dark:border-white/5">
+            <div className="flex flex-wrap items-center justify-between gap-3 pl-8">
+              <div className="flex items-center gap-2">
+                <div className="bg-muted/80 p-1 rounded-xl border border-border flex items-center gap-1" dir="ltr">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={pdfPreviewMode === 'statement' ? 'default' : 'ghost'}
+                    onClick={() => setPdfPreviewMode('statement')}
+                    className="h-8 px-3 rounded-lg text-xs font-black gap-1.5"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    <span>Statement View</span>
+                  </Button>
+                  {pdfPreviewUrl && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={pdfPreviewMode === 'pdf' ? 'default' : 'ghost'}
+                      onClick={() => setPdfPreviewMode('pdf')}
+                      className="h-8 px-3 rounded-lg text-xs font-black gap-1.5"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      <span>PDF Viewer</span>
+                    </Button>
+                  )}
+                </div>
+                {pdfPreviewCustomer && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => handleDownloadPdfReport(pdfPreviewCustomer)}
+                    className="h-9 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs gap-1.5 shadow-md shadow-amber-500/20"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    <span>Download PDF</span>
+                  </Button>
+                )}
+              </div>
+
+              <div className="text-right">
+                <DialogTitle className="text-xl font-black flex items-center justify-end gap-2">
+                  <span>Customer Outstanding PDF Preview (ޕީޑީއެފް ސްޓޭޓްމަންޓް)</span>
+                  <FileText className="h-5 w-5 text-amber-500 shrink-0" />
+                </DialogTitle>
+                <DialogDescription className="text-right text-muted-foreground text-xs mt-0.5">
+                  {pdfPreviewCustomer?.name_dv} ({pdfPreviewCustomer?.name_en}) — #{pdfPreviewCustomer?.code}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {pdfPreviewCustomer && (() => {
+            const { itemRows, totalQty, totalPurchased, totalSettled, outstandingBalance } = getCustomerStatementData(pdfPreviewCustomer);
+            const currency = settings.shop.currency || 'MVR';
+
+            return (
+              <>
+                <div className="flex-1 overflow-y-auto my-3 pr-1 custom-scrollbar" dir="ltr">
+                  {pdfPreviewMode === 'pdf' && pdfPreviewUrl ? (
+                    <iframe
+                      src={pdfPreviewUrl}
+                      title="Customer Outstanding PDF Preview"
+                      className="w-full h-[62vh] rounded-2xl border border-border bg-white"
+                    />
+                  ) : (
+                    <div className="bg-white text-slate-900 rounded-2xl border border-slate-200 shadow-inner p-6 sm:p-8 mx-auto max-w-4xl">
+                      {/* Document Header */}
+                      <div className="text-center border-b-2 border-slate-200 pb-4 mb-5">
+                        {settings.reports?.showLogo && settings.shop.logo && (
+                          <img
+                            src={settings.shop.logo}
+                            alt="Shop Logo"
+                            className="max-h-14 mx-auto mb-2 object-contain"
+                          />
+                        )}
+                        <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">
+                          {settings.shop.shopName}
+                        </h2>
+                        {(settings.shop.shopAddress || settings.shop.shopPhone) && (
+                          <p className="text-xs text-slate-500 mt-1">
+                            {settings.shop.shopAddress}
+                            {settings.shop.shopPhone ? ` • Tel: ${settings.shop.shopPhone}` : ''}
+                            {settings.shop.shopEmail ? ` • ${settings.shop.shopEmail}` : ''}
+                          </p>
+                        )}
+                        <div className="mt-3 inline-block bg-blue-50 text-blue-700 border border-blue-200 px-4 py-1 rounded-lg text-xs font-black tracking-wider uppercase">
+                          Customer Outstanding Statement
+                        </div>
+                      </div>
+
+                      {/* Customer & Balance Summary Banner */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 border border-slate-200 rounded-xl p-4 mb-5 text-xs">
+                        <div className="space-y-1 text-left">
+                          <div>
+                            <span className="text-slate-500 font-semibold">Customer Name: </span>
+                            <span className="font-black text-slate-900">
+                              {pdfPreviewCustomer.name_en || pdfPreviewCustomer.name_dv}{' '}
+                              {pdfPreviewCustomer.name_dv && pdfPreviewCustomer.name_en ? `(${pdfPreviewCustomer.name_dv})` : ''}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500 font-semibold">Customer Code: </span>
+                            <span className="font-mono font-bold text-slate-800">#{pdfPreviewCustomer.code}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500 font-semibold">Phone: </span>
+                            <span className="font-mono text-slate-800">{pdfPreviewCustomer.phone || '-'}</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1 text-left sm:text-right">
+                          <div>
+                            <span className="text-slate-500 font-semibold">Statement Date: </span>
+                            <span className="font-mono text-slate-800">
+                              {formatDate(new Date())} {formatTime(new Date())}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500 font-semibold">Total Purchased ({totalQty} items): </span>
+                            <span className="font-mono font-bold text-slate-900">
+                              {currency} {totalPurchased.toFixed(2)}
+                            </span>
+                          </div>
+                          {totalSettled > 0 && (
+                            <div>
+                              <span className="text-emerald-700 font-semibold">Payments Settled: </span>
+                              <span className="font-mono font-bold text-emerald-700">
+                                - {currency} {totalSettled.toFixed(2)}
+                              </span>
+                            </div>
+                          )}
+                          <div className="pt-1">
+                            <span className="text-red-600 font-black uppercase">Total Outstanding: </span>
+                            <span className="font-mono text-sm font-black text-red-600">
+                              {currency} {outstandingBalance.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Purchased Items Table */}
+                      <div className="overflow-x-auto rounded-xl border border-slate-200">
+                        <table className="w-full text-xs border-collapse">
+                          <thead>
+                            <tr className="bg-blue-600 text-white uppercase text-[10px] tracking-wider">
+                              <th className="py-2.5 px-2 text-center w-9">#</th>
+                              <th className="py-2.5 px-3 text-left">Date & Time</th>
+                              <th className="py-2.5 px-3 text-left">Invoice #</th>
+                              <th className="py-2.5 px-3 text-left">Item Purchased</th>
+                              <th className="py-2.5 px-2 text-center">Qty</th>
+                              <th className="py-2.5 px-3 text-right">Price</th>
+                              <th className="py-2.5 px-3 text-right">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-200">
+                            {itemRows.length > 0 ? (
+                              itemRows.map((row, idx) => (
+                                <tr key={`${row.saleId}-${idx}`} className="hover:bg-slate-50">
+                                  <td className="py-2 px-2 text-center text-slate-500 font-mono">{idx + 1}</td>
+                                  <td className="py-2 px-3 whitespace-nowrap font-mono text-[11px] text-slate-700">
+                                    <div>{row.formattedDate}</div>
+                                    {row.formattedTime && (
+                                      <div className="text-[10px] text-slate-400">{row.formattedTime}</div>
+                                    )}
+                                  </td>
+                                  <td className="py-2 px-3 font-mono font-bold text-slate-700 whitespace-nowrap">
+                                    {row.invoiceNumber}
+                                    {row.isSplit && (
+                                      <span className="ml-1 text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                                        SPLIT
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="py-2 px-3">
+                                    <div className="font-bold text-slate-900">
+                                      {row.nameEn}
+                                      {row.unit}
+                                    </div>
+                                    <div className="text-[11px] text-slate-500">
+                                      {row.nameDv !== row.nameEn ? row.nameDv : ''}{' '}
+                                      {row.itemCode !== '-' ? `[${row.itemCode}]` : ''}
+                                    </div>
+                                  </td>
+                                  <td className="py-2 px-2 text-center font-mono font-bold text-slate-800">
+                                    {row.qty}
+                                  </td>
+                                  <td className="py-2 px-3 text-right font-mono text-slate-700 whitespace-nowrap">
+                                    {currency} {row.price.toFixed(2)}
+                                  </td>
+                                  <td className="py-2 px-3 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
+                                    {currency} {row.lineTotal.toFixed(2)}
+                                  </td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                <td colSpan={7} className="py-10 text-center text-slate-400 italic">
+                                  No itemized credit purchases found for this customer.
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                          <tfoot>
+                            <tr className="bg-slate-100 font-bold text-slate-800 border-t-2 border-slate-300">
+                              <td colSpan={4} className="py-2.5 px-3 text-right uppercase text-[11px]">
+                                Total Items Purchased:
+                              </td>
+                              <td className="py-2.5 px-2 text-center font-mono">{totalQty}</td>
+                              <td></td>
+                              <td className="py-2.5 px-3 text-right font-mono whitespace-nowrap">
+                                {currency} {totalPurchased.toFixed(2)}
+                              </td>
+                            </tr>
+                            {totalSettled > 0 && (
+                              <tr className="bg-emerald-50 font-bold text-emerald-700 border-t border-emerald-200">
+                                <td colSpan={6} className="py-2 px-3 text-right uppercase text-[11px]">
+                                  Less: Payments Settled:
+                                </td>
+                                <td className="py-2 px-3 text-right font-mono whitespace-nowrap">
+                                  - {currency} {totalSettled.toFixed(2)}
+                                </td>
+                              </tr>
+                            )}
+                            <tr className="bg-red-50 font-black text-red-700 border-t-2 border-red-500 text-sm">
+                              <td colSpan={6} className="py-3 px-3 text-right uppercase">
+                                Total Outstanding Balance Due:
+                              </td>
+                              <td className="py-3 px-3 text-right font-mono whitespace-nowrap">
+                                {currency} {outstandingBalance.toFixed(2)}
+                              </td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+
+                      {settings.reports?.customerOutstandingFooter && (
+                        <p className="text-[11px] text-center text-slate-400 italic mt-5">
+                          {settings.reports.customerOutstandingFooter}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <DialogFooter className="pt-3 border-t border-white/10 dark:border-white/5 flex flex-wrap gap-2 justify-between">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsPdfPreviewOpen(false)}
+                    className="h-11 px-6 rounded-2xl border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold"
+                  >
+                    Close
+                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handlePrintA4CustomerStatement(pdfPreviewCustomer)}
+                      className="h-11 px-5 rounded-2xl border-border hover:bg-muted font-black text-xs gap-2"
+                    >
+                      <Printer className="h-4 w-4" />
+                      <span>Print A4 Statement</span>
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => handleDownloadPdfReport(pdfPreviewCustomer)}
+                      className="h-11 px-6 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs gap-2 shadow-lg shadow-amber-500/25"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span>Download PDF File (ޑައުންލޯޑް ޕީޑީއެފް)</span>
+                    </Button>
+                  </div>
+                </DialogFooter>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 

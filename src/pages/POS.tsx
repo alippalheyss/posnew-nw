@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useAppContext, Product, Customer, CartItem, Sale } from '@/context/AppContext';
+import { usePersistedState } from '@/hooks/usePersistedState';
 import { useAuth } from '@/context/AuthContext';
 import { showSuccess, showError, showInfo } from '@/utils/toast';
 import LoyaltyRedemptionDialog from '@/components/LoyaltyRedemptionDialog';
@@ -193,12 +194,12 @@ const POS = () => {
     pendingSlipsCount
   } = useAppContext();
 
-  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState<boolean>(false);
+  const [selectedCategory, setSelectedCategory] = usePersistedState<string>('pos_selected_category', 'ALL');
+  const [showFavoritesOnly, setShowFavoritesOnly] = usePersistedState<boolean>('pos_show_favorites_only', false);
   const [visibleCatalogueCount, setVisibleCatalogueCount] = useState<number>(48);
 
   const cartCounter = useRef(openCarts.size);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = usePersistedState<string>('pos_search_term', '');
   const [isCashDialogOpen, setIsCashDialogOpen] = useState(false);
   const [isCreditDialogOpen, setIsCreditDialogOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);

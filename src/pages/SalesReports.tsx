@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAppContext, Sale, ReturnItem } from '@/context/AppContext';
+import { usePersistedState } from '@/hooks/usePersistedState';
 import { 
   TrendingUp, 
   BarChart3, 
@@ -135,12 +136,12 @@ const SalesReports = () => {
   const yearProfit = calculateProfitForPeriod('year');
 
   // --- Custom Report State ---
-  const [customPeriodType, setCustomPeriodType] = useState<'date' | 'month' | 'quarter' | 'year'>('date');
-  const [customDate, setCustomDate] = useState(toISODate(new Date()));
-  const [customMonth, setCustomMonth] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`);
-  const [customQuarter, setCustomQuarter] = useState<string>(String(Math.floor(new Date().getMonth() / 3) + 1));
-  const [customYear, setCustomYear] = useState(String(new Date().getFullYear()));
-  const [showCustomPreview, setShowCustomPreview] = useState(false);
+  const [customPeriodType, setCustomPeriodType] = usePersistedState<'date' | 'month' | 'quarter' | 'year'>('sales_reports_period_type', 'date');
+  const [customDate, setCustomDate] = usePersistedState<string>('sales_reports_custom_date', toISODate(new Date()));
+  const [customMonth, setCustomMonth] = usePersistedState<string>('sales_reports_custom_month', `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`);
+  const [customQuarter, setCustomQuarter] = usePersistedState<string>('sales_reports_custom_quarter', String(Math.floor(new Date().getMonth() / 3) + 1));
+  const [customYear, setCustomYear] = usePersistedState<string>('sales_reports_custom_year', String(new Date().getFullYear()));
+  const [showCustomPreview, setShowCustomPreview] = usePersistedState<boolean>('sales_reports_show_preview', false);
 
   // Filter sales for custom period
   const customSales = useMemo(() => {

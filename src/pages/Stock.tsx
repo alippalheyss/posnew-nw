@@ -13,6 +13,7 @@ import StockTransferDialog from '@/components/StockTransferDialog';
 import ProductDialog from '@/components/ProductDialog';
 import QuickStockDialog from '@/components/QuickStockDialog';
 import { useAppContext, Product } from '@/context/AppContext';
+import { usePersistedState } from '@/hooks/usePersistedState';
 import { Badge } from '@/components/ui/badge';
 import { showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
@@ -27,8 +28,8 @@ const Stock = () => {
     updateProduct,
     transferStock
   } = useAppContext();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'high' | 'warning'>('all');
+  const [searchTerm, setSearchTerm] = usePersistedState<string>('stock_search_term', '');
+  const [stockFilter, setStockFilter] = usePersistedState<'all' | 'low' | 'high' | 'warning'>('stock_filter_level', 'all');
   const [isStockUpdateDialogOpen, setIsStockUpdateDialogOpen] = useState(false);
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
   const [isProductDialog, setIsProductDialog] = useState(false);

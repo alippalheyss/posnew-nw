@@ -29,6 +29,7 @@ import {
   History
 } from 'lucide-react';
 import { useAppContext, Product } from '@/context/AppContext';
+import { usePersistedState } from '@/hooks/usePersistedState';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
@@ -50,7 +51,7 @@ const ShrinkageReport = () => {
   const { t } = useTranslation();
   const { products, settings, updateStock } = useAppContext();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = usePersistedState<string>('shrinkage_search_term', '');
   const [records, setRecords] = useState<ShrinkageRecord[]>(() => {
     if (typeof window !== 'undefined') {
       try {

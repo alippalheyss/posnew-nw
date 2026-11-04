@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Download, PlusCircle, Receipt, Building2, Calculator, ArrowUpRight, ArrowDownLeft, Landmark, X, ShoppingCart, Archive, Play, Trash2, Save, Package, FileText, Info, TrendingDown, TrendingUp, Smartphone, Pencil, RefreshCw } from 'lucide-react';
 import { useAppContext, Purchase, Vendor, PurchaseItem, Product } from '@/context/AppContext';
+import { usePersistedState } from '@/hooks/usePersistedState';
 import { Badge } from '@/components/ui/badge';
 import { showSuccess, showError } from '@/utils/toast';
 import { formatDate, extractDateOnly } from '@/utils/formatters';
@@ -23,7 +24,7 @@ const GSTReports = () => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { sales, purchases, vendors, settings, setIsPurchaseWindowOpen, deletePurchase, setEditingPurchase, refreshGSTData } = useAppContext();
-    const [timeRange, setTimeRange] = useState('this_month');
+    const [timeRange, setTimeRange] = usePersistedState<string>('gst_reports_time_range', 'this_month');
     const [purchaseToDelete, setPurchaseToDelete] = useState<Purchase | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
     

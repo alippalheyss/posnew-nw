@@ -5,8 +5,10 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { PencilLine, CalendarDays, Printer, Trash2, Filter, ChevronRight, Receipt, DollarSign, CreditCard, ArrowRightLeft, TrendingUp, Download, Calendar as CalendarIcon, FileSpreadsheet, Moon, Send, Loader2, RefreshCw, Eye } from 'lucide-react';
+import { PencilLine, CalendarDays, Printer, Trash2, Filter, ChevronRight, Receipt, DollarSign, CreditCard, ArrowRightLeft, TrendingUp, Download, Calendar as CalendarIcon, FileSpreadsheet, Moon, Send, Loader2, RefreshCw, Eye, Search, X, ArrowUpDown, Banknote } from 'lucide-react';
 import { useAppContext, Product, Customer, CartItem, Sale } from '@/context/AppContext';
+import { usePersistedState, usePersistedDateRange } from '@/hooks/usePersistedState';
+import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase';
 import { formatDate, formatTime, formatDateTime, toISODate, extractDateOnly } from '@/utils/formatters';
 import SaleEditDialog from '@/components/SaleEditDialog'; 
@@ -38,12 +40,15 @@ const DailySales = () => {
   const [isBriefingDialogOpen, setIsBriefingDialogOpen] = useState(false);
   const [briefingDateMode, setBriefingDateMode] = useState<'today' | 'yesterday'>('today');
   const [isSendingBriefing, setIsSendingBriefing] = useState(false);
-  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'last30' | 'custom'>('today');
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+  const [dateFilter, setDateFilter] = usePersistedState<'all' | 'today' | 'yesterday' | 'last30' | 'custom'>('daily_sales_date_filter', 'today');
+  const [dateRange, setDateRange] = usePersistedDateRange('daily_sales_date_range', {
     from: new Date(),
     to: new Date()
   });
-  const [activeTab, setActiveTab] = useState<'sales' | 'pending'>('sales');
+  const [activeTab, setActiveTab] = usePersistedState<'sales' | 'pending'>('daily_sales_active_tab', 'sales');
+  const [paymentFilter, setPaymentFilter] = usePersistedState<'all' | 'cash' | 'credit' | 'transfer'>('daily_sales_payment_filter', 'all');
+  const [searchQuery, setSearchQuery] = usePersistedState<string>('daily_sales_search_query', '');
+  const [sortBy, setSortBy] = usePersistedState<'newest' | 'oldest' | 'amount_desc' | 'amount_asc'>('daily_sales_sort_by', 'newest');
   const [isSyncing, setIsSyncing] = useState(false);
   const { pendingTransfers, resolvePendingTransfer, convertAllPendingToCredit } = useAppContext();
 
@@ -156,7 +161,81 @@ const DailySales = () => {
     });
   };
 
-  const filteredSales = filterSalesByDate(sales);
+  const dateFilteredSales = filterSalesByDate(sales);
+
+  const isCashTransaction = (sale: Sale) => {
+    const method = (sale.paymentMethod || (sale as any).payment_method || '').toLowerCase();
+    return method === 'cash' || (method === 'split' && Number((sale as any).splitDetails?.cashAmount ?? sale.paidAmount ?? 0) > 0);
+  };
+
+  const isCreditTransaction = (sale: Sale) => {
+    const method = (sale.paymentMethod || (sale as any).payment_method || '').toLowerCase();
+    return method === 'credit' || (method === 'split' && Number((sale as any).splitDetails?.creditAmount ?? sale.balance ?? 0) > 0);
+  };
+
+  const isTransferTransaction = (sale: Sale) => {
+    const method = (sale.paymentMethod || (sale as any).payment_method || '').toLowerCase();
+    return method === 'transfer' || method === 'mobile' || method === 'card' || (method === 'split' && Number((sale as any).splitDetails?.transferAmount ?? 0) > 0);
+  };
+
+  const getCashAmountForSale = (sale: Sale) => {
+    const method = (sale.paymentMethod || (sale as any).payment_method || '').toLowerCase();
+    if (method === 'cash') return Number(sale.grandTotal || 0);
+    if (method === 'split') return Number((sale as any).splitDetails?.cashAmount ?? sale.paidAmount ?? 0);
+    return 0;
+  };
+
+  const getCreditAmountForSale = (sale: Sale) => {
+    const method = (sale.paymentMethod || (sale as any).payment_method || '').toLowerCase();
+    if (method === 'credit') return Number(sale.grandTotal || 0);
+    if (method === 'split') return Number((sale as any).splitDetails?.creditAmount ?? sale.balance ?? 0);
+    return 0;
+  };
+
+  const cashSalesInPeriod = dateFilteredSales.filter(isCashTransaction);
+  const creditSalesInPeriod = dateFilteredSales.filter(isCreditTransaction);
+  const transferSalesInPeriod = dateFilteredSales.filter(isTransferTransaction);
+
+  const cashSalesTotal = dateFilteredSales.reduce((acc, s) => acc + getCashAmountForSale(s), 0);
+  const creditSalesTotal = dateFilteredSales.reduce((acc, s) => acc + getCreditAmountForSale(s), 0);
+
+  const filteredSales = dateFilteredSales
+    .filter((sale) => {
+      if (paymentFilter === 'cash' && !isCashTransaction(sale)) return false;
+      if (paymentFilter === 'credit' && !isCreditTransaction(sale)) return false;
+      if (paymentFilter === 'transfer' && !isTransferTransaction(sale)) return false;
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.trim().toLowerCase();
+        const inv = (sale.invoiceNumber || (sale as any).invoice_number || sale.id || '').toLowerCase();
+        const cust = sale.customer || customers.find(c => c.id === (sale as any).customer_id);
+        const custNameEn = (cust?.name_en || '').toLowerCase();
+        const custNameDv = (cust?.name_dv || '').toLowerCase();
+        const custCode = (cust?.code || '').toLowerCase();
+        const matchesItem = (sale.items || []).some(
+          (item: any) =>
+            (item.name_en || '').toLowerCase().includes(q) ||
+            (item.name_dv || '').toLowerCase().includes(q) ||
+            (item.barcode || '').toLowerCase().includes(q)
+        );
+        if (
+          !inv.includes(q) &&
+          !custNameEn.includes(q) &&
+          !custNameDv.includes(q) &&
+          !custCode.includes(q) &&
+          !matchesItem
+        ) {
+          return false;
+        }
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'oldest') return (a.date || '').localeCompare(b.date || '');
+      if (sortBy === 'amount_desc') return Number(b.grandTotal || 0) - Number(a.grandTotal || 0);
+      if (sortBy === 'amount_asc') return Number(a.grandTotal || 0) - Number(b.grandTotal || 0);
+      return (b.date || '').localeCompare(a.date || '');
+    });
 
   const getDateFilterLabel = () => {
     if (dateFilter === 'today') return 'Today';
@@ -634,39 +713,207 @@ const DailySales = () => {
       </div>
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-         <Card className="apple-glass-card border border-white/20 dark:border-white/10 rounded-3xl p-6 relative overflow-hidden group shadow-lg">
-            <div className="absolute top-0 right-0 w-28 h-28 bg-primary/15 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-primary/25 transition-all" />
-            <div className="flex justify-between items-center mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-5">
+         <Card
+           onClick={() => setPaymentFilter('all')}
+           className={cn(
+             "apple-glass-card border rounded-3xl p-5 relative overflow-hidden group shadow-lg cursor-pointer transition-all",
+             paymentFilter === 'all'
+               ? "border-primary/50 ring-2 ring-primary/20"
+               : "border-white/20 dark:border-white/10 hover:border-primary/40"
+           )}
+         >
+            <div className="absolute top-0 right-0 w-24 h-24 bg-primary/15 rounded-full -mr-10 -mt-10 blur-2xl group-hover:bg-primary/25 transition-all" />
+            <div className="flex justify-between items-center mb-3">
                <DollarSign className="h-5 w-5 text-primary" />
                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Total Sales</span>
             </div>
-            <p className="text-3xl font-black text-foreground font-mono">{settings.shop.currency} {totalSalesAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-            <p className="text-[10px] text-muted-foreground/60 mt-1 font-bold uppercase tracking-widest">{dateFilter} SUMMARY</p>
+            <p className="text-2xl font-black text-foreground font-mono">{settings.shop.currency} {totalSalesAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+            <p className="text-[10px] text-muted-foreground/60 mt-1 font-bold uppercase tracking-widest">{getDateFilterLabel().toUpperCase()} SUMMARY</p>
          </Card>
 
-         <Card className="apple-glass-card border border-white/20 dark:border-white/10 rounded-3xl p-6 relative overflow-hidden group shadow-lg">
-            <div className="absolute top-0 right-0 w-28 h-28 bg-purple-500/15 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-purple-500/25 transition-all" />
-            <div className="flex justify-between items-center mb-4">
+         <Card
+           onClick={() => setPaymentFilter(paymentFilter === 'cash' ? 'all' : 'cash')}
+           className={cn(
+             "apple-glass-card border rounded-3xl p-5 relative overflow-hidden group shadow-lg cursor-pointer transition-all",
+             paymentFilter === 'cash'
+               ? "border-emerald-500 ring-2 ring-emerald-500/25 bg-emerald-500/[0.06]"
+               : "border-emerald-500/25 dark:border-emerald-500/20 hover:border-emerald-500/60"
+           )}
+         >
+            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/15 rounded-full -mr-10 -mt-10 blur-2xl group-hover:bg-emerald-500/25 transition-all" />
+            <div className="flex justify-between items-center mb-3">
+               <Banknote className="h-5 w-5 text-emerald-500" />
+               <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Cash Sales</span>
+            </div>
+            <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+              {settings.shop.currency} {cashSalesTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </p>
+            <p className="text-[10px] text-muted-foreground/70 mt-1 font-bold uppercase tracking-widest">
+              {cashSalesInPeriod.length} CASH RECEIPTS {paymentFilter === 'cash' ? '• FILTERED' : ''}
+            </p>
+         </Card>
+
+         <Card
+           onClick={() => setPaymentFilter(paymentFilter === 'credit' ? 'all' : 'credit')}
+           className={cn(
+             "apple-glass-card border rounded-3xl p-5 relative overflow-hidden group shadow-lg cursor-pointer transition-all",
+             paymentFilter === 'credit'
+               ? "border-amber-500 ring-2 ring-amber-500/25 bg-amber-500/[0.06]"
+               : "border-amber-500/25 dark:border-amber-500/20 hover:border-amber-500/60"
+           )}
+         >
+            <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/15 rounded-full -mr-10 -mt-10 blur-2xl group-hover:bg-amber-500/25 transition-all" />
+            <div className="flex justify-between items-center mb-3">
+               <CreditCard className="h-5 w-5 text-amber-500" />
+               <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">Credit Sales</span>
+            </div>
+            <p className="text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">
+              {settings.shop.currency} {creditSalesTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </p>
+            <p className="text-[10px] text-muted-foreground/70 mt-1 font-bold uppercase tracking-widest">
+              {creditSalesInPeriod.length} CREDIT INVOICES {paymentFilter === 'credit' ? '• FILTERED' : ''}
+            </p>
+         </Card>
+
+         <Card className="apple-glass-card border border-white/20 dark:border-white/10 rounded-3xl p-5 relative overflow-hidden group shadow-lg">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/15 rounded-full -mr-10 -mt-10 blur-2xl group-hover:bg-purple-500/25 transition-all" />
+            <div className="flex justify-between items-center mb-3">
                <Receipt className="h-5 w-5 text-purple-500" />
                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Total Transactions</span>
             </div>
-            <p className="text-3xl font-black text-foreground font-mono">{filteredSales.length}</p>
-            <p className="text-[10px] text-muted-foreground/60 mt-1 font-bold uppercase tracking-widest">RECEIPTS ISSUED</p>
+            <p className="text-2xl font-black text-foreground font-mono">{filteredSales.length}</p>
+            <p className="text-[10px] text-muted-foreground/60 mt-1 font-bold uppercase tracking-widest">RECEIPTS SHOWN</p>
          </Card>
 
-         <Card className="apple-glass-card border border-white/20 dark:border-white/10 rounded-3xl p-6 relative overflow-hidden group shadow-lg">
-            <div className="absolute top-0 right-0 w-28 h-28 bg-emerald-500/15 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-emerald-500/25 transition-all" />
-            <div className="flex justify-between items-center mb-4">
-               <TrendingUp className="h-5 w-5 text-emerald-500" />
+         <Card className="apple-glass-card border border-white/20 dark:border-white/10 rounded-3xl p-5 relative overflow-hidden group shadow-lg">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-sky-500/15 rounded-full -mr-10 -mt-10 blur-2xl group-hover:bg-sky-500/25 transition-all" />
+            <div className="flex justify-between items-center mb-3">
+               <TrendingUp className="h-5 w-5 text-sky-500" />
                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Average Transaction</span>
             </div>
-            <p className="text-3xl font-black text-foreground font-mono">
+            <p className="text-2xl font-black text-foreground font-mono">
               {settings.shop.currency} {(filteredSales.length > 0 ? totalSalesAmount / filteredSales.length : 0).toFixed(2)}
             </p>
             <p className="text-[10px] text-muted-foreground/60 mt-1 font-bold uppercase tracking-widest">PER CUSTOMER</p>
          </Card>
       </div>
+
+      {/* Filter & Search Bar */}
+      {activeTab === 'sales' && (
+        <div className="apple-glass-card border border-white/20 dark:border-white/10 rounded-2xl p-3 mb-5 flex flex-wrap items-center justify-between gap-3 shadow-xs">
+          {/* Search Input */}
+          <div className="relative flex-1 min-w-[220px] max-w-md">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search Invoice #, Customer Name / Code, or Item..."
+              className="pr-9 pl-8 h-9 rounded-xl bg-background/60 border-border text-xs font-bold text-right"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Payment Method Filter Pills */}
+            <div className="bg-muted/80 rounded-xl p-1 border border-border flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPaymentFilter('all')}
+                className={cn(
+                  "h-7 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+                  paymentFilter === 'all' ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                All ({dateFilteredSales.length})
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPaymentFilter('cash')}
+                className={cn(
+                  "h-7 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+                  paymentFilter === 'cash' ? "bg-emerald-500 text-white shadow-xs" : "text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+                )}
+              >
+                Cash ({cashSalesInPeriod.length})
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPaymentFilter('credit')}
+                className={cn(
+                  "h-7 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+                  paymentFilter === 'credit' ? "bg-amber-500 text-white shadow-xs" : "text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                )}
+              >
+                Credit ({creditSalesInPeriod.length})
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPaymentFilter('transfer')}
+                className={cn(
+                  "h-7 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+                  paymentFilter === 'transfer' ? "bg-sky-500 text-white shadow-xs" : "text-sky-600 dark:text-sky-400 hover:bg-sky-500/10"
+                )}
+              >
+                Transfer ({transferSalesInPeriod.length})
+              </Button>
+            </div>
+
+            {/* Sort Selector */}
+            <div className="bg-muted/80 rounded-xl p-1 border border-border flex items-center gap-1">
+              <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground mx-1.5" />
+              {[
+                { id: 'newest', label: 'Newest' },
+                { id: 'oldest', label: 'Oldest' },
+                { id: 'amount_desc', label: 'Highest' },
+                { id: 'amount_asc', label: 'Lowest' },
+              ].map((opt) => (
+                <Button
+                  key={opt.id}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSortBy(opt.id as any)}
+                  className={cn(
+                    "h-7 px-2.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+                    sortBy === opt.id ? "bg-foreground text-background shadow-xs" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {opt.label}
+                </Button>
+              ))}
+            </div>
+
+            {/* Reset Filters Button */}
+            {(paymentFilter !== 'all' || searchQuery.trim() !== '' || sortBy !== 'newest') && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setPaymentFilter('all');
+                  setSearchQuery('');
+                  setSortBy('newest');
+                }}
+                className="h-8 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider border-rose-500/30 text-rose-500 hover:bg-rose-500/10 gap-1"
+              >
+                <X className="h-3 w-3" />
+                Reset
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
 
        {/* Sales/Pending List */}
       <ScrollArea className="flex-1 custom-scrollbar">
@@ -679,7 +926,7 @@ const DailySales = () => {
               </div>
             ) : (
               <>
-              {filteredSales.sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, visibleCount).map((sale) => {
+              {filteredSales.slice(0, visibleCount).map((sale) => {
               const method = (sale.paymentMethod || (sale as any).payment_method || '').toLowerCase();
               const isCredit = method === 'credit' || (method === 'split' && Number(sale.balance ?? (sale as any).balance ?? 0) > 0);
               const isCash = method === 'cash';

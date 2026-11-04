@@ -15,6 +15,7 @@ import ExcelImportDialog from '@/components/ExcelImportDialog';
 import OnlineImageSearchDialog from '@/components/OnlineImageSearchDialog';
 import { saveOnlineImageToBucket } from '@/services/productImageService';
 import { useAppContext, Product } from '@/context/AppContext';
+import { usePersistedState } from '@/hooks/usePersistedState';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { getAdaptedImageUrl, generatePlaceholderImage } from '@/utils/imageUtils';
@@ -62,15 +63,15 @@ const Products = () => {
     updateProduct 
   } = useAppContext();
 
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = usePersistedState<string>('products_search_term', '');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [inventoryFilter, setInventoryFilter] = useState<InventoryFilterType>('ALL');
-  const [taxFilter, setTaxFilter] = useState<'ALL' | 'STANDARD_GST' | 'ZERO_GST'>('ALL');
-  const [sortKey, setSortKey] = useState<ProductSortKey>('DEFAULT');
+  const [inventoryFilter, setInventoryFilter] = usePersistedState<InventoryFilterType>('products_inventory_filter', 'ALL');
+  const [taxFilter, setTaxFilter] = usePersistedState<'ALL' | 'STANDARD_GST' | 'ZERO_GST'>('products_tax_filter', 'ALL');
+  const [sortKey, setSortKey] = usePersistedState<ProductSortKey>('products_sort_key', 'DEFAULT');
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [viewMode, setViewMode] = usePersistedState<'grid' | 'list'>('products_view_mode', 'grid');
+  const [selectedCategory, setSelectedCategory] = usePersistedState<string>('products_selected_category', 'ALL');
   const [visibleCount, setVisibleCount] = useState(30);
   const [isTranslating, setIsTranslating] = useState(false);
   const [onlineImageProduct, setOnlineImageProduct] = useState<Product | null>(null);

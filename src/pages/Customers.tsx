@@ -24,15 +24,16 @@ import { formatCreditStatementViberMessage, shareViaViber } from '@/utils/viberH
 import { showSuccess, showError } from '@/utils/toast';
 import { TelegramConnectDialog } from '@/components/TelegramConnectDialog';
 import { sendTelegramOutstandingStatement } from '@/services/telegramService';
+import { usePersistedState } from '@/hooks/usePersistedState';
 import { QrCode, Send, Loader2 } from 'lucide-react';
 
 const Customers = () => {
   const { t } = useTranslation();
   const { customers, setCustomers, settings, addCustomer, updateCustomer, refreshCustomers, sales } = useAppContext();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = usePersistedState<string>('customers_search_term', '');
   const [visibleCount, setVisibleCount] = useState(24);
-  const [filterType, setFilterType] = useState<'ALL' | 'BY_NAME' | 'BY_CODE'>('ALL');
-  const [sortBy, setSortBy] = useState<'DEFAULT' | 'NAME_ASC' | 'CODE_ASC' | 'BALANCE_DESC'>('DEFAULT');
+  const [filterType, setFilterType] = usePersistedState<'ALL' | 'BY_NAME' | 'BY_CODE'>('customers_filter_type', 'ALL');
+  const [sortBy, setSortBy] = usePersistedState<'DEFAULT' | 'NAME_ASC' | 'CODE_ASC' | 'BALANCE_DESC'>('customers_sort_by', 'DEFAULT');
   const [isEditCustomerDialogOpen, setIsEditCustomerDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [isAddCustomerDialogOpen, setIsAddCustomerDialogOpen] = useState(false);

@@ -21,6 +21,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { useAppContext, Expense, ExpenseCategory } from '@/context/AppContext';
+import { usePersistedState, usePersistedDateRange } from '@/hooks/usePersistedState';
 import { formatDate, formatTime, formatDateTime, toISODate, extractDateOnly } from '@/utils/formatters';
 import { showSuccess, showError } from '@/utils/toast';
 import { printContent } from '@/utils/printHelper';
@@ -85,13 +86,13 @@ const Expenses: React.FC = () => {
   const { expenses, addExpense, updateExpense, deleteExpense, settings } = useAppContext();
 
   // Filter states
-  const [selectedCategory, setSelectedCategory] = useState<ExpenseCategory | 'all'>('all');
-  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'this_month' | 'this_year' | 'custom'>('this_month');
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+  const [selectedCategory, setSelectedCategory] = usePersistedState<ExpenseCategory | 'all'>('expenses_selected_category', 'all');
+  const [dateFilter, setDateFilter] = usePersistedState<'all' | 'today' | 'this_month' | 'this_year' | 'custom'>('expenses_date_filter', 'this_month');
+  const [dateRange, setDateRange] = usePersistedDateRange('expenses_date_range', {
     from: new Date(),
     to: new Date()
   });
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = usePersistedState<string>('expenses_search_term', '');
 
   // Dialog states
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);

@@ -13,6 +13,7 @@ import { formatDate, formatTime, formatDateTime, extractDateOnly, toISODate } fr
 import SaleEditDialog from '@/components/SaleEditDialog';
 import InvoiceViewDialog from '@/components/InvoiceViewDialog';
 import { showSuccess, showError } from '@/utils/toast';
+import { usePersistedState, usePersistedDateRange } from '@/hooks/usePersistedState';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
@@ -34,9 +35,9 @@ const CreditInvoices = () => {
   const [visibleCount, setVisibleCount] = useState(30);
   const [viewingSale, setViewingSale] = useState<Sale | null>(null);
   const [isViewInvoiceDialogOpen, setIsViewInvoiceDialogOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'custom'>('all');
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+  const [searchTerm, setSearchTerm] = usePersistedState<string>('credit_invoices_search', '');
+  const [dateFilter, setDateFilter] = usePersistedState<'all' | 'today' | 'yesterday' | 'custom'>('credit_invoices_date_filter', 'all');
+  const [dateRange, setDateRange] = usePersistedDateRange('credit_invoices_date_range', {
     from: new Date(),
     to: new Date()
   });

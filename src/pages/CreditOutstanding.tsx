@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import SaleEditDialog from '@/components/SaleEditDialog';
 import { supabase } from '@/lib/supabase';
 import { useAppContext, Product, Sale, Customer } from '@/context/AppContext';
+import { usePersistedState } from '@/hooks/usePersistedState';
 import { printContent } from '@/utils/printHelper';
 import { cn } from '@/lib/utils';
 import { showSuccess, showError } from '@/utils/toast';
@@ -117,11 +118,11 @@ const CreditOutstanding = () => {
   };
 
   // --- Dedicated Filters for Credit Outstanding: Unified Search, Credit Amount, Sorting ---
-  const [searchQuery, setSearchQuery] = useState('');
-  const [amountFilter, setAmountFilter] = useState<'has_due' | 'all' | 'gt_500' | 'gt_1000' | 'gt_5000' | 'zero_balance' | 'custom'>('has_due');
-  const [customMinAmount, setCustomMinAmount] = useState<string>('');
-  const [customMaxAmount, setCustomMaxAmount] = useState<string>('');
-  const [sortBy, setSortBy] = useState<'due_desc' | 'due_asc' | 'name_asc' | 'code_asc'>('due_desc');
+  const [searchQuery, setSearchQuery] = usePersistedState<string>('credit_outstanding_search', '');
+  const [amountFilter, setAmountFilter] = usePersistedState<'has_due' | 'all' | 'gt_500' | 'gt_1000' | 'gt_5000' | 'zero_balance' | 'custom'>('credit_outstanding_amount_filter', 'has_due');
+  const [customMinAmount, setCustomMinAmount] = usePersistedState<string>('credit_outstanding_min_amount', '');
+  const [customMaxAmount, setCustomMaxAmount] = usePersistedState<string>('credit_outstanding_max_amount', '');
+  const [sortBy, setSortBy] = usePersistedState<'due_desc' | 'due_asc' | 'name_asc' | 'code_asc'>('credit_outstanding_sort_by', 'due_desc');
 
   const filteredCustomers = useMemo(() => {
     return customers.filter(customer => {

@@ -16,6 +16,8 @@ import {
   sendAutoTransferToCreditNotification,
 } from '@/services/telegramService';
 import { putStoreBatch, getStoreAll, STORES } from '@/lib/indexedDb';
+import { BankNotification, parseBankNotificationPayload } from '@/utils/bankNotificationParser';
+import { BANK_WEBHOOK_ROW_ID } from '@/components/BankNotificationsDialog';
 
 export interface ProductFlavour {
   id?: string;
@@ -105,6 +107,7 @@ export interface Cart {
   displayNumber: number;
   customer: Customer | null;
   items: CartItem[];
+  createdAt?: string;
 }
 
 export interface ReturnItem {
@@ -400,6 +403,12 @@ interface AppContextType {
   rejectTransferSlip: (slipId: string, reason: string) => Promise<boolean>;
   addTransferSlip: (slip: Partial<TransferSlip>) => Promise<TransferSlip | null>;
   loadSalesForDateRange: (startDate: string, endDate: string) => Promise<void>;
+  bankNotifications: BankNotification[];
+  unclaimedBankNotificationsCount: number;
+  verifyBankNotification: (id: string, matchedCustomerName?: string) => void;
+  dismissBankNotification: (id: string) => void;
+  clearVerifiedBankNotifications: () => void;
+  simulateBankNotification: (payload: { title: string; body: string; timestamp: number }) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -972,6 +981,160 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   }, []);
 
+  const [bankNotifications, setBankNotifications] = useState<BankNotification[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('pos_bank_notifications');
+        return saved ? JSON.parse(saved) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  const lastProcessedWebhookSigRef = useRef<string>('');
+
+  const playBankAlertChime = useCallback(() => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const notes = [587.33, 880, 1174.66]; // D5 -> A5 -> D6 chime
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.11);
+        gain.gain.setValueAtTime(0.18, ctx.currentTime + i * 0.11);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.11 + 0.28);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + i * 0.11);
+        osc.stop(ctx.currentTime + i * 0.11 + 0.3);
+      });
+    } catch {
+      // Ignore audio errors
+    }
+  }, []);
+
+  const syncBankNotificationsToCloud = useCallback(async (list: BankNotification[]) => {
+    const trimmed = list.slice(0, 50);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('pos_bank_notifications', JSON.stringify(trimmed));
+      } catch {}
+    }
+    try {
+      if (supabase) {
+        await supabase.from('settings').upsert(
+          {
+            id: '320e8d7f-9329-41ec-9f65-9a9130bb2802',
+            user_id: DEFAULT_SETTINGS_USER_ID,
+            category: 'bank_notifications_log',
+            settings: { notifications: trimmed },
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'id' }
+        );
+      }
+    } catch (err) {
+      console.warn('Error syncing bank notifications to cloud:', err);
+    }
+  }, []);
+
+  const handleIncomingBankWebhook = useCallback(
+    (rawPayload: any) => {
+      if (!rawPayload || (!rawPayload.body && !rawPayload.text && !rawPayload.title)) return;
+      const sig = `${rawPayload.title || ''}|${rawPayload.body || rawPayload.text || ''}|${rawPayload.timestamp || ''}`;
+      if (lastProcessedWebhookSigRef.current === sig) return;
+      lastProcessedWebhookSigRef.current = sig;
+
+      const parsed = parseBankNotificationPayload(rawPayload);
+      setBankNotifications((prev) => {
+        // Deduplicate by identical body + timestamp within 15 seconds
+        const isDuplicate = prev.some(
+          (existing) =>
+            existing.body === parsed.body &&
+            Math.abs(new Date(existing.receivedAt).getTime() - new Date(parsed.receivedAt).getTime()) < 15000
+        );
+        if (isDuplicate) return prev;
+        const next = [parsed, ...prev].slice(0, 50);
+        syncBankNotificationsToCloud(next);
+        return next;
+      });
+
+      playBankAlertChime();
+      const amtText = parsed.amount !== null ? `${parsed.currency} ${parsed.amount.toFixed(2)}` : parsed.title;
+      showSuccess(`🏦 Bank Transfer Received: ${amtText}${parsed.senderOrRef ? ` (${parsed.senderOrRef})` : ''}`);
+    },
+    [playBankAlertChime, syncBankNotificationsToCloud]
+  );
+
+  const verifyBankNotification = useCallback(
+    (id: string, matchedCustomerName?: string) => {
+      setBankNotifications((prev) => {
+        const next = prev.map((n) =>
+          n.id === id
+            ? {
+                ...n,
+                status: 'verified' as const,
+                matchedCustomerName: matchedCustomerName || n.matchedCustomerName || null,
+                verifiedAt: new Date().toISOString(),
+              }
+            : n
+        );
+        syncBankNotificationsToCloud(next);
+        return next;
+      });
+    },
+    [syncBankNotificationsToCloud]
+  );
+
+  const dismissBankNotification = useCallback(
+    (id: string) => {
+      setBankNotifications((prev) => {
+        const next = prev.map((n) => (n.id === id ? { ...n, status: 'dismissed' as const } : n));
+        syncBankNotificationsToCloud(next);
+        return next;
+      });
+    },
+    [syncBankNotificationsToCloud]
+  );
+
+  const clearVerifiedBankNotifications = useCallback(() => {
+    setBankNotifications((prev) => {
+      const next = prev.filter((n) => n.status === 'unclaimed');
+      syncBankNotificationsToCloud(next);
+      return next;
+    });
+  }, [syncBankNotificationsToCloud]);
+
+  const simulateBankNotification = useCallback(
+    async (payload: { title: string; body: string; timestamp: number }) => {
+      handleIncomingBankWebhook(payload);
+      if (supabase) {
+        try {
+          await supabase.from('settings').upsert(
+            {
+              id: BANK_WEBHOOK_ROW_ID,
+              user_id: DEFAULT_SETTINGS_USER_ID,
+              category: 'bank_webhook_incoming',
+              settings: payload,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'id' }
+          );
+        } catch (err) {
+          console.warn('Error broadcasting simulated bank webhook:', err);
+        }
+      }
+    },
+    [handleIncomingBankWebhook]
+  );
+
+  const unclaimedBankNotificationsCount = bankNotifications.filter((n) => n.status === 'unclaimed').length;
+
   const syncPendingTransfers = useCallback(async () => {
     try {
       if (!supabase) return;
@@ -1526,6 +1689,17 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           }
         }
 
+        // Sync cloud bank notifications log across devices
+        const bankLogRow = settingsData.find((r: any) => r.category === 'bank_notifications_log');
+        if (bankLogRow && bankLogRow.settings && Array.isArray(bankLogRow.settings.notifications)) {
+          setBankNotifications(bankLogRow.settings.notifications);
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('pos_bank_notifications', JSON.stringify(bankLogRow.settings.notifications));
+            } catch {}
+          }
+        }
+
         // Sync cloud favorites across devices
         const favRow = settingsData.find((r: any) => r.category === 'favorites' || r.category === 'favorite_products');
         if (favRow && favRow.settings) {
@@ -1671,6 +1845,21 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, (payload) => {
         const row = payload.new as any;
         if (row && row.category && row.settings) {
+          if (row.category === 'bank_webhook_incoming') {
+            handleIncomingBankWebhook(row.settings);
+            return;
+          }
+          if (row.category === 'bank_notifications_log') {
+            if (Array.isArray(row.settings?.notifications)) {
+              setBankNotifications(row.settings.notifications);
+              if (typeof window !== 'undefined') {
+                try {
+                  localStorage.setItem('pos_bank_notifications', JSON.stringify(row.settings.notifications));
+                } catch {}
+              }
+            }
+            return;
+          }
           if (row.category === 'favorites' || row.category === 'favorite_products') {
             const ids = row.settings.product_ids || row.settings.productIds;
             if (Array.isArray(ids)) {
@@ -4500,7 +4689,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       confirmTransferSlip,
       rejectTransferSlip,
       addTransferSlip,
-      loadSalesForDateRange
+      loadSalesForDateRange,
+      bankNotifications,
+      unclaimedBankNotificationsCount,
+      verifyBankNotification,
+      dismissBankNotification,
+      clearVerifiedBankNotifications,
+      simulateBankNotification
     }}>
       {children}
     </AppContext.Provider>

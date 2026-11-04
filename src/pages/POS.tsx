@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ShoppingCart, PlusCircle, Minus, Trash2, MonitorPlay, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, Star, ArrowLeft, Plus, ChevronDown, Boxes, X, CheckCircle2, Package, Loader2, Check, Printer, Gift, Flame, TrendingDown, Clock, LogOut } from 'lucide-react';
+import { ShoppingCart, PlusCircle, Minus, Trash2, MonitorPlay, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, Star, ArrowLeft, Plus, ChevronDown, Boxes, X, CheckCircle2, Package, Loader2, Check, Printer, Gift, Flame, TrendingDown, Clock, LogOut, BellRing, ShieldCheck } from 'lucide-react';
 import { formatDate, toISODate, toISODatetime, formatTime, formatDateTime } from '@/utils/formatters';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
@@ -35,6 +35,8 @@ import { printContent } from '@/utils/printHelper';
 import { getAdaptedImageUrl, generatePlaceholderImage } from '@/utils/imageUtils';
 import { TelegramConnectDialog } from '@/components/TelegramConnectDialog';
 import { TransferSlipsDialog } from '@/components/TransferSlipsDialog';
+import { BankNotificationsDialog } from '@/components/BankNotificationsDialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { sendTelegramSaleReceipt } from '@/services/telegramService';
 import PulsatingDots from '@/components/PulsatingDots';
 import { playScanSuccessSound, playScanErrorSound } from '@/utils/soundEffects';
@@ -45,6 +47,7 @@ interface Cart {
   displayNumber: number;
   customer: Customer | null;
   items: CartItem[];
+  createdAt?: string;
 }
 
 // Decimal-friendly Quantity Stepper for Kilos and Fractional Items
@@ -191,7 +194,13 @@ const POS = () => {
     convertAllPendingToCredit,
     updateProduct,
     refreshCustomers,
-    pendingSlipsCount
+    pendingSlipsCount,
+    bankNotifications,
+    unclaimedBankNotificationsCount,
+    verifyBankNotification,
+    dismissBankNotification,
+    clearVerifiedBankNotifications,
+    simulateBankNotification
   } = useAppContext();
 
   const [selectedCategory, setSelectedCategory] = usePersistedState<string>('pos_selected_category', 'ALL');
@@ -217,6 +226,9 @@ const POS = () => {
   const [telegramCustomer, setTelegramCustomer] = useState<Customer | null>(null);
   const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false);
   const [isTransferSlipsDialogOpen, setIsTransferSlipsDialogOpen] = useState(false);
+  const [isBankNotificationsDialogOpen, setIsBankNotificationsDialogOpen] = useState(false);
+  const [longPressedCartId, setLongPressedCartId] = useState<string | null>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [shouldPrintCashReceipt, setShouldPrintCashReceipt] = useState<boolean>(false);
   const cashDialogOpenedAt = useRef<number>(0);
 
@@ -599,7 +611,7 @@ const POS = () => {
   const createNewCart = () => {
     const newCartId = `cart-${Date.now()}`;
     const nextNum = openCarts.size + 1;
-    setOpenCarts(prev => new Map(prev).set(newCartId, { id: newCartId, displayNumber: nextNum, customer: null, items: [] }));
+    setOpenCarts(prev => new Map(prev).set(newCartId, { id: newCartId, displayNumber: nextNum, customer: null, items: [], createdAt: new Date().toISOString() }));
     setActiveCartId(newCartId);
   };
 
@@ -1646,6 +1658,24 @@ const POS = () => {
             <Button
               variant="ghost"
               size="icon"
+              onClick={() => setIsBankNotificationsDialogOpen(true)}
+              title="Live Bank Transfer Notifications (MacroDroid / Tasker)"
+              className={cn(
+                "relative h-10 w-10 rounded-xl bg-muted border border-border hover:bg-emerald-500/20 hover:text-emerald-500 text-muted-foreground transition-all",
+                unclaimedBankNotificationsCount > 0 && "border-emerald-500/50 bg-emerald-500/10 text-emerald-500"
+              )}
+            >
+              <BellRing className="h-4 w-4" />
+              {unclaimedBankNotificationsCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 text-white rounded-full text-[10px] font-black flex items-center justify-center border-2 border-background animate-pulse">
+                  {unclaimedBankNotificationsCount}
+                </span>
+              )}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setIsTransferSlipsDialogOpen(true)}
               title="Bank Transfer Slips from Telegram"
               className={cn(
@@ -1837,47 +1867,176 @@ const POS = () => {
               </div>
             </Button>
           </div>
-          <div className="flex flex-wrap gap-2 mb-3">
-            {[...openCarts.values()].map((cart, idx) => {
-              const displayNumber = idx + 1;
-              const isActive = activeCartId === cart.id;
-              const customerName = cart.customer ? (cart.customer.name_dv || cart.customer.name_en) : null;
-              return (
-                <div key={cart.id} className="relative group">
-                  <Button
-                    variant={isActive ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => switchCart(cart.id)}
-                    className={cn(
-                      "h-9 px-3.5 text-xs font-black rounded-xl transition-all flex items-center gap-2",
-                      isActive
-                        ? "bg-primary text-white shadow-[0_0_15px_rgba(0,132,255,0.4)] ring-2 ring-primary/40 border-primary"
-                        : "bg-muted/70 border-border text-foreground/80 hover:text-foreground hover:bg-muted"
-                    )}
+          <TooltipProvider delayDuration={150}>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {[...openCarts.values()].map((cart, idx) => {
+                const displayNumber = idx + 1;
+                const isActive = activeCartId === cart.id;
+                const customerName = cart.customer ? (cart.customer.name_dv || cart.customer.name_en) : null;
+                const cartTotal = cart.items.reduce((sum, item) => sum + item.price * (item.qty || 1), 0);
+                const totalUnits = cart.items.reduce((sum, item) => sum + (item.qty || 1), 0);
+
+                const getCartCreatedInfo = () => {
+                  let ts: number | null = null;
+                  if (cart.createdAt) {
+                    const parsed = new Date(cart.createdAt).getTime();
+                    if (!isNaN(parsed)) ts = parsed;
+                  } else if (cart.id.startsWith('cart-')) {
+                    const num = parseInt(cart.id.replace('cart-', ''), 10);
+                    if (!isNaN(num) && num > 1000000000000) ts = num;
+                  }
+                  if (!ts) return null;
+                  const diffMins = Math.max(0, Math.floor((Date.now() - ts) / 60000));
+                  const agoStr = diffMins < 1 ? 'Just now' : diffMins < 60 ? `${diffMins}m ago` : `${Math.floor(diffMins / 60)}h ${diffMins % 60}m ago`;
+                  return `${formatTime(new Date(ts).toISOString())} (${agoStr})`;
+                };
+
+                const createdInfo = getCartCreatedInfo();
+
+                return (
+                  <Tooltip
+                    key={cart.id}
+                    open={longPressedCartId === cart.id ? true : undefined}
+                    onOpenChange={(open) => {
+                      if (!open && longPressedCartId === cart.id) {
+                        setLongPressedCartId(null);
+                      }
+                    }}
                   >
-                    <span>Cart #{displayNumber}</span>
-                    {customerName && (
-                      <span className={cn(
-                        "max-w-[90px] truncate text-[10px] px-1.5 py-0.5 rounded-md font-medium",
-                        isActive ? "bg-white/20 text-white" : "bg-primary/10 text-primary"
-                      )}>
-                        {customerName}
-                      </span>
-                    )}
-                  </Button>
-                  {openCarts.size > 1 && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleRemoveCartClick(cart.id); }}
-                      className="absolute -top-1.5 -left-1.5 h-5 w-5 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg hover:bg-red-600"
-                      title="Remove Cart"
+                    <div className="relative group">
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant={isActive ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => switchCart(cart.id)}
+                          onTouchStart={() => {
+                            if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                            longPressTimerRef.current = setTimeout(() => {
+                              setLongPressedCartId(cart.id);
+                            }, 420);
+                          }}
+                          onTouchEnd={() => {
+                            if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+                          }}
+                          className={cn(
+                            "h-9 px-3.5 text-xs font-black rounded-xl transition-all flex items-center gap-2",
+                            isActive
+                              ? "bg-primary text-white shadow-[0_0_15px_rgba(0,132,255,0.4)] ring-2 ring-primary/40 border-primary"
+                              : "bg-muted/70 border-border text-foreground/80 hover:text-foreground hover:bg-muted"
+                          )}
+                        >
+                          <span>Cart #{displayNumber}</span>
+                          {cart.items.length > 0 && (
+                            <span
+                              className={cn(
+                                "text-[10px] font-mono px-1.5 py-0.2 rounded-full font-black",
+                                isActive ? "bg-white/25 text-white" : "bg-primary/15 text-primary"
+                              )}
+                            >
+                              {cart.items.length}
+                            </span>
+                          )}
+                          {customerName && (
+                            <span className={cn(
+                              "max-w-[90px] truncate text-[10px] px-1.5 py-0.5 rounded-md font-medium",
+                              isActive ? "bg-white/20 text-white" : "bg-primary/10 text-primary"
+                            )}>
+                              {customerName}
+                            </span>
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      {openCarts.size > 1 && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleRemoveCartClick(cart.id); }}
+                          className="absolute -top-1.5 -left-1.5 h-5 w-5 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg hover:bg-red-600 z-10"
+                          title="Remove Cart"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+
+                    <TooltipContent
+                      side="bottom"
+                      align="end"
+                      sideOffset={8}
+                      className="w-72 sm:w-80 p-3.5 rounded-2xl apple-glass-dialog border border-white/25 dark:border-white/15 bg-card/95 backdrop-blur-xl text-foreground shadow-2xl z-[150] font-faruma"
+                      dir="rtl"
                     >
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                      <div className="space-y-2.5">
+                        {/* Header: Cart # + Customer + Created Time */}
+                        <div className="flex items-start justify-between gap-2 pb-2 border-b border-border/70">
+                          <div className="text-right min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="px-2 py-0.5 rounded-md bg-primary text-white text-[10px] font-black font-mono">
+                                CART #{displayNumber}
+                              </span>
+                              <span className="text-xs font-black text-foreground truncate">
+                                {customerName || 'Walk-in Customer'}
+                              </span>
+                            </div>
+                            {createdInfo && (
+                              <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono mt-1" dir="ltr">
+                                <Clock className="h-2.5 w-2.5" />
+                                <span>{createdInfo}</span>
+                              </div>
+                            )}
+                          </div>
+                          <span dir="ltr" className="text-xs font-black font-mono text-primary shrink-0 bg-primary/10 px-2 py-0.5 rounded-lg border border-primary/20">
+                            {settings.shop.currency} {cartTotal.toFixed(2)}
+                          </span>
+                        </div>
+
+                        {/* Items List */}
+                        {cart.items.length === 0 ? (
+                          <div className="py-4 text-center text-xs text-muted-foreground font-bold">
+                            Empty Cart (އެއްވެސް އައިޓަމެއް ނެތް)
+                          </div>
+                        ) : (
+                          <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
+                            {cart.items.map((item, iIdx) => (
+                              <div
+                                key={`${item.id}-${iIdx}`}
+                                className="flex items-center justify-between gap-2 text-xs py-1 px-2 rounded-lg bg-muted/50 border border-border/50"
+                              >
+                                <div className="text-right min-w-0 flex-1">
+                                  <p className="font-black text-foreground truncate text-[11px]">
+                                    {item.name_dv || item.name_en}
+                                  </p>
+                                  {item.name_en && item.name_dv && (
+                                    <p className="text-[9px] text-muted-foreground font-mono truncate">
+                                      {item.name_en}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0 font-mono" dir="ltr">
+                                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-background border border-border text-muted-foreground">
+                                    {item.qty}x {item.selected_unit && item.selected_unit !== 'Piece' ? item.selected_unit : ''}
+                                  </span>
+                                  <span className="text-[11px] font-black text-primary min-w-[52px] text-right">
+                                    {(item.price * (item.qty || 1)).toFixed(2)}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Footer Summary */}
+                        <div className="flex items-center justify-between pt-2 border-t border-border/70 text-[11px] font-bold text-muted-foreground" dir="ltr">
+                          <span>{cart.items.length} item(s) • {totalUnits} unit(s)</span>
+                          <span className="font-mono font-black text-foreground">
+                            Total: {settings.shop.currency} {cartTotal.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
+          </TooltipProvider>
 
           {/* Active Cart Title & Status Banner */}
           <div className="flex items-center justify-between px-4 py-2.5 bg-muted/60 rounded-2xl border border-border mb-3">
@@ -3007,7 +3166,7 @@ const POS = () => {
       </Dialog>
 
       <Dialog open={isExpiryDialogOpen} onOpenChange={setIsExpiryDialogOpen}>
-        <DialogContent className="sm:max-w-[560px] w-[min(94vw,560px)] max-h-[92vh] overflow-y-auto font-faruma apple-glass-dialog text-foreground border-white/20 dark:border-white/10 text-right p-4 sm:p-6 shadow-2xl rounded-3xl box-border [&>button]:left-4 [&>button]:right-auto space-y-4" dir="rtl">
+        <DialogContent className="sm:max-w-[560px] w-[min(94vw,560px)] max-h-[92vh] overflow-y-auto overflow-x-hidden flex flex-col font-faruma apple-glass-dialog text-foreground border-white/20 dark:border-white/10 text-right p-5 sm:p-6 shadow-2xl rounded-3xl box-border [&>button]:left-4 [&>button]:right-auto space-y-4" dir="rtl">
           {(() => {
             const basePrice = selectedProductForExpiry?.original_price || selectedProductForExpiry?.price || 0;
             const currentNewPrice = Number(expiryDropPrice) || basePrice;
@@ -3019,83 +3178,84 @@ const POS = () => {
 
             return (
               <>
-                <DialogHeader className="pb-3 text-right space-y-2 border-b border-border/60 box-border">
-                  <div className="flex flex-col-reverse sm:flex-row items-start sm:items-center justify-between gap-2.5 box-border">
+                <DialogHeader className="pb-3 text-right space-y-2 border-b border-border/60 w-full min-w-0 pl-10 box-border">
+                  <div className="flex flex-wrap items-start justify-between gap-2 w-full min-w-0">
+                    <div className="text-right flex-1 min-w-0">
+                      <DialogTitle className="text-lg sm:text-xl font-black text-orange-600 dark:text-orange-400 flex items-center justify-start gap-2">
+                        <Flame className="h-5 w-5 shrink-0 text-orange-500" />
+                        <span className="leading-snug break-words">މުއްދަތު ހަމަވާތީ އަގު ތިރިކުރުން</span>
+                      </DialogTitle>
+                      <p className="text-[11px] text-muted-foreground font-bold tracking-wide mt-0.5 text-right">
+                        Drop Selling Price for Near-Expiry Item
+                      </p>
+                    </div>
                     {selectedProductForExpiry?.expiry_date && (
                       <Badge
                         variant="outline"
+                        dir="ltr"
                         className={cn(
-                          "text-[11px] font-black shrink-0 px-3 py-1 rounded-xl font-mono",
+                          "text-[11px] font-black shrink-0 px-2.5 py-1 rounded-xl font-mono flex items-center gap-1",
                           diffDays <= 7
                             ? "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30"
                             : "bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30"
                         )}
                       >
-                        <Clock className="h-3 w-3 mr-1 inline" />
-                        {diffDays <= 0 ? 'Expires Today' : `${diffDays} days left`} ({formatDate(selectedProductForExpiry.expiry_date)})
+                        <Clock className="h-3 w-3 shrink-0" />
+                        <span>{diffDays <= 0 ? 'Expires Today' : `${diffDays} days left`} ({formatDate(selectedProductForExpiry.expiry_date)})</span>
                       </Badge>
                     )}
-                    <div className="text-right flex-1 min-w-0 pl-7 sm:pl-0">
-                      <DialogTitle className="text-xl font-black text-orange-600 dark:text-orange-400 flex items-center justify-end gap-2">
-                        <span className="truncate">މުއްދަތު ހަމަވާތީ އަގު ތިރިކުރުން</span>
-                        <Flame className="h-5 w-5 shrink-0 text-orange-500" />
-                      </DialogTitle>
-                      <p className="text-[11px] text-muted-foreground font-bold tracking-wide mt-0.5">
-                        Drop Selling Price for Near-Expiry Item
-                      </p>
-                    </div>
                   </div>
                   <DialogDescription className="text-muted-foreground text-xs leading-relaxed text-right pt-1 break-words">
                     މި މުދަލުގެ މުއްދަތު ހަމަވާން ކައިރިވެފައިވާތީ އަގު ތިރިކޮށް، ސިސްޓަމްގައި ރައްކާކުރަން ބޭނުންފުޅުވާ އާ އަގު ކަނޑައަޅުއްވާ.
                   </DialogDescription>
                 </DialogHeader>
 
-                {/* Product details & Price comparison card - Auto-scaled & responsive */}
-                <div className="w-full max-w-full box-border p-3.5 sm:p-4.5 bg-orange-500/10 dark:bg-orange-500/15 rounded-2xl border border-orange-500/30 space-y-3.5 text-right overflow-hidden">
-                  <div className="flex flex-col-reverse sm:flex-row items-start sm:items-center justify-between gap-2.5 w-full box-border">
-                    <span className="text-xs font-mono font-bold text-muted-foreground shrink-0 bg-background/70 px-2.5 py-0.5 rounded-md border border-border/50">
+                {/* Product details & Price comparison card */}
+                <div className="w-full min-w-0 box-border p-4 bg-orange-500/10 dark:bg-orange-500/15 rounded-2xl border border-orange-500/30 space-y-3.5 text-right overflow-hidden">
+                  <div className="flex flex-wrap items-center justify-between gap-2.5 w-full min-w-0 box-border">
+                    <div className="min-w-0 flex-1 text-right">
+                      <p className="font-black text-sm sm:text-base text-foreground break-words leading-snug">{selectedProductForExpiry?.name_dv}</p>
+                      <p className="text-xs text-muted-foreground font-mono font-bold break-words mt-0.5">{selectedProductForExpiry?.name_en}</p>
+                    </div>
+                    <span dir="ltr" className="text-xs font-mono font-bold text-muted-foreground shrink-0 bg-background/80 px-2.5 py-1 rounded-lg border border-border/60">
                       Stock: {selectedProductForExpiry?.stock_shop || 0} pcs
                     </span>
-                    <div className="min-w-0 flex-1 text-right w-full">
-                      <p className="font-black text-sm text-foreground truncate">{selectedProductForExpiry?.name_dv}</p>
-                      <p className="text-[11px] text-muted-foreground font-mono font-bold truncate">{selectedProductForExpiry?.name_en}</p>
-                    </div>
                   </div>
 
                   {/* Pricing Comparison Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 pt-1 w-full box-border">
+                  <div className="grid grid-cols-2 gap-2.5 sm:gap-3 pt-1 w-full min-w-0 box-border">
                     <div className="p-3 bg-background/80 rounded-xl border border-border text-right min-w-0 box-border overflow-hidden">
-                      <span className="text-[10px] text-muted-foreground font-bold uppercase block mb-0.5 truncate">
+                      <span className="text-[10px] text-muted-foreground font-bold uppercase block mb-1 truncate">
                         ކުރީގެ އަގު (Price Before)
                       </span>
-                      <span className="text-base font-black text-muted-foreground font-mono line-through opacity-80 block truncate">
+                      <span dir="ltr" className="text-base font-black text-muted-foreground font-mono line-through opacity-80 block truncate text-right">
                         {settings.shop.currency} {basePrice.toFixed(2)}
                       </span>
                     </div>
 
                     <div className="p-3 bg-orange-500/20 rounded-xl border border-orange-500/40 text-right min-w-0 box-border overflow-hidden">
-                      <div className="flex items-center justify-between gap-1 mb-0.5">
+                      <div className="flex items-center justify-between gap-1 mb-1">
                         <span className="text-[10px] text-orange-600 dark:text-orange-400 font-black uppercase truncate">
                           އާ އަގު (Drop Price)
                         </span>
                         {discountPct > 0 && (
-                          <Badge className="bg-orange-500 text-white text-[9px] font-mono px-1.5 py-0 h-4 shrink-0">
+                          <Badge dir="ltr" className="bg-orange-500 text-white text-[9px] font-mono px-1.5 py-0 h-4 shrink-0">
                             {discountPct}% OFF
                           </Badge>
                         )}
                       </div>
-                      <span className="text-lg font-black text-orange-600 dark:text-orange-300 font-mono block truncate">
+                      <span dir="ltr" className="text-lg font-black text-orange-600 dark:text-orange-300 font-mono block truncate text-right">
                         {settings.shop.currency} {currentNewPrice.toFixed(2)}
                       </span>
                     </div>
                   </div>
 
                   {/* Preset Percent Drop Pills */}
-                  <div className="space-y-1.5 pt-1 w-full box-border">
+                  <div className="space-y-1.5 pt-1 w-full min-w-0 box-border">
                     <span className="text-[11px] font-bold text-muted-foreground block text-right">
                       އަވަސް ޑިސްކައުންޓް ޕަސެންޓް (Quick Drop Presets):
                     </span>
-                    <div className="grid grid-cols-4 gap-1.5 sm:gap-2 w-full box-border">
+                    <div className="grid grid-cols-4 gap-2 w-full box-border" dir="ltr">
                       {[10, 20, 30, 50].map((pct) => (
                         <Button
                           key={pct}
@@ -3120,11 +3280,11 @@ const POS = () => {
                   </div>
 
                   {/* Direct Price Input */}
-                  <div className="space-y-1.5 pt-1 w-full box-border">
+                  <div className="space-y-1.5 pt-1 w-full min-w-0 box-border">
                     <Label className="text-[11px] font-bold text-muted-foreground block text-right">
                       ކަނޑައަޅާ އާ އަގު ލިޔުއްވާ (Enter Drop Price):
                     </Label>
-                    <div className="relative w-full box-border">
+                    <div className="relative w-full box-border" dir="ltr">
                       <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-orange-600 dark:text-orange-400 font-mono pointer-events-none">
                         {settings.shop.currency}
                       </span>
@@ -3143,11 +3303,11 @@ const POS = () => {
                   </div>
                 </div>
 
-                <DialogFooter className="gap-2.5 pt-3 border-t border-border flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center w-full box-border">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-3 border-t border-border w-full min-w-0 box-border">
                   <Button
                     variant="outline"
                     onClick={keepOriginalPriceAndAddToCart}
-                    className="w-full sm:w-auto h-11 border-border hover:bg-muted text-muted-foreground hover:text-foreground rounded-xl font-bold text-xs shrink-0"
+                    className="w-full h-11 px-3 border-border hover:bg-muted text-muted-foreground hover:text-foreground rounded-xl font-bold text-xs min-w-0 truncate"
                     title="Add to cart at regular price without changing product data"
                   >
                     އަގު ބަދަލުނުކޮށް ކާޓަށް ލާ (Keep Price)
@@ -3156,16 +3316,16 @@ const POS = () => {
                   <Button
                     onClick={confirmExpiryPriceDrop}
                     disabled={isUpdatingProductPrice || !expiryDropPrice || expiryDropPrice <= 0}
-                    className="flex-1 w-full sm:w-auto h-11 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-xl shadow-lg shadow-orange-600/20 text-xs uppercase tracking-wider flex items-center justify-center gap-2"
+                    className="w-full h-11 px-3 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-xl shadow-lg shadow-orange-600/20 text-xs flex items-center justify-center gap-1.5 min-w-0 truncate"
                   >
                     {isUpdatingProductPrice ? (
                       <PulsatingDots dotClassName="h-2 w-2 rounded-full bg-white" />
                     ) : (
-                      <TrendingDown className="h-4 w-4" />
+                      <TrendingDown className="h-4 w-4 shrink-0" />
                     )}
-                    <span>އަގު ތިރިކޮށް ސޭވްކުރޭ (Drop & Save Price)</span>
+                    <span className="truncate">އަގު ތިރިކޮށް ސޭވްކުރޭ (Drop & Save)</span>
                   </Button>
-                </DialogFooter>
+                </div>
               </>
             );
           })()}
@@ -3498,6 +3658,65 @@ const POS = () => {
               </span>
             </div>
 
+            {/* Live Bank Notification Auto-Match Section */}
+            {(() => {
+              const unclaimed = bankNotifications.filter(n => n.status === 'unclaimed');
+              const exactMatch = unclaimed.find(n => n.amount !== null && Math.abs(n.amount - grandTotal) < 0.01);
+              if (exactMatch) {
+                return (
+                  <div className="p-3.5 rounded-2xl bg-emerald-500/15 border-2 border-emerald-500 flex flex-col sm:flex-row items-center justify-between gap-3 text-left" dir="ltr">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5">
+                          ✓ LIVE BANK TRANSFER MATCHED
+                        </Badge>
+                        <span className="text-sm font-black font-mono text-emerald-600 dark:text-emerald-400">
+                          {exactMatch.currency} {exactMatch.amount?.toFixed(2)}
+                        </span>
+                      </div>
+                      <p className="text-[11px] font-mono text-foreground/90 mt-1 truncate">
+                        {exactMatch.body}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={async () => {
+                        verifyBankNotification(
+                          exactMatch.id,
+                          activeCart?.customer?.name_en || activeCart?.customer?.name_dv || customerSearchTerm || 'Walk-in Transfer'
+                        );
+                        setPaidAmount(grandTotal);
+                        setIsAwaitingTransferDialogOpen(false);
+                        await processCashPayment();
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs h-9 px-3.5 rounded-xl shrink-0 gap-1.5 shadow-md"
+                    >
+                      <ShieldCheck className="h-4 w-4" />
+                      Verify & Complete Sale Now
+                    </Button>
+                  </div>
+                );
+              }
+              return (
+                <div className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-muted/50 border border-border text-xs" dir="ltr">
+                  <span className="text-muted-foreground font-bold flex items-center gap-1.5">
+                    <BellRing className="h-3.5 w-3.5 text-emerald-500" />
+                    <span>Listening for live BML / MIB push notifications... ({unclaimed.length} unclaimed)</span>
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsBankNotificationsDialogOpen(true)}
+                    className="h-7 px-2.5 text-[11px] font-black text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 rounded-lg"
+                  >
+                    Open Live Alerts
+                  </Button>
+                </div>
+              );
+            })()}
+
             {/* Customer Section */}
             <div className="space-y-2.5 pt-1">
               <div className="flex items-center justify-between gap-2">
@@ -3707,6 +3926,38 @@ const POS = () => {
       <TransferSlipsDialog
         open={isTransferSlipsDialogOpen}
         onOpenChange={setIsTransferSlipsDialogOpen}
+      />
+
+      {/* Live Bank Push Notifications Dialog (MacroDroid / Tasker) */}
+      <BankNotificationsDialog
+        open={isBankNotificationsDialogOpen}
+        onOpenChange={setIsBankNotificationsDialogOpen}
+        notifications={bankNotifications}
+        currentCartTotal={grandTotal}
+        pendingTransfers={pendingTransfers}
+        currency={settings.shop.currency}
+        onVerifyNotification={(id, note) => verifyBankNotification(id, note)}
+        onDismissNotification={(id) => dismissBankNotification(id)}
+        onClearVerified={clearVerifiedBankNotifications}
+        onSimulateIncoming={simulateBankNotification}
+        onApplyToCurrentCart={async (notif) => {
+          verifyBankNotification(
+            notif.id,
+            activeCart?.customer?.name_en || activeCart?.customer?.name_dv || 'POS Cart'
+          );
+          setPaidAmount(grandTotal);
+          setIsBankNotificationsDialogOpen(false);
+          setIsAwaitingTransferDialogOpen(false);
+          await processCashPayment();
+        }}
+        onVerifyPendingTransfer={async (transferId, notif) => {
+          const target = pendingTransfers.find((t) => t.id === transferId);
+          verifyBankNotification(
+            notif.id,
+            target?.customer?.name_en || target?.customer?.name_dv || target?.tempCustomerName || 'Pending Transfer'
+          );
+          await resolvePendingTransfer(transferId, 'cash');
+        }}
       />
     </div>
   );

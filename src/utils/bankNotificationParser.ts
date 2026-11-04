@@ -14,6 +14,17 @@ export interface BankNotification {
 }
 
 /**
+ * Strips unresolved MacroDroid / Tasker magic text placeholders (e.g. "{not_text}", "{not_big_text}", "%evtprm3")
+ */
+function cleanMacroPlaceholders(str: string): string {
+  return str
+    .replace(/\{(?:not_text|notification|not_big_text|not_sub_text|not_ticker|not_title|time_ms)\}/gi, '')
+    .replace(/%(?:evtprm\d+|notification_text|notification_title|TIMEMS)/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+/**
  * Parses bank mobile app push notification text (e.g. BML Mobile, MIB, Favara)
  * to extract the transferred amount, currency, sender/reference, and bank name.
  */
@@ -21,13 +32,40 @@ export function parseBankNotificationPayload(payload: {
   id?: string;
   title?: string;
   body?: string;
+  big_text?: string;
+  sub_text?: string;
+  ticker?: string;
   text?: string;
   message?: string;
   timestamp?: string | number;
   app?: string;
 }): BankNotification {
-  const rawTitle = String(payload.title || payload.app || 'Bank Notification').trim();
-  const rawBody = String(payload.body || payload.text || payload.message || '').trim();
+  const cleanedTitle = cleanMacroPlaceholders(String(payload.title || payload.app || ''));
+  const rawTitle = cleanedTitle || 'Bank Notification';
+
+  // Combine standard notification text + expanded big_text + sub_text (deduplicated)
+  const parts = [
+    cleanMacroPlaceholders(String(payload.body || payload.text || payload.message || '')),
+    cleanMacroPlaceholders(String(payload.big_text || '')),
+    cleanMacroPlaceholders(String(payload.sub_text || '')),
+    cleanMacroPlaceholders(String(payload.ticker || '')),
+  ].filter(Boolean);
+
+  // Pick the most detailed non-duplicate body string
+  const uniqueParts: string[] = [];
+  for (const p of parts) {
+    if (!uniqueParts.some((existing) => existing.includes(p))) {
+      // If this new part contains an existing shorter part, replace the shorter part
+      const shorterIdx = uniqueParts.findIndex((existing) => p.includes(existing));
+      if (shorterIdx !== -1) {
+        uniqueParts[shorterIdx] = p;
+      } else {
+        uniqueParts.push(p);
+      }
+    }
+  }
+
+  const rawBody = uniqueParts.join(' — ') || rawTitle;
   const combined = `${rawTitle} ${rawBody}`;
 
   // Detect bank name
@@ -82,7 +120,6 @@ export function parseBankNotificationPayload(payload: {
   if (payload.timestamp) {
     const tsNum = Number(payload.timestamp);
     if (!isNaN(tsNum) && tsNum > 1000000000) {
-      // Support both seconds and milliseconds
       const ms = tsNum < 10000000000 ? tsNum * 1000 : tsNum;
       const d = new Date(ms);
       if (!isNaN(d.getTime())) {
@@ -108,4 +145,3 @@ export function parseBankNotificationPayload(payload: {
     status: 'unclaimed',
   };
 }
-

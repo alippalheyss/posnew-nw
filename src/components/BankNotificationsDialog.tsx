@@ -94,7 +94,10 @@ export const BankNotificationsDialog: React.FC<BankNotificationsDialogProps> = (
       category: 'bank_webhook_incoming',
       settings: {
         title: '{not_title}',
-        body: '{not_text}',
+        body: '{notification}',
+        big_text: '{not_big_text}',
+        sub_text: '{not_sub_text}',
+        ticker: '{not_ticker}',
         timestamp: '{time_ms}',
         app: 'BML',
       },

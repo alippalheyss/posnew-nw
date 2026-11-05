@@ -1120,6 +1120,12 @@ export default function StockAudit() {
         if (pBarcode && (pBarcode === cleanCode || (strippedCode && pStrippedBarcode === strippedCode))) {
           return true;
         }
+        if (p.extra_barcodes?.some(eb => {
+          const cleanEb = (eb || '').trim().toLowerCase();
+          return cleanEb && (cleanEb === cleanCode || (strippedCode && cleanEb.replace(/^0+/, '') === strippedCode));
+        })) {
+          return true;
+        }
         if (pItemCode && (pItemCode === cleanCode || (strippedCode && pStrippedItemCode === strippedCode))) {
           return true;
         }
@@ -1162,6 +1168,7 @@ export default function StockAudit() {
       (p.name_en && p.name_en.toLowerCase().includes(q)) ||
       (p.name_dv && p.name_dv.includes(q)) ||
       (p.barcode && p.barcode.toLowerCase().includes(q)) ||
+      (p.extra_barcodes && p.extra_barcodes.some(b => b.toLowerCase().includes(q))) ||
       (p.item_code && p.item_code.toLowerCase().includes(q))
     ).slice(0, 50);
   }, [products, searchQuery]);

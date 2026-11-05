@@ -1018,6 +1018,7 @@ const POS = () => {
         product.name_en.toLowerCase().includes(termLower) ||
         product.barcode.includes(searchTerm) ||
         product.item_code.toLowerCase().includes(termLower) ||
+        product.extra_barcodes?.some(b => b.toLowerCase().includes(termLower)) ||
         product.flavours?.some(f => f.name.toLowerCase().includes(termLower) || (f.barcode && f.barcode.includes(searchTerm)));
 
       const matchesCategory = selectedCategory === 'ALL' || product.category === selectedCategory;
@@ -1076,15 +1077,16 @@ const POS = () => {
     let matchedUnit: string | undefined = undefined;
     let matchedFlavour: string | undefined = undefined;
 
-    // 1. Try exact barcode match (product barcode, flavour barcode, or unit barcode)
+    // 1. Try exact barcode match (product barcode, extra barcodes, flavour barcode, or unit barcode)
     let exactMatch = products.find(p => {
-      if (p.barcode && p.barcode.trim() === rawTerm) return true;
-      const foundFlavour = p.flavours?.find(f => f.barcode && f.barcode.trim() === rawTerm);
+      if (p.barcode && (p.barcode.trim() === rawTerm || p.barcode.trim().replace(/^0+/, '') === strippedTerm)) return true;
+      if (p.extra_barcodes?.some(b => b && (b.trim() === rawTerm || (strippedTerm && b.trim().replace(/^0+/, '') === strippedTerm)))) return true;
+      const foundFlavour = p.flavours?.find(f => f.barcode && (f.barcode.trim() === rawTerm || (strippedTerm && f.barcode.trim().replace(/^0+/, '') === strippedTerm)));
       if (foundFlavour) {
         matchedFlavour = foundFlavour.name;
         return true;
       }
-      const foundUnit = p.units?.find(u => u.barcode && u.barcode.trim() === rawTerm);
+      const foundUnit = p.units?.find(u => u.barcode && (u.barcode.trim() === rawTerm || (strippedTerm && u.barcode.trim().replace(/^0+/, '') === strippedTerm)));
       if (foundUnit) {
         matchedUnit = foundUnit.name;
         return true;

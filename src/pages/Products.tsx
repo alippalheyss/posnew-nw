@@ -209,7 +209,9 @@ const Products = () => {
         product.name_dv.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.barcode.includes(searchTerm) ||
-        product.item_code.toLowerCase().includes(searchTerm.toLowerCase());
+        product.item_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.extra_barcodes?.some(b => b.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        product.flavours?.some(f => f.name.toLowerCase().includes(searchTerm.toLowerCase()) || (f.barcode && f.barcode.includes(searchTerm)));
 
       const matchesCategory = selectedCategory === 'ALL' || product.category === selectedCategory;
 

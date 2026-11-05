@@ -52,6 +52,7 @@ export interface Product {
   is_zero_tax: boolean;
   units?: ProductUnit[];
   flavours?: ProductFlavour[];
+  extra_barcodes?: string[];
 }
 
 export interface Settlement {
@@ -409,6 +410,7 @@ interface AppContextType {
   dismissBankNotification: (id: string) => void;
   clearVerifiedBankNotifications: () => void;
   simulateBankNotification: (payload: { title: string; body: string; timestamp: number }) => Promise<void>;
+  syncBankWebhooksFromCloud: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -769,6 +771,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         try {
           if (item.type === 'insert_sale') {
             await supabase.from('sales').upsert([item.payload]);
+          } else if (item.type === 'update_sale') {
+            const { id, ...restPayload } = item.payload;
+            const { error } = await supabase.from('sales').update(restPayload).eq('id', id);
+            if (error) {
+              const { invoice_number: _inv, split_details: _split, ...corePayload } = restPayload;
+              await supabase.from('sales').update(corePayload).eq('id', id);
+            }
           } else if (item.type === 'insert_purchase' || item.type === 'update_purchase') {
             await supabase.from('purchases').upsert([item.payload]);
           } else if (item.type === 'update_stock') {
@@ -993,6 +1002,11 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     return [];
   });
 
+  const bankNotificationsRef = useRef<BankNotification[]>(bankNotifications);
+  useEffect(() => {
+    bankNotificationsRef.current = bankNotifications;
+  }, [bankNotifications]);
+
   const lastProcessedWebhookSigRef = useRef<string>('');
 
   const playBankAlertChime = useCallback(() => {
@@ -1045,24 +1059,29 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const handleIncomingBankWebhook = useCallback(
     (rawPayload: any) => {
-      if (!rawPayload || (!rawPayload.body && !rawPayload.text && !rawPayload.title)) return;
-      const sig = `${rawPayload.title || ''}|${rawPayload.body || rawPayload.text || ''}|${rawPayload.timestamp || ''}`;
-      if (lastProcessedWebhookSigRef.current === sig) return;
-      lastProcessedWebhookSigRef.current = sig;
-
+      if (!rawPayload || (!rawPayload.body && !rawPayload.text && !rawPayload.title && !rawPayload.message && !rawPayload.big_text)) return;
       const parsed = parseBankNotificationPayload(rawPayload);
-      setBankNotifications((prev) => {
-        // Deduplicate by identical body + timestamp within 15 seconds
-        const isDuplicate = prev.some(
-          (existing) =>
-            existing.body === parsed.body &&
-            Math.abs(new Date(existing.receivedAt).getTime() - new Date(parsed.receivedAt).getTime()) < 15000
-        );
-        if (isDuplicate) return prev;
-        const next = [parsed, ...prev].slice(0, 50);
-        syncBankNotificationsToCloud(next);
-        return next;
+      if (!parsed.body && (!parsed.title || parsed.title === 'Bank Alert')) return;
+
+      const sig = `${parsed.title}|${parsed.body}|${rawPayload.timestamp || parsed.receivedAt || ''}`;
+      if (lastProcessedWebhookSigRef.current === sig) return;
+
+      const currentList = bankNotificationsRef.current || [];
+      const isDuplicate = currentList.some((existing) => {
+        if (existing.body !== parsed.body) return false;
+        const tA = new Date(existing.receivedAt).getTime();
+        const tB = new Date(parsed.receivedAt).getTime();
+        if (!isNaN(tA) && !isNaN(tB) && Math.abs(tA - tB) < 60000) return true;
+        return existing.receivedAt === parsed.receivedAt;
       });
+
+      lastProcessedWebhookSigRef.current = sig;
+      if (isDuplicate) return;
+
+      const next = [parsed, ...currentList].slice(0, 50);
+      bankNotificationsRef.current = next;
+      setBankNotifications(next);
+      syncBankNotificationsToCloud(next);
 
       playBankAlertChime();
       const amtText = parsed.amount !== null ? `${parsed.currency} ${parsed.amount.toFixed(2)}` : parsed.title;
@@ -1070,6 +1089,79 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     },
     [playBankAlertChime, syncBankNotificationsToCloud]
   );
+
+  // Cloud catch-up sync for bank webhooks that arrived while phone or POS was locked/offline
+  const syncBankWebhooksFromCloud = useCallback(async () => {
+    if (!supabase || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
+    try {
+      const { data } = await supabase
+        .from('settings')
+        .select('id, category, settings, updated_at')
+        .or('category.eq.bank_webhook_incoming,category.eq.bank_notifications_log,category.like.bank_webhook_%');
+
+      if (!data || data.length === 0) return;
+
+      // 1. Merge bank_notifications_log with local notifications so nothing is overwritten
+      const logRow = data.find((r: any) => r.category === 'bank_notifications_log');
+      if (logRow?.settings && Array.isArray(logRow.settings.notifications)) {
+        const cloudList: BankNotification[] = logRow.settings.notifications;
+        const localList = bankNotificationsRef.current || [];
+        const map = new Map<string, BankNotification>();
+        localList.forEach((n) => map.set(n.id, n));
+        cloudList.forEach((cn) => {
+          const existing = map.get(cn.id);
+          if (!existing) {
+            // Also check if same body + timestamp within 60s already exists locally
+            const dup = Array.from(map.values()).find(
+              (loc) =>
+                loc.body === cn.body &&
+                Math.abs(new Date(loc.receivedAt).getTime() - new Date(cn.receivedAt).getTime()) < 60000
+            );
+            if (!dup) {
+              map.set(cn.id, cn);
+            } else if (cn.status !== 'unclaimed' && dup.status === 'unclaimed') {
+              map.set(dup.id, { ...dup, status: cn.status, matchedCustomerName: cn.matchedCustomerName, verifiedAt: cn.verifiedAt });
+            }
+          } else if (cn.status !== 'unclaimed' && existing.status === 'unclaimed') {
+            map.set(cn.id, cn);
+          }
+        });
+        const merged = Array.from(map.values())
+          .sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime())
+          .slice(0, 50);
+        if (merged.length !== localList.length || JSON.stringify(merged) !== JSON.stringify(localList)) {
+          bankNotificationsRef.current = merged;
+          setBankNotifications(merged);
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('pos_bank_notifications', JSON.stringify(merged));
+            } catch {}
+          }
+        }
+      }
+
+      // 2. Process bank_webhook_incoming and any queued bank_webhook_* rows
+      const webhookRows = data
+        .filter((r: any) => r.category === 'bank_webhook_incoming' || (typeof r.category === 'string' && r.category.startsWith('bank_webhook_') && r.category !== 'bank_notifications_log'))
+        .sort((a: any, b: any) => new Date(a.updated_at || 0).getTime() - new Date(b.updated_at || 0).getTime());
+
+      for (const row of webhookRows) {
+        if (row.settings) {
+          if (Array.isArray(row.settings.queue)) {
+            row.settings.queue.forEach((item: any) => handleIncomingBankWebhook(item));
+          } else {
+            handleIncomingBankWebhook(row.settings);
+          }
+          // Clean up one-off queued webhook rows (keep primary bank_webhook_incoming row)
+          if (row.category !== 'bank_webhook_incoming' && row.id) {
+            supabase.from('settings').delete().eq('id', row.id).then(() => {});
+          }
+        }
+      }
+    } catch (err) {
+      // Silent background sync
+    }
+  }, [handleIncomingBankWebhook]);
 
   const verifyBankNotification = useCallback(
     (id: string, matchedCustomerName?: string) => {
@@ -1084,6 +1176,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
               }
             : n
         );
+        bankNotificationsRef.current = next;
         syncBankNotificationsToCloud(next);
         return next;
       });
@@ -1095,6 +1188,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     (id: string) => {
       setBankNotifications((prev) => {
         const next = prev.map((n) => (n.id === id ? { ...n, status: 'dismissed' as const } : n));
+        bankNotificationsRef.current = next;
         syncBankNotificationsToCloud(next);
         return next;
       });
@@ -1105,6 +1199,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   const clearVerifiedBankNotifications = useCallback(() => {
     setBankNotifications((prev) => {
       const next = prev.filter((n) => n.status === 'unclaimed');
+      bankNotificationsRef.current = next;
       syncBankNotificationsToCloud(next);
       return next;
     });
@@ -1163,16 +1258,25 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     fetchTransferSlips();
     syncRecentSales();
     syncPendingTransfers();
+    syncBankWebhooksFromCloud();
 
     const handleFocus = () => {
       if (typeof document !== 'undefined' && !document.hidden && navigator.onLine) {
         fetchTransferSlips();
         syncRecentSales();
         syncPendingTransfers();
+        syncBankWebhooksFromCloud();
       }
     };
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleFocus);
+
+    // Lightweight 6-second catch-up poll for bank transfer webhooks (rescues locked/offline phone or dropped WebSocket events)
+    const bankWebhookInterval = setInterval(() => {
+      if (typeof navigator !== 'undefined' && navigator.onLine) {
+        syncBankWebhooksFromCloud();
+      }
+    }, 6 * 1000);
 
     // Active background heartbeat every 3 minutes (fallback for edge cases/reconnection)
     // Live multi-device synchronization is handled instantly via Realtime WebSocket mesh
@@ -1185,11 +1289,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     }, 3 * 60 * 1000);
 
     return () => {
+      clearInterval(bankWebhookInterval);
       clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleFocus);
     };
-  }, [fetchTransferSlips, syncRecentSales, syncPendingTransfers]);
+  }, [fetchTransferSlips, syncRecentSales, syncPendingTransfers, syncBankWebhooksFromCloud]);
 
   // Automatically enrich cached purchases with vendor names once vendors list is loaded
   useEffect(() => {
@@ -1277,19 +1382,28 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
             try { units = JSON.parse(units); } catch (e) { units = []; }
           }
           const rawUnits = Array.isArray(units) ? units : [];
-          const packagingUnits = rawUnits.filter((u: any) => !u.is_flavour);
+          const packagingUnits = rawUnits.filter((u: any) => !u.is_flavour && !u.is_extra_barcode);
           const flavours = rawUnits.filter((u: any) => !!u.is_flavour).map((f: any) => ({
             id: f.id || f.barcode || f.name,
             name: f.name,
             barcode: f.barcode || '',
             price: f.price
           }));
+          const extraBarcodesFromUnits = rawUnits
+            .filter((u: any) => !!u.is_extra_barcode && u.barcode)
+            .map((u: any) => String(u.barcode).trim())
+            .filter(Boolean);
+          const existingExtra = Array.isArray(p.extra_barcodes)
+            ? p.extra_barcodes.map((b: any) => String(b).trim()).filter(Boolean)
+            : [];
+          const extraBarcodes = Array.from(new Set([...existingExtra, ...extraBarcodesFromUnits]));
           return {
             ...p,
             item_code: p.item_code !== undefined && p.item_code !== null ? String(p.item_code).trim() : '',
             barcode: p.barcode !== undefined && p.barcode !== null ? String(p.barcode).trim() : '',
             units: packagingUnits,
-            flavours: flavours
+            flavours: flavours,
+            extra_barcodes: extraBarcodes
           };
         });
         setProducts(sanitizedProducts);
@@ -1576,19 +1690,28 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
             try { units = JSON.parse(units); } catch (e) { units = []; }
           }
           const rawUnits = Array.isArray(units) ? units : [];
-          const packagingUnits = rawUnits.filter((u: any) => !u.is_flavour);
+          const packagingUnits = rawUnits.filter((u: any) => !u.is_flavour && !u.is_extra_barcode);
           const flavours = rawUnits.filter((u: any) => !!u.is_flavour).map((f: any) => ({
             id: f.id || f.barcode || f.name,
             name: f.name,
             barcode: f.barcode || '',
             price: f.price
           }));
+          const extraBarcodesFromUnits = rawUnits
+            .filter((u: any) => !!u.is_extra_barcode && u.barcode)
+            .map((u: any) => String(u.barcode).trim())
+            .filter(Boolean);
+          const existingExtra = Array.isArray(p.extra_barcodes)
+            ? p.extra_barcodes.map((b: any) => String(b).trim()).filter(Boolean)
+            : [];
+          const extraBarcodes = Array.from(new Set([...existingExtra, ...extraBarcodesFromUnits]));
           return {
             ...p,
             item_code: p.item_code !== undefined && p.item_code !== null ? String(p.item_code).trim() : '',
             barcode: p.barcode !== undefined && p.barcode !== null ? String(p.barcode).trim() : '',
             units: packagingUnits,
-            flavours: flavours
+            flavours: flavours,
+            extra_barcodes: extraBarcodes
           };
         });
         setProducts(sanitizedProducts);
@@ -1689,16 +1812,47 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           }
         }
 
-        // Sync cloud bank notifications log across devices
+        // Sync cloud bank notifications log across devices & process any pending bank_webhook_incoming
         const bankLogRow = settingsData.find((r: any) => r.category === 'bank_notifications_log');
         if (bankLogRow && bankLogRow.settings && Array.isArray(bankLogRow.settings.notifications)) {
-          setBankNotifications(bankLogRow.settings.notifications);
+          const cloudList: BankNotification[] = bankLogRow.settings.notifications;
+          const localList = bankNotificationsRef.current || [];
+          const map = new Map<string, BankNotification>();
+          localList.forEach((n) => map.set(n.id, n));
+          cloudList.forEach((cn) => {
+            if (!map.has(cn.id)) {
+              const dup = Array.from(map.values()).find(
+                (loc) =>
+                  loc.body === cn.body &&
+                  Math.abs(new Date(loc.receivedAt).getTime() - new Date(cn.receivedAt).getTime()) < 60000
+              );
+              if (!dup) map.set(cn.id, cn);
+            } else if (cn.status !== 'unclaimed') {
+              map.set(cn.id, cn);
+            }
+          });
+          const merged = Array.from(map.values())
+            .sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime())
+            .slice(0, 50);
+          bankNotificationsRef.current = merged;
+          setBankNotifications(merged);
           if (typeof window !== 'undefined') {
             try {
-              localStorage.setItem('pos_bank_notifications', JSON.stringify(bankLogRow.settings.notifications));
+              localStorage.setItem('pos_bank_notifications', JSON.stringify(merged));
             } catch {}
           }
         }
+
+        const webhookRows = settingsData.filter(
+          (r: any) =>
+            r.category === 'bank_webhook_incoming' ||
+            (typeof r.category === 'string' && r.category.startsWith('bank_webhook_') && r.category !== 'bank_notifications_log')
+        );
+        webhookRows.forEach((row: any) => {
+          if (row.settings) {
+            handleIncomingBankWebhook(row.settings);
+          }
+        });
 
         // Sync cloud favorites across devices
         const favRow = settingsData.find((r: any) => r.category === 'favorites' || r.category === 'favorite_products');
@@ -2073,11 +2227,17 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           }
         }
       })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sales' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, (payload) => {
+        if (payload.eventType === 'DELETE') {
+          const oldRow = payload.old as any;
+          if (oldRow?.id) {
+            setSales(prev => prev.filter(s => s.id !== oldRow.id));
+          }
+          return;
+        }
         const row = payload.new as any;
         if (!row) return;
         setSales(prev => {
-          if (prev.some(s => s.id === row.id)) return prev;
           let items = row.items;
           if (typeof items === 'string') {
             try { items = JSON.parse(items); } catch { items = []; }
@@ -2087,11 +2247,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
             try { splitDetails = JSON.parse(splitDetails); } catch { splitDetails = null; }
           }
           const cust = customers.find(c => c.id.toLowerCase() === row.customer_id?.toLowerCase()) || null;
-          const newSale: Sale = {
+          const mappedSale: Sale = {
             ...row,
             date: row.date,
             items: Array.isArray(items) ? items : [],
             customer: cust,
+            customerId: row.customer_id || undefined,
+            customer_id: row.customer_id || undefined,
             grandTotal: Number(row.grand_total || 0),
             paymentMethod: String(row.payment_method || 'cash').toLowerCase() as any,
             paidAmount: Number(row.paid_amount || 0),
@@ -2099,7 +2261,10 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
             invoiceNumber: row.invoice_number || `INV-${String(row.id).slice(-6)}`,
             splitDetails
           };
-          return [newSale, ...prev];
+          if (prev.some(s => s.id === row.id)) {
+            return prev.map(s => s.id === row.id ? mappedSale : s);
+          }
+          return [mappedSale, ...prev];
         });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'vendors' }, () => {
@@ -3686,14 +3851,29 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         ? String(updatedProduct.barcode).trim()
         : '';
       
+      const cleanExtraBarcodes = Array.from(
+        new Set(
+          (updatedProduct.extra_barcodes || [])
+            .map((b: string) => String(b).trim())
+            .filter((b: string) => Boolean(b) && b !== barcode)
+        )
+      );
+
       const combinedUnits = [
-        ...(updatedProduct.units || []).filter((u: any) => !u.is_flavour),
+        ...(updatedProduct.units || []).filter((u: any) => !u.is_flavour && !u.is_extra_barcode),
         ...(updatedProduct.flavours || []).map((f: any) => ({
           name: f.name,
           barcode: f.barcode || '',
           price: f.price !== undefined && f.price !== null && !isNaN(Number(f.price)) ? Number(f.price) : Number(updatedProduct.price || 0),
           conversion_factor: 1,
           is_flavour: true
+        })),
+        ...cleanExtraBarcodes.map((code: string) => ({
+          name: '__extra_barcode__',
+          barcode: code,
+          price: Number(updatedProduct.price || 0),
+          conversion_factor: 1,
+          is_extra_barcode: true
         }))
       ];
 
@@ -3756,7 +3936,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       const productToStore: Product = {
         ...updatedProduct,
         item_code: itemCode,
-        barcode: barcode
+        barcode: barcode,
+        extra_barcodes: cleanExtraBarcodes
       };
 
       setProducts(prev => prev.map(p =>
@@ -3780,21 +3961,37 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         ? String(product.barcode).trim()
         : itemCode;
 
+      const cleanExtraBarcodes = Array.from(
+        new Set(
+          (product.extra_barcodes || [])
+            .map((b: string) => String(b).trim())
+            .filter((b: string) => Boolean(b) && b !== barcode)
+        )
+      );
+
       const productToStore: Product = {
         ...product,
         id: finalId,
         item_code: itemCode,
-        barcode: barcode
+        barcode: barcode,
+        extra_barcodes: cleanExtraBarcodes
       };
 
       const combinedUnits = [
-        ...(productToStore.units || []).filter((u: any) => !u.is_flavour),
+        ...(productToStore.units || []).filter((u: any) => !u.is_flavour && !u.is_extra_barcode),
         ...(productToStore.flavours || []).map((f: any) => ({
           name: f.name,
           barcode: f.barcode || '',
           price: f.price !== undefined && f.price !== null && !isNaN(Number(f.price)) ? Number(f.price) : Number(productToStore.price || 0),
           conversion_factor: 1,
           is_flavour: true
+        })),
+        ...cleanExtraBarcodes.map((code: string) => ({
+          name: '__extra_barcode__',
+          barcode: code,
+          price: Number(productToStore.price || 0),
+          conversion_factor: 1,
+          is_extra_barcode: true
         }))
       ];
 
@@ -4363,27 +4560,185 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   };
 
   const updateSale = async (updatedSale: Sale) => {
-    setSales(prev => prev.map(s => s.id === updatedSale.id ? updatedSale : s));
+    const oldSale = sales.find(s => s.id === updatedSale.id);
 
-    try {
-      if (supabase) {
-        await supabase.from('sales').update({
-          date: updatedSale.date,
-          customer_id: updatedSale.customer?.id || null,
-          items: updatedSale.items,
-          grand_total: Number(updatedSale.grandTotal),
-          payment_method: String(updatedSale.paymentMethod).toLowerCase(),
-          paid_amount: updatedSale.paidAmount !== undefined ? Number(updatedSale.paidAmount) : null,
-          balance: updatedSale.balance !== undefined ? Number(updatedSale.balance) : null,
-          invoice_number: updatedSale.invoiceNumber,
-          split_details: updatedSale.splitDetails || null
-        }).eq('id', updatedSale.id);
-      }
-    } catch (err) {
-      console.warn('Error saving updated sale to cloud:', err);
+    const method = String(updatedSale.paymentMethod || 'cash').toLowerCase() as any;
+    const grandTotal = Number(updatedSale.grandTotal || 0);
+    const paidAmount = updatedSale.paidAmount !== undefined ? Number(updatedSale.paidAmount) : 0;
+    const splitDetails = updatedSale.splitDetails || (updatedSale as any).split_details || undefined;
+
+    let computedBalance = Number(updatedSale.balance || 0);
+    if (method === 'credit') {
+      computedBalance = Math.max(0, grandTotal - paidAmount);
+    } else if (method === 'split' && Array.isArray(splitDetails) && splitDetails.length > 0) {
+      computedBalance = splitDetails
+        .filter((e: any) => String(e.method || '').toLowerCase() === 'credit')
+        .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+    } else {
+      computedBalance = Math.max(0, paidAmount - grandTotal);
     }
 
-    broadcastLiveSync('sale_updated', { sale: updatedSale });
+    const resolvedCustomer = updatedSale.customer || null;
+    const resolvedCustId = resolvedCustomer?.id || updatedSale.customerId || updatedSale.customer_id || undefined;
+
+    const finalSale: Sale = {
+      ...updatedSale,
+      date: updatedSale.date || oldSale?.date || new Date().toISOString(),
+      customer: resolvedCustomer,
+      customerId: resolvedCustId,
+      customer_id: resolvedCustId,
+      items: Array.isArray(updatedSale.items) ? updatedSale.items : [],
+      grandTotal,
+      paymentMethod: method,
+      paidAmount,
+      balance: computedBalance,
+      splitDetails
+    };
+
+    // 1. Update local sales state & cache immediately
+    setSales(prev => {
+      const next = prev.map(s => s.id === finalSale.id ? finalSale : s);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('cached_pos_sales', JSON.stringify(next));
+        } catch {}
+      }
+      putStoreBatch(STORES.SALES, next).catch(() => {});
+      return next;
+    });
+
+    // 2. Adjust product shop stock based on item quantity differences (oldQty - newQty)
+    if (oldSale && String(oldSale.paymentMethod).toLowerCase() !== 'return' && String(finalSale.paymentMethod).toLowerCase() !== 'return') {
+      const stockDiffMap = new Map<string, number>();
+
+      (oldSale.items || []).forEach((item: any) => {
+        if (!item?.id) return;
+        const oldDeducted = Number(item.qty || 0) * Number(item.unit_conversion || 1);
+        stockDiffMap.set(item.id, (stockDiffMap.get(item.id) || 0) + oldDeducted);
+      });
+
+      (finalSale.items || []).forEach((item: any) => {
+        if (!item?.id) return;
+        const newDeducted = Number(item.qty || 0) * Number(item.unit_conversion || 1);
+        stockDiffMap.set(item.id, (stockDiffMap.get(item.id) || 0) - newDeducted);
+      });
+
+      const nonZeroStockDiffs = Array.from(stockDiffMap.entries()).filter(([, delta]) => Math.abs(delta) > 0.0001);
+      if (nonZeroStockDiffs.length > 0) {
+        setProducts(prev => prev.map(p => {
+          const delta = stockDiffMap.get(p.id);
+          if (delta !== undefined && Math.abs(delta) > 0.0001) {
+            return { ...p, stock_shop: Math.round((p.stock_shop || 0) + delta) };
+          }
+          return p;
+        }));
+
+        Promise.all(nonZeroStockDiffs.map(async ([productId, delta]) => {
+          const prod = products.find(p => p.id === productId);
+          if (prod && supabase) {
+            const intStock = Math.round((prod.stock_shop || 0) + delta);
+            const nowIso = new Date().toISOString();
+            await supabase.from('products').update({ stock_shop: intStock, updated_at: nowIso }).eq('id', productId).catch(() => {});
+          }
+        })).catch(() => {});
+      }
+    }
+
+    // 3. Adjust customer outstanding credit balance based on credit amount differences
+    const extractCreditByCustomer = (s?: Sale | null): Map<string, number> => {
+      const map = new Map<string, number>();
+      if (!s) return map;
+      const sSplit = s.splitDetails || (s as any).split_details;
+      if (Array.isArray(sSplit) && sSplit.length > 0) {
+        sSplit.forEach((entry: any) => {
+          if (String(entry.method || '').toLowerCase() === 'credit' && entry.customerId && Number(entry.amount) > 0) {
+            map.set(entry.customerId, (map.get(entry.customerId) || 0) + Number(entry.amount));
+          }
+        });
+      } else {
+        const sMethod = String(s.paymentMethod || (s as any).payment_method || '').toLowerCase();
+        const sCustId = s.customer?.id || s.customerId || s.customer_id;
+        if (sCustId) {
+          if (sMethod === 'credit') {
+            const amt = Math.max(0, Number(s.grandTotal || 0) - Number(s.paidAmount || 0));
+            if (amt > 0) map.set(sCustId, amt);
+          } else if (Number(s.balance || 0) > 0 && sMethod === 'split') {
+            map.set(sCustId, Number(s.balance || 0));
+          }
+        }
+      }
+      return map;
+    };
+
+    const oldCredits = extractCreditByCustomer(oldSale);
+    const newCredits = extractCreditByCustomer(finalSale);
+    const allAffectedCustomerIds = new Set<string>([...oldCredits.keys(), ...newCredits.keys()]);
+
+    for (const custId of allAffectedCustomerIds) {
+      const oldAmt = oldCredits.get(custId) || 0;
+      const newAmt = newCredits.get(custId) || 0;
+      const creditDelta = newAmt - oldAmt;
+      if (Math.abs(creditDelta) > 0.009) {
+        await updateCustomerBalance(custId, creditDelta);
+      }
+    }
+
+    // 4. Persist updated sale to Supabase cloud (with fallback for schema differences & offline queue)
+    const saleUpdatePayload: any = {
+      date: finalSale.date,
+      customer_id: resolvedCustId || null,
+      items: finalSale.items,
+      grand_total: Number(finalSale.grandTotal),
+      payment_method: String(finalSale.paymentMethod).toLowerCase(),
+      paid_amount: finalSale.paidAmount !== undefined ? Number(finalSale.paidAmount) : null,
+      balance: finalSale.balance !== undefined ? Number(finalSale.balance) : null,
+      invoice_number: finalSale.invoiceNumber,
+      split_details: finalSale.splitDetails || null
+    };
+
+    try {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        queueOfflineAction('update_sale', { id: finalSale.id, ...saleUpdatePayload });
+      } else if (supabase) {
+        let { data, error } = await supabase
+          .from('sales')
+          .update(saleUpdatePayload)
+          .eq('id', finalSale.id)
+          .select('id');
+
+        if (error && (error.message?.includes('invoice_number') || error.message?.includes('split_details') || error.message?.includes('column'))) {
+          const { invoice_number: _inv, split_details: _split, ...corePayload } = saleUpdatePayload;
+          const retryRes = await supabase
+            .from('sales')
+            .update(corePayload)
+            .eq('id', finalSale.id)
+            .select('id');
+          data = retryRes.data;
+          error = retryRes.error;
+        }
+
+        if (error) {
+          console.warn('Error updating sale in cloud, trying upsert fallback:', error);
+          const { error: upsertErr } = await supabase
+            .from('sales')
+            .upsert([{ id: finalSale.id, ...saleUpdatePayload }]);
+          if (upsertErr) {
+            queueOfflineAction('update_sale', { id: finalSale.id, ...saleUpdatePayload });
+          }
+        } else if (!data || data.length === 0) {
+          // If row was not yet in cloud or RLS blocked update, try upsert
+          await supabase
+            .from('sales')
+            .upsert([{ id: finalSale.id, ...saleUpdatePayload }]);
+        }
+      }
+    } catch (err) {
+      console.warn('Error saving updated sale to cloud, queuing offline:', err);
+      queueOfflineAction('update_sale', { id: finalSale.id, ...saleUpdatePayload });
+    }
+
+    broadcastLiveSync('sale_updated', { sale: finalSale });
+    showSuccess('Invoice updated successfully (ބިލް އަދާހަމަކުރެވިއްޖެ)');
   };
 
   const deleteSale = async (saleId: string) => {
@@ -4695,7 +5050,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       verifyBankNotification,
       dismissBankNotification,
       clearVerifiedBankNotifications,
-      simulateBankNotification
+      simulateBankNotification,
+      syncBankWebhooksFromCloud
     }}>
       {children}
     </AppContext.Provider>

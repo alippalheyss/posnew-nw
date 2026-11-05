@@ -58,7 +58,11 @@ const QuickStockDialog: React.FC<QuickStockDialogProps> = ({ isOpen, onClose }) 
     
     // Auto-select on exact barcode match
     if (value) {
-      const match = products.find(p => p.barcode === value || p.item_code === value);
+      const match = products.find(p =>
+        p.barcode === value ||
+        p.item_code === value ||
+        p.extra_barcodes?.some(b => b.trim() === value.trim())
+      );
       if (match) {
         handleSelectItem(match);
         setSearchQuery('');
@@ -70,6 +74,7 @@ const QuickStockDialog: React.FC<QuickStockDialogProps> = ({ isOpen, onClose }) 
     if (e.key === 'Enter' && searchQuery) {
       const match = products.find(p => 
         p.barcode === searchQuery || 
+        p.extra_barcodes?.some(b => b.trim() === searchQuery.trim()) ||
         p.item_code.toLowerCase() === searchQuery.toLowerCase() ||
         p.name_en.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.name_dv.toLowerCase().includes(searchQuery.toLowerCase())

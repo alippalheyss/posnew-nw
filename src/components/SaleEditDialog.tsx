@@ -30,15 +30,31 @@ const SaleEditDialog: React.FC<SaleEditDialogProps> = ({ isOpen, onClose, sale, 
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
-    setEditedSale(sale);
-    setPaidAmount(sale?.paidAmount || '');
+    if (sale) {
+      const custId = sale.customer?.id || sale.customerId || sale.customer_id;
+      const resolvedCustomer =
+        (sale.customer && (sale.customer.name_en || sale.customer.name_dv))
+          ? sale.customer
+          : (custId ? customers.find(c => String(c.id).toLowerCase() === String(custId).toLowerCase()) || sale.customer || null : null);
+      setEditedSale({
+        ...sale,
+        customer: resolvedCustomer,
+        customerId: resolvedCustomer?.id || custId,
+        customer_id: resolvedCustomer?.id || custId,
+        items: Array.isArray(sale.items) ? sale.items.map(i => ({ ...i })) : []
+      });
+      setPaidAmount(sale.paidAmount !== undefined && sale.paidAmount > 0 ? sale.paidAmount : '');
+    } else {
+      setEditedSale(null);
+      setPaidAmount('');
+    }
     setConfirmDelete(false);
-  }, [sale, isOpen]);
+  }, [sale, isOpen, customers]);
 
   if (!editedSale) return null;
 
   const calculateTotals = (currentItems: CartItem[]) => {
-    const grandTotal = currentItems.reduce((sum, item) => sum + item.price * item.qty, 0);
+    const grandTotal = currentItems.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.qty || 0), 0);
     const gstRate = (settings?.shop?.taxRate || 0) / 100;
     const subtotalExcludingGst = grandTotal / (1 + gstRate);
     const gstAmount = grandTotal - subtotalExcludingGst;
@@ -46,16 +62,39 @@ const SaleEditDialog: React.FC<SaleEditDialogProps> = ({ isOpen, onClose, sale, 
   };
 
   const { grandTotal } = calculateTotals(editedSale.items || []);
-  const currentBalance = typeof paidAmount === 'number' ? paidAmount - grandTotal : -grandTotal;
+  const numericPaid = typeof paidAmount === 'number' ? paidAmount : 0;
+  const isCreditSale = String(editedSale.paymentMethod || '').toLowerCase() === 'credit';
+  const currentBalance = isCreditSale
+    ? Math.max(0, grandTotal - numericPaid)
+    : numericPaid - grandTotal;
 
   const handleItemQtyChange = (itemId: string, delta: number) => {
     setEditedSale(prev => {
       if (!prev) return null;
       const updatedItems = prev.items.map(item =>
-        item.id === itemId ? { ...item, qty: item.qty + delta } : item
+        item.id === itemId ? { ...item, qty: Math.max(0, Number((item.qty + delta).toFixed(4))) } : item
       ).filter(item => item.qty > 0);
       const newTotals = calculateTotals(updatedItems);
-      return { ...prev, items: updatedItems, grandTotal: newTotals.grandTotal };
+      const nextBalance = String(prev.paymentMethod || '').toLowerCase() === 'credit'
+        ? Math.max(0, newTotals.grandTotal - numericPaid)
+        : Math.max(0, numericPaid - newTotals.grandTotal);
+      return { ...prev, items: updatedItems, grandTotal: newTotals.grandTotal, balance: nextBalance };
+    });
+  };
+
+  const handleItemDirectQty = (itemId: string, rawVal: string) => {
+    const parsed = parseFloat(rawVal);
+    if (isNaN(parsed) || parsed <= 0) return;
+    setEditedSale(prev => {
+      if (!prev) return null;
+      const updatedItems = prev.items.map(item =>
+        item.id === itemId ? { ...item, qty: parsed } : item
+      );
+      const newTotals = calculateTotals(updatedItems);
+      const nextBalance = String(prev.paymentMethod || '').toLowerCase() === 'credit'
+        ? Math.max(0, newTotals.grandTotal - numericPaid)
+        : Math.max(0, numericPaid - newTotals.grandTotal);
+      return { ...prev, items: updatedItems, grandTotal: newTotals.grandTotal, balance: nextBalance };
     });
   };
 
@@ -64,17 +103,29 @@ const SaleEditDialog: React.FC<SaleEditDialogProps> = ({ isOpen, onClose, sale, 
       if (!prev) return null;
       const updatedItems = prev.items.filter(item => item.id !== itemId);
       const newTotals = calculateTotals(updatedItems);
-      return { ...prev, items: updatedItems, grandTotal: newTotals.grandTotal };
+      const nextBalance = String(prev.paymentMethod || '').toLowerCase() === 'credit'
+        ? Math.max(0, newTotals.grandTotal - numericPaid)
+        : Math.max(0, numericPaid - newTotals.grandTotal);
+      return { ...prev, items: updatedItems, grandTotal: newTotals.grandTotal, balance: nextBalance };
     });
   };
 
   const handleCustomerChange = (customerId: string) => {
     const customer = customerId === 'walk-in' ? null : customers.find(c => c.id === customerId) || null;
-    setEditedSale(prev => prev ? { ...prev, customer } : null);
+    setEditedSale(prev => prev ? {
+      ...prev,
+      customer,
+      customerId: customer?.id || undefined,
+      customer_id: customer?.id || undefined
+    } : null);
   };
 
   const handlePaymentMethodChange = (method: string) => {
-    setEditedSale(prev => prev ? { ...prev, paymentMethod: method as any } : null);
+    setEditedSale(prev => {
+      if (!prev) return null;
+      const nextBalance = method === 'credit' ? prev.grandTotal : 0;
+      return { ...prev, paymentMethod: method as any, balance: nextBalance };
+    });
     if (method !== 'cash') {
       setPaidAmount('');
     } else if (editedSale) {
@@ -99,21 +150,36 @@ const SaleEditDialog: React.FC<SaleEditDialogProps> = ({ isOpen, onClose, sale, 
         updatedItems = [...prev.items, newItem];
       }
       const newTotals = calculateTotals(updatedItems);
-      return { ...prev, items: updatedItems, grandTotal: newTotals.grandTotal };
+      const nextBalance = String(prev.paymentMethod || '').toLowerCase() === 'credit'
+        ? Math.max(0, newTotals.grandTotal - numericPaid)
+        : Math.max(0, numericPaid - newTotals.grandTotal);
+      return { ...prev, items: updatedItems, grandTotal: newTotals.grandTotal, balance: nextBalance };
     });
     setProductSearch('');
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (editedSale.items.length === 0) {
-      showError(t('no_items_in_sale'));
+      showError(t('no_items_in_sale') || 'Cannot save an invoice with 0 items');
       return;
     }
-    onSave({
+    if (isCreditSale && !editedSale.customer) {
+      showError('Please select a customer for credit invoice');
+      return;
+    }
+    const finalPaid = isCreditSale ? numericPaid : (numericPaid > 0 ? numericPaid : grandTotal);
+    const finalBalance = isCreditSale
+      ? Math.max(0, grandTotal - finalPaid)
+      : Math.max(0, finalPaid - grandTotal);
+
+    await onSave({
       ...editedSale,
-      paidAmount: typeof paidAmount === 'number' ? paidAmount : 0
+      grandTotal,
+      paidAmount: finalPaid,
+      balance: finalBalance,
+      customerId: editedSale.customer?.id || undefined,
+      customer_id: editedSale.customer?.id || undefined
     });
-    showSuccess(t('sale_updated_successfully'));
     onClose();
   };
 
@@ -123,11 +189,16 @@ const SaleEditDialog: React.FC<SaleEditDialogProps> = ({ isOpen, onClose, sale, 
     </>
   );
 
-  const filteredProducts = products.filter(p => 
-    p.name_dv.includes(productSearch) || 
-    p.name_en.toLowerCase().includes(productSearch.toLowerCase()) ||
-    p.item_code.toLowerCase().includes(productSearch.toLowerCase())
-  ).slice(0, 5);
+  const filteredProducts = products.filter(p => {
+    const q = productSearch.toLowerCase();
+    return (
+      p.name_dv.includes(productSearch) ||
+      p.name_en.toLowerCase().includes(q) ||
+      p.item_code.toLowerCase().includes(q) ||
+      (p.barcode && p.barcode.toLowerCase().includes(q)) ||
+      (p.extra_barcodes && p.extra_barcodes.some(b => b.toLowerCase().includes(q)))
+    );
+  }).slice(0, 6);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -182,7 +253,15 @@ const SaleEditDialog: React.FC<SaleEditDialogProps> = ({ isOpen, onClose, sale, 
                           <div className="flex items-center gap-2 mr-3">
                              <div className="flex items-center gap-1 bg-black/20 rounded-xl p-1 border border-white/10">
                                 <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground rounded-lg" onClick={() => handleItemQtyChange(item.id, -1)}><Minus className="h-3 w-3" /></Button>
-                                <span className="w-6 text-center text-xs font-black font-mono">{item.qty}</span>
+                                <input
+                                  type="number"
+                                  min="0.01"
+                                  step="any"
+                                  value={item.qty}
+                                  onChange={(e) => handleItemDirectQty(item.id, e.target.value)}
+                                  onFocus={(e) => e.target.select()}
+                                  className="w-10 bg-transparent text-center text-xs font-black font-mono text-foreground focus:outline-none"
+                                />
                                 <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground rounded-lg" onClick={() => handleItemQtyChange(item.id, 1)}><Plus className="h-3 w-3" /></Button>
                              </div>
                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/50 hover:text-red-400 hover:bg-red-500/15 rounded-xl opacity-0 group-hover:opacity-100 transition-all" onClick={() => handleRemoveItem(item.id)}><Trash2 className="h-4 w-4" /></Button>
@@ -256,14 +335,21 @@ const SaleEditDialog: React.FC<SaleEditDialogProps> = ({ isOpen, onClose, sale, 
                     <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{renderBoth('grand_total')}</span>
                     <span className="text-2xl font-black text-primary font-mono">{settings.shop.currency} {grandTotal.toFixed(2)}</span>
                  </div>
-                 {editedSale.paymentMethod === 'cash' && (
+                 {isCreditSale ? (
+                    <div className="flex justify-between items-center pt-1 border-t border-white/10 mt-1">
+                       <span className="text-[10px] font-black text-orange-400 uppercase tracking-widest">Balance Due (ކްރެޑިޓް ބާކީ)</span>
+                       <span className="text-xl font-black font-mono text-orange-500">
+                          {settings.shop.currency} {currentBalance.toFixed(2)}
+                       </span>
+                    </div>
+                 ) : editedSale.paymentMethod === 'cash' ? (
                     <div className="flex justify-between items-center">
                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{renderBoth('balance')}</span>
                        <span className={cn("text-xl font-black font-mono", currentBalance < 0 ? "text-red-400" : "text-emerald-400")}>
                           {settings.shop.currency} {currentBalance.toFixed(2)}
                        </span>
                     </div>
-                 )}
+                 ) : null}
               </div>
            </div>
         </div>

@@ -25,9 +25,11 @@ import {
   Send,
   ShieldCheck,
   AlertCircle,
+  RotateCw,
 } from 'lucide-react';
 import { BankNotification } from '@/utils/bankNotificationParser';
 import { supabaseUrl, supabaseAnonKey, DEFAULT_SETTINGS_USER_ID } from '@/lib/supabase';
+import { useAppContext } from '@/context/AppContext';
 import { formatTime, formatDate } from '@/utils/formatters';
 import { showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
@@ -63,6 +65,7 @@ export const BankNotificationsDialog: React.FC<BankNotificationsDialogProps> = (
   onApplyToCurrentCart,
   onVerifyPendingTransfer,
 }) => {
+  const { syncBankWebhooksFromCloud } = useAppContext();
   const [activeTab, setActiveTab] = useState<'feed' | 'setup'>('feed');
   const [filterMode, setFilterMode] = useState<'unclaimed' | 'all'>('unclaimed');
   const [simAmount, setSimAmount] = useState<string>(() =>
@@ -70,13 +73,27 @@ export const BankNotificationsDialog: React.FC<BankNotificationsDialogProps> = (
   );
   const [simSender, setSimSender] = useState<string>('AHMED IBRAHIM');
   const [isSimulating, setIsSimulating] = useState(false);
+  const [isSyncingFeed, setIsSyncingFeed] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   React.useEffect(() => {
-    if (open && currentCartTotal > 0) {
-      setSimAmount(currentCartTotal.toFixed(2));
+    if (open) {
+      if (currentCartTotal > 0) {
+        setSimAmount(currentCartTotal.toFixed(2));
+      }
+      syncBankWebhooksFromCloud().catch(() => {});
     }
-  }, [open, currentCartTotal]);
+  }, [open, currentCartTotal, syncBankWebhooksFromCloud]);
+
+  const handleManualSync = async () => {
+    setIsSyncingFeed(true);
+    try {
+      await syncBankWebhooksFromCloud();
+      showSuccess('Synced latest bank alerts from cloud');
+    } finally {
+      setIsSyncingFeed(false);
+    }
+  };
 
   const copyText = (key: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -219,6 +236,17 @@ export const BankNotificationsDialog: React.FC<BankNotificationsDialogProps> = (
               </div>
 
               <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleManualSync}
+                  disabled={isSyncingFeed}
+                  className="h-7 px-2.5 rounded-lg text-[11px] font-black gap-1"
+                  title="Check cloud for missed or offline BML alerts"
+                >
+                  <RotateCw className={cn("h-3 w-3 text-emerald-500", isSyncingFeed && "animate-spin")} />
+                  Sync
+                </Button>
                 {notifications.some((n) => n.status !== 'unclaimed') && (
                   <Button
                     size="sm"
@@ -551,6 +579,25 @@ Prefer: resolution=merge-duplicates`}
                     {taskerJsonBody}
                   </pre>
                 </div>
+              </div>
+
+              {/* Locked Phone & Offline Reconnect Guide */}
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-1.5">
+                <p className="text-xs font-black text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                  Locked Screen &amp; Offline Phone Fix (BML Notifications)
+                </p>
+                <ul className="text-[11px] text-muted-foreground space-y-1 list-disc pl-4 leading-relaxed">
+                  <li>
+                    <strong>When Phone is Locked (Android Doze Mode):</strong> Set Battery Optimization to <strong>Unrestricted</strong> for both <strong>MacroDroid</strong> and <strong>BML Mobile</strong> in Android Settings. In MacroDroid, add the action <strong>Screen On</strong> (or enable Wake Lock) right before the HTTP Request so Android does not block network access while the screen is off.
+                  </li>
+                  <li>
+                    <strong>When Phone is Offline &amp; Reconnects:</strong> In your MacroDroid macro, add the action <strong>Wait Until Trigger → Network Connectivity (Connected)</strong> right before the <strong>HTTP Request</strong> action. If a BML notification arrives while offline, MacroDroid will hold it and immediately send it to POS the moment Wi-Fi or Mobile Data reconnects.
+                  </li>
+                  <li>
+                    <strong>POS Auto-Catchup:</strong> Even if the POS computer was offline or asleep when the transfer happened, POS now automatically syncs missed bank alerts from the cloud every 6 seconds and whenever connection is restored.
+                  </li>
+                </ul>
               </div>
             </div>
           </div>

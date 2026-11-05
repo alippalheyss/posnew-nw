@@ -48,7 +48,13 @@ const CreditInvoices = () => {
   };
 
   const handleEditClick = (sale: Sale) => {
-    setEditingSale({ ...sale });
+    const cust = getCustomer(sale);
+    setEditingSale({
+      ...sale,
+      customer: cust || sale.customer || null,
+      customerId: cust?.id || sale.customerId || sale.customer_id,
+      customer_id: cust?.id || sale.customer_id || sale.customerId
+    });
     setIsEditSaleDialogOpen(true);
   };
 
@@ -57,7 +63,6 @@ const CreditInvoices = () => {
       await updateSale(updatedSale);
       setIsEditSaleDialogOpen(false);
       setEditingSale(null);
-      showSuccess(t('sale_updated_successfully') || 'Invoice updated successfully');
     } catch (err) {
       console.error('Error updating invoice:', err);
       showError('Failed to update invoice');
@@ -644,9 +649,10 @@ const CreditInvoices = () => {
             {filteredSales.sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, visibleCount).map((sale) => {
               const cust = getCustomer(sale);
               const invNo = getInvoiceDisplay(sale);
-              const balanceDue = Number(sale.balance !== undefined && Number(sale.balance) > 0 
-                ? sale.balance 
-                : Math.max(0, (sale.grandTotal || 0) - Number(sale.paidAmount || 0)));
+              const isSplitSale = String(sale.paymentMethod || '').toLowerCase() === 'split';
+              const balanceDue = isSplitSale && Number(sale.balance) > 0
+                ? Number(sale.balance)
+                : Math.max(0, Number(sale.grandTotal || 0) - Number(sale.paidAmount || 0));
 
               return (
                 <Card key={sale.id} className="apple-glass-card border border-white/20 dark:border-white/10 hover:border-orange-500/40 transition-all rounded-3xl p-6 group shadow-sm hover:shadow-lg">

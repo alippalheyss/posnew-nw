@@ -2,8 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, History, DollarSign, ShoppingBag, PlusCircle, Download, FileText, User, Activity, TrendingDown, Clock, CheckCircle2, AlertCircle, Edit, Trash2, X, Filter, ArrowUpDown, RotateCw, Printer, Eye } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Search, History, DollarSign, ShoppingBag, PlusCircle, Download, FileText, User, Activity, TrendingDown, Clock, CheckCircle2, AlertCircle, Edit, Trash2, X, Filter, ArrowUpDown, RotateCw, Printer, Eye, EyeOff } from 'lucide-react';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -1034,251 +1034,297 @@ const CreditOutstanding = () => {
   }).slice(0, 15);
 
   return (
-    <div className="p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
-      {/* Header & Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
-        <div className="lg:col-span-3">
-           <div className="flex justify-between items-center mb-6">
-              <div className="text-right">
-                 <h1 className="text-3xl font-black text-foreground flex items-center justify-end gap-3">
-                   {renderBoth('credit_outstanding')} <DollarSign className="h-8 w-8 text-primary" />
-                 </h1>
-                 <p className="text-sm text-muted-foreground mt-1">Manage receivables and track customer credit history</p>
-              </div>
-              <div className="flex gap-2">
-                 <Button
-                   onClick={() => setIsTransferSlipsDialogOpen(true)}
-                   variant="outline"
-                   className="gap-2 h-11 px-5 rounded-xl font-bold border-border relative bg-card hover:bg-muted"
-                 >
-                   <CreditCard className="h-4 w-4 text-primary" />
-                   TRANSFER SLIPS
-                   {pendingSlipsCount > 0 && (
-                     <Badge className="bg-amber-500 text-black font-black text-xs animate-pulse ml-1">
-                       {pendingSlipsCount} NEW
-                     </Badge>
-                   )}
-                 </Button>
-              </div>
+    <div className="p-4 sm:p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
+      {/* Unified Top Header Bar */}
+      <div className="shrink-0 mb-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-4 apple-glass-card border border-white/20 dark:border-white/10 rounded-3xl p-4 sm:px-6 shadow-sm">
+          {/* Title & Subtitle (Right side in RTL) */}
+          <div className="flex items-center gap-3.5 text-right">
+            <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary shrink-0 shadow-xs">
+              <DollarSign className="h-6 w-6" />
             </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black text-foreground leading-tight">
+                {renderBoth('credit_outstanding')}
+              </h1>
+              <p className="text-xs text-muted-foreground mt-0.5" dir="ltr">
+                Manage receivables &amp; track customer credit history
+              </p>
+            </div>
+          </div>
 
-            {pendingSlipsCount > 0 && (
-              <div
-                onClick={() => setIsTransferSlipsDialogOpen(true)}
-                className="mb-4 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between cursor-pointer hover:bg-amber-500/15 transition-all shadow-sm group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-black animate-pulse">
-                    <CreditCard className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="font-black text-foreground text-sm flex items-center gap-2">
-                      <span>{pendingSlipsCount} Bank Transfer Slip(s) Awaiting Cashier Verification</span>
-                      <Badge className="bg-amber-500 text-black text-[10px] font-bold">ACTION REQUIRED</Badge>
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Customer submitted transfer slips via Telegram bot. Click here to verify and settle their tabs.
-                    </p>
-                  </div>
+          {/* Total Outstanding Summary + Action Buttons (Left side in RTL) */}
+          <div className="flex flex-wrap items-center gap-2.5 mr-auto sm:mr-0" dir="ltr">
+            {/* Compact Total Outstanding Summary Card */}
+            <div className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-orange-500/10 border border-orange-500/30">
+              <div className="w-8 h-8 rounded-xl bg-orange-500/20 text-orange-500 flex items-center justify-center shrink-0">
+                <AlertCircle className="h-4 w-4" />
+              </div>
+              <div className="text-left">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">
+                    Total Outstanding
+                  </span>
+                  <span className="text-[10px] font-black text-orange-500 bg-orange-500/15 px-1.5 py-0.2 rounded-md">
+                    {filteredCustomers.length} Acc
+                  </span>
                 </div>
-                <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-black font-bold rounded-xl gap-1">
-                  Review & Settle Slips
-                </Button>
+                <p
+                  className={cn(
+                    "text-base sm:text-lg font-black text-foreground font-mono leading-tight transition-all",
+                    !isOutstandingVisible && "blur-md select-none"
+                  )}
+                >
+                  {settings.shop.currency}{' '}
+                  {customers
+                    .reduce((sum, c) => sum + (c.outstanding_balance || 0), 0)
+                    .toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
               </div>
-            )}
-
-           <ScrollArea className="h-[140px] overflow-hidden">
-              <div className="flex gap-4 p-1" dir="ltr">
-                {allSettlements.length === 0 ? (
-                  <div className="w-full h-24 flex items-center justify-center border-2 border-dashed border-white/20 dark:border-white/10 rounded-3xl text-muted-foreground/30 font-black uppercase tracking-widest text-[10px]">
-                     No recent settlements recorded
-                  </div>
-                ) : (
-                  allSettlements.map((s) => (
-                    <div key={s.id} className="min-w-[220px] apple-glass-card border border-white/20 dark:border-white/10 hover:border-green-500/40 rounded-3xl p-4 text-left transition-all group shadow-sm">
-                       <div className="flex items-center justify-between mb-3">
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                          <span className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest">{formatDate(s.date)} {formatTime(s.date)}</span>
-                       </div>
-                       <p className="font-black text-foreground text-sm truncate mb-1" dir="rtl">{s.customerName}</p>
-                       <p className="text-xl font-black text-green-500">{settings.shop.currency} {s.amount_paid.toFixed(0)}</p>
-                    </div>
-                  ))
-                )}
-              </div>
-           </ScrollArea>
-        </div>
-
-        <Card className="apple-glass-card border border-orange-500/30 rounded-[2rem] p-6 relative overflow-hidden group shadow-md">
-           <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-orange-500/20 transition-all" />
-           <div className="flex justify-between items-center mb-6">
-              <AlertCircle className="h-6 w-6 text-orange-500" />
               <Button
                 variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 text-muted-foreground/50 hover:text-foreground hover:bg-white/10"
+                size="icon"
+                className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/10 shrink-0"
                 onClick={() => setIsOutstandingVisible(!isOutstandingVisible)}
+                title={isOutstandingVisible ? "Hide total outstanding" : "Show total outstanding"}
               >
-                <History className={cn("h-4 w-4", !isOutstandingVisible && "opacity-50")} />
+                {isOutstandingVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
-           </div>
-           <div className="text-right">
-              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Total Outstanding</p>
-              <p className={cn("text-3xl font-black text-foreground transition-all", !isOutstandingVisible && "blur-lg select-none")}>
-                {settings.shop.currency} {customers.reduce((sum, c) => sum + (c.outstanding_balance || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 0 })}
-              </p>
-              <p className="text-[10px] text-orange-500/70 mt-2 font-black uppercase tracking-widest">Across {filteredCustomers.length} Accounts</p>
-           </div>
-        </Card>
-      </div>
+            </div>
 
-      {/* Comprehensive Filter & Actions Bar */}
-      <div className="flex flex-col gap-3 mb-6" dir="ltr">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* 1. Unified Search: English Name, Dhivehi Name, or Customer Code (No mobile numbers) */}
-          <div className="relative flex-1 min-w-[260px]">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60 pointer-events-none" />
-            <Input 
-              dir="ltr"
-              placeholder="Search customer by name or code (e.g. Ali, C01, 01)..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full apple-glass-input rounded-2xl pl-10 pr-9 h-12 text-left font-bold transition-all text-sm shadow-xs"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted"
-                title="Clear search"
+            {/* Action Toolbar */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                onClick={() => setIsTransferSlipsDialogOpen(true)}
+                variant="outline"
+                className="gap-2 h-10 px-3.5 rounded-xl font-black text-xs border-border relative bg-card hover:bg-muted"
               >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
+                <CreditCard className="h-4 w-4 text-primary" />
+                <span>TRANSFER SLIPS</span>
+                {pendingSlipsCount > 0 && (
+                  <Badge className="bg-amber-500 text-black font-black text-[10px] animate-pulse ml-0.5 px-1.5 py-0">
+                    {pendingSlipsCount} NEW
+                  </Badge>
+                )}
+              </Button>
 
-          {/* 2. Filter by Credit Amount */}
-          <div className="w-full sm:w-56">
-            <Select value={amountFilter} onValueChange={(val: any) => setAmountFilter(val)}>
-              <SelectTrigger className="h-12 rounded-2xl apple-glass-input border-border font-bold text-xs">
-                <div className="flex items-center gap-2 truncate">
-                  <DollarSign className="h-4 w-4 text-primary shrink-0" />
-                  <SelectValue placeholder="Credit Amount" />
-                </div>
-              </SelectTrigger>
-              <SelectContent className="apple-glass-dialog border-white/20 dark:border-white/10 z-[120]">
-                <SelectItem value="has_due" className="text-xs font-bold">Active Debts (Due &gt; 0)</SelectItem>
-                <SelectItem value="all" className="text-xs font-bold">All Customers (Any Balance)</SelectItem>
-                <SelectItem value="gt_500" className="text-xs font-bold">Due &gt; MVR 500</SelectItem>
-                <SelectItem value="gt_1000" className="text-xs font-bold">Due &gt; MVR 1,000</SelectItem>
-                <SelectItem value="gt_5000" className="text-xs font-bold">Due &gt; MVR 5,000</SelectItem>
-                <SelectItem value="zero_balance" className="text-xs font-bold">Zero Balance (Settled)</SelectItem>
-                <SelectItem value="custom" className="text-xs font-bold">Custom Min/Max Range</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+              <Button
+                onClick={handleOpenBatchRemindersDialog}
+                className="h-10 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs gap-1.5 shadow-xs transition-all flex items-center active:scale-[0.98]"
+              >
+                <BellRing className="h-4 w-4" />
+                <span>REMINDERS</span>
+                {linkedCustomersWithDue.length > 0 && (
+                  <Badge className="bg-white/20 text-white border-none text-[10px] px-1.5 py-0 rounded-full font-mono font-bold">
+                    {linkedCustomersWithDue.length}
+                  </Badge>
+                )}
+              </Button>
 
-          {/* 3. Sort By */}
-          <div className="w-full sm:w-52">
-            <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
-              <SelectTrigger className="h-12 rounded-2xl apple-glass-input border-border font-bold text-xs">
-                <div className="flex items-center gap-2 truncate">
-                  <ArrowUpDown className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <SelectValue placeholder="Sort By" />
-                </div>
-              </SelectTrigger>
-              <SelectContent className="apple-glass-dialog border-white/20 dark:border-white/10 z-[120]">
-                <SelectItem value="due_desc" className="text-xs font-bold">Highest Due First</SelectItem>
-                <SelectItem value="due_asc" className="text-xs font-bold">Lowest Due First</SelectItem>
-                <SelectItem value="name_asc" className="text-xs font-bold">Name (A to Z)</SelectItem>
-                <SelectItem value="code_asc" className="text-xs font-bold">Customer Code</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+              <Button
+                onClick={exportAllOutstanding}
+                variant="outline"
+                className="h-10 px-3.5 rounded-xl border-border bg-card hover:bg-muted gap-1.5 font-black text-xs"
+              >
+                <Download className="h-4 w-4" />
+                <span className="hidden xl:inline">EXPORT</span>
+              </Button>
 
-          {/* Clear Filters Button (shown when active) */}
-          {(searchQuery || amountFilter !== 'has_due' || customMinAmount || customMaxAmount) && (
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setSearchQuery('');
-                setAmountFilter('has_due');
-                setCustomMinAmount('');
-                setCustomMaxAmount('');
-                setSortBy('due_desc');
-              }}
-              className="h-12 px-3 rounded-2xl text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-muted"
-              title="Reset all filters"
-            >
-              <X className="h-4 w-4 mr-1" /> Reset
-            </Button>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2 ml-auto">
-            <Button
-              onClick={handleOpenBatchRemindersDialog}
-              className="h-12 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs gap-2 shadow-md hover:shadow-emerald-500/20 transition-all flex items-center active:scale-[0.98]"
-            >
-              <BellRing className="h-4 w-4" />
-              <span className="hidden sm:inline">REMINDERS</span>
-              {linkedCustomersWithDue.length > 0 && (
-                <Badge className="bg-white/20 text-white border-none text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
-                  {linkedCustomersWithDue.length}
-                </Badge>
-              )}
-            </Button>
-            <Button onClick={exportAllOutstanding} variant="outline" className="h-12 px-4 rounded-2xl border-white/20 dark:border-white/10 hover:bg-white/10 gap-2 font-bold text-xs">
-              <Download className="h-4 w-4" /> <span className="hidden sm:inline">EXPORT</span>
-            </Button>
-            <Button
-              onClick={async () => {
-                setIsSyncing(true);
-                try {
-                  await refreshCustomers(true);
-                } finally {
-                  setIsSyncing(false);
-                }
-              }}
-              disabled={isSyncing}
-              variant="outline"
-              className="h-12 px-4 rounded-2xl border-white/20 dark:border-white/10 hover:bg-white/10 gap-2 font-bold text-xs"
-              title="Sync customers and credit balances directly from cloud"
-            >
-              <RotateCw className={cn("h-4 w-4 text-primary", isSyncing && "animate-spin")} />
-              <span className="hidden sm:inline">SYNC</span>
-            </Button>
+              <Button
+                onClick={async () => {
+                  setIsSyncing(true);
+                  try {
+                    await refreshCustomers(true);
+                  } finally {
+                    setIsSyncing(false);
+                  }
+                }}
+                disabled={isSyncing}
+                variant="outline"
+                className="h-10 px-3.5 rounded-xl border-border bg-card hover:bg-muted gap-1.5 font-black text-xs"
+                title="Sync customers and credit balances directly from cloud"
+              >
+                <RotateCw className={cn("h-4 w-4 text-primary", isSyncing && "animate-spin")} />
+                <span className="hidden xl:inline">SYNC</span>
+              </Button>
+            </div>
           </div>
         </div>
 
-        {/* Custom Min/Max Amount Row when custom is selected */}
-        {amountFilter === 'custom' && (
-          <div className="flex items-center gap-3 bg-muted/40 p-3 rounded-2xl border border-border text-xs font-bold">
-            <Filter className="h-4 w-4 text-primary shrink-0" />
-            <span>Custom Credit Amount:</span>
-            <Input
-              type="number"
-              placeholder="Min MVR..."
-              value={customMinAmount}
-              onChange={(e) => setCustomMinAmount(e.target.value)}
-              className="w-32 h-9 rounded-xl text-xs font-mono"
-            />
-            <span>to</span>
-            <Input
-              type="number"
-              placeholder="Max MVR..."
-              value={customMaxAmount}
-              onChange={(e) => setCustomMaxAmount(e.target.value)}
-              className="w-32 h-9 rounded-xl text-xs font-mono"
-            />
+        {/* Pending Transfer Slips Alert Banner */}
+        {pendingSlipsCount > 0 && (
+          <div
+            onClick={() => setIsTransferSlipsDialogOpen(true)}
+            className="p-3 px-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between cursor-pointer hover:bg-amber-500/15 transition-all shadow-xs group"
+            dir="ltr"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-black animate-pulse shrink-0">
+                <CreditCard className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-black text-foreground text-xs sm:text-sm flex items-center gap-2">
+                  <span>{pendingSlipsCount} Bank Transfer Slip(s) Awaiting Cashier Verification</span>
+                  <Badge className="bg-amber-500 text-black text-[10px] font-bold">ACTION REQUIRED</Badge>
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  Customer submitted transfer slips via Telegram bot. Click here to verify and settle their tabs.
+                </p>
+              </div>
+            </div>
+            <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-black font-bold rounded-xl gap-1 h-8 text-xs shrink-0">
+              Review &amp; Settle Slips
+            </Button>
           </div>
         )}
 
-        <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-          <span>Showing <strong className="text-foreground font-mono">{filteredCustomers.length}</strong> of <strong className="text-foreground font-mono">{customers.length}</strong> customers</span>
-          {amountFilter !== 'all' && (
-            <span className="text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-md font-bold">
-              Filter: {amountFilter === 'has_due' ? 'Active Due > 0' : amountFilter.toUpperCase()}
-            </span>
+        {/* Compact Recent Settlements Strip (shown when settlements exist) */}
+        {allSettlements.length > 0 && (
+          <ScrollArea className="w-full whitespace-nowrap rounded-2xl" dir="ltr">
+            <div className="flex items-center gap-2.5 pb-2">
+              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[10px] font-black uppercase tracking-wider shrink-0">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span>Recent Settlements</span>
+              </div>
+              {allSettlements.slice(0, 12).map((s) => (
+                <div
+                  key={s.id}
+                  className="inline-flex items-center gap-3 px-3.5 py-2 apple-glass-card border border-white/20 dark:border-white/10 hover:border-emerald-500/40 rounded-xl text-left transition-all shrink-0"
+                >
+                  <div>
+                    <p className="font-black text-foreground text-xs truncate max-w-[140px]" dir="rtl">
+                      {s.customerName}
+                    </p>
+                    <p className="text-[9px] font-bold text-muted-foreground">
+                      {formatDate(s.date)} {formatTime(s.date)}
+                    </p>
+                  </div>
+                  <Badge className="bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 font-mono font-black text-xs px-2 py-0.5">
+                    +{settings.shop.currency} {s.amount_paid.toFixed(0)}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        )}
+
+        {/* Unified Search & Filter Bar */}
+        <div className="apple-glass-card border border-white/20 dark:border-white/10 rounded-2xl p-2.5 sm:p-3 flex flex-col gap-2.5" dir="ltr">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* 1. Unified Search */}
+            <div className="relative flex-1 min-w-[220px]">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60 pointer-events-none" />
+              <Input
+                dir="ltr"
+                placeholder="Search customer by name or code (e.g. Ali, C01, 01)..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full apple-glass-input rounded-xl pl-10 pr-9 h-10 text-left font-bold transition-all text-xs sm:text-sm"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted"
+                  title="Clear search"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* 2. Filter by Credit Amount */}
+            <div className="w-full sm:w-52">
+              <Select value={amountFilter} onValueChange={(val: any) => setAmountFilter(val)}>
+                <SelectTrigger className="h-10 rounded-xl apple-glass-input border-border font-bold text-xs">
+                  <div className="flex items-center gap-2 truncate">
+                    <DollarSign className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <SelectValue placeholder="Credit Amount" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="apple-glass-dialog border-white/20 dark:border-white/10 z-[120]">
+                  <SelectItem value="has_due" className="text-xs font-bold">Active Debts (Due &gt; 0)</SelectItem>
+                  <SelectItem value="all" className="text-xs font-bold">All Customers (Any Balance)</SelectItem>
+                  <SelectItem value="gt_500" className="text-xs font-bold">Due &gt; MVR 500</SelectItem>
+                  <SelectItem value="gt_1000" className="text-xs font-bold">Due &gt; MVR 1,000</SelectItem>
+                  <SelectItem value="gt_5000" className="text-xs font-bold">Due &gt; MVR 5,000</SelectItem>
+                  <SelectItem value="zero_balance" className="text-xs font-bold">Zero Balance (Settled)</SelectItem>
+                  <SelectItem value="custom" className="text-xs font-bold">Custom Min/Max Range</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 3. Sort By */}
+            <div className="w-full sm:w-48">
+              <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
+                <SelectTrigger className="h-10 rounded-xl apple-glass-input border-border font-bold text-xs">
+                  <div className="flex items-center gap-2 truncate">
+                    <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <SelectValue placeholder="Sort By" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="apple-glass-dialog border-white/20 dark:border-white/10 z-[120]">
+                  <SelectItem value="due_desc" className="text-xs font-bold">Highest Due First</SelectItem>
+                  <SelectItem value="due_asc" className="text-xs font-bold">Lowest Due First</SelectItem>
+                  <SelectItem value="name_asc" className="text-xs font-bold">Name (A to Z)</SelectItem>
+                  <SelectItem value="code_asc" className="text-xs font-bold">Customer Code</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Clear Filters Button */}
+            {(searchQuery || amountFilter !== 'has_due' || customMinAmount || customMaxAmount) && (
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setSearchQuery('');
+                  setAmountFilter('has_due');
+                  setCustomMinAmount('');
+                  setCustomMaxAmount('');
+                  setSortBy('due_desc');
+                }}
+                className="h-10 px-3 rounded-xl text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-muted"
+                title="Reset all filters"
+              >
+                <X className="h-3.5 w-3.5 mr-1" /> Reset
+              </Button>
+            )}
+
+            {/* Showing count badge */}
+            <div className="hidden md:flex items-center gap-2 ml-auto pl-2 text-xs text-muted-foreground">
+              <span>
+                Showing <strong className="text-foreground font-mono">{filteredCustomers.length}</strong> /{' '}
+                <strong className="text-foreground font-mono">{customers.length}</strong>
+              </span>
+              {amountFilter !== 'all' && (
+                <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-md font-black">
+                  {amountFilter === 'has_due' ? 'Active Due > 0' : amountFilter.toUpperCase()}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Custom Min/Max Amount Row when custom is selected */}
+          {amountFilter === 'custom' && (
+            <div className="flex items-center gap-3 bg-muted/40 p-2.5 rounded-xl border border-border text-xs font-bold">
+              <Filter className="h-3.5 w-3.5 text-primary shrink-0" />
+              <span>Custom Credit Amount:</span>
+              <Input
+                type="number"
+                placeholder="Min MVR..."
+                value={customMinAmount}
+                onChange={(e) => setCustomMinAmount(e.target.value)}
+                className="w-32 h-8 rounded-lg text-xs font-mono"
+              />
+              <span>to</span>
+              <Input
+                type="number"
+                placeholder="Max MVR..."
+                value={customMaxAmount}
+                onChange={(e) => setCustomMaxAmount(e.target.value)}
+                className="w-32 h-8 rounded-lg text-xs font-mono"
+              />
+            </div>
           )}
         </div>
       </div>

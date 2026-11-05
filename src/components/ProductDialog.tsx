@@ -98,6 +98,10 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
         barcode: ''
     });
 
+    // Extra Barcodes state (for products that have multiple different barcodes)
+    const [extraBarcodes, setExtraBarcodes] = useState<string[]>([]);
+    const [extraBarcodeInput, setExtraBarcodeInput] = useState<string>('');
+
     useEffect(() => {
         if (isOpen) {
             if (product) {
@@ -109,6 +113,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                 setExpiryDate(cloned.expiry_date ? parseISO(cloned.expiry_date) : undefined);
                 setUnits(cloned.units && Array.isArray(cloned.units) ? cloned.units : []);
                 setFlavours(cloned.flavours && Array.isArray(cloned.flavours) ? cloned.flavours : []);
+                setExtraBarcodes(cloned.extra_barcodes && Array.isArray(cloned.extra_barcodes) ? cloned.extra_barcodes : []);
             } else {
                 const newId = crypto.randomUUID();
                 const autoBarcode = Math.floor(Math.random() * 900000000000 + 100000000000).toString();
@@ -125,7 +130,8 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                     category: 'OTHER',
                     is_zero_tax: false,
                     units: [],
-                    flavours: []
+                    flavours: [],
+                    extra_barcodes: []
                 });
                 localDataUrlRef.current = null;
                 setUploadedBucketPath(null);
@@ -133,7 +139,9 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                 setExpiryDate(undefined);
                 setUnits([]);
                 setFlavours([]);
+                setExtraBarcodes([]);
             }
+            setExtraBarcodeInput('');
             setIsUnitFormOpen(false);
             setEditingUnitIndex(null);
             setUnitForm({ name: 'Box', price: '', conversion_factor: '', barcode: '' });
@@ -145,6 +153,26 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
     }, [isOpen, product?.id]);
 
     if (!editedProduct) return null;
+
+    const handleAddExtraBarcode = () => {
+        const trimmed = extraBarcodeInput.trim();
+        if (!trimmed) return;
+        if (trimmed === editedProduct.barcode) {
+            showError('This barcode is already set as the main barcode for this product.');
+            return;
+        }
+        if (extraBarcodes.includes(trimmed)) {
+            showError(`Barcode "${trimmed}" is already added.`);
+            return;
+        }
+        setExtraBarcodes(prev => [...prev, trimmed]);
+        setExtraBarcodeInput('');
+        showSuccess(`Added extra barcode: ${trimmed}`);
+    };
+
+    const handleRemoveExtraBarcode = (codeToRemove: string) => {
+        setExtraBarcodes(prev => prev.filter(c => c !== codeToRemove));
+    };
 
     const handleAutoTranslateName = () => {
         if (!editedProduct?.name_en?.trim()) {
@@ -511,6 +539,14 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
             }
         }
 
+        let finalExtraBarcodes = [...extraBarcodes];
+        if (extraBarcodeInput.trim()) {
+            const pendingCode = extraBarcodeInput.trim();
+            if (pendingCode !== editedProduct.barcode && !finalExtraBarcodes.includes(pendingCode)) {
+                finalExtraBarcodes.push(pendingCode);
+            }
+        }
+
         const finalProduct: Product = {
             ...editedProduct,
             cost_price: (editedProduct.cost_price !== undefined && editedProduct.cost_price !== null && !isNaN(Number(editedProduct.cost_price)))
@@ -520,7 +556,8 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
             image: uploadedBucketPath || editedProduct.image || imagePreviewUrl || generatePlaceholderImage(editedProduct.name_en || editedProduct.name_dv, numericCode),
             expiry_date: expiryDate ? format(expiryDate, 'yyyy-MM-dd') : undefined,
             units: finalUnits.length > 0 ? finalUnits : [],
-            flavours: finalFlavours.length > 0 ? finalFlavours : []
+            flavours: finalFlavours.length > 0 ? finalFlavours : [],
+            extra_barcodes: finalExtraBarcodes
         };
 
         onSave(finalProduct);
@@ -848,6 +885,69 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                 </div>
                             </div>
 
+                            {/* Extra Barcodes Section (for products with multiple barcodes) */}
+                            <div className="p-3 rounded-2xl bg-white/5 dark:bg-black/20 border border-white/15 dark:border-white/10 space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-bold text-muted-foreground font-mono">
+                                        {extraBarcodes.length} extra barcode{extraBarcodes.length === 1 ? '' : 's'}
+                                    </span>
+                                    <Label className="text-right block text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-1.5">
+                                        <span>Extra Barcodes (އިތުރު ބާކޯޑުތައް)</span>
+                                        <Barcode className="h-3.5 w-3.5 text-primary" />
+                                    </Label>
+                                </div>
+                                <div className="flex gap-2" dir="ltr">
+                                    <div className="relative flex-1">
+                                        <Barcode className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+                                        <Input
+                                            dir="ltr"
+                                            value={extraBarcodeInput}
+                                            onChange={(e) => setExtraBarcodeInput(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    handleAddExtraBarcode();
+                                                }
+                                            }}
+                                            placeholder="Scan or type another barcode for this product & press Enter..."
+                                            className="apple-glass-input h-9 rounded-xl text-left pl-8 font-mono text-xs"
+                                        />
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        onClick={handleAddExtraBarcode}
+                                        disabled={!extraBarcodeInput.trim()}
+                                        className="h-9 px-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs gap-1 shrink-0"
+                                    >
+                                        <Plus className="h-3.5 w-3.5" />
+                                        <span>Add Barcode</span>
+                                    </Button>
+                                </div>
+                                {extraBarcodes.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 pt-1" dir="ltr">
+                                        {extraBarcodes.map((code) => (
+                                            <Badge
+                                                key={code}
+                                                variant="secondary"
+                                                className="bg-primary/15 text-primary border border-primary/30 px-2.5 py-1 rounded-xl font-mono text-xs font-bold flex items-center gap-1.5"
+                                            >
+                                                <Barcode className="h-3 w-3 opacity-70" />
+                                                <span>{code}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveExtraBarcode(code)}
+                                                    className="ml-0.5 hover:bg-red-500/20 hover:text-red-500 rounded-full p-0.5 transition-colors"
+                                                    title="Remove barcode"
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </button>
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
                             {/* Barcode Label Live Preview Badge */}
                             {editedProduct.barcode && (
                                 <div className="p-3 bg-muted/40 rounded-2xl border border-border/80 flex items-center justify-between gap-3 text-right">
@@ -866,7 +966,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                             <span className="truncate">{editedProduct.name_dv || editedProduct.name_en || 'Product'}</span>
                                         </div>
                                         <p className="text-[10px] font-mono text-muted-foreground mt-0.5">
-                                            Scannable Barcode: {editedProduct.barcode}
+                                            Scannable Barcode: {editedProduct.barcode}{extraBarcodes.length > 0 ? ` (+${extraBarcodes.length} extra)` : ''}
                                         </p>
                                     </div>
                                 </div>
@@ -893,20 +993,62 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                 </div>
 
                                 <div className="space-y-1">
-                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                                        {renderBoth('expiry_date')}
-                                    </Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button variant="outline" className={cn("w-full justify-between text-right font-bold h-11 text-xs rounded-xl apple-glass-input hover:bg-white/10", !expiryDate && "text-muted-foreground")}>
-                                                {expiryDate ? format(expiryDate, "dd/MM/yyyy") : <span>{renderBoth('pick_a_date')}</span>}
-                                                <CalendarIcon className="h-3.5 w-3.5 opacity-50" />
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0 apple-glass-dialog border border-white/20 z-[120]" align="start">
-                                            <Calendar mode="single" selected={expiryDate} onSelect={setExpiryDate} initialFocus className="text-foreground" />
-                                        </PopoverContent>
-                                    </Popover>
+                                    <div className="flex items-center justify-between">
+                                        {expiryDate ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => setExpiryDate(undefined)}
+                                                className="text-[9px] font-bold text-red-400 hover:text-red-500 flex items-center gap-0.5"
+                                                title="Clear expiry date"
+                                            >
+                                                <X className="h-2.5 w-2.5" /> Clear
+                                            </button>
+                                        ) : <span />}
+                                        <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                                            {renderBoth('expiry_date')}
+                                        </Label>
+                                    </div>
+                                    <div className="flex items-center gap-1" dir="ltr">
+                                        <Input
+                                            type="date"
+                                            dir="ltr"
+                                            value={expiryDate ? format(expiryDate, 'yyyy-MM-dd') : ''}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (!val) {
+                                                    setExpiryDate(undefined);
+                                                } else {
+                                                    const parsed = parseISO(val);
+                                                    if (!isNaN(parsed.getTime())) {
+                                                        setExpiryDate(parsed);
+                                                    }
+                                                }
+                                            }}
+                                            className="apple-glass-input h-11 rounded-xl text-left font-mono font-bold text-xs flex-1 px-2.5"
+                                        />
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="icon"
+                                                    className="h-11 w-10 shrink-0 rounded-xl apple-glass-input hover:bg-white/10"
+                                                    title="Open Calendar Picker"
+                                                >
+                                                    <CalendarIcon className="h-4 w-4 text-primary" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0 apple-glass-dialog border border-white/20 z-[150]" align="center">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={expiryDate}
+                                                    onSelect={setExpiryDate}
+                                                    initialFocus
+                                                    className="text-foreground"
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
                                 </div>
 
                                 <div className="apple-glass-card p-2.5 rounded-xl border border-white/15 dark:border-white/10 flex items-center justify-between h-11">

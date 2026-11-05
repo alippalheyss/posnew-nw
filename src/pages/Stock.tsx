@@ -47,7 +47,9 @@ const Stock = () => {
       item.name_dv.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.name_en.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.barcode.includes(searchTerm) ||
-      item.item_code.toLowerCase().includes(searchTerm.toLowerCase());
+      item.item_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.extra_barcodes?.some(b => b.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      item.flavours?.some(f => f.barcode && f.barcode.includes(searchTerm));
 
     if (!matchesSearch) return false;
 

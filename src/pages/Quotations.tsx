@@ -327,9 +327,15 @@ export const Quotations: React.FC = () => {
         <div className="flex flex-wrap items-center justify-between gap-4 apple-glass-card border border-white/20 dark:border-white/10 rounded-3xl p-4 sm:px-6 shadow-sm">
           {/* Title & Subtitle */}
           <div className="flex items-center gap-3.5 text-right">
-            <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary shrink-0 shadow-xs">
-              <FileText className="h-6 w-6" />
-            </div>
+            {settings?.shop?.logo ? (
+              <div className="w-12 h-12 rounded-2xl bg-white border border-border flex items-center justify-center p-1.5 shrink-0 shadow-xs overflow-hidden">
+                <img src={settings.shop.logo} alt="Shop Logo" className="w-full h-full object-contain" />
+              </div>
+            ) : (
+              <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary shrink-0 shadow-xs">
+                <FileText className="h-6 w-6" />
+              </div>
+            )}
             <div>
               <h1 className="text-xl sm:text-2xl font-black text-foreground leading-tight">
                 އަންދާސީ ހިސާބު (Quotations)

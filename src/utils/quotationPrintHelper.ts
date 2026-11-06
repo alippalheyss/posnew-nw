@@ -5,7 +5,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 /**
- * 80mm Thermal Slip for Quotations (އަންދާސީ ހިސާބު)
+ * 80mm Thermal Slip for Quotations (English-Only, No Dhivehi, with Shop Logo)
  */
 export const printQuotation80mm = (quotation: Quotation, settings: AppSettings) => {
   const currency = settings.shop.currency || 'MVR';
@@ -13,8 +13,9 @@ export const printQuotation80mm = (quotation: Quotation, settings: AppSettings) 
   const shopContact = settings.shop.contactNumber || '';
   const shopAddress = settings.shop.address || '';
   const shopTin = settings.shop.tinNumber || (settings.shop as any).tin || '';
+  const shopLogo = settings.shop.logo || '';
 
-  const customerName = quotation.customer?.name_en || quotation.customer?.name_dv || quotation.customer_name || 'Valued Customer / އާންމު ކަސްޓަމަރު';
+  const customerName = quotation.customer?.name_en || quotation.customer?.name_dv || quotation.customer_name || 'Valued Customer';
   const customerPhone = quotation.customer?.phone || quotation.customer_phone || '';
 
   const itemsHtml = quotation.items.map((item, idx) => {
@@ -35,19 +36,19 @@ export const printQuotation80mm = (quotation: Quotation, settings: AppSettings) 
 
   const html = `
     <!DOCTYPE html>
-    <html dir="rtl">
+    <html dir="ltr">
     <head>
       <meta charset="utf-8" />
       <title>Quotation ${quotation.quotation_number}</title>
       <style>
         @page { size: 80mm auto; margin: 0; }
         body {
-          font-family: 'Faruma', 'MV Boli', Tahoma, sans-serif;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
           width: 72mm;
           margin: 0 auto;
           padding: 8px 4px;
           color: #000;
-          line-height: 1.3;
+          line-height: 1.35;
         }
         .text-center { text-align: center; }
         .text-left { text-align: left; }
@@ -59,13 +60,28 @@ export const printQuotation80mm = (quotation: Quotation, settings: AppSettings) 
           padding: 4px;
           margin: 6px 0;
           text-align: center;
-          font-size: 12px;
+          font-size: 13px;
           font-weight: 900;
           letter-spacing: 1px;
+        }
+        .logo-container {
+          text-align: center;
+          margin-bottom: 6px;
+        }
+        .logo-container img {
+          max-height: 52px;
+          max-width: 140px;
+          object-fit: contain;
         }
       </style>
     </head>
     <body>
+      ${shopLogo ? `
+        <div class="logo-container">
+          <img src="${shopLogo}" alt="Shop Logo" />
+        </div>
+      ` : ''}
+
       <div class="text-center">
         <h2 style="margin: 0 0 2px 0; font-size: 16px; font-weight: 900;">${shopName}</h2>
         ${shopAddress ? `<div style="font-size: 10px;">${shopAddress}</div>` : ''}
@@ -74,39 +90,39 @@ export const printQuotation80mm = (quotation: Quotation, settings: AppSettings) 
       </div>
 
       <div class="banner">
-        <div>QUOTATION / އަންދާސީ ހިސާބު</div>
+        <div>QUOTATION</div>
         <div style="font-size: 9px; font-weight: normal; margin-top: 2px;">*** NOT A TAX INVOICE ***</div>
       </div>
 
       <div style="font-size: 10px; margin-bottom: 6px;">
         <div style="display: flex; justify-content: space-between;">
-          <span>ކޯޓޭޝަން ނަންބަރު:</span>
-          <span class="bold" dir="ltr">${quotation.quotation_number}</span>
+          <span>Quotation No:</span>
+          <span class="bold">${quotation.quotation_number}</span>
         </div>
         <div style="display: flex; justify-content: space-between;">
-          <span>ތާރީޚް:</span>
-          <span dir="ltr">${formatDate(quotation.date)} ${formatTime(quotation.date)}</span>
+          <span>Date:</span>
+          <span>${formatDate(quotation.date)} ${formatTime(quotation.date)}</span>
         </div>
         <div style="display: flex; justify-content: space-between;">
-          <span>ބަލައިގަންނާނެ އެންމެ ފަހު ތާރީޚް:</span>
-          <span class="bold" dir="ltr">${formatDate(quotation.valid_until)}</span>
+          <span>Valid Until:</span>
+          <span class="bold">${formatDate(quotation.valid_until)}</span>
         </div>
         <div class="divider"></div>
         <div style="display: flex; justify-content: space-between;">
-          <span>ކަސްޓަމަރު:</span>
+          <span>Customer:</span>
           <span class="bold">${customerName}</span>
         </div>
         ${customerPhone ? `
         <div style="display: flex; justify-content: space-between;">
-          <span>ފޯނު:</span>
-          <span dir="ltr">${customerPhone}</span>
+          <span>Phone:</span>
+          <span>${customerPhone}</span>
         </div>` : ''}
       </div>
 
       <div class="divider"></div>
       <div style="font-size: 10px; font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between;">
-        <span>ތަކެތި (Description)</span>
-        <span>އަގު (${currency})</span>
+        <span>Item Description</span>
+        <span>Price (${currency})</span>
       </div>
       <div class="divider"></div>
 
@@ -116,30 +132,30 @@ export const printQuotation80mm = (quotation: Quotation, settings: AppSettings) 
 
       <div style="font-size: 11px;">
         <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-          <span>ސަބްޓޯޓަލް (Subtotal):</span>
-          <span dir="ltr">${currency} ${quotation.subtotal.toFixed(2)}</span>
+          <span>Subtotal:</span>
+          <span>${currency} ${quotation.subtotal.toFixed(2)}</span>
         </div>
         ${quotation.tax_amount > 0 ? `
         <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-          <span>ޖީ.އެސް.ޓީ (GST ${settings.shop.taxRate}%):</span>
-          <span dir="ltr">${currency} ${quotation.tax_amount.toFixed(2)}</span>
+          <span>GST (${settings.shop.taxRate}%):</span>
+          <span>${currency} ${quotation.tax_amount.toFixed(2)}</span>
         </div>` : ''}
         <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 900; margin-top: 4px; border-top: 1px solid #000; padding-top: 4px;">
-          <span>ޖުމްލަ (Grand Total):</span>
-          <span dir="ltr">${currency} ${quotation.grand_total.toFixed(2)}</span>
+          <span>Grand Total:</span>
+          <span>${currency} ${quotation.grand_total.toFixed(2)}</span>
         </div>
       </div>
 
       ${quotation.notes ? `
       <div class="divider"></div>
       <div style="font-size: 9px; color: #444;">
-        <strong>ނޯޓް:</strong> ${quotation.notes}
+        <strong>Note:</strong> ${quotation.notes}
       </div>` : ''}
 
       <div class="divider"></div>
       <div class="text-center" style="font-size: 9px; color: #666; margin-top: 6px;">
-        <div>މިއީ އަންދާސީ ހިސާބެކެވެ. މުދާ ދޫކުރެވޭނީ ސްޓޮކް ހުރި މިންވަރަކުންނެވެ.</div>
-        <div style="margin-top: 2px;">Thank you for your business!</div>
+        <div>This is a price quotation. Subject to stock availability.</div>
+        <div style="margin-top: 3px; font-weight: bold;">Thank you for your business!</div>
       </div>
     </body>
     </html>
@@ -149,7 +165,7 @@ export const printQuotation80mm = (quotation: Quotation, settings: AppSettings) 
 };
 
 /**
- * A4 Professional PDF Generator for Quotations
+ * A4 Professional PDF Generator for Quotations (with Shop Logo, Bold Customer, No Barcode Column, No Status)
  */
 export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettings) => {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -158,6 +174,7 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
   const shopAddress = settings.shop.address || '';
   const shopPhone = settings.shop.contactNumber || '';
   const shopTin = settings.shop.tinNumber || (settings.shop as any).tin || '';
+  const shopLogo = settings.shop.logo || '';
 
   const customerName = quotation.customer?.name_en || quotation.customer?.name_dv || quotation.customer_name || 'Valued Customer';
   const customerPhone = quotation.customer?.phone || quotation.customer_phone || '';
@@ -166,21 +183,35 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
   doc.setFillColor(15, 23, 42); // Slate-900
   doc.rect(0, 0, 210, 38, 'F');
 
+  let textStartX = 14;
+
+  // 1. Render Shop Logo if available
+  if (shopLogo) {
+    try {
+      const format = shopLogo.includes('image/jpeg') || shopLogo.includes('.jpg') || shopLogo.includes('.jpeg') ? 'JPEG' : 'PNG';
+      doc.addImage(shopLogo, format, 14, 6, 26, 26);
+      textStartX = 45;
+    } catch (e) {
+      // Fallback without logo shift if format fails
+      textStartX = 14;
+    }
+  }
+
   // Shop Name & Branding
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.text(shopName.toUpperCase(), 14, 18);
+  doc.setFontSize(18);
+  doc.text(shopName.toUpperCase(), textStartX, 18);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.setTextColor(203, 213, 225);
   const headerDetails = [
     shopAddress,
     shopPhone ? `Phone: ${shopPhone}` : '',
     shopTin ? `Shop TIN: ${shopTin}` : '',
   ].filter(Boolean).join('  |  ');
-  doc.text(headerDetails, 14, 26);
+  doc.text(headerDetails, textStartX, 26);
 
   // Big Title Right Side
   doc.setFont('helvetica', 'bold');
@@ -194,36 +225,49 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
 
   // Metadata Panel
   doc.setTextColor(51, 65, 85);
+
+  // Customer Info (Left) — BOLD Customer Name
+  doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
-
-  // Customer Info (Left)
-  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(71, 85, 105);
   doc.text('QUOTATION ISSUED TO:', 14, 48);
-  doc.setFont('helvetica', 'normal');
-  doc.text(customerName, 14, 54);
-  if (customerPhone) doc.text(`Phone: ${customerPhone}`, 14, 60);
 
-  // Quote Info (Right)
   doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(15, 23, 42);
+  doc.text(customerName.toUpperCase(), 14, 55);
+
+  if (customerPhone) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Phone: ${customerPhone}`, 14, 62);
+  }
+
+  // Quote Info (Right) — Clean Date & Valid Until (No Status)
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(71, 85, 105);
   doc.text('QUOTATION DETAILS:', 140, 48);
+
   doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(15, 23, 42);
   doc.text(`Quotation Date: ${formatDate(quotation.date)}`, 140, 54);
   doc.text(`Valid Until: ${formatDate(quotation.valid_until)}`, 140, 60);
-  doc.text(`Status: ${quotation.status.toUpperCase()}`, 140, 66);
 
-  // Items Table
+  // Items Table — Product Barcode Column Removed!
   const tableRows = quotation.items.map((item, idx) => [
     idx + 1,
     item.name_en || item.name_dv || 'Item',
-    item.barcode || item.item_code || '-',
     item.qty,
     `${currency} ${Number(item.price).toFixed(2)}`,
     `${currency} ${(Number(item.price) * Number(item.qty)).toFixed(2)}`,
   ]);
 
   autoTable(doc, {
-    startY: 72,
-    head: [['#', 'Item Description', 'Barcode / Code', 'Qty', 'Unit Price', 'Total']],
+    startY: 68,
+    head: [['#', 'Item Description', 'Qty', 'Unit Price', 'Total']],
     body: tableRows,
     theme: 'striped',
     headStyles: {
@@ -233,16 +277,15 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
       fontSize: 9,
     },
     styles: {
-      fontSize: 8.5,
-      cellPadding: 3,
+      fontSize: 9,
+      cellPadding: 3.5,
     },
     columnStyles: {
-      0: { cellWidth: 10, halign: 'center' },
-      1: { cellWidth: 70 },
-      2: { cellWidth: 35 },
-      3: { cellWidth: 20, halign: 'center' },
-      4: { cellWidth: 30, halign: 'right' },
-      5: { cellWidth: 30, halign: 'right' },
+      0: { cellWidth: 12, halign: 'center' },
+      1: { cellWidth: 105 },
+      2: { cellWidth: 18, halign: 'center' },
+      3: { cellWidth: 28, halign: 'right' },
+      4: { cellWidth: 28, halign: 'right' },
     },
   });
 
@@ -252,6 +295,7 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
   const summaryX = 130;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
+  doc.setTextColor(51, 65, 85);
   doc.text('Subtotal:', summaryX, finalY);
   doc.text(`${currency} ${quotation.subtotal.toFixed(2)}`, 196, finalY, { align: 'right' });
 
@@ -288,8 +332,7 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
   doc.setTextColor(100, 116, 139);
   doc.text('Authorized Signature & Stamp', 14, pageHeight - 30);
 
-  doc.text(`Generated on ${new Date().toLocaleDateString()} | MVPOS`, 196, pageHeight - 15, { align: 'right' });
+  doc.text(`Generated on ${new Date().toLocaleDateString()} | ${shopName}`, 196, pageHeight - 15, { align: 'right' });
 
   doc.save(`Quotation_${quotation.quotation_number}.pdf`);
 };
-

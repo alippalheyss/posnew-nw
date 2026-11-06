@@ -526,9 +526,9 @@ export const Quotations: React.FC = () => {
                       key={item.id}
                       className="p-2.5 rounded-2xl bg-muted/40 border border-border/60 flex items-center justify-between gap-2 transition-all hover:bg-muted/60"
                     >
-                      <div className="flex-1 min-w-0 text-right">
+                      <div className="flex-1 min-w-0 text-left" dir="ltr">
                         <p className="text-xs font-black text-foreground truncate">
-                          {item.name_dv || item.name_en}
+                          {item.name_en || item.name_dv || 'Item'}
                         </p>
                         <p className="text-[10px] text-muted-foreground font-mono">
                           {settings.shop.currency} {Number(item.price).toFixed(2)} each
@@ -714,8 +714,8 @@ export const Quotations: React.FC = () => {
                               </Badge>
                             )}
                           </div>
-                          <p className="text-xs font-black text-foreground line-clamp-2 leading-tight">
-                            {product.name_dv || product.name_en}
+                          <p className="text-xs font-black text-foreground line-clamp-2 leading-tight text-left" dir="ltr">
+                            {product.name_en || product.name_dv || 'Unnamed Product'}
                           </p>
                         </div>
 
@@ -928,3 +928,4 @@ export const Quotations: React.FC = () => {
 };
 
 export default Quotations;
+

@@ -18,7 +18,7 @@ export const printQuotation80mm = (quotation: Quotation, settings: AppSettings) 
   const customerPhone = quotation.customer?.phone || quotation.customer_phone || '';
 
   const itemsHtml = quotation.items.map((item, idx) => {
-    const name = item.name_dv || item.name_en || 'Item';
+    const name = item.name_en || item.name_dv || 'Item';
     const total = (Number(item.price || 0) * Number(item.qty || 0)).toFixed(2);
     return `
       <div style="margin-bottom: 5px; font-size: 11px;">
@@ -292,3 +292,4 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
 
   doc.save(`Quotation_${quotation.quotation_number}.pdf`);
 };
+

@@ -186,116 +186,158 @@ const GSTReports = () => {
 
     return (
         <div className="p-4 sm:p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
-            {/* Header with auto-scale layout and refresh button */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 shrink-0">
-                <div className="text-right">
-                    <h1 className="text-2xl sm:text-3xl font-black text-foreground flex items-center justify-end gap-3">
-                        {renderBoth('gst_reports')} <Landmark className="h-7 w-7 sm:h-8 sm:w-8 text-primary shrink-0" />
-                    </h1>
-                    <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{renderBoth('gst_reports_description')}</p>
+            {/* Unified Top Header Bar */}
+            <div className="shrink-0 mb-4 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-4 apple-glass-card border border-white/20 dark:border-white/10 rounded-3xl p-4 sm:px-6 shadow-sm">
+                    {/* Title & Subtitle (Right side in RTL) */}
+                    <div className="flex items-center gap-3.5 text-right">
+                        <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary shrink-0 shadow-xs">
+                            <Landmark className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <h1 className="text-xl sm:text-2xl font-black text-foreground leading-tight">
+                                {renderBoth('gst_reports')}
+                            </h1>
+                            <p className="text-xs text-muted-foreground mt-0.5" dir="ltr">
+                                {renderBoth('gst_reports_description')}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Net GST Summary + Action Buttons (Left side in RTL) */}
+                    <div className="flex flex-wrap items-center gap-2.5 mr-auto sm:mr-0" dir="ltr">
+                        {/* Compact Net GST Summary Card */}
+                        <div className={cn(
+                            "flex items-center gap-3 px-4 py-2 rounded-2xl border transition-all",
+                            netGST >= 0 ? "bg-red-500/10 border-red-500/30" : "bg-emerald-500/10 border-emerald-500/30"
+                        )}>
+                            <div className={cn(
+                                "w-8 h-8 rounded-xl flex items-center justify-center shrink-0",
+                                netGST >= 0 ? "bg-red-500/20 text-red-500" : "bg-emerald-500/20 text-emerald-500"
+                            )}>
+                                <Calculator className="h-4 w-4" />
+                            </div>
+                            <div className="text-left">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">
+                                        {netGST >= 0 ? 'Net GST Payable' : 'GST Tax Credit'}
+                                    </span>
+                                    <span className={cn(
+                                        "text-[9px] font-black px-1.5 py-0.2 rounded-md font-mono",
+                                        netGST >= 0 ? "bg-red-500/20 text-red-500" : "bg-emerald-500/20 text-emerald-500"
+                                    )}>
+                                        {settings.shop.taxRate}% MIRA
+                                    </span>
+                                </div>
+                                <p className={cn(
+                                    "text-base sm:text-lg font-black font-mono leading-tight",
+                                    netGST >= 0 ? "text-red-500" : "text-emerald-500"
+                                )}>
+                                    {settings.shop.currency} {Math.abs(netGST).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Action Toolbar */}
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button 
+                                onClick={handleRefresh} 
+                                variant="outline" 
+                                disabled={isRefreshing}
+                                className="gap-1.5 h-10 px-3.5 rounded-xl font-black text-xs border-border bg-card hover:bg-muted"
+                                title="Refresh GST and Purchases data from cloud / އައުކުރުން"
+                            >
+                                <RefreshCw className={cn("h-4 w-4 text-primary", isRefreshing && "animate-spin")} />
+                                <span className="hidden xl:inline">Refresh</span>
+                            </Button>
+
+                            <Button 
+                                onClick={exportToExcel} 
+                                variant="outline" 
+                                className="gap-1.5 h-10 px-3.5 rounded-xl font-black text-xs border-border bg-card hover:bg-muted"
+                                title="Download MIRA Input Tax Statement Excel"
+                            >
+                                <Download className="h-4 w-4 text-emerald-500" /> 
+                                <span>Excel</span>
+                            </Button>
+
+                            <Button 
+                                onClick={() => navigate('/vendors')} 
+                                variant="outline" 
+                                className="gap-1.5 h-10 px-3.5 rounded-xl font-black text-xs border-primary/30 hover:border-primary/60 bg-primary/10 hover:bg-primary/20 text-primary"
+                            >
+                                <Building2 className="h-4 w-4" />
+                                <span>{renderBoth('vendors')}</span>
+                            </Button>
+
+                            <Button 
+                                onClick={() => navigate('/mobile-purchase')} 
+                                variant="outline" 
+                                className="gap-1.5 h-10 px-3.5 rounded-xl font-black text-xs border-emerald-500/30 hover:border-emerald-500/60 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400"
+                            >
+                                <Smartphone className="h-4 w-4" />
+                                <span className="hidden sm:inline">Mobile Bill</span>
+                                <span className="sm:hidden">Mobile</span>
+                            </Button>
+
+                            <Button 
+                                onClick={() => setIsPurchaseWindowOpen(true)} 
+                                className="gap-1.5 h-10 px-4 rounded-xl font-black text-xs bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm active:scale-[0.98]"
+                            >
+                                <PlusCircle className="h-4 w-4" /> 
+                                <span>Record Bill</span>
+                            </Button>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 justify-start lg:justify-end">
-                    <Select value={timeRange} onValueChange={setTimeRange}>
-                        <SelectTrigger className="w-[140px] sm:w-[160px] bg-muted border-border text-right h-10 rounded-xl text-xs sm:text-sm font-bold shadow-xs">
-                            <SelectValue placeholder="Time Period" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-card border-border text-foreground">
-                            <SelectItem value="today" className="text-right">Today</SelectItem>
-                            <SelectItem value="this_month" className="text-right">This Month</SelectItem>
-                            <SelectItem value="this_year" className="text-right">This Year</SelectItem>
-                            <SelectItem value="q1" className="text-right">Q1 (Jan-Mar)</SelectItem>
-                            <SelectItem value="q2" className="text-right">Q2 (Apr-Jun)</SelectItem>
-                            <SelectItem value="q3" className="text-right">Q3 (Jul-Sep)</SelectItem>
-                            <SelectItem value="q4" className="text-right">Q4 (Oct-Dec)</SelectItem>
-                        </SelectContent>
-                    </Select>
+                {/* Compact Period & Tax Stats Strip */}
+                <div className="apple-glass-card border border-white/20 dark:border-white/10 rounded-2xl p-2.5 sm:p-3 flex flex-wrap items-center justify-between gap-3" dir="ltr">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-black text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mr-1">
+                            <Landmark className="h-3.5 w-3.5 text-primary" /> Period:
+                        </span>
+                        <Select value={timeRange} onValueChange={setTimeRange}>
+                            <SelectTrigger className="w-[150px] sm:w-[170px] h-9 rounded-xl apple-glass-input border-border font-bold text-xs">
+                                <SelectValue placeholder="Time Period" />
+                            </SelectTrigger>
+                            <SelectContent className="apple-glass-dialog border-white/20 dark:border-white/10 z-[120]">
+                                <SelectItem value="today" className="text-xs font-bold">Today</SelectItem>
+                                <SelectItem value="this_month" className="text-xs font-bold">This Month</SelectItem>
+                                <SelectItem value="this_year" className="text-xs font-bold">This Year</SelectItem>
+                                <SelectItem value="q1" className="text-xs font-bold">Q1 (Jan - Mar)</SelectItem>
+                                <SelectItem value="q2" className="text-xs font-bold">Q2 (Apr - Jun)</SelectItem>
+                                <SelectItem value="q3" className="text-xs font-bold">Q3 (Jul - Sep)</SelectItem>
+                                <SelectItem value="q4" className="text-xs font-bold">Q4 (Oct - Dec)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
 
-                    <Button 
-                        onClick={handleRefresh} 
-                        variant="outline" 
-                        disabled={isRefreshing}
-                        className="gap-2 border-border hover:bg-muted h-10 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs"
-                        title="Refresh GST and Purchases data from cloud / އައުކުރުން"
-                    >
-                        <RefreshCw className={cn("h-4 w-4 text-primary", isRefreshing && "animate-spin")} />
-                        <span className="hidden sm:inline">Refresh</span>
-                    </Button>
+                    {/* Quick metric pill counters */}
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs">
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20">
+                            <ArrowUpRight className="h-3.5 w-3.5 text-primary" />
+                            <span className="text-[11px] font-bold text-muted-foreground">Output GST:</span>
+                            <span className="font-mono font-black text-foreground">{settings.shop.currency} {outputGST.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
 
-                    <Button onClick={exportToExcel} variant="outline" className="gap-2 border-border hover:bg-muted h-10 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold shadow-xs">
-                        <Download className="h-4 w-4" /> 
-                        <span className="hidden sm:inline">{renderBoth('download_excel')}</span>
-                        <span className="sm:hidden">Excel</span>
-                    </Button>
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                            <ArrowDownLeft className="h-3.5 w-3.5 text-amber-500" />
+                            <span className="text-[11px] font-bold text-muted-foreground">Input GST:</span>
+                            <span className="font-mono font-black text-foreground">{settings.shop.currency} {inputGST.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
 
-                    <Button 
-                        onClick={() => navigate('/vendors')} 
-                        variant="outline" 
-                        className="gap-2 border-primary/30 hover:border-primary/60 bg-primary/10 hover:bg-primary/20 text-primary h-10 px-3 sm:px-4 rounded-xl font-black text-xs sm:text-sm transition-all shadow-xs"
-                    >
-                        <Building2 className="h-4 w-4" />
-                        <span>{renderBoth('vendors')}</span>
-                    </Button>
-
-                    <Button 
-                        onClick={() => navigate('/mobile-purchase')} 
-                        variant="outline" 
-                        className="gap-2 border-emerald-500/30 hover:border-emerald-500/60 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 h-10 px-3 sm:px-4 rounded-xl font-black text-xs sm:text-sm transition-all shadow-xs"
-                    >
-                        <Smartphone className="h-4 w-4" />
-                        <span className="hidden md:inline">ބިލް އެޅުން (Mobile) (Purchase Bill Mobile)</span>
-                        <span className="md:hidden">ބިލް އެޅުން (Mobile)</span>
-                    </Button>
-
-                    <Button onClick={() => setIsPurchaseWindowOpen(true)} className="gap-2 bg-primary hover:bg-primary/90 h-10 px-4 sm:px-5 rounded-xl font-black text-xs sm:text-sm shadow-[0_0_20px_rgba(0,132,255,0.3)]">
-                        <PlusCircle className="h-4 w-4" /> 
-                        <span>{renderBoth('record_local_purchase')}</span>
-                    </Button>
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/60 border border-border">
+                            <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-[11px] font-bold text-muted-foreground">Purchases:</span>
+                            <span className="font-mono font-black text-foreground">{filteredPurchases.length} bills</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <ScrollArea className="flex-1 custom-scrollbar">
-                <div className="space-y-8 pb-6">
-                    {/* Summary Stats */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <Card className="apple-glass-card border border-white/20 dark:border-white/10 rounded-[2rem] p-6 relative group overflow-hidden shadow-md hover:shadow-xl transition-all duration-300">
-                           <div className="absolute top-0 right-0 w-28 h-28 bg-primary/15 rounded-full -mr-12 -mt-12 blur-2xl" />
-                           <div className="flex justify-between items-center mb-4">
-                              <ArrowUpRight className="h-5 w-5 text-primary" />
-                              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Output GST (Sales)</span>
-                           </div>
-                           <p className="text-3xl font-black text-foreground">{settings.shop.currency} {outputGST.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                           <p className="text-[10px] text-muted-foreground/60 mt-1 font-bold uppercase tracking-widest">TOTAL TAXABLE: {totalTaxableSales.toLocaleString()}</p>
-                        </Card>
-
-                        <Card className="apple-glass-card border border-white/20 dark:border-white/10 rounded-[2rem] p-6 relative group overflow-hidden shadow-md hover:shadow-xl transition-all duration-300">
-                           <div className="absolute top-0 right-0 w-28 h-28 bg-amber-500/15 rounded-full -mr-12 -mt-12 blur-2xl" />
-                           <div className="flex justify-between items-center mb-4">
-                              <ArrowDownLeft className="h-5 w-5 text-amber-500" />
-                              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Input GST (Purchases)</span>
-                           </div>
-                           <p className="text-3xl font-black text-foreground">{settings.shop.currency} {inputGST.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                           <p className="text-[10px] text-muted-foreground/60 mt-1 font-bold uppercase tracking-widest">TOTAL PURCHASES: {totalPurchases.toLocaleString()}</p>
-                        </Card>
-
-                        <Card className="apple-glass-card border border-white/20 dark:border-white/10 rounded-[2rem] p-6 relative group overflow-hidden shadow-md hover:shadow-xl transition-all duration-300">
-                           <div className={cn(
-                             "absolute top-0 right-0 w-28 h-28 rounded-full -mr-12 -mt-12 blur-2xl",
-                             netGST >= 0 ? "bg-red-500/15" : "bg-emerald-500/15"
-                           )} />
-                           <div className="flex justify-between items-center mb-4">
-                              <Calculator className="h-5 w-5 text-purple-500" />
-                              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Net GST Payable</span>
-                           </div>
-                           <p className={cn(
-                             "text-3xl font-black",
-                             netGST >= 0 ? "text-red-500" : "text-green-500"
-                           )}>{settings.shop.currency} {Math.abs(netGST).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                           <p className="text-[10px] text-muted-foreground/50 mt-1 font-bold uppercase tracking-widest">
-                             {netGST >= 0 ? "AMOUNT TO PAY" : "TAX CREDIT"}
-                           </p>
-                        </Card>
-                    </div>
+                <div className="space-y-4 pb-6">
 
                     {/* Input GST Table */}
                     <Card className="apple-glass-card border border-white/20 dark:border-white/10 rounded-[2rem] overflow-hidden shadow-2xl flex flex-col">

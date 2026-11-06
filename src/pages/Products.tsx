@@ -420,195 +420,192 @@ const Products = () => {
 
   return (
     <div className="p-4 sm:p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden relative" dir="rtl">
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-        <div className="text-right">
-           <h1 className="text-2xl sm:text-3xl font-black text-foreground flex items-center justify-end gap-3">
-             {renderBoth('products')} <Package className="h-7 w-7 sm:h-8 sm:w-8 text-primary shrink-0" />
-           </h1>
-           <p className="text-xs sm:text-sm text-muted-foreground mt-1">Manage inventory, flag inactive items, and perform bulk updates</p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5">
-           <Button 
-             variant="outline" 
-             onClick={handleTranslateAllMissingDhivehi}
-             disabled={isTranslating}
-             className="gap-2 border-border hover:bg-muted h-11 px-3.5 sm:px-4 rounded-xl font-bold text-xs"
-             title="Automatically translate English product names into Dhivehi using smart supermarket dictionary"
-           >
-             <Sparkles className="h-4 w-4 text-amber-500" />
-             <span>{isTranslating ? 'Translating...' : 'Auto-Translate Dhivehi (ދިވެހިކުރޭ)'}</span>
-           </Button>
-           <Button 
-             variant="outline" 
-             onClick={() => setIsImportDialogOpen(true)}
-             className="gap-2 border-border hover:bg-muted h-11 px-4 sm:px-5 rounded-xl font-bold text-xs"
-           >
-             <Upload className="h-4 w-4" /> {renderBoth('import_excel')}
-           </Button>
-           <Button 
-             onClick={handleAddClick}
-             className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground h-11 px-5 sm:px-6 rounded-xl font-black shadow-[0_0_20px_rgba(0,132,255,0.3)] text-xs"
-           >
-             <Plus className="h-4 w-4" /> {renderBoth('add_new_product')}
-           </Button>
-        </div>
-      </div>
-
-      {/* PROMINENT CENTERED SEARCH BAR */}
-      <div className="w-full flex items-center justify-center mb-4">
-        <div className="relative w-full max-w-2xl" dir="ltr">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary pointer-events-none" />
-          <Input 
-            dir="ltr"
-            placeholder={renderBothString('search_products')}
-            value={searchTerm}
-            onChange={(e) => { setSearchTerm(e.target.value); setVisibleCount(30); }}
-            className="w-full bg-muted/80 hover:bg-muted border-2 border-border focus:border-primary rounded-2xl pl-12 pr-12 h-12 text-left font-bold text-sm sm:text-base focus:bg-background transition-all shadow-sm placeholder:text-muted-foreground/60 text-foreground"
-          />
-          {searchTerm && (
-            <button
-              onClick={() => { setSearchTerm(''); setVisibleCount(30); }}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors"
-              title="Clear search"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Filter Tabs & Controls Bar */}
-      <div className="space-y-3 mb-4">
-        {/* Status Filters: All, Favorites, Low Stock, Out of Stock, Never Sold, Unsold >30d, Never Stocked */}
-        <div className="flex flex-wrap items-center gap-2">
-          {[
-            { id: 'ALL', label: 'All Products (ހުރިހާ)', count: products.length },
-            { 
-              id: 'FAVORITES', 
-              label: 'Favorites (ފޭވަރިޓްސް)', 
-              count: favoriteProductIds.length, 
-              hasStar: true
-            },
-            { id: 'LOW_STOCK', label: 'Low Stock (<10)', badgeColor: 'bg-orange-500/15 text-orange-400' },
-            { id: 'OUT_OF_STOCK', label: 'Out of Stock (ހުސްވެފައި)', badgeColor: 'bg-red-500/15 text-red-400' },
-            { id: 'NEVER_SOLD', label: 'Never Sold (އަދި ނުވިކޭ)', badgeColor: 'bg-purple-500/15 text-purple-400' },
-            { id: 'UNSOLD_30_DAYS', label: 'Unsold >30d (30 ދުވަސް ތެރޭ ނުވިކޭ)', badgeColor: 'bg-amber-500/15 text-amber-400' },
-            { id: 'NEVER_UPDATED_STOCK', label: 'Never Updated Stock (ސްޓޮކް އަޕްޑޭޓް ނުކުރާ)', badgeColor: 'bg-zinc-500/20 text-zinc-300' },
-          ].map((tab) => (
-            <Button
-              key={tab.id}
-              variant={inventoryFilter === tab.id ? "default" : "outline"}
-              size="sm"
-              onClick={() => { setInventoryFilter(tab.id as InventoryFilterType); setVisibleCount(30); }}
-              className={cn(
-                "h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5",
-                inventoryFilter === tab.id 
-                  ? (tab.id === 'FAVORITES' 
-                      ? "bg-yellow-500 text-black shadow-sm shadow-yellow-500/30 hover:bg-yellow-400" 
-                      : "bg-primary text-primary-foreground shadow-sm shadow-primary/30")
-                  : (tab.id === 'FAVORITES'
-                      ? "bg-yellow-500/10 border-yellow-500/40 text-yellow-500 dark:text-yellow-400 hover:bg-yellow-500/20"
-                      : "bg-muted/60 border-border text-muted-foreground hover:text-foreground hover:bg-muted")
-              )}
-            >
-              {tab.hasStar && (
-                <Star className={cn("h-3.5 w-3.5", inventoryFilter === tab.id ? "fill-black text-black" : "fill-yellow-400 text-yellow-400")} />
-              )}
-              <span>{tab.label}</span>
-              {tab.count !== undefined && (
-                <span className={cn(
-                  "text-[10px] px-1.5 py-0.2 rounded-full font-mono font-black ml-1",
-                  inventoryFilter === tab.id 
-                    ? (tab.id === 'FAVORITES' ? "bg-black/25 text-black" : "bg-black/20 text-white") 
-                    : (tab.id === 'FAVORITES' ? "bg-yellow-500/25 text-yellow-600 dark:text-yellow-400" : "bg-muted text-muted-foreground")
-                )}>
-                  {tab.count}
-                </span>
-              )}
-            </Button>
-          ))}
-        </div>
-
-        {/* Categories, Sort Selector, View Mode & Select All */}
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-muted/40 p-2.5 rounded-2xl border border-border">
-          {/* Categories bar */}
-          <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 lg:pb-0">
-            {/* Quick Favorites Toggle */}
-            <Button 
-              variant={inventoryFilter === 'FAVORITES' ? "default" : "outline"} 
-              size="sm" 
-              onClick={() => {
-                setInventoryFilter(inventoryFilter === 'FAVORITES' ? 'ALL' : 'FAVORITES');
-                setVisibleCount(30);
-              }}
-              className={cn(
-                "px-3 h-8 rounded-lg text-xs font-black transition-all shrink-0 flex items-center gap-1.5",
-                inventoryFilter === 'FAVORITES' 
-                  ? "bg-yellow-500 text-black hover:bg-yellow-400 shadow-sm" 
-                  : "bg-card border-border text-yellow-500 hover:bg-yellow-500/10"
-              )}
-              title="Filter by Favorites (ތަރި ފިލްޓަރ)"
-            >
-              <Star className={cn("h-3.5 w-3.5", inventoryFilter === 'FAVORITES' ? "fill-black text-black" : "fill-yellow-400 text-yellow-400")} />
-              <span>Favorites ({favoriteProductIds.length})</span>
-            </Button>
-
-            {availableCategories.map((cat) => (
-              <Button 
-                key={cat}
-                variant={selectedCategory === cat ? "default" : "ghost"} 
-                size="sm" 
-                onClick={() => { setSelectedCategory(cat); setVisibleCount(30); }}
-                className={cn(
-                  "px-3 h-8 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all shrink-0",
-                  selectedCategory === cat ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {cat}
-              </Button>
-            ))}
+      {/* Unified Top Header Bar */}
+      <div className="shrink-0 mb-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-4 apple-glass-card border border-white/20 dark:border-white/10 rounded-3xl p-4 sm:px-6 shadow-sm">
+          {/* Title & Subtitle (Right side in RTL) */}
+          <div className="flex items-center gap-3.5 text-right">
+            <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary shrink-0 shadow-xs">
+              <Package className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black text-foreground leading-tight">
+                {renderBothString('products')}
+              </h1>
+              <p className="text-xs text-muted-foreground mt-0.5" dir="ltr">
+                Manage inventory, pricing, barcodes &amp; catalog
+              </p>
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 justify-between lg:justify-end">
-            {/* Sort Dropdown */}
-            <Select value={sortKey} onValueChange={(val) => { setSortKey(val as ProductSortKey); setVisibleCount(30); }}>
-              <SelectTrigger className="w-[190px] h-9 rounded-xl bg-card border-border text-xs font-black text-foreground flex gap-2">
-                <ArrowUpDown className="h-3.5 w-3.5 text-primary" />
-                <SelectValue placeholder="Sort Order (ތަރުތީބު)" />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border font-faruma text-foreground max-h-72">
-                <SelectItem value="DEFAULT">Default Order (އަސްލު ތަރުތީބު)</SelectItem>
-                <SelectItem value="NAME_ASC">Name (ދިވެހި A-Z)</SelectItem>
-                <SelectItem value="NAME_DESC">Name (ދިވެހި Z-A)</SelectItem>
-                <SelectItem value="NAME_EN_ASC">Name (English A-Z)</SelectItem>
-                <SelectItem value="NAME_EN_DESC">Name (English Z-A)</SelectItem>
-                <SelectItem value="STOCK_ASC">Stock: Low to High (ސްޓޮކް: މަދުން ގިނައަށް)</SelectItem>
-                <SelectItem value="STOCK_DESC">Stock: High to Low (ސްޓޮކް: ގިނައިން މަދަށް)</SelectItem>
-                <SelectItem value="PRICE_ASC">Price: Low to High (އަގު: ކުޑައިން ބޮޑަށް)</SelectItem>
-                <SelectItem value="PRICE_DESC">Price: High to Low (އަގު: ބޮޑުން ކުޑައަށް)</SelectItem>
-                <SelectItem value="CODE_ASC">Item Code: Low to High (ކޯޑް: ކުޑައިން ބޮޑަށް)</SelectItem>
-                <SelectItem value="CODE_DESC">Item Code: High to Low (ކޯޑް: ބޮޑުން ކުޑައަށް)</SelectItem>
-                <SelectItem value="ACTIVITY_ACTIVE">Status: Most Sold (ގިނައިން ވިކޭ)</SelectItem>
-                <SelectItem value="ACTIVITY_NEVER">Status: Never Sold (ނުވިކޭ)</SelectItem>
-                <SelectItem value="ACTIVITY_UNSOLD">Status: Unsold &gt;30d (30 ދުވަސް ތެރޭ ނުވިކޭ)</SelectItem>
-                <SelectItem value="ACTIVITY_UNSTOCKED">Status: Never Stocked (ސްޓޮކް ނެތް)</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Product Count Summary + Actions Toolbar (Left side in RTL) */}
+          <div className="flex flex-wrap items-center gap-2.5 mr-auto sm:mr-0" dir="ltr">
+            {/* Compact Product Count Card */}
+            <div className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-primary/10 border border-primary/20">
+              <div className="w-8 h-8 rounded-xl bg-primary/20 text-primary flex items-center justify-center shrink-0">
+                <Package className="h-4 w-4" />
+              </div>
+              <div className="text-left">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">
+                    Total Catalog
+                  </span>
+                  {products.filter(p => Number(p.stock_shop) <= 0).length > 0 && (
+                    <span className="text-[9px] font-black bg-red-500/20 text-red-500 px-1.5 py-0.2 rounded-md font-mono">
+                      {products.filter(p => Number(p.stock_shop) <= 0).length} OOS
+                    </span>
+                  )}
+                </div>
+                <p className="text-base sm:text-lg font-black font-mono text-foreground leading-tight">
+                  {products.length} Products
+                </p>
+              </div>
+            </div>
+
+            {/* Action Buttons Toolbar */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button 
+                variant="outline" 
+                onClick={handleTranslateAllMissingDhivehi}
+                disabled={isTranslating}
+                className="gap-1.5 border-border bg-card hover:bg-muted h-10 px-3.5 rounded-xl font-black text-xs"
+                title="Automatically translate English product names into Dhivehi using smart supermarket dictionary"
+              >
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                <span className="hidden sm:inline">{isTranslating ? 'Translating...' : 'Auto-Translate'}</span>
+                <span className="sm:hidden">Translate</span>
+              </Button>
+
+              <Button 
+                variant="outline" 
+                onClick={() => setIsImportDialogOpen(true)}
+                className="gap-1.5 border-border bg-card hover:bg-muted h-10 px-3.5 rounded-xl font-black text-xs"
+                title="Import products from Excel sheet"
+              >
+                <Upload className="h-4 w-4" />
+                <span className="hidden sm:inline">Import Excel</span>
+                <span className="sm:hidden">Import</span>
+              </Button>
+
+              <Button 
+                onClick={handleAddClick}
+                className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground h-10 px-4 rounded-xl font-black text-xs shadow-sm active:scale-[0.98]"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Product</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Unified Search, Filter & Controls Bar */}
+        <div className="apple-glass-card border border-white/20 dark:border-white/10 rounded-2xl p-2.5 sm:p-3 flex flex-col gap-2.5" dir="ltr">
+          {/* Row 1: Search, Status Filter, Category, Sort, Tax, Select All & View Toggle */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Search Input */}
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60 pointer-events-none" />
+              <Input 
+                dir="ltr"
+                placeholder={renderBothString('search_products')}
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setVisibleCount(30); }}
+                className="w-full apple-glass-input rounded-xl pl-10 pr-9 h-10 text-left font-bold text-xs sm:text-sm"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => { setSearchTerm(''); setVisibleCount(30); }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted"
+                  title="Clear search"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Status Filter Select */}
+            <div className="w-full sm:w-44">
+              <Select value={inventoryFilter} onValueChange={(val) => { setInventoryFilter(val as InventoryFilterType); setVisibleCount(30); }}>
+                <SelectTrigger className="h-10 rounded-xl apple-glass-input border-border font-bold text-xs">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <SlidersHorizontal className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <SelectValue placeholder="Status Filter" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="apple-glass-dialog border-white/20 dark:border-white/10 z-[120]">
+                  <SelectItem value="ALL" className="text-xs font-bold">All Products ({products.length})</SelectItem>
+                  <SelectItem value="FAVORITES" className="text-xs font-bold">★ Favorites ({favoriteProductIds.length})</SelectItem>
+                  <SelectItem value="LOW_STOCK" className="text-xs font-bold">Low Stock (&lt;10)</SelectItem>
+                  <SelectItem value="OUT_OF_STOCK" className="text-xs font-bold">Out of Stock (0)</SelectItem>
+                  <SelectItem value="NEVER_SOLD" className="text-xs font-bold">Never Sold</SelectItem>
+                  <SelectItem value="UNSOLD_30_DAYS" className="text-xs font-bold">Unsold &gt;30 Days</SelectItem>
+                  <SelectItem value="NEVER_UPDATED_STOCK" className="text-xs font-bold">Never Updated Stock</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Category Select */}
+            <div className="w-full sm:w-36">
+              <Select value={selectedCategory} onValueChange={(val) => { setSelectedCategory(val); setVisibleCount(30); }}>
+                <SelectTrigger className="h-10 rounded-xl apple-glass-input border-border font-bold text-xs">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <Package className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <SelectValue placeholder="Category" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="apple-glass-dialog border-white/20 dark:border-white/10 z-[120]">
+                  {availableCategories.map((cat) => (
+                    <SelectItem key={cat} value={cat} className="text-xs font-bold">{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Sort Order Select */}
+            <div className="w-full sm:w-44">
+              <Select value={sortKey} onValueChange={(val) => { setSortKey(val as ProductSortKey); setVisibleCount(30); }}>
+                <SelectTrigger className="h-10 rounded-xl apple-glass-input border-border font-bold text-xs">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <ArrowUpDown className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <SelectValue placeholder="Sort Order" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="apple-glass-dialog border-white/20 dark:border-white/10 z-[120] max-h-72">
+                  <SelectItem value="DEFAULT" className="text-xs font-bold">Default Order</SelectItem>
+                  <SelectItem value="NAME_ASC" className="text-xs font-bold">Name (ދިވެހި A-Z)</SelectItem>
+                  <SelectItem value="NAME_DESC" className="text-xs font-bold">Name (ދިވެހި Z-A)</SelectItem>
+                  <SelectItem value="NAME_EN_ASC" className="text-xs font-bold">Name (English A-Z)</SelectItem>
+                  <SelectItem value="NAME_EN_DESC" className="text-xs font-bold">Name (English Z-A)</SelectItem>
+                  <SelectItem value="STOCK_ASC" className="text-xs font-bold">Stock: Low to High</SelectItem>
+                  <SelectItem value="STOCK_DESC" className="text-xs font-bold">Stock: High to Low</SelectItem>
+                  <SelectItem value="PRICE_ASC" className="text-xs font-bold">Price: Low to High</SelectItem>
+                  <SelectItem value="PRICE_DESC" className="text-xs font-bold">Price: High to Low</SelectItem>
+                  <SelectItem value="CODE_ASC" className="text-xs font-bold">Item Code: Low to High</SelectItem>
+                  <SelectItem value="CODE_DESC" className="text-xs font-bold">Item Code: High to Low</SelectItem>
+                  <SelectItem value="ACTIVITY_ACTIVE" className="text-xs font-bold">Status: Most Sold</SelectItem>
+                  <SelectItem value="ACTIVITY_NEVER" className="text-xs font-bold">Status: Never Sold</SelectItem>
+                  <SelectItem value="ACTIVITY_UNSOLD" className="text-xs font-bold">Status: Unsold &gt;30d</SelectItem>
+                  <SelectItem value="ACTIVITY_UNSTOCKED" className="text-xs font-bold">Status: Never Stocked</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* GST Tax Filter */}
-            <Select value={taxFilter} onValueChange={(val: any) => { setTaxFilter(val); setVisibleCount(30); }}>
-              <SelectTrigger className="w-[170px] h-9 rounded-xl bg-card border-border text-xs font-black text-foreground flex gap-2">
-                <Percent className="h-3.5 w-3.5 text-primary" />
-                <SelectValue placeholder="GST Filter (ޖީއެސްޓީ)" />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border font-faruma text-foreground" dir="rtl">
-                <SelectItem value="ALL">All Tax Rates (ހުރިހާ ޓެކްސް)</SelectItem>
-                <SelectItem value="STANDARD_GST">{settings?.shop?.taxRate || 8}% Standard GST</SelectItem>
-                <SelectItem value="ZERO_GST">0% Zero-Rated GST</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="w-full sm:w-36">
+              <Select value={taxFilter} onValueChange={(val: any) => { setTaxFilter(val); setVisibleCount(30); }}>
+                <SelectTrigger className="h-10 rounded-xl apple-glass-input border-border font-bold text-xs">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <Percent className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <SelectValue placeholder="GST Rate" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="apple-glass-dialog border-white/20 dark:border-white/10 z-[120]">
+                  <SelectItem value="ALL" className="text-xs font-bold">All GST Rates</SelectItem>
+                  <SelectItem value="STANDARD_GST" className="text-xs font-bold">{settings?.shop?.taxRate || 8}% Standard</SelectItem>
+                  <SelectItem value="ZERO_GST" className="text-xs font-bold">0% Zero-Rated</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Select All Checkbox Button */}
             <Button
@@ -616,22 +613,23 @@ const Products = () => {
               size="sm"
               onClick={handleSelectAllFiltered}
               className={cn(
-                "h-9 px-3 rounded-xl border-border text-xs font-bold gap-1.5 transition-all",
+                "h-10 px-3 rounded-xl border-border text-xs font-bold gap-1.5 transition-all",
                 isAllFilteredSelected ? "bg-primary/10 text-primary border-primary/40" : "bg-card hover:bg-muted text-foreground"
               )}
               title="Select / Deselect all filtered products"
             >
               {isAllFilteredSelected ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4 text-muted-foreground" />}
-              <span className="text-[11px] font-black">Select All ({filteredProducts.length})</span>
+              <span className="text-[11px] font-black">All ({filteredProducts.length})</span>
             </Button>
 
             {/* View Mode Toggle */}
-            <div className="bg-card rounded-xl p-1 border border-border flex gap-1">
+            <div className="bg-muted/80 rounded-xl p-0.5 border border-border flex items-center gap-0.5">
               <Button 
                 variant="ghost" 
                 size="icon" 
                 onClick={() => setViewMode('grid')}
-                className={cn("h-7 w-7 rounded-lg", viewMode === 'grid' ? "bg-muted shadow-sm text-primary" : "text-muted-foreground")}
+                className={cn("h-8 w-8 rounded-lg", viewMode === 'grid' ? "bg-card shadow-xs text-primary" : "text-muted-foreground hover:text-foreground")}
+                title="Grid view"
               >
                 <Grid className="h-3.5 w-3.5" />
               </Button>
@@ -639,10 +637,58 @@ const Products = () => {
                 variant="ghost" 
                 size="icon" 
                 onClick={() => setViewMode('list')}
-                className={cn("h-7 w-7 rounded-lg", viewMode === 'list' ? "bg-muted shadow-sm text-primary" : "text-muted-foreground")}
+                className={cn("h-8 w-8 rounded-lg", viewMode === 'list' ? "bg-card shadow-xs text-primary" : "text-muted-foreground hover:text-foreground")}
+                title="List view"
               >
                 <List className="h-3.5 w-3.5" />
               </Button>
+            </div>
+          </div>
+
+          {/* Row 2: Quick Category & Filter Chips Strip */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border/40">
+            <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-0.5 custom-scrollbar">
+              {/* Quick Favorites Chip */}
+              <Button 
+                variant={inventoryFilter === 'FAVORITES' ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => {
+                  setInventoryFilter(inventoryFilter === 'FAVORITES' ? 'ALL' : 'FAVORITES');
+                  setVisibleCount(30);
+                }}
+                className={cn(
+                  "px-2.5 h-7 rounded-lg text-[11px] font-black transition-all shrink-0 flex items-center gap-1",
+                  inventoryFilter === 'FAVORITES' 
+                    ? "bg-yellow-500 text-black hover:bg-yellow-400 shadow-xs" 
+                    : "bg-card border-border text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/10"
+                )}
+              >
+                <Star className={cn("h-3 w-3", inventoryFilter === 'FAVORITES' ? "fill-black text-black" : "fill-yellow-400 text-yellow-400")} />
+                <span>Favorites ({favoriteProductIds.length})</span>
+              </Button>
+
+              {/* Category Chips */}
+              {availableCategories.map((cat) => (
+                <Button 
+                  key={cat}
+                  variant={selectedCategory === cat ? "default" : "ghost"} 
+                  size="sm" 
+                  onClick={() => { setSelectedCategory(cat); setVisibleCount(30); }}
+                  className={cn(
+                    "px-2.5 h-7 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all shrink-0",
+                    selectedCategory === cat ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {cat}
+                </Button>
+              ))}
+            </div>
+
+            {/* Counter */}
+            <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground shrink-0 pl-1">
+              <span>
+                Showing <strong className="text-foreground font-mono">{filteredProducts.length}</strong> of <strong className="text-foreground font-mono">{products.length}</strong> products
+              </span>
             </div>
           </div>
         </div>

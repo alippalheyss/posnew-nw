@@ -1073,175 +1073,212 @@ const SalesReports = () => {
   );
 
   return (
-    <div className="p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
-      {/* Header with quick download action buttons */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <div className="text-right">
-           <h1 className="text-3xl font-black text-foreground flex items-center justify-end gap-3">
-             {renderBoth('sales_reports')} <BarChart3 className="h-8 w-8 text-primary" />
-           </h1>
-           <p className="text-sm text-muted-foreground mt-1">{renderBoth('sales_reports_description')}</p>
+    <div className="p-4 sm:p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
+      {/* Unified Top Header Bar */}
+      <div className="shrink-0 mb-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-4 apple-glass-card border border-white/20 dark:border-white/10 rounded-3xl p-4 sm:px-6 shadow-sm">
+          {/* Title & Subtitle (Right side in RTL) */}
+          <div className="flex items-center gap-3.5 text-right">
+            <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary shrink-0 shadow-xs">
+              <BarChart3 className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-black text-foreground leading-tight">
+                {renderBoth('sales_reports')}
+              </h1>
+              <p className="text-xs text-muted-foreground mt-0.5" dir="ltr">
+                Sales analytics, profit metrics &amp; MIRA GST reports
+              </p>
+            </div>
+          </div>
+
+          {/* Today's Summary + Quick Export Action Buttons (Left side in RTL) */}
+          <div className="flex flex-wrap items-center gap-2.5 mr-auto sm:mr-0" dir="ltr">
+            {/* Compact Today's Sales Summary Card */}
+            <div className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-primary/10 border border-primary/20">
+              <div className="w-8 h-8 rounded-xl bg-primary/20 text-primary flex items-center justify-center shrink-0">
+                <DollarSign className="h-4 w-4" />
+              </div>
+              <div className="text-left">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">
+                    Today&apos;s Sales
+                  </span>
+                  <span className="text-[9px] font-black bg-primary/20 text-primary px-1.5 py-0.2 rounded-md font-mono">
+                    {dayStats.count} txns
+                  </span>
+                </div>
+                <p className="text-base sm:text-lg font-black font-mono text-foreground leading-tight">
+                  {settings.shop.currency} {dayStats.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+            </div>
+
+            {/* Action Buttons for downloading daily, monthly, yearly, and GST statements */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportDailySales}
+                className="rounded-xl border-border bg-card hover:bg-muted transition-all text-xs font-black gap-1.5 h-10 px-3.5"
+                title="Download today's sales report as Excel"
+              >
+                <FileSpreadsheet className="h-4 w-4 text-primary" />
+                <span>Daily</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportMonthlySales}
+                className="rounded-xl border-border bg-card hover:bg-muted transition-all text-xs font-black gap-1.5 h-10 px-3.5"
+                title="Download this month's sales report as Excel"
+              >
+                <FileSpreadsheet className="h-4 w-4 text-purple-500" />
+                <span>Monthly</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportYearlySales}
+                className="rounded-xl border-border bg-card hover:bg-muted transition-all text-xs font-black gap-1.5 h-10 px-3.5"
+                title="Download this year's sales report as Excel"
+              >
+                <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+                <span>Yearly</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleExportGSTOutputTaxStatement()}
+                className="rounded-xl border-blue-500/30 hover:border-blue-500/60 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 transition-all text-xs font-black gap-1.5 h-10 px-3.5"
+                title="Download MIRA GST Output Tax Statement"
+              >
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">GST Statement</span>
+                <span className="sm:hidden">GST</span>
+              </Button>
+            </div>
+          </div>
         </div>
 
-        {/* Action Buttons for downloading daily, monthly, yearly, quarterly sales */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportDailySales}
-            className="rounded-xl border-border/80 bg-card hover:bg-primary hover:text-primary-foreground transition-all text-xs font-black gap-2 shadow-xs h-9 px-3.5"
-          >
-            <FileSpreadsheet className="h-4 w-4 text-primary" />
-            <span>Daily Sales Excel (މިއަދު)</span>
-          </Button>
+        {/* Unified Custom Period Filter Bar */}
+        <div className="apple-glass-card border border-white/20 dark:border-white/10 rounded-2xl p-2.5 sm:p-3 flex flex-wrap items-center justify-between gap-3" dir="ltr">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-black text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mr-1">
+              <Calendar className="h-3.5 w-3.5 text-primary" /> Period:
+            </span>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportMonthlySales}
-            className="rounded-xl border-border/80 bg-card hover:bg-purple-600 hover:text-white transition-all text-xs font-black gap-2 shadow-xs h-9 px-3.5"
-          >
-            <FileSpreadsheet className="h-4 w-4 text-purple-500" />
-            <span>Monthly Sales Excel (މިމަސް)</span>
-          </Button>
+            {/* Period Type Selector */}
+            <div className="flex bg-muted rounded-xl p-0.5 gap-1 border border-border/60">
+              {(['date', 'month', 'quarter', 'year'] as const).map(pt => (
+                <button
+                  key={pt}
+                  onClick={() => { setCustomPeriodType(pt); setShowCustomPreview(false); }}
+                  className={cn(
+                    'px-2.5 py-1 rounded-lg text-xs font-black transition-all',
+                    customPeriodType === pt
+                      ? 'bg-primary text-primary-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {pt === 'date' ? 'Date' : pt === 'month' ? 'Month' : pt === 'quarter' ? 'Quarter' : 'Year'}
+                </button>
+              ))}
+            </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setCustomPeriodType('quarter');
-              setShowCustomPreview(true);
-            }}
-            className="rounded-xl border-border/80 bg-card hover:bg-amber-600 hover:text-white transition-all text-xs font-black gap-2 shadow-xs h-9 px-3.5"
-          >
-            <FileSpreadsheet className="h-4 w-4 text-amber-500" />
-            <span>Quarterly & GST Report (ކުއާޓަރ / ޖީއެސްޓީ)</span>
-          </Button>
+            {/* Period Picker */}
+            {customPeriodType === 'date' && (
+              <input
+                type="date"
+                value={customDate}
+                onChange={e => { setCustomDate(e.target.value); setShowCustomPreview(false); }}
+                className="h-9 px-3 rounded-xl border border-border bg-muted text-foreground text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            )}
+            {customPeriodType === 'month' && (
+              <input
+                type="month"
+                value={customMonth}
+                onChange={e => { setCustomMonth(e.target.value); setShowCustomPreview(false); }}
+                className="h-9 px-3 rounded-xl border border-border bg-muted text-foreground text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            )}
+            {customPeriodType === 'quarter' && (
+              <div className="flex items-center gap-2">
+                <select
+                  value={customQuarter}
+                  onChange={e => { setCustomQuarter(e.target.value); setShowCustomPreview(false); }}
+                  className="h-9 px-3 rounded-xl border border-border bg-muted text-foreground text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                  dir="ltr"
+                >
+                  <option value="1">Q1 (Jan - Mar)</option>
+                  <option value="2">Q2 (Apr - Jun)</option>
+                  <option value="3">Q3 (Jul - Sep)</option>
+                  <option value="4">Q4 (Oct - Dec)</option>
+                </select>
+                <input
+                  type="number"
+                  value={customYear}
+                  min="2020"
+                  max="2099"
+                  onChange={e => { setCustomYear(e.target.value); setShowCustomPreview(false); }}
+                  className="h-9 px-3 w-20 rounded-xl border border-border bg-muted text-foreground text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary"
+                  dir="ltr"
+                />
+              </div>
+            )}
+            {customPeriodType === 'year' && (
+              <input
+                type="number"
+                value={customYear}
+                min="2020"
+                max="2099"
+                onChange={e => { setCustomYear(e.target.value); setShowCustomPreview(false); }}
+                className="h-9 px-3 w-24 rounded-xl border border-border bg-muted text-foreground text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary"
+                dir="ltr"
+              />
+            )}
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportYearlySales}
-            className="rounded-xl border-border/80 bg-card hover:bg-emerald-600 hover:text-white transition-all text-xs font-black gap-2 shadow-xs h-9 px-3.5"
-          >
-            <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
-            <span>Yearly Sales Excel (މިއަހަރު)</span>
-          </Button>
+            <Button
+              variant={showCustomPreview ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowCustomPreview(!showCustomPreview)}
+              className="h-9 rounded-xl text-xs font-black gap-1.5 border-primary/40"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              <span>{showCustomPreview ? 'Hide Details' : 'Preview Details'}</span>
+            </Button>
+          </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleExportGSTOutputTaxStatement()}
-            className="rounded-xl border-border/80 bg-card hover:bg-blue-600 hover:text-white transition-all text-xs font-black gap-2 shadow-xs h-9 px-3.5"
-          >
-            <Download className="h-4 w-4 text-blue-500" />
-            <span>GST Output Tax Statement (އައުޓްޕުޓް ޓެކްސް ބަޔާން)</span>
-          </Button>
+          {/* Quick period summary metrics */}
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/60 border border-border">
+              <span className="text-[11px] font-bold text-muted-foreground">{getCustomPeriodLabel()}:</span>
+              <span className="font-mono font-black text-foreground">{settings.shop.currency} {customTotalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="text-[10px] text-muted-foreground font-mono">({customSales.length} txns)</span>
+            </div>
+
+            <Button
+              onClick={handleExportCustomReport}
+              size="sm"
+              className="h-9 rounded-xl text-xs font-black gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white"
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              <span>Export Custom</span>
+            </Button>
+          </div>
         </div>
       </div>
 
       <ScrollArea className="flex-1 custom-scrollbar">
-        <div className="space-y-8 pb-6">
+        <div className="space-y-6 pb-6">
 
-          {/* ── Custom Report Builder ── */}
-          <div className="bg-card border border-border rounded-[2rem] overflow-hidden">
-            <div className="p-6 pb-4 border-b border-border">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  {/* Period Type Selector */}
-                  <div className="flex bg-muted rounded-xl p-1 gap-1">
-                    {(['date', 'month', 'quarter', 'year'] as const).map(pt => (
-                      <button
-                        key={pt}
-                        onClick={() => { setCustomPeriodType(pt); setShowCustomPreview(false); }}
-                        className={cn(
-                          'px-3 py-1.5 rounded-lg text-xs font-black transition-all',
-                          customPeriodType === pt
-                            ? 'bg-primary text-primary-foreground shadow-sm'
-                            : 'text-muted-foreground hover:text-foreground'
-                        )}
-                      >
-                        {pt === 'date' ? 'Date' : pt === 'month' ? 'Month' : pt === 'quarter' ? 'Quarter (GST)' : 'Year'}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Period Picker */}
-                  {customPeriodType === 'date' && (
-                    <input
-                      type="date"
-                      value={customDate}
-                      onChange={e => { setCustomDate(e.target.value); setShowCustomPreview(false); }}
-                      className="h-9 px-3 rounded-xl border border-border bg-muted text-foreground text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  )}
-                  {customPeriodType === 'month' && (
-                    <input
-                      type="month"
-                      value={customMonth}
-                      onChange={e => { setCustomMonth(e.target.value); setShowCustomPreview(false); }}
-                      className="h-9 px-3 rounded-xl border border-border bg-muted text-foreground text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  )}
-                  {customPeriodType === 'quarter' && (
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={customQuarter}
-                        onChange={e => { setCustomQuarter(e.target.value); setShowCustomPreview(false); }}
-                        className="h-9 px-3 rounded-xl border border-border bg-muted text-foreground text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
-                        dir="ltr"
-                      >
-                        <option value="1">Q1 (Jan - Mar) / 1 ވަނަ ކުއާޓަރ</option>
-                        <option value="2">Q2 (Apr - Jun) / 2 ވަނަ ކުއާޓަރ</option>
-                        <option value="3">Q3 (Jul - Sep) / 3 ވަނަ ކުއާޓަރ</option>
-                        <option value="4">Q4 (Oct - Dec) / 4 ވަނަ ކުއާޓަރ</option>
-                      </select>
-                      <input
-                        type="number"
-                        value={customYear}
-                        min="2020"
-                        max="2099"
-                        onChange={e => { setCustomYear(e.target.value); setShowCustomPreview(false); }}
-                        className="h-9 px-3 w-20 rounded-xl border border-border bg-muted text-foreground text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary"
-                        dir="ltr"
-                      />
-                    </div>
-                  )}
-                  {customPeriodType === 'year' && (
-                    <input
-                      type="number"
-                      value={customYear}
-                      min="2020"
-                      max="2099"
-                      onChange={e => { setCustomYear(e.target.value); setShowCustomPreview(false); }}
-                      className="h-9 px-3 w-24 rounded-xl border border-border bg-muted text-foreground text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary"
-                      dir="ltr"
-                    />
-                  )}
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowCustomPreview(true)}
-                    className="h-9 rounded-xl text-xs font-black gap-1.5 border-primary/40 text-primary hover:bg-primary hover:text-primary-foreground"
-                  >
-                    <Eye className="h-3.5 w-3.5" />
-                    Preview
-                  </Button>
-                </div>
-
-                <div className="text-right">
-                  <h3 className="text-base font-black text-foreground flex items-center justify-end gap-2">
-                    <Calendar className="h-4 w-4 text-primary" />
-                    Custom & GST Report
-                  </h3>
-                  <p className="text-[11px] text-muted-foreground">Select a period (day, month, quarter, year), preview & download</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Preview Panel */}
-            {showCustomPreview && (
+          {/* ── Custom Report Preview Panel (Shown when preview is enabled) ── */}
+          {showCustomPreview && (
+            <div className="apple-glass-card border border-white/20 dark:border-white/10 rounded-[2rem] overflow-hidden shadow-md">
               <div className="p-6 space-y-5">
                 {/* Summary Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -1352,8 +1389,8 @@ const SalesReports = () => {
                   </div>
                 )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Main Stats with direct Download buttons */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

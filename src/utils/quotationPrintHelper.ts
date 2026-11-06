@@ -8,12 +8,12 @@ import autoTable from 'jspdf-autotable';
  * 80mm Thermal Slip for Quotations (English-Only, No Dhivehi, with Shop Logo and Complete Shop Info)
  */
 export const printQuotation80mm = (quotation: Quotation, settings: AppSettings) => {
-  const shop = settings?.shop || ({} as any);
+  const shop = (settings?.shop || {}) as Partial<AppSettings['shop']>;
   const currency = shop.currency || 'MVR';
   const shopName = shop.shopName || 'MVPOS Store';
   const shopPhone = shop.shopPhone || shop.contactNumber || shop.phone || '';
   const shopAddress = shop.shopAddress || shop.address || '';
-  const shopTin = shop.tinNumber || shop.tin || shop.taxNumber || (settings as any)?.accounting?.tinNumber || '';
+  const shopTin = shop.tinNumber || shop.tin || shop.taxNumber || settings?.accounting?.tinNumber || '';
   const shopLogo = shop.logo || '';
 
   const customerName = quotation.customer?.name_en || quotation.customer?.name_dv || quotation.customer_name || 'Valued Customer';
@@ -170,12 +170,12 @@ export const printQuotation80mm = (quotation: Quotation, settings: AppSettings) 
  */
 export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettings) => {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const shop = settings?.shop || ({} as any);
+  const shop = (settings?.shop || {}) as Partial<AppSettings['shop']>;
   const currency = shop.currency || 'MVR';
   const shopName = shop.shopName || 'MVPOS Store';
   const shopAddress = shop.shopAddress || shop.address || '';
   const shopPhone = shop.shopPhone || shop.contactNumber || shop.phone || '';
-  const shopTin = shop.tinNumber || shop.tin || shop.taxNumber || (settings as any)?.accounting?.tinNumber || '';
+  const shopTin = shop.tinNumber || shop.tin || shop.taxNumber || settings?.accounting?.tinNumber || '';
   const shopLogo = shop.logo || '';
 
   const customerName = quotation.customer?.name_en || quotation.customer?.name_dv || quotation.customer_name || 'Valued Customer';
@@ -291,7 +291,10 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
     },
   });
 
-  const finalY = (doc as any).lastAutoTable.finalY + 8;
+  interface AutoTableDoc extends jsPDF {
+    lastAutoTable: { finalY: number };
+  }
+  const finalY = (doc as unknown as AutoTableDoc).lastAutoTable.finalY + 8;
 
   // Financial Summary Box (Right)
   const summaryX = 130;

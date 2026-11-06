@@ -33,6 +33,7 @@ const Sidebar = () => {
   const [editNameDv, setEditNameDv] = useState('');
   const [editNameEn, setEditNameEn] = useState('');
   const [isSavingName, setIsSavingName] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -209,7 +210,6 @@ const Sidebar = () => {
     </div>
   );
 
-  const [isHovered, setIsHovered] = useState(false);
   const isExpanded = !sidebarCollapsed || isHovered;
 
   return (

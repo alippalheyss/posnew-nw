@@ -765,7 +765,7 @@ export const Quotations: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <Select value={statusFilter} onValueChange={(val: any) => setStatusFilter(val)}>
+              <Select value={statusFilter} onValueChange={(val: 'all' | 'active' | 'converted' | 'expired') => setStatusFilter(val)}>
                 <SelectTrigger className="w-[140px] h-10 rounded-xl apple-glass-input border-border font-bold text-xs">
                   <SelectValue placeholder="Status Filter" />
                 </SelectTrigger>

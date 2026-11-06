@@ -55,3 +55,4 @@ export const BankAlertPill: React.FC = () => {
 };
 
 export default BankAlertPill;
+

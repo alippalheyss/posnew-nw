@@ -29,6 +29,7 @@ import CustomerDisplay from "./pages/CustomerDisplay";
 import LocalPurchaseWindow from "./components/LocalPurchaseWindow";
 import MobilePurchase from "./pages/MobilePurchase";
 import StockAudit from "./pages/StockAudit";
+import Quotations from "./pages/Quotations";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
@@ -81,6 +82,7 @@ const App = () => (
                     <Layout>
                       <Routes>
                         <Route path="/" element={<POS />} />
+                        <Route path="/quotations" element={<Quotations />} />
                         <Route path="/products" element={<Products />} />
                         <Route path="/stock" element={<Stock />} />
                         <Route path="/customers" element={<Customers />} />

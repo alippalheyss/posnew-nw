@@ -134,6 +134,23 @@ export interface Sale {
   created_at?: string;
 }
 
+export interface Quotation {
+  id: string;
+  quotation_number: string;
+  date: string;
+  valid_until: string;
+  customer: Customer | null;
+  customer_name?: string;
+  customer_phone?: string;
+  items: CartItem[];
+  subtotal: number;
+  tax_amount: number;
+  grand_total: number;
+  notes?: string;
+  status: 'active' | 'converted' | 'expired';
+  created_at?: string;
+}
+
 export interface Vendor {
   id: string;
   code: string;
@@ -412,6 +429,10 @@ interface AppContextType {
   clearVerifiedBankNotifications: () => void;
   simulateBankNotification: (payload: { title: string; body: string; timestamp: number }) => Promise<void>;
   syncBankWebhooksFromCloud: () => Promise<void>;
+  quotations: Quotation[];
+  addQuotation: (quotation: Quotation) => Promise<void>;
+  updateQuotation: (quotation: Quotation) => Promise<void>;
+  deleteQuotation: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -1155,6 +1176,17 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
             } catch {}
           }
         }
+
+        // Sync cloud quotations
+        const quoteRow = settingsData.find((r: any) => r.category === 'pos_quotations');
+        if (quoteRow?.settings && Array.isArray(quoteRow.settings.quotations)) {
+          setQuotations(quoteRow.settings.quotations);
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('pos_quotations', JSON.stringify(quoteRow.settings.quotations));
+            } catch {}
+          }
+        }
       }
 
       // 2. Process bank_webhook_incoming and any queued bank_webhook_* rows
@@ -1246,6 +1278,76 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   );
 
   const unclaimedBankNotificationsCount = bankNotifications.filter((n) => n.status === 'unclaimed').length;
+
+  // --- Quotations State & Cloud Sync ---
+  const [quotations, setQuotations] = useState<Quotation[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('pos_quotations');
+        return saved ? JSON.parse(saved) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  const syncQuotationsToCloud = useCallback(async (list: Quotation[]) => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('pos_quotations', JSON.stringify(list));
+      } catch {}
+    }
+    try {
+      if (supabase) {
+        await supabase.from('settings').upsert(
+          {
+            id: '320e8d7f-9329-41ec-9f65-9a9130bb2803',
+            user_id: DEFAULT_SETTINGS_USER_ID,
+            category: 'pos_quotations',
+            settings: { quotations: list },
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'id' }
+        );
+      }
+    } catch (err) {
+      console.warn('Error syncing quotations to cloud:', err);
+    }
+  }, []);
+
+  const addQuotation = useCallback(
+    async (quotation: Quotation) => {
+      setQuotations((prev) => {
+        const next = [quotation, ...prev.filter((q) => q.id !== quotation.id)];
+        syncQuotationsToCloud(next);
+        return next;
+      });
+    },
+    [syncQuotationsToCloud]
+  );
+
+  const updateQuotation = useCallback(
+    async (quotation: Quotation) => {
+      setQuotations((prev) => {
+        const next = prev.map((q) => (q.id === quotation.id ? quotation : q));
+        syncQuotationsToCloud(next);
+        return next;
+      });
+    },
+    [syncQuotationsToCloud]
+  );
+
+  const deleteQuotation = useCallback(
+    async (id: string) => {
+      setQuotations((prev) => {
+        const next = prev.filter((q) => q.id !== id);
+        syncQuotationsToCloud(next);
+        return next;
+      });
+    },
+    [syncQuotationsToCloud]
+  );
 
   const syncPendingTransfers = useCallback(async () => {
     try {
@@ -1860,6 +1962,17 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           }
         }
 
+        // Sync cloud quotations
+        const quoteRow = settingsData.find((r: any) => r.category === 'pos_quotations');
+        if (quoteRow?.settings && Array.isArray(quoteRow.settings.quotations)) {
+          setQuotations(quoteRow.settings.quotations);
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('pos_quotations', JSON.stringify(quoteRow.settings.quotations));
+            } catch {}
+          }
+        }
+
         const webhookRows = settingsData.filter(
           (r: any) =>
             r.category === 'bank_webhook_incoming' ||
@@ -2026,6 +2139,17 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
               if (typeof window !== 'undefined') {
                 try {
                   localStorage.setItem('pos_bank_notifications', JSON.stringify(row.settings.notifications));
+                } catch {}
+              }
+            }
+            return;
+          }
+          if (row.category === 'pos_quotations') {
+            if (Array.isArray(row.settings?.quotations)) {
+              setQuotations(row.settings.quotations);
+              if (typeof window !== 'undefined') {
+                try {
+                  localStorage.setItem('pos_quotations', JSON.stringify(row.settings.quotations));
                 } catch {}
               }
             }
@@ -5069,7 +5193,11 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       dismissBankNotification,
       clearVerifiedBankNotifications,
       simulateBankNotification,
-      syncBankWebhooksFromCloud
+      syncBankWebhooksFromCloud,
+      quotations,
+      addQuotation,
+      updateQuotation,
+      deleteQuotation
     }}>
       {children}
     </AppContext.Provider>

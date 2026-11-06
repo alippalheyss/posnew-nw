@@ -213,7 +213,7 @@ export interface Expense {
   createdAt?: string;
 }
 
-interface ShopSettings {
+export interface ShopSettings {
   shopName: string;
   shopAddress: string;
   shopPhone: string;
@@ -330,7 +330,7 @@ interface TelegramSettings {
   lastNightlyBriefingDate?: string;
 }
 
-interface AppSettings {
+export interface AppSettings {
   shop: ShopSettings;
   accounting: AccountingSettings;
   software: SoftwareSettings;

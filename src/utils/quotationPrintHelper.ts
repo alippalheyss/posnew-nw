@@ -1,19 +1,20 @@
 import { Quotation, AppSettings } from '@/context/AppContext';
-import { printViaIframe } from '@/utils/printHelper';
+import { printContent } from '@/utils/printHelper';
 import { formatDate, formatTime } from '@/utils/formatters';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 /**
- * 80mm Thermal Slip for Quotations (English-Only, No Dhivehi, with Shop Logo)
+ * 80mm Thermal Slip for Quotations (English-Only, No Dhivehi, with Shop Logo and Complete Shop Info)
  */
 export const printQuotation80mm = (quotation: Quotation, settings: AppSettings) => {
-  const currency = settings.shop.currency || 'MVR';
-  const shopName = settings.shop.shopName || 'MVPOS Store';
-  const shopContact = settings.shop.contactNumber || '';
-  const shopAddress = settings.shop.address || '';
-  const shopTin = settings.shop.tinNumber || (settings.shop as any).tin || '';
-  const shopLogo = settings.shop.logo || '';
+  const shop = settings?.shop || ({} as any);
+  const currency = shop.currency || 'MVR';
+  const shopName = shop.shopName || 'MVPOS Store';
+  const shopPhone = shop.shopPhone || shop.contactNumber || shop.phone || '';
+  const shopAddress = shop.shopAddress || shop.address || '';
+  const shopTin = shop.tinNumber || shop.tin || shop.taxNumber || (settings as any)?.accounting?.tinNumber || '';
+  const shopLogo = shop.logo || '';
 
   const customerName = quotation.customer?.name_en || quotation.customer?.name_dv || quotation.customer_name || 'Valued Customer';
   const customerPhone = quotation.customer?.phone || quotation.customer_phone || '';
@@ -84,8 +85,8 @@ export const printQuotation80mm = (quotation: Quotation, settings: AppSettings) 
 
       <div class="text-center">
         <h2 style="margin: 0 0 2px 0; font-size: 16px; font-weight: 900;">${shopName}</h2>
-        ${shopAddress ? `<div style="font-size: 10px;">${shopAddress}</div>` : ''}
-        ${shopContact ? `<div style="font-size: 10px;">Tel: ${shopContact}</div>` : ''}
+        ${shopAddress ? `<div style="font-size: 11px; margin-bottom: 2px;">${shopAddress}</div>` : ''}
+        ${shopPhone ? `<div style="font-size: 11px; margin-bottom: 2px;">Tel: ${shopPhone}</div>` : ''}
         ${shopTin ? `<div style="font-size: 10px;">TIN: ${shopTin}</div>` : ''}
       </div>
 
@@ -94,7 +95,7 @@ export const printQuotation80mm = (quotation: Quotation, settings: AppSettings) 
         <div style="font-size: 9px; font-weight: normal; margin-top: 2px;">*** NOT A TAX INVOICE ***</div>
       </div>
 
-      <div style="font-size: 10px; margin-bottom: 6px;">
+      <div style="font-size: 11px; margin-bottom: 6px;">
         <div style="display: flex; justify-content: space-between;">
           <span>Quotation No:</span>
           <span class="bold">${quotation.quotation_number}</span>
@@ -137,7 +138,7 @@ export const printQuotation80mm = (quotation: Quotation, settings: AppSettings) 
         </div>
         ${quotation.tax_amount > 0 ? `
         <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-          <span>GST (${settings.shop.taxRate}%):</span>
+          <span>GST (${shop.taxRate || 8}%):</span>
           <span>${currency} ${quotation.tax_amount.toFixed(2)}</span>
         </div>` : ''}
         <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 900; margin-top: 4px; border-top: 1px solid #000; padding-top: 4px;">
@@ -148,12 +149,12 @@ export const printQuotation80mm = (quotation: Quotation, settings: AppSettings) 
 
       ${quotation.notes ? `
       <div class="divider"></div>
-      <div style="font-size: 9px; color: #444;">
+      <div style="font-size: 10px; color: #444;">
         <strong>Note:</strong> ${quotation.notes}
       </div>` : ''}
 
       <div class="divider"></div>
-      <div class="text-center" style="font-size: 9px; color: #666; margin-top: 6px;">
+      <div class="text-center" style="font-size: 10px; color: #666; margin-top: 6px;">
         <div>This is a price quotation. Subject to stock availability.</div>
         <div style="margin-top: 3px; font-weight: bold;">Thank you for your business!</div>
       </div>
@@ -161,20 +162,21 @@ export const printQuotation80mm = (quotation: Quotation, settings: AppSettings) 
     </html>
   `;
 
-  printViaIframe(html);
+  printContent(html, settings);
 };
 
 /**
- * A4 Professional PDF Generator for Quotations (with Shop Logo, Bold Customer, No Barcode Column, No Status)
+ * A4 Professional PDF Generator for Quotations (with Complete Shop Info, Shop Logo, Bold Customer, No Barcode Column, No Status)
  */
 export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettings) => {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const currency = settings.shop.currency || 'MVR';
-  const shopName = settings.shop.shopName || 'MVPOS Store';
-  const shopAddress = settings.shop.address || '';
-  const shopPhone = settings.shop.contactNumber || '';
-  const shopTin = settings.shop.tinNumber || (settings.shop as any).tin || '';
-  const shopLogo = settings.shop.logo || '';
+  const shop = settings?.shop || ({} as any);
+  const currency = shop.currency || 'MVR';
+  const shopName = shop.shopName || 'MVPOS Store';
+  const shopAddress = shop.shopAddress || shop.address || '';
+  const shopPhone = shop.shopPhone || shop.contactNumber || shop.phone || '';
+  const shopTin = shop.tinNumber || shop.tin || shop.taxNumber || (settings as any)?.accounting?.tinNumber || '';
+  const shopLogo = shop.logo || '';
 
   const customerName = quotation.customer?.name_en || quotation.customer?.name_dv || quotation.customer_name || 'Valued Customer';
   const customerPhone = quotation.customer?.phone || quotation.customer_phone || '';
@@ -197,7 +199,7 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
     }
   }
 
-  // Shop Name & Branding
+  // Shop Name & Complete Information
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
@@ -300,7 +302,7 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
   doc.text(`${currency} ${quotation.subtotal.toFixed(2)}`, 196, finalY, { align: 'right' });
 
   if (quotation.tax_amount > 0) {
-    doc.text(`GST (${settings.shop.taxRate}%):`, summaryX, finalY + 6);
+    doc.text(`GST (${shop.taxRate || 8}%):`, summaryX, finalY + 6);
     doc.text(`${currency} ${quotation.tax_amount.toFixed(2)}`, 196, finalY + 6, { align: 'right' });
   }
 

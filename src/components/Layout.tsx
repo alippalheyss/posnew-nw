@@ -7,6 +7,7 @@ import { useAppContext } from '@/context/AppContext';
 import { Button } from './ui/button';
 import { ChevronRight } from 'lucide-react';
 import AmbientBackground from './AmbientBackground';
+import { BankAlertPill } from './BankAlertPill';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -22,6 +23,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   
   return (
     <div className="flex h-[100dvh] flex-row-reverse bg-background text-foreground overflow-hidden relative">
+      {/* Top Floating Non-Clickable Bank Alert Pill */}
+      <BankAlertPill />
+
       {/* Ambient slowly moving dots & lines dynamic background */}
       <AmbientBackground />
 

@@ -405,6 +405,7 @@ interface AppContextType {
   addTransferSlip: (slip: Partial<TransferSlip>) => Promise<TransferSlip | null>;
   loadSalesForDateRange: (startDate: string, endDate: string) => Promise<void>;
   bankNotifications: BankNotification[];
+  activeTopBankAlert: BankNotification | null;
   unclaimedBankNotificationsCount: number;
   verifyBankNotification: (id: string, matchedCustomerName?: string) => void;
   dismissBankNotification: (id: string) => void;
@@ -1002,6 +1003,15 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     return [];
   });
 
+  const [activeTopBankAlert, setActiveTopBankAlert] = useState<BankNotification | null>(null);
+  const topBankAlertTimerRef = useRef<any>(null);
+
+  useEffect(() => {
+    return () => {
+      if (topBankAlertTimerRef.current) clearTimeout(topBankAlertTimerRef.current);
+    };
+  }, []);
+
   const bankNotificationsRef = useRef<BankNotification[]>(bankNotifications);
   useEffect(() => {
     bankNotificationsRef.current = bankNotifications;
@@ -1082,6 +1092,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       bankNotificationsRef.current = next;
       setBankNotifications(next);
       syncBankNotificationsToCloud(next);
+
+      // Trigger prominent non-clickable pill popup from top (shows for 4-5 seconds)
+      setActiveTopBankAlert(parsed);
+      if (topBankAlertTimerRef.current) clearTimeout(topBankAlertTimerRef.current);
+      topBankAlertTimerRef.current = setTimeout(() => {
+        setActiveTopBankAlert(null);
+      }, 4500);
 
       playBankAlertChime();
       const amtText = parsed.amount !== null ? `${parsed.currency} ${parsed.amount.toFixed(2)}` : parsed.title;
@@ -5046,6 +5063,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       addTransferSlip,
       loadSalesForDateRange,
       bankNotifications,
+      activeTopBankAlert,
       unclaimedBankNotificationsCount,
       verifyBankNotification,
       dismissBankNotification,

@@ -13,7 +13,7 @@ export const printQuotation80mm = (quotation: Quotation, settings: AppSettings) 
   const shopName = shop.shopName || 'MVPOS Store';
   const shopPhone = shop.shopPhone || shop.contactNumber || shop.phone || '';
   const shopAddress = shop.shopAddress || shop.address || '';
-  const shopTin = shop.tinNumber || shop.tin || shop.taxNumber || settings?.accounting?.tinNumber || '';
+  const shopTin = shop.tinNumber || shop.tin || shop.taxNumber || settings?.accounting?.tinNumber || '1021550GST501';
   const shopLogo = shop.logo || '';
 
   const customerName = quotation.customer?.name_en || quotation.customer?.name_dv || quotation.customer_name || 'Valued Customer';
@@ -175,7 +175,7 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
   const shopName = shop.shopName || 'MVPOS Store';
   const shopAddress = shop.shopAddress || shop.address || '';
   const shopPhone = shop.shopPhone || shop.contactNumber || shop.phone || '';
-  const shopTin = shop.tinNumber || shop.tin || shop.taxNumber || settings?.accounting?.tinNumber || '';
+  const shopTin = shop.tinNumber || shop.tin || shop.taxNumber || settings?.accounting?.tinNumber || '1021550GST501';
   const shopLogo = shop.logo || '';
 
   const customerName = quotation.customer?.name_en || quotation.customer?.name_dv || quotation.customer_name || 'Valued Customer';
@@ -320,24 +320,28 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
   doc.text(`${currency} ${quotation.grand_total.toFixed(2)}`, 196, finalY + 16, { align: 'right' });
 
   // Notes & Terms (Left)
+  let notesEndY = finalY;
   if (quotation.notes) {
     doc.setFontSize(8.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(71, 85, 105);
     doc.text('TERMS & NOTES:', 14, finalY);
     doc.setFont('helvetica', 'normal');
-    doc.text(doc.splitTextToSize(quotation.notes, 105), 14, finalY + 5);
+    const splitNotes = doc.splitTextToSize(quotation.notes, 105);
+    doc.text(splitNotes, 14, finalY + 5);
+    notesEndY = finalY + 5 + (splitNotes.length * 4);
   }
 
-  // Footer & Signature Line
-  const pageHeight = doc.internal.pageSize.getHeight();
+  // Footer & Signature Line: Placed immediately after Grand Total / Notes to save vertical space
+  const afterTotalY = Math.max(finalY + 20, notesEndY + 6);
+  doc.setLineWidth(0.5);
   doc.setDrawColor(203, 213, 225);
-  doc.line(14, pageHeight - 35, 70, pageHeight - 35);
+  doc.line(14, afterTotalY + 14, 70, afterTotalY + 14);
   doc.setFontSize(8);
   doc.setTextColor(100, 116, 139);
-  doc.text('Authorized Signature & Stamp', 14, pageHeight - 30);
+  doc.text('Authorized Signature & Stamp', 14, afterTotalY + 18);
 
-  doc.text(`Generated on ${new Date().toLocaleDateString()} | ${shopName}`, 196, pageHeight - 15, { align: 'right' });
+  doc.text(`Generated on ${new Date().toLocaleDateString()} | ${shopName}`, 196, afterTotalY + 18, { align: 'right' });
 
   doc.save(`Quotation_${quotation.quotation_number}.pdf`);
 };

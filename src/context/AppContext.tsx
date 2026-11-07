@@ -218,6 +218,7 @@ export interface ShopSettings {
   shopAddress: string;
   shopPhone: string;
   shopEmail: string;
+  tinNumber?: string;
   currency: string;
   taxRate: number;
   receiptHeader: string;
@@ -1178,7 +1179,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         }
 
         // Sync cloud quotations
-        const quoteRow = settingsData.find((r: any) => r.category === 'pos_quotations');
+        const quoteRow = data.find((r: any) => r.category === 'pos_quotations');
         if (quoteRow?.settings && Array.isArray(quoteRow.settings.quotations)) {
           setQuotations(quoteRow.settings.quotations);
           if (typeof window !== 'undefined') {
@@ -1963,7 +1964,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         }
 
         // Sync cloud quotations
-        const quoteRow = settingsData.find((r: any) => r.category === 'pos_quotations');
+        const quoteRow = data.find((r: any) => r.category === 'pos_quotations');
         if (quoteRow?.settings && Array.isArray(quoteRow.settings.quotations)) {
           setQuotations(quoteRow.settings.quotations);
           if (typeof window !== 'undefined') {
@@ -2477,6 +2478,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         shopAddress: 'Male, Maldives',
         shopPhone: '9336337',
         shopEmail: 'info@myshop.com',
+        tinNumber: '1021550GST501',
         currency: 'MVR',
         taxRate: 8,
         receiptHeader: 'Thank you for shopping with us!',

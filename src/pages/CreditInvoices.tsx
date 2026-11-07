@@ -71,6 +71,7 @@ const CreditInvoices = () => {
 
   const handlePrintReceipt = (sale: Sale) => {
     const currency = settings.shop.currency;
+    const shopTin = settings.shop.tinNumber || settings.accounting?.tinNumber || '1021550GST501';
     const itemsHtml = sale.items.map((item: any) => {
       const unitTag = item.selected_unit && item.selected_unit !== 'Piece' ? ` (${item.selected_unit})` : '';
       const flavourTag = item.selected_flavour ? ` [${item.selected_flavour}]` : '';
@@ -137,7 +138,7 @@ const CreditInvoices = () => {
           ${logoHtml}
           <div style="font-weight: bold; font-size: 15px;">${settings.shop.shopName}</div>
           <div style="font-size: 12px;">${settings.shop.shopAddress}</div>
-          <div style="font-size: 10px; margin-top: 4px;">Tel: ${settings.shop.shopPhone}<br/>${formatDate(sale.date)} ${formatTime(sale.date)} | ${sale.invoiceNumber || sale.id}</div>
+          <div style="font-size: 10px; margin-top: 4px;">Tel: ${settings.shop.shopPhone}${shopTin ? ` | TIN: ${shopTin}` : ''}<br/>${formatDate(sale.date)} ${formatTime(sale.date)} | ${sale.invoiceNumber || sale.id}</div>
           <div style="margin: 6px auto; display: inline-block; padding: 2px 8px; border: 1px solid #000; font-weight: 900; font-size: 11px; letter-spacing: 1px;">
             CREDIT INVOICE
           </div>
@@ -183,6 +184,7 @@ const CreditInvoices = () => {
 
   const handlePrintA4Invoice = (sale: Sale) => {
     const currency = settings.shop.currency;
+    const shopTin = settings.shop.tinNumber || settings.accounting?.tinNumber || '1021550GST501';
     const itemsHtml = sale.items.map(item => `
       <tr style="border-bottom: 1px solid #eee;">
         <td style="padding: 8px; text-align: left;">
@@ -237,7 +239,8 @@ const CreditInvoices = () => {
               <strong>From:</strong><br/>
               ${settings.shop.shopName}<br/>
               ${settings.shop.shopAddress}<br/>
-              Tel: ${settings.shop.shopPhone}
+              Tel: ${settings.shop.shopPhone}<br/>
+              ${shopTin ? `TIN: ${shopTin}` : ''}
             </div>
             <div style="text-align: right;">
               <strong>To:</strong><br/>
@@ -387,6 +390,7 @@ const CreditInvoices = () => {
 
   const handleDownloadExcel = () => {
     const currency = settings.shop.currency;
+    const shopTin = settings.shop.tinNumber || settings.accounting?.tinNumber || '1021550GST501';
     const filterLabel = getDateFilterLabel();
 
     const data: any[][] = [

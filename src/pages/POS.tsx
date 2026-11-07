@@ -1379,6 +1379,8 @@ const POS = () => {
       </div>
     ` : '';
 
+    const shopTin = settings.shop.tinNumber || settings.accounting?.tinNumber || '1021550GST501';
+
     const htmlContent = `
       <html>
         <head>
@@ -1406,7 +1408,7 @@ const POS = () => {
           ${logoHtml}
           <div style="font-weight: bold; font-size: 15px;">${settings.shop.shopName}</div>
           <div style="font-size: 12px;">${settings.shop.shopAddress}</div>
-          <div style="font-size: 10px; margin-top: 4px;">Tel: ${settings.shop.shopPhone}<br/>${formatDate(sale.date)} ${formatTime(sale.date)} | ${sale.invoiceNumber || sale.id}</div>
+          <div style="font-size: 10px; margin-top: 4px;">Tel: ${settings.shop.shopPhone}${shopTin ? ` | TIN: ${shopTin}` : ''}<br/>${formatDate(sale.date)} ${formatTime(sale.date)} | ${sale.invoiceNumber || sale.id}</div>
           ${customerHtml}
           <div style="border-top: 1px dashed #000; margin: 8px 0;"></div>
           ${itemsHtml}

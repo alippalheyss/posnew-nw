@@ -87,8 +87,13 @@ export const InvoiceViewDialog: React.FC<InvoiceViewDialogProps> = ({
                 <span>{invoiceNumber}</span>
                 <ShoppingBag className="h-5 w-5 text-primary" />
               </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                {settings.shop?.shopName || 'B BACK'}
+              <DialogDescription asChild>
+                <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground mt-0.5">
+                  <span>{settings.shop?.shopName || 'B BACK'}</span>
+                  <span className="font-mono text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold">
+                    TIN: {settings.shop?.tinNumber || '1021550GST501'}
+                  </span>
+                </div>
               </DialogDescription>
             </div>
           </div>

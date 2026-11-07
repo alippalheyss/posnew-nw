@@ -522,6 +522,18 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         className="apple-glass-input h-12 rounded-2xl text-right font-mono"
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                        {renderBoth('shop_tin') || 'Shop GST TIN (Tax Number)'}
+                      </Label>
+                      <Input
+                        value={shopSettings.tinNumber ?? '1021550GST501'}
+                        placeholder="1021550GST501"
+                        onChange={(e) => handleSettingsChange('shop', 'tinNumber', e.target.value)}
+                        className="apple-glass-input h-12 rounded-2xl text-left font-mono font-bold tracking-wider"
+                        dir="ltr"
+                      />
+                    </div>
                   </div>
 
                   <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-border rounded-3xl bg-white/2">

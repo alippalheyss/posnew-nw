@@ -169,7 +169,7 @@ export const printQuotation80mm = (quotation: Quotation, settings: AppSettings) 
  * A4 Professional PDF Generator for Quotations (with Complete Shop Info, Shop Logo, Bold Customer, No Barcode Column, No Status)
  */
 /**
- * A4 Clean Modern Quotation PDF (Light Blue & Emerald Green Theme)
+ * A4 Clean Minimalist Professional Quotation PDF
  */
 export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettings) => {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -195,148 +195,114 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
   validityDays = validityDays || 7;
 
   // ==========================================
-  // 1. LIGHT CLEAN TOP BAR / HEADER (Sky-50 with Emerald & Sky Accent)
+  // 1. TOP ACCENT LINE & CLEAN WHITE HEADER
   // ==========================================
-  const headerHeight = 44;
-  
-  // Soft airy light blue background
-  doc.setFillColor(240, 249, 255); // Sky-50
-  doc.rect(0, 0, 210, headerHeight, 'F');
-
-  // Top Dual Accent Stripe (Emerald Green & Light Sky Blue)
-  doc.setFillColor(16, 185, 129); // Emerald-500
-  doc.rect(0, 0, 105, 3.5, 'F');
-  doc.setFillColor(14, 165, 233); // Sky-500
-  doc.rect(105, 0, 105, 3.5, 'F');
-
-  // Bottom Subtle Divider Line
-  doc.setDrawColor(186, 230, 253); // Sky-200
-  doc.setLineWidth(0.4);
-  doc.line(0, headerHeight, 210, headerHeight);
+  // Subtle top accent bar (2mm clean sky blue)
+  doc.setFillColor(2, 132, 199); // Sky-600
+  doc.rect(0, 0, 210, 2.5, 'F');
 
   let textStartX = 14;
 
-  // Render Shop Logo in a clean white rounded container if available
+  // Render Shop Logo directly on white page if available
   if (shopLogo) {
     try {
-      doc.setFillColor(255, 255, 255);
-      doc.setDrawColor(186, 230, 253); // Sky-200
-      doc.roundedRect(14, 8, 28, 28, 3, 3, 'FD');
-
       const format = shopLogo.includes('image/jpeg') || shopLogo.includes('.jpg') || shopLogo.includes('.jpeg') ? 'JPEG' : 'PNG';
-      doc.addImage(shopLogo, format, 16, 10, 24, 24);
-      textStartX = 48;
+      doc.addImage(shopLogo, format, 14, 9, 24, 24);
+      textStartX = 44;
     } catch {
       textStartX = 14;
     }
   }
 
-  // Shop Name (Vibrant Ocean Blue)
+  // Shop Name (Crisp Dark Slate)
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.setTextColor(3, 105, 161); // Sky-700
-  doc.text(shopName.toUpperCase(), textStartX, 17);
+  doc.setFontSize(17);
+  doc.setTextColor(15, 23, 42); // Slate-900
+  doc.text(shopName.toUpperCase(), textStartX, 16);
 
-  // Shop Address
+  // Shop Address & Contact
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
-  doc.setTextColor(71, 85, 105); // Slate-600
+  doc.setTextColor(100, 116, 139); // Slate-500
   if (shopAddress) {
-    doc.text(shopAddress, textStartX, 23);
+    doc.text(shopAddress, textStartX, 22);
   }
 
-  // Contact line
-  if (shopPhone) {
-    doc.text(`Tel: ${shopPhone}`, textStartX, 28.5);
+  const contactLine = [
+    shopPhone ? `Tel: ${shopPhone}` : '',
+    shopTin ? `TIN: ${shopTin}` : '',
+  ].filter(Boolean).join('   |   ');
+  if (contactLine) {
+    doc.text(contactLine, textStartX, 27.5);
   }
 
-  // Shop GST TIN Pill Badge (Light Emerald Green Pill)
-  if (shopTin) {
-    const tinY = shopAddress && shopPhone ? 32.5 : 28.5;
-    doc.setFillColor(236, 253, 245); // Emerald-50
-    doc.setDrawColor(167, 243, 208); // Emerald-200
-    doc.roundedRect(textStartX, tinY, 56, 6.5, 1.5, 1.5, 'FD');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.5);
-    doc.setTextColor(5, 150, 105); // Emerald-600
-    doc.text(`GST TIN: ${shopTin}`, textStartX + 3, tinY + 4.5);
-  }
-
-  // Right Side: Quotation Title (Sky Blue) & Ref Pill
+  // Right Side: Quotation Title (Clean Ocean Blue) & Reference
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
+  doc.setFontSize(20);
   doc.setTextColor(2, 132, 199); // Sky-600
-  doc.text('QUOTATION', 196, 18, { align: 'right' });
+  doc.text('QUOTATION', 196, 16, { align: 'right' });
 
-  // Reference Number Pill (Right) - Light Sky Pill
-  doc.setFillColor(224, 242, 254); // Sky-100
-  doc.setDrawColor(186, 230, 253); // Sky-200
-  doc.roundedRect(136, 22.5, 60, 7.5, 2, 2, 'FD');
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
-  doc.setTextColor(3, 105, 161); // Sky-700
-  doc.text(`REF: ${quotation.quotation_number}`, 166, 27.5, { align: 'center' });
+  doc.setFontSize(9.5);
+  doc.setTextColor(15, 23, 42);
+  doc.text(`Ref: ${quotation.quotation_number}`, 196, 22.5, { align: 'right' });
 
-  // Date line on header right
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.setTextColor(100, 116, 139); // Slate-500
-  doc.text(`Date: ${formatDate(quotation.date)}  •  Valid: ${formatDate(quotation.valid_until)}`, 196, 37, { align: 'right' });
+  doc.setTextColor(100, 116, 139);
+  doc.text(`Date: ${formatDate(quotation.date)}`, 196, 28, { align: 'right' });
 
-  // ==========================================
-  // 2. CLIENT & QUOTATION DETAILS CARDS
-  // ==========================================
-  const cardsY = 51;
-  const cardHeight = 25;
-
-  // Left Card: Customer Details (Light Sky Card)
-  doc.setFillColor(240, 249, 255); // Sky-50
-  doc.setDrawColor(186, 230, 253); // Sky-200
+  // Clean Subtle Header Separator Line
+  doc.setDrawColor(226, 232, 240); // Slate-200
   doc.setLineWidth(0.4);
-  doc.roundedRect(14, cardsY, 88, cardHeight, 2.5, 2.5, 'FD');
+  doc.line(14, 35, 196, 35);
 
+  // ==========================================
+  // 2. CLIENT & QUOTATION DETAILS
+  // ==========================================
+  const detailsY = 43;
+
+  // Left: Customer Details
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
-  doc.setTextColor(2, 132, 199); // Sky-600
-  doc.text('QUOTATION ISSUED TO', 19, cardsY + 6);
+  doc.setTextColor(100, 116, 139); // Slate-500
+  doc.text('QUOTATION ISSUED TO:', 14, detailsY);
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
+  doc.setFontSize(10.5);
   doc.setTextColor(15, 23, 42); // Slate-900
-  doc.text(customerName.toUpperCase(), 19, cardsY + 13);
+  doc.text(customerName.toUpperCase(), 14, detailsY + 6.5);
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.setTextColor(71, 85, 105);
-  doc.text(customerPhone ? `Phone: ${customerPhone}` : 'Direct Customer', 19, cardsY + 19.5);
+  if (customerPhone) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(71, 85, 105);
+    doc.text(`Phone: ${customerPhone}`, 14, detailsY + 12.5);
+  }
 
-  // Right Card: Reference & Validity Details (Light Emerald Card)
-  doc.setFillColor(236, 253, 245); // Emerald-50
-  doc.setDrawColor(167, 243, 208); // Emerald-200
-  doc.roundedRect(108, cardsY, 88, cardHeight, 2.5, 2.5, 'FD');
-
+  // Right: Validity Details
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
-  doc.setTextColor(5, 150, 105); // Emerald-600
-  doc.text('VALIDITY & SCHEDULE', 113, cardsY + 6);
+  doc.setTextColor(100, 116, 139);
+  doc.text('QUOTATION DETAILS:', 135, detailsY);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(71, 85, 105);
-  doc.text('Quotation Date:', 113, cardsY + 13);
+  doc.text('Quotation Date:', 135, detailsY + 6.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(15, 23, 42);
-  doc.text(formatDate(quotation.date), 191, cardsY + 13, { align: 'right' });
+  doc.text(formatDate(quotation.date), 196, detailsY + 6.5, { align: 'right' });
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(71, 85, 105);
-  doc.text('Valid Until:', 113, cardsY + 19.5);
+  doc.text('Valid Until:', 135, detailsY + 12.5);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(16, 185, 129); // Emerald-500
-  doc.text(`${formatDate(quotation.valid_until)} (${validityDays} Days)`, 191, cardsY + 19.5, { align: 'right' });
+  doc.setTextColor(2, 132, 199); // Sky-600
+  doc.text(`${formatDate(quotation.valid_until)} (${validityDays} Days)`, 196, detailsY + 12.5, { align: 'right' });
 
   // ==========================================
-  // 3. MODERN ITEMS TABLE (Sky-600 Blue Header)
+  // 3. CLEAN ITEMS TABLE
   // ==========================================
   const tableRows = quotation.items.map((item, idx) => [
     idx + 1,
@@ -347,33 +313,34 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
   ]);
 
   autoTable(doc, {
-    startY: 81,
+    startY: 63,
     head: [['#', 'Item Description', 'Qty', 'Unit Price', 'Total Amount']],
     body: tableRows,
-    theme: 'striped',
+    theme: 'plain',
     headStyles: {
-      fillColor: [2, 132, 199], // Sky-600 Light Ocean Blue
-      textColor: [255, 255, 255],
+      fillColor: [241, 245, 249], // Very subtle Slate-100
+      textColor: [15, 23, 42],     // Dark Slate
       fontStyle: 'bold',
       fontSize: 8.5,
       halign: 'left',
-      cellPadding: 4,
+      cellPadding: 3.5,
     },
     alternateRowStyles: {
-      fillColor: [240, 249, 255], // Soft Sky-50
+      fillColor: [250, 250, 250],
     },
     styles: {
       fontSize: 8.5,
       cellPadding: 3.5,
-      lineColor: [224, 242, 254], // Sky-100
+      lineColor: [226, 232, 240], // Light clean border
       lineWidth: 0.1,
+      textColor: [51, 65, 85],
     },
     columnStyles: {
       0: { cellWidth: 12, halign: 'center', textColor: [100, 116, 139] },
-      1: { cellWidth: 105, fontStyle: 'bold' },
+      1: { cellWidth: 105, fontStyle: 'bold', textColor: [15, 23, 42] },
       2: { cellWidth: 18, halign: 'center' },
       3: { cellWidth: 28, halign: 'right' },
-      4: { cellWidth: 28, halign: 'right', fontStyle: 'bold' },
+      4: { cellWidth: 28, halign: 'right', fontStyle: 'bold', textColor: [15, 23, 42] },
     },
   });
 
@@ -386,89 +353,80 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
   // 4. FINANCIAL SUMMARY & TERMS
   // ==========================================
   const hasGst = quotation.tax_amount > 0;
-  const summaryBoxHeight = hasGst ? 32 : 24;
 
-  // Financial Summary Card (Right)
-  doc.setFillColor(240, 249, 255); // Sky-50
-  doc.setDrawColor(186, 230, 253); // Sky-200
-  doc.setLineWidth(0.4);
-  doc.roundedRect(125, finalY, 71, summaryBoxHeight, 2.5, 2.5, 'FD');
-
-  const summaryTextX = 130;
+  // Financial Summary (Right)
+  const summaryX = 135;
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(71, 85, 105);
-  doc.text('Subtotal:', summaryTextX, finalY + 7);
+  doc.text('Subtotal:', summaryX, finalY + 4);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(15, 23, 42);
-  doc.text(`${currency} ${quotation.subtotal.toFixed(2)}`, 191, finalY + 7, { align: 'right' });
+  doc.text(`${currency} ${quotation.subtotal.toFixed(2)}`, 196, finalY + 4, { align: 'right' });
 
   if (hasGst) {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(71, 85, 105);
-    doc.text(`GST (${shop.taxRate || 8}%):`, summaryTextX, finalY + 14);
+    doc.text(`GST (${shop.taxRate || 8}%):`, summaryX, finalY + 10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42);
-    doc.text(`${currency} ${quotation.tax_amount.toFixed(2)}`, 191, finalY + 14, { align: 'right' });
+    doc.text(`${currency} ${quotation.tax_amount.toFixed(2)}`, 196, finalY + 10, { align: 'right' });
   }
 
-  // Grand Total Highlight Pill (Fresh Emerald Green)
-  const grandTotalTopY = hasGst ? finalY + 18 : finalY + 11;
-  doc.setFillColor(16, 185, 129); // Emerald-500
-  doc.roundedRect(128, grandTotalTopY, 65, 10, 2, 2, 'F');
+  // Divider Line before Total
+  const totalLineY = hasGst ? finalY + 14 : finalY + 8;
+  doc.setDrawColor(203, 213, 225);
+  doc.setLineWidth(0.4);
+  doc.line(summaryX, totalLineY, 196, totalLineY);
 
+  // Grand Total Line (Clean, Elegant Typography)
+  const grandTotalTextY = totalLineY + 6.5;
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9.5);
-  doc.setTextColor(255, 255, 255);
-  doc.text('TOTAL:', 133, grandTotalTopY + 6.8);
+  doc.setFontSize(10.5);
+  doc.setTextColor(15, 23, 42);
+  doc.text('Grand Total:', summaryX, grandTotalTextY);
 
-  doc.setFontSize(11);
-  doc.setTextColor(255, 255, 255);
-  doc.text(`${currency} ${quotation.grand_total.toFixed(2)}`, 189, grandTotalTopY + 6.8, { align: 'right' });
+  doc.setFontSize(11.5);
+  doc.setTextColor(2, 132, 199); // Sky-600
+  doc.text(`${currency} ${quotation.grand_total.toFixed(2)}`, 196, grandTotalTextY, { align: 'right' });
 
-  // Notes & Terms (Left - Soft Emerald Tint)
+  // Notes & Terms (Left)
   let notesEndY = finalY;
   if (quotation.notes) {
-    const splitNotes = doc.splitTextToSize(quotation.notes, 96);
-    const notesHeight = Math.max(splitNotes.length * 4.5 + 8, summaryBoxHeight);
-
-    doc.setFillColor(236, 253, 245); // Emerald-50
-    doc.setDrawColor(167, 243, 208); // Emerald-200
-    doc.setLineWidth(0.4);
-    doc.roundedRect(14, finalY, 105, notesHeight, 2.5, 2.5, 'FD');
+    const splitNotes = doc.splitTextToSize(quotation.notes, 105);
 
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(5, 150, 105); // Emerald-600
-    doc.text('TERMS & CONDITIONS', 19, finalY + 6);
+    doc.setTextColor(100, 116, 139);
+    doc.text('TERMS & CONDITIONS:', 14, finalY + 4);
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.setTextColor(51, 65, 85);
-    doc.text(splitNotes, 19, finalY + 12);
-    notesEndY = finalY + notesHeight;
+    doc.setTextColor(71, 85, 105);
+    doc.text(splitNotes, 14, finalY + 9.5);
+    notesEndY = finalY + 9.5 + (splitNotes.length * 4);
   }
 
   // ==========================================
   // 5. SIGNATURE & GENERATION LINE
   // ==========================================
-  const afterTotalY = Math.max(finalY + summaryBoxHeight, notesEndY) + 6;
+  const afterTotalY = Math.max(grandTotalTextY + 6, notesEndY) + 6;
 
   // Signature Line
   doc.setLineWidth(0.4);
-  doc.setDrawColor(186, 230, 253); // Sky-200
-  doc.line(14, afterTotalY + 14, 75, afterTotalY + 14);
+  doc.setDrawColor(203, 213, 225);
+  doc.line(14, afterTotalY + 12, 70, afterTotalY + 12);
 
   doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
-  doc.text('Authorized Signature & Official Stamp', 14, afterTotalY + 18.5);
+  doc.text('Authorized Signature & Stamp', 14, afterTotalY + 16.5);
 
   // Generation timestamp on right
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setTextColor(148, 163, 184);
-  doc.text(`Generated on ${new Date().toLocaleDateString()} | ${shopName}`, 196, afterTotalY + 18.5, { align: 'right' });
+  doc.text(`Generated on ${new Date().toLocaleDateString()} | ${shopName}`, 196, afterTotalY + 16.5, { align: 'right' });
 
   doc.save(`Quotation_${quotation.quotation_number}.pdf`);
 };

@@ -139,6 +139,7 @@ export interface Quotation {
   quotation_number: string;
   date: string;
   valid_until: string;
+  validity_days?: number;
   customer: Customer | null;
   customer_name?: string;
   customer_phone?: string;

@@ -169,7 +169,7 @@ export const printQuotation80mm = (quotation: Quotation, settings: AppSettings) 
  * A4 Professional PDF Generator for Quotations (with Complete Shop Info, Shop Logo, Bold Customer, No Barcode Column, No Status)
  */
 /**
- * A4 Clean Modern Executive Quotation PDF
+ * A4 Clean Modern Quotation PDF (Light Blue & Emerald Green Theme)
  */
 export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettings) => {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -184,16 +184,35 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
   const customerName = quotation.customer?.name_en || quotation.customer?.name_dv || quotation.customer_name || 'Valued Customer';
   const customerPhone = quotation.customer?.phone || quotation.customer_phone || '';
 
+  // Accurately compute validity days
+  let validityDays = quotation.validity_days;
+  if (!validityDays && quotation.date && quotation.valid_until) {
+    const diff = new Date(quotation.valid_until).getTime() - new Date(quotation.date).getTime();
+    if (diff > 0) {
+      validityDays = Math.max(1, Math.round(diff / (1000 * 60 * 60 * 24)));
+    }
+  }
+  validityDays = validityDays || 7;
+
   // ==========================================
-  // 1. MODERN TOP BAR / HEADER (Slate-900 with Sky-500 Accent)
+  // 1. LIGHT CLEAN TOP BAR / HEADER (Sky-50 with Emerald & Sky Accent)
   // ==========================================
   const headerHeight = 44;
-  doc.setFillColor(15, 23, 42); // Deep Luxury Slate-900
+  
+  // Soft airy light blue background
+  doc.setFillColor(240, 249, 255); // Sky-50
   doc.rect(0, 0, 210, headerHeight, 'F');
 
-  // Bottom Cyan Accent Line
+  // Top Dual Accent Stripe (Emerald Green & Light Sky Blue)
+  doc.setFillColor(16, 185, 129); // Emerald-500
+  doc.rect(0, 0, 105, 3.5, 'F');
   doc.setFillColor(14, 165, 233); // Sky-500
-  doc.rect(0, headerHeight - 2, 210, 2, 'F');
+  doc.rect(105, 0, 105, 3.5, 'F');
+
+  // Bottom Subtle Divider Line
+  doc.setDrawColor(186, 230, 253); // Sky-200
+  doc.setLineWidth(0.4);
+  doc.line(0, headerHeight, 210, headerHeight);
 
   let textStartX = 14;
 
@@ -201,65 +220,68 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
   if (shopLogo) {
     try {
       doc.setFillColor(255, 255, 255);
-      doc.roundedRect(14, 7, 30, 30, 3, 3, 'F');
+      doc.setDrawColor(186, 230, 253); // Sky-200
+      doc.roundedRect(14, 8, 28, 28, 3, 3, 'FD');
 
       const format = shopLogo.includes('image/jpeg') || shopLogo.includes('.jpg') || shopLogo.includes('.jpeg') ? 'JPEG' : 'PNG';
-      doc.addImage(shopLogo, format, 16, 9, 26, 26);
-      textStartX = 49;
+      doc.addImage(shopLogo, format, 16, 10, 24, 24);
+      textStartX = 48;
     } catch {
       textStartX = 14;
     }
   }
 
-  // Shop Name
+  // Shop Name (Vibrant Ocean Blue)
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
-  doc.setTextColor(255, 255, 255);
-  doc.text(shopName.toUpperCase(), textStartX, 16);
+  doc.setTextColor(3, 105, 161); // Sky-700
+  doc.text(shopName.toUpperCase(), textStartX, 17);
 
   // Shop Address
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
-  doc.setTextColor(203, 213, 225); // Slate-300
+  doc.setTextColor(71, 85, 105); // Slate-600
   if (shopAddress) {
-    doc.text(shopAddress, textStartX, 22);
+    doc.text(shopAddress, textStartX, 23);
   }
 
   // Contact line
   if (shopPhone) {
-    doc.text(`Tel: ${shopPhone}`, textStartX, 27.5);
+    doc.text(`Tel: ${shopPhone}`, textStartX, 28.5);
   }
 
-  // Shop GST TIN Pill Badge
+  // Shop GST TIN Pill Badge (Light Emerald Green Pill)
   if (shopTin) {
-    const tinY = shopAddress && shopPhone ? 31.5 : 27.5;
-    doc.setFillColor(30, 41, 59); // Slate-800
-    doc.roundedRect(textStartX, tinY, 56, 6, 1.5, 1.5, 'F');
+    const tinY = shopAddress && shopPhone ? 32.5 : 28.5;
+    doc.setFillColor(236, 253, 245); // Emerald-50
+    doc.setDrawColor(167, 243, 208); // Emerald-200
+    doc.roundedRect(textStartX, tinY, 56, 6.5, 1.5, 1.5, 'FD');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7.5);
-    doc.setTextColor(56, 189, 248); // Sky-400
-    doc.text(`GST TIN: ${shopTin}`, textStartX + 3, tinY + 4.2);
+    doc.setTextColor(5, 150, 105); // Emerald-600
+    doc.text(`GST TIN: ${shopTin}`, textStartX + 3, tinY + 4.5);
   }
 
-  // Right Side: Quotation Title & Ref Number
+  // Right Side: Quotation Title (Sky Blue) & Ref Pill
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(22);
-  doc.setTextColor(255, 255, 255);
-  doc.text('QUOTATION', 196, 17, { align: 'right' });
+  doc.setTextColor(2, 132, 199); // Sky-600
+  doc.text('QUOTATION', 196, 18, { align: 'right' });
 
-  // Reference Number Pill (Right)
-  doc.setFillColor(30, 41, 59); // Slate-800
-  doc.roundedRect(136, 21.5, 60, 7.5, 2, 2, 'F');
+  // Reference Number Pill (Right) - Light Sky Pill
+  doc.setFillColor(224, 242, 254); // Sky-100
+  doc.setDrawColor(186, 230, 253); // Sky-200
+  doc.roundedRect(136, 22.5, 60, 7.5, 2, 2, 'FD');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
-  doc.setTextColor(56, 189, 248); // Sky-400
-  doc.text(`REF: ${quotation.quotation_number}`, 166, 26.5, { align: 'center' });
+  doc.setTextColor(3, 105, 161); // Sky-700
+  doc.text(`REF: ${quotation.quotation_number}`, 166, 27.5, { align: 'center' });
 
   // Date line on header right
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.setTextColor(148, 163, 184); // Slate-400
-  doc.text(`Date: ${formatDate(quotation.date)}  •  Valid: ${formatDate(quotation.valid_until)}`, 196, 36, { align: 'right' });
+  doc.setTextColor(100, 116, 139); // Slate-500
+  doc.text(`Date: ${formatDate(quotation.date)}  •  Valid: ${formatDate(quotation.valid_until)}`, 196, 37, { align: 'right' });
 
   // ==========================================
   // 2. CLIENT & QUOTATION DETAILS CARDS
@@ -267,15 +289,15 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
   const cardsY = 51;
   const cardHeight = 25;
 
-  // Left Card: Customer Details
-  doc.setFillColor(248, 250, 252); // Slate-50
-  doc.setDrawColor(226, 232, 240); // Slate-200
+  // Left Card: Customer Details (Light Sky Card)
+  doc.setFillColor(240, 249, 255); // Sky-50
+  doc.setDrawColor(186, 230, 253); // Sky-200
   doc.setLineWidth(0.4);
   doc.roundedRect(14, cardsY, 88, cardHeight, 2.5, 2.5, 'FD');
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
-  doc.setTextColor(100, 116, 139); // Slate-500
+  doc.setTextColor(2, 132, 199); // Sky-600
   doc.text('QUOTATION ISSUED TO', 19, cardsY + 6);
 
   doc.setFont('helvetica', 'bold');
@@ -288,14 +310,14 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
   doc.setTextColor(71, 85, 105);
   doc.text(customerPhone ? `Phone: ${customerPhone}` : 'Direct Customer', 19, cardsY + 19.5);
 
-  // Right Card: Reference & Validity Details
-  doc.setFillColor(248, 250, 252);
-  doc.setDrawColor(226, 232, 240);
+  // Right Card: Reference & Validity Details (Light Emerald Card)
+  doc.setFillColor(236, 253, 245); // Emerald-50
+  doc.setDrawColor(167, 243, 208); // Emerald-200
   doc.roundedRect(108, cardsY, 88, cardHeight, 2.5, 2.5, 'FD');
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
-  doc.setTextColor(100, 116, 139);
+  doc.setTextColor(5, 150, 105); // Emerald-600
   doc.text('VALIDITY & SCHEDULE', 113, cardsY + 6);
 
   doc.setFont('helvetica', 'normal');
@@ -310,11 +332,11 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
   doc.setTextColor(71, 85, 105);
   doc.text('Valid Until:', 113, cardsY + 19.5);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(2, 132, 199); // Sky-600
-  doc.text(`${formatDate(quotation.valid_until)} (${quotation.validity_days || 7} Days)`, 191, cardsY + 19.5, { align: 'right' });
+  doc.setTextColor(16, 185, 129); // Emerald-500
+  doc.text(`${formatDate(quotation.valid_until)} (${validityDays} Days)`, 191, cardsY + 19.5, { align: 'right' });
 
   // ==========================================
-  // 3. MODERN ITEMS TABLE
+  // 3. MODERN ITEMS TABLE (Sky-600 Blue Header)
   // ==========================================
   const tableRows = quotation.items.map((item, idx) => [
     idx + 1,
@@ -330,7 +352,7 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
     body: tableRows,
     theme: 'striped',
     headStyles: {
-      fillColor: [15, 23, 42],
+      fillColor: [2, 132, 199], // Sky-600 Light Ocean Blue
       textColor: [255, 255, 255],
       fontStyle: 'bold',
       fontSize: 8.5,
@@ -338,12 +360,12 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
       cellPadding: 4,
     },
     alternateRowStyles: {
-      fillColor: [248, 250, 252],
+      fillColor: [240, 249, 255], // Soft Sky-50
     },
     styles: {
       fontSize: 8.5,
       cellPadding: 3.5,
-      lineColor: [226, 232, 240],
+      lineColor: [224, 242, 254], // Sky-100
       lineWidth: 0.1,
     },
     columnStyles: {
@@ -367,8 +389,8 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
   const summaryBoxHeight = hasGst ? 32 : 24;
 
   // Financial Summary Card (Right)
-  doc.setFillColor(248, 250, 252);
-  doc.setDrawColor(226, 232, 240);
+  doc.setFillColor(240, 249, 255); // Sky-50
+  doc.setDrawColor(186, 230, 253); // Sky-200
   doc.setLineWidth(0.4);
   doc.roundedRect(125, finalY, 71, summaryBoxHeight, 2.5, 2.5, 'FD');
 
@@ -390,9 +412,9 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
     doc.text(`${currency} ${quotation.tax_amount.toFixed(2)}`, 191, finalY + 14, { align: 'right' });
   }
 
-  // Grand Total Highlight Pill
+  // Grand Total Highlight Pill (Fresh Emerald Green)
   const grandTotalTopY = hasGst ? finalY + 18 : finalY + 11;
-  doc.setFillColor(15, 23, 42); // Slate-900
+  doc.setFillColor(16, 185, 129); // Emerald-500
   doc.roundedRect(128, grandTotalTopY, 65, 10, 2, 2, 'F');
 
   doc.setFont('helvetica', 'bold');
@@ -401,28 +423,28 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
   doc.text('TOTAL:', 133, grandTotalTopY + 6.8);
 
   doc.setFontSize(11);
-  doc.setTextColor(56, 189, 248); // Sky-400
+  doc.setTextColor(255, 255, 255);
   doc.text(`${currency} ${quotation.grand_total.toFixed(2)}`, 189, grandTotalTopY + 6.8, { align: 'right' });
 
-  // Notes & Terms (Left)
+  // Notes & Terms (Left - Soft Emerald Tint)
   let notesEndY = finalY;
   if (quotation.notes) {
     const splitNotes = doc.splitTextToSize(quotation.notes, 96);
     const notesHeight = Math.max(splitNotes.length * 4.5 + 8, summaryBoxHeight);
 
-    doc.setFillColor(248, 250, 252);
-    doc.setDrawColor(226, 232, 240);
+    doc.setFillColor(236, 253, 245); // Emerald-50
+    doc.setDrawColor(167, 243, 208); // Emerald-200
     doc.setLineWidth(0.4);
     doc.roundedRect(14, finalY, 105, notesHeight, 2.5, 2.5, 'FD');
 
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(100, 116, 139);
+    doc.setTextColor(5, 150, 105); // Emerald-600
     doc.text('TERMS & CONDITIONS', 19, finalY + 6);
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.setTextColor(71, 85, 105);
+    doc.setTextColor(51, 65, 85);
     doc.text(splitNotes, 19, finalY + 12);
     notesEndY = finalY + notesHeight;
   }
@@ -434,7 +456,7 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
 
   // Signature Line
   doc.setLineWidth(0.4);
-  doc.setDrawColor(203, 213, 225);
+  doc.setDrawColor(186, 230, 253); // Sky-200
   doc.line(14, afterTotalY + 14, 75, afterTotalY + 14);
 
   doc.setFontSize(7.5);

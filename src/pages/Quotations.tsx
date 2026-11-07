@@ -150,6 +150,8 @@ export const Quotations: React.FC = () => {
     setSelectedCustomer(null);
     setCustomCustomerName('');
     setCustomCustomerPhone('');
+    setValidityDays(7);
+    setNotes('Prices valid for the duration specified. Subject to stock availability.');
     setEditingQuoteId(null);
   };
 
@@ -211,9 +213,11 @@ export const Quotations: React.FC = () => {
 
   // Build Quotation Object
   const createQuotationObject = (): Quotation => {
+    const existingQuote = editingQuoteId ? quotations.find((q) => q.id === editingQuoteId) : null;
+    const days = Number(validityDays) || 7;
     const now = new Date();
     const validUntilDate = new Date();
-    validUntilDate.setDate(now.getDate() + (validityDays || 7));
+    validUntilDate.setDate(now.getDate() + days);
 
     const finalCustomerName = selectedCustomer
       ? selectedCustomer.name_en || selectedCustomer.name_dv
@@ -222,10 +226,11 @@ export const Quotations: React.FC = () => {
     return {
       id: editingQuoteId || `quote_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       quotation_number: editingQuoteId
-        ? quotations.find((q) => q.id === editingQuoteId)?.quotation_number || generateQuotationNumber()
+        ? existingQuote?.quotation_number || generateQuotationNumber()
         : generateQuotationNumber(),
-      date: new Date().toISOString(),
+      date: existingQuote?.date || now.toISOString(),
       valid_until: validUntilDate.toISOString(),
+      validity_days: days,
       customer: selectedCustomer,
       customer_name: finalCustomerName,
       customer_phone: selectedCustomer?.phone || customCustomerPhone.trim() || undefined,
@@ -234,8 +239,8 @@ export const Quotations: React.FC = () => {
       tax_amount: gstAmount,
       grand_total: grandTotal,
       notes: notes.trim(),
-      status: 'active',
-      created_at: new Date().toISOString(),
+      status: existingQuote?.status || 'active',
+      created_at: existingQuote?.created_at || now.toISOString(),
     };
   };
 
@@ -272,6 +277,17 @@ export const Quotations: React.FC = () => {
     setCustomCustomerName(quote.customer_name || '');
     setCustomCustomerPhone(quote.customer_phone || '');
     setNotes(quote.notes || '');
+
+    // Restore validityDays accurately from quotation object or calculated date difference
+    let days = quote.validity_days;
+    if (!days && quote.date && quote.valid_until) {
+      const diffTime = new Date(quote.valid_until).getTime() - new Date(quote.date).getTime();
+      if (diffTime > 0) {
+        days = Math.max(1, Math.round(diffTime / (1000 * 60 * 60 * 24)));
+      }
+    }
+    setValidityDays(days || 7);
+
     setEditingQuoteId(quote.id);
     setActiveTab('builder');
     showSuccess(`Loaded ${quote.quotation_number} into builder`);
@@ -511,6 +527,9 @@ export const Quotations: React.FC = () => {
                       <SelectItem value="7">7 Days (Standard)</SelectItem>
                       <SelectItem value="14">14 Days (2 Weeks)</SelectItem>
                       <SelectItem value="30">30 Days (1 Month)</SelectItem>
+                      {![3, 7, 14, 30].includes(validityDays) && (
+                        <SelectItem value={validityDays.toString()}>{validityDays} Days (Custom)</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>

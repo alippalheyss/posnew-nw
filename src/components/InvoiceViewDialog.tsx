@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Printer, FileText, X, Clock, User, Phone, DollarSign, Calendar, PackageCheck, ShoppingBag } from 'lucide-react';
+import { Printer, FileText, X, Clock, User, Phone, DollarSign, Calendar, PackageCheck, ShoppingBag, Download } from 'lucide-react';
 import { Sale, useAppContext } from '@/context/AppContext';
 import { formatDate, formatTime, formatDateTime } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
+import { downloadSaleA4Pdf, printSaleA4Html, printSale80mmSlip } from '@/utils/invoicePrintHelper';
 
 interface InvoiceViewDialogProps {
   isOpen: boolean;
@@ -34,7 +35,7 @@ export const InvoiceViewDialog: React.FC<InvoiceViewDialogProps> = ({
 
   const currency = settings.shop?.currency || 'MVR';
   const customer = sale.customer || (sale.customer_id ? customers.find(c => c.id === sale.customer_id) : null);
-  const paymentMethod = String(sale.paymentMethod || (sale as any).payment_method || 'cash').toLowerCase();
+  const paymentMethod = String(sale.paymentMethod || (sale as Record<string, unknown>).payment_method || 'cash').toLowerCase();
   const isCredit = paymentMethod === 'credit';
   const isCash = paymentMethod === 'cash';
   const isSplit = paymentMethod === 'split';
@@ -50,10 +51,10 @@ export const InvoiceViewDialog: React.FC<InvoiceViewDialogProps> = ({
   const subtotal = gstRate > 0 ? grandTotal / (1 + gstRate / 100) : grandTotal;
   const gstAmount = grandTotal - subtotal;
 
-  const invoiceNumber = sale.invoiceNumber || (sale as any).invoice_number || `INV-${String(sale.id).slice(-6)}`;
-  const dateStr = sale.date || (sale as any).created_at;
+  const invoiceNumber = sale.invoiceNumber || (sale as Record<string, unknown>).invoice_number || `INV-${String(sale.id).slice(-6)}`;
+  const dateStr = sale.date || (sale as Record<string, unknown>).created_at as string | undefined;
 
-  const splitDetails = sale.splitDetails || (sale as any).split_details;
+  const splitDetails = sale.splitDetails || (sale as Record<string, unknown>).split_details;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -143,7 +144,7 @@ export const InvoiceViewDialog: React.FC<InvoiceViewDialogProps> = ({
             </div>
 
             <div className="space-y-2">
-              {(sale.items || []).map((item: any, idx: number) => {
+              {(sale.items || []).map((item, idx: number) => {
                 const itemTotal = Number(item.qty || 0) * Number(item.price || 0);
                 const unitTag = item.selected_unit && item.selected_unit !== 'Piece' ? item.selected_unit : null;
                 const flavourTag = item.selected_flavour || null;
@@ -279,26 +280,31 @@ export const InvoiceViewDialog: React.FC<InvoiceViewDialogProps> = ({
           </Button>
 
           <div className="flex items-center gap-2">
-            {onPrintA4 && (
-              <Button
-                variant="outline"
-                onClick={() => onPrintA4(sale)}
-                className="rounded-xl h-11 px-4 gap-2 font-bold text-xs hover:bg-slate-700 hover:text-white"
-              >
-                <FileText className="h-4 w-4" />
-                <span>A4 Invoice</span>
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              onClick={() => onPrintThermal ? onPrintThermal(sale) : printSale80mmSlip(sale, settings)}
+              className="rounded-xl h-11 px-4 gap-2 font-bold text-xs"
+            >
+              <Printer className="h-4 w-4" />
+              <span>Print Slip</span>
+            </Button>
 
-            {onPrintThermal && (
-              <Button
-                onClick={() => onPrintThermal(sale)}
-                className="rounded-xl h-11 px-5 gap-2 font-black text-xs bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
-              >
-                <Printer className="h-4 w-4" />
-                <span>Print Receipt</span>
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              onClick={() => onPrintA4 ? onPrintA4(sale) : printSaleA4Html(sale, settings)}
+              className="rounded-xl h-11 px-4 gap-2 font-bold text-xs"
+            >
+              <FileText className="h-4 w-4" />
+              <span>Print A4</span>
+            </Button>
+
+            <Button
+              onClick={() => downloadSaleA4Pdf(sale, settings)}
+              className="rounded-xl h-11 px-4 gap-2 font-black text-xs bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
+            >
+              <Download className="h-4 w-4" />
+              <span>Download PDF</span>
+            </Button>
           </div>
         </div>
       </DialogContent>

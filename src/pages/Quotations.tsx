@@ -626,12 +626,13 @@ export const Quotations: React.FC = () => {
               {/* Action Buttons */}
               <div className="grid grid-cols-2 gap-2 pt-1" dir="ltr">
                 <Button
-                  onClick={() => handleSaveQuotation(true, false)}
+                  onClick={() => setSelectedQuoteForPreview(createQuotationObject())}
                   disabled={quoteItems.length === 0}
-                  className="h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs gap-1.5 shadow-sm"
+                  variant="outline"
+                  className="h-10 rounded-xl font-bold text-xs border-border gap-1.5 hover:bg-primary/10"
                 >
-                  <Printer className="h-4 w-4" />
-                  <span>Save &amp; Print</span>
+                  <Eye className="h-4 w-4 text-primary" />
+                  <span>Preview Quote</span>
                 </Button>
 
                 <Button
@@ -644,15 +645,27 @@ export const Quotations: React.FC = () => {
                 </Button>
               </div>
 
-              <Button
-                onClick={() => handleSaveQuotation(false, false)}
-                disabled={quoteItems.length === 0}
-                variant="outline"
-                className="w-full h-9 rounded-xl font-black text-xs border-border gap-1.5"
-              >
-                <FileText className="h-3.5 w-3.5 text-primary" />
-                <span>Save Quotation Only</span>
-              </Button>
+              <div className="grid grid-cols-2 gap-2" dir="ltr">
+                <Button
+                  onClick={() => handleSaveQuotation(true, false)}
+                  disabled={quoteItems.length === 0}
+                  variant="outline"
+                  className="h-9 rounded-xl font-bold text-xs border-border gap-1.5"
+                >
+                  <Printer className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>Save &amp; Print</span>
+                </Button>
+
+                <Button
+                  onClick={() => handleSaveQuotation(false, false)}
+                  disabled={quoteItems.length === 0}
+                  variant="outline"
+                  className="h-9 rounded-xl font-bold text-xs border-border gap-1.5"
+                >
+                  <FileText className="h-3.5 w-3.5 text-primary" />
+                  <span>Save Only</span>
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -896,6 +909,17 @@ export const Quotations: React.FC = () => {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => setSelectedQuoteForPreview(quote)}
+                          className="h-8 px-2.5 rounded-xl text-xs font-bold gap-1 text-primary hover:bg-primary/10"
+                          title="View Quotation Details"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">View</span>
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => downloadQuotationA4Pdf(quote, settings)}
                           className="h-8 px-2.5 rounded-xl text-xs font-bold gap-1"
                           title="Download A4 PDF"
@@ -948,6 +972,157 @@ export const Quotations: React.FC = () => {
           </ScrollArea>
         </div>
       )}
+
+      {/* Quotation Preview & View Dialog */}
+      <Dialog open={selectedQuoteForPreview !== null} onOpenChange={(open) => !open && setSelectedQuoteForPreview(null)}>
+        <DialogContent className="max-w-2xl w-[95vw] apple-glass-dialog p-0 overflow-hidden rounded-3xl" dir="ltr">
+          {selectedQuoteForPreview && (
+            <div className="flex flex-col max-h-[85vh]">
+              {/* Top Accent Line */}
+              <div className="h-1.5 w-full bg-primary" />
+
+              {/* Dialog Header */}
+              <div className="p-5 border-b border-border/60 flex items-center justify-between gap-3 bg-muted/20">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-lg font-black text-foreground flex items-center gap-2 font-mono">
+                      <span>{selectedQuoteForPreview.quotation_number}</span>
+                      <Badge variant="outline" className={cn(
+                        "text-[10px] font-bold font-sans",
+                        selectedQuoteForPreview.status === 'converted' 
+                          ? 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
+                          : 'border-blue-500/40 text-blue-600 dark:text-blue-400 bg-blue-500/10'
+                      )}>
+                        {selectedQuoteForPreview.status === 'converted' ? 'Converted to Sale' : 'Active Quote'}
+                      </Badge>
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                      Date: {formatDate(selectedQuoteForPreview.date)} • Valid Until: {formatDate(selectedQuoteForPreview.valid_until)} ({selectedQuoteForPreview.validity_days || 7} Days)
+                    </DialogDescription>
+                  </div>
+                </div>
+
+                {/* Customer Info */}
+                <div className="text-right">
+                  <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Issued To:</div>
+                  <div className="text-sm font-black text-foreground">
+                    {selectedQuoteForPreview.customer?.name_en || selectedQuoteForPreview.customer?.name_dv || selectedQuoteForPreview.customer_name || 'General Customer'}
+                  </div>
+                  {selectedQuoteForPreview.customer_phone && (
+                    <div className="text-xs text-muted-foreground font-mono">{selectedQuoteForPreview.customer_phone}</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Items List */}
+              <ScrollArea className="flex-1 p-5 custom-scrollbar overflow-y-auto">
+                <div className="space-y-4">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-border/60 text-muted-foreground font-bold uppercase text-[10px]">
+                        <th className="text-center pb-2 w-8">#</th>
+                        <th className="text-left pb-2">Item Description</th>
+                        <th className="text-center pb-2 w-14">Qty</th>
+                        <th className="text-right pb-2 w-20">Unit Price</th>
+                        <th className="text-right pb-2 w-24">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/40">
+                      {selectedQuoteForPreview.items.map((item, idx) => (
+                        <tr key={idx} className="hover:bg-muted/30 transition-colors">
+                          <td className="py-2.5 text-center text-muted-foreground font-mono">{idx + 1}</td>
+                          <td className="py-2.5 font-bold text-foreground">
+                            {item.name_en || item.name_dv || 'Item'}
+                            {item.selected_flavour && <span className="text-muted-foreground font-normal ml-1">[{item.selected_flavour}]</span>}
+                            {item.selected_unit && item.selected_unit !== 'Piece' && <span className="text-muted-foreground font-normal ml-1">({item.selected_unit})</span>}
+                          </td>
+                          <td className="py-2.5 text-center font-mono font-bold">{item.qty}</td>
+                          <td className="py-2.5 text-right font-mono">{settings.shop.currency} {Number(item.price).toFixed(2)}</td>
+                          <td className="py-2.5 text-right font-mono font-bold text-foreground">
+                            {settings.shop.currency} {(Number(item.price) * Number(item.qty)).toFixed(2)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  {/* Financial Breakdown */}
+                  <div className="p-3.5 rounded-2xl bg-muted/40 border border-border/60 space-y-1.5 ml-auto max-w-xs">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Subtotal:</span>
+                      <span className="font-mono font-bold">{settings.shop.currency} {selectedQuoteForPreview.subtotal.toFixed(2)}</span>
+                    </div>
+                    {selectedQuoteForPreview.tax_amount > 0 && (
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>GST ({settings.shop.taxRate}%):</span>
+                        <span className="font-mono font-bold">{settings.shop.currency} {selectedQuoteForPreview.tax_amount.toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm font-black text-foreground pt-1.5 border-t border-border/60">
+                      <span>Grand Total:</span>
+                      <span className="font-mono text-primary text-base">{settings.shop.currency} {selectedQuoteForPreview.grand_total.toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  {selectedQuoteForPreview.notes && (
+                    <div className="p-3 rounded-xl bg-muted/30 border border-border/40 text-xs text-muted-foreground">
+                      <span className="font-bold text-foreground mr-1">Terms &amp; Notes:</span>
+                      {selectedQuoteForPreview.notes}
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+
+              {/* Dialog Footer Actions */}
+              <div className="p-4 bg-muted/40 border-t border-border flex items-center justify-between gap-2 flex-wrap">
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedQuoteForPreview(null)}
+                  className="rounded-xl px-4 h-10 font-bold text-xs"
+                >
+                  Close
+                </Button>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => printQuotation80mm(selectedQuoteForPreview, settings)}
+                    className="rounded-xl h-10 px-3.5 gap-1.5 font-bold text-xs"
+                  >
+                    <Printer className="h-4 w-4" />
+                    <span>Print Slip</span>
+                  </Button>
+
+                  <Button
+                    onClick={() => downloadQuotationA4Pdf(selectedQuoteForPreview, settings)}
+                    className="rounded-xl h-10 px-4 gap-1.5 font-black text-xs bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>Download A4 PDF</span>
+                  </Button>
+
+                  {selectedQuoteForPreview.id && (
+                    <Button
+                      onClick={() => {
+                        const q = selectedQuoteForPreview;
+                        setSelectedQuoteForPreview(null);
+                        handleConvertToPosCart(q);
+                      }}
+                      className="rounded-xl h-10 px-4 gap-1.5 font-black text-xs bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm"
+                    >
+                      <ArrowRightLeft className="h-4 w-4" />
+                      <span>Convert to Sale</span>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

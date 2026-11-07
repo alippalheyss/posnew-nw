@@ -168,6 +168,9 @@ export const printQuotation80mm = (quotation: Quotation, settings: AppSettings) 
 /**
  * A4 Professional PDF Generator for Quotations (with Complete Shop Info, Shop Logo, Bold Customer, No Barcode Column, No Status)
  */
+/**
+ * A4 Clean Modern Executive Quotation PDF
+ */
 export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettings) => {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const shop = (settings?.shop || {}) as Partial<AppSettings['shop']>;
@@ -181,84 +184,138 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
   const customerName = quotation.customer?.name_en || quotation.customer?.name_dv || quotation.customer_name || 'Valued Customer';
   const customerPhone = quotation.customer?.phone || quotation.customer_phone || '';
 
-  // Header Box
-  doc.setFillColor(15, 23, 42); // Slate-900
-  doc.rect(0, 0, 210, 38, 'F');
+  // ==========================================
+  // 1. MODERN TOP BAR / HEADER (Slate-900 with Sky-500 Accent)
+  // ==========================================
+  const headerHeight = 44;
+  doc.setFillColor(15, 23, 42); // Deep Luxury Slate-900
+  doc.rect(0, 0, 210, headerHeight, 'F');
+
+  // Bottom Cyan Accent Line
+  doc.setFillColor(14, 165, 233); // Sky-500
+  doc.rect(0, headerHeight - 2, 210, 2, 'F');
 
   let textStartX = 14;
 
-  // 1. Render Shop Logo if available
+  // Render Shop Logo in a clean white rounded container if available
   if (shopLogo) {
     try {
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(14, 7, 30, 30, 3, 3, 'F');
+
       const format = shopLogo.includes('image/jpeg') || shopLogo.includes('.jpg') || shopLogo.includes('.jpeg') ? 'JPEG' : 'PNG';
-      doc.addImage(shopLogo, format, 14, 6, 26, 26);
-      textStartX = 45;
-    } catch (e) {
-      // Fallback without logo shift if format fails
+      doc.addImage(shopLogo, format, 16, 9, 26, 26);
+      textStartX = 49;
+    } catch {
       textStartX = 14;
     }
   }
 
-  // Shop Name & Complete Information
-  doc.setTextColor(255, 255, 255);
+  // Shop Name
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
-  doc.text(shopName.toUpperCase(), textStartX, 18);
+  doc.setTextColor(255, 255, 255);
+  doc.text(shopName.toUpperCase(), textStartX, 16);
 
+  // Shop Address
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
-  doc.setTextColor(203, 213, 225);
-  const headerDetails = [
-    shopAddress,
-    shopPhone ? `Phone: ${shopPhone}` : '',
-    shopTin ? `Shop TIN: ${shopTin}` : '',
-  ].filter(Boolean).join('  |  ');
-  doc.text(headerDetails, textStartX, 26);
+  doc.setTextColor(203, 213, 225); // Slate-300
+  if (shopAddress) {
+    doc.text(shopAddress, textStartX, 22);
+  }
 
-  // Big Title Right Side
+  // Contact line
+  if (shopPhone) {
+    doc.text(`Tel: ${shopPhone}`, textStartX, 27.5);
+  }
+
+  // Shop GST TIN Pill Badge
+  if (shopTin) {
+    const tinY = shopAddress && shopPhone ? 31.5 : 27.5;
+    doc.setFillColor(30, 41, 59); // Slate-800
+    doc.roundedRect(textStartX, tinY, 56, 6, 1.5, 1.5, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(56, 189, 248); // Sky-400
+    doc.text(`GST TIN: ${shopTin}`, textStartX + 3, tinY + 4.2);
+  }
+
+  // Right Side: Quotation Title & Ref Number
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.setTextColor(56, 189, 248); // Sky 400
-  doc.text('PRICE QUOTATION', 196, 18, { align: 'right' });
-
-  doc.setFontSize(9);
+  doc.setFontSize(22);
   doc.setTextColor(255, 255, 255);
-  doc.text(`Ref: ${quotation.quotation_number}`, 196, 26, { align: 'right' });
+  doc.text('QUOTATION', 196, 17, { align: 'right' });
 
-  // Metadata Panel
-  doc.setTextColor(51, 65, 85);
-
-  // Customer Info (Left) — BOLD Customer Name
+  // Reference Number Pill (Right)
+  doc.setFillColor(30, 41, 59); // Slate-800
+  doc.roundedRect(136, 21.5, 60, 7.5, 2, 2, 'F');
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(71, 85, 105);
-  doc.text('QUOTATION ISSUED TO:', 14, 48);
+  doc.setFontSize(8.5);
+  doc.setTextColor(56, 189, 248); // Sky-400
+  doc.text(`REF: ${quotation.quotation_number}`, 166, 26.5, { align: 'center' });
+
+  // Date line on header right
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(148, 163, 184); // Slate-400
+  doc.text(`Date: ${formatDate(quotation.date)}  •  Valid: ${formatDate(quotation.valid_until)}`, 196, 36, { align: 'right' });
+
+  // ==========================================
+  // 2. CLIENT & QUOTATION DETAILS CARDS
+  // ==========================================
+  const cardsY = 51;
+  const cardHeight = 25;
+
+  // Left Card: Customer Details
+  doc.setFillColor(248, 250, 252); // Slate-50
+  doc.setDrawColor(226, 232, 240); // Slate-200
+  doc.setLineWidth(0.4);
+  doc.roundedRect(14, cardsY, 88, cardHeight, 2.5, 2.5, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 116, 139); // Slate-500
+  doc.text('QUOTATION ISSUED TO', 19, cardsY + 6);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
-  doc.setTextColor(15, 23, 42);
-  doc.text(customerName.toUpperCase(), 14, 55);
-
-  if (customerPhone) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(100, 116, 139);
-    doc.text(`Phone: ${customerPhone}`, 14, 62);
-  }
-
-  // Quote Info (Right) — Clean Date & Valid Until (No Status)
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(71, 85, 105);
-  doc.text('QUOTATION DETAILS:', 140, 48);
+  doc.setTextColor(15, 23, 42); // Slate-900
+  doc.text(customerName.toUpperCase(), 19, cardsY + 13);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(15, 23, 42);
-  doc.text(`Quotation Date: ${formatDate(quotation.date)}`, 140, 54);
-  doc.text(`Valid Until: ${formatDate(quotation.valid_until)}`, 140, 60);
+  doc.setFontSize(8.5);
+  doc.setTextColor(71, 85, 105);
+  doc.text(customerPhone ? `Phone: ${customerPhone}` : 'Direct Customer', 19, cardsY + 19.5);
 
-  // Items Table — Product Barcode Column Removed!
+  // Right Card: Reference & Validity Details
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(226, 232, 240);
+  doc.roundedRect(108, cardsY, 88, cardHeight, 2.5, 2.5, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text('VALIDITY & SCHEDULE', 113, cardsY + 6);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(71, 85, 105);
+  doc.text('Quotation Date:', 113, cardsY + 13);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(15, 23, 42);
+  doc.text(formatDate(quotation.date), 191, cardsY + 13, { align: 'right' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(71, 85, 105);
+  doc.text('Valid Until:', 113, cardsY + 19.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(2, 132, 199); // Sky-600
+  doc.text(`${formatDate(quotation.valid_until)} (${quotation.validity_days || 7} Days)`, 191, cardsY + 19.5, { align: 'right' });
+
+  // ==========================================
+  // 3. MODERN ITEMS TABLE
+  // ==========================================
   const tableRows = quotation.items.map((item, idx) => [
     idx + 1,
     item.name_en || item.name_dv || 'Item',
@@ -268,26 +325,33 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
   ]);
 
   autoTable(doc, {
-    startY: 68,
-    head: [['#', 'Item Description', 'Qty', 'Unit Price', 'Total']],
+    startY: 81,
+    head: [['#', 'Item Description', 'Qty', 'Unit Price', 'Total Amount']],
     body: tableRows,
     theme: 'striped',
     headStyles: {
       fillColor: [15, 23, 42],
       textColor: [255, 255, 255],
       fontStyle: 'bold',
-      fontSize: 9,
+      fontSize: 8.5,
+      halign: 'left',
+      cellPadding: 4,
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252],
     },
     styles: {
-      fontSize: 9,
+      fontSize: 8.5,
       cellPadding: 3.5,
+      lineColor: [226, 232, 240],
+      lineWidth: 0.1,
     },
     columnStyles: {
-      0: { cellWidth: 12, halign: 'center' },
-      1: { cellWidth: 105 },
+      0: { cellWidth: 12, halign: 'center', textColor: [100, 116, 139] },
+      1: { cellWidth: 105, fontStyle: 'bold' },
       2: { cellWidth: 18, halign: 'center' },
       3: { cellWidth: 28, halign: 'right' },
-      4: { cellWidth: 28, halign: 'right' },
+      4: { cellWidth: 28, halign: 'right', fontStyle: 'bold' },
     },
   });
 
@@ -296,52 +360,93 @@ export const downloadQuotationA4Pdf = (quotation: Quotation, settings: AppSettin
   }
   const finalY = (doc as unknown as AutoTableDoc).lastAutoTable.finalY + 8;
 
-  // Financial Summary Box (Right)
-  const summaryX = 130;
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(51, 65, 85);
-  doc.text('Subtotal:', summaryX, finalY);
-  doc.text(`${currency} ${quotation.subtotal.toFixed(2)}`, 196, finalY, { align: 'right' });
+  // ==========================================
+  // 4. FINANCIAL SUMMARY & TERMS
+  // ==========================================
+  const hasGst = quotation.tax_amount > 0;
+  const summaryBoxHeight = hasGst ? 32 : 24;
 
-  if (quotation.tax_amount > 0) {
-    doc.text(`GST (${shop.taxRate || 8}%):`, summaryX, finalY + 6);
-    doc.text(`${currency} ${quotation.tax_amount.toFixed(2)}`, 196, finalY + 6, { align: 'right' });
+  // Financial Summary Card (Right)
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(125, finalY, 71, summaryBoxHeight, 2.5, 2.5, 'FD');
+
+  const summaryTextX = 130;
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(71, 85, 105);
+  doc.text('Subtotal:', summaryTextX, finalY + 7);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(15, 23, 42);
+  doc.text(`${currency} ${quotation.subtotal.toFixed(2)}`, 191, finalY + 7, { align: 'right' });
+
+  if (hasGst) {
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text(`GST (${shop.taxRate || 8}%):`, summaryTextX, finalY + 14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(`${currency} ${quotation.tax_amount.toFixed(2)}`, 191, finalY + 14, { align: 'right' });
   }
 
-  doc.setLineWidth(0.5);
-  doc.setDrawColor(203, 213, 225);
-  doc.line(summaryX, finalY + 9, 196, finalY + 9);
+  // Grand Total Highlight Pill
+  const grandTotalTopY = hasGst ? finalY + 18 : finalY + 11;
+  doc.setFillColor(15, 23, 42); // Slate-900
+  doc.roundedRect(128, grandTotalTopY, 65, 10, 2, 2, 'F');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setTextColor(15, 23, 42);
-  doc.text('Grand Total:', summaryX, finalY + 16);
-  doc.text(`${currency} ${quotation.grand_total.toFixed(2)}`, 196, finalY + 16, { align: 'right' });
+  doc.setFontSize(9.5);
+  doc.setTextColor(255, 255, 255);
+  doc.text('TOTAL:', 133, grandTotalTopY + 6.8);
+
+  doc.setFontSize(11);
+  doc.setTextColor(56, 189, 248); // Sky-400
+  doc.text(`${currency} ${quotation.grand_total.toFixed(2)}`, 189, grandTotalTopY + 6.8, { align: 'right' });
 
   // Notes & Terms (Left)
   let notesEndY = finalY;
   if (quotation.notes) {
-    doc.setFontSize(8.5);
+    const splitNotes = doc.splitTextToSize(quotation.notes, 96);
+    const notesHeight = Math.max(splitNotes.length * 4.5 + 8, summaryBoxHeight);
+
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(14, finalY, 105, notesHeight, 2.5, 2.5, 'FD');
+
+    doc.setFontSize(7.5);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(71, 85, 105);
-    doc.text('TERMS & NOTES:', 14, finalY);
+    doc.setTextColor(100, 116, 139);
+    doc.text('TERMS & CONDITIONS', 19, finalY + 6);
+
     doc.setFont('helvetica', 'normal');
-    const splitNotes = doc.splitTextToSize(quotation.notes, 105);
-    doc.text(splitNotes, 14, finalY + 5);
-    notesEndY = finalY + 5 + (splitNotes.length * 4);
+    doc.setFontSize(8);
+    doc.setTextColor(71, 85, 105);
+    doc.text(splitNotes, 19, finalY + 12);
+    notesEndY = finalY + notesHeight;
   }
 
-  // Footer & Signature Line: Placed immediately after Grand Total / Notes to save vertical space
-  const afterTotalY = Math.max(finalY + 20, notesEndY + 6);
-  doc.setLineWidth(0.5);
-  doc.setDrawColor(203, 213, 225);
-  doc.line(14, afterTotalY + 14, 70, afterTotalY + 14);
-  doc.setFontSize(8);
-  doc.setTextColor(100, 116, 139);
-  doc.text('Authorized Signature & Stamp', 14, afterTotalY + 18);
+  // ==========================================
+  // 5. SIGNATURE & GENERATION LINE
+  // ==========================================
+  const afterTotalY = Math.max(finalY + summaryBoxHeight, notesEndY) + 6;
 
-  doc.text(`Generated on ${new Date().toLocaleDateString()} | ${shopName}`, 196, afterTotalY + 18, { align: 'right' });
+  // Signature Line
+  doc.setLineWidth(0.4);
+  doc.setDrawColor(203, 213, 225);
+  doc.line(14, afterTotalY + 14, 75, afterTotalY + 14);
+
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(100, 116, 139);
+  doc.text('Authorized Signature & Official Stamp', 14, afterTotalY + 18.5);
+
+  // Generation timestamp on right
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(148, 163, 184);
+  doc.text(`Generated on ${new Date().toLocaleDateString()} | ${shopName}`, 196, afterTotalY + 18.5, { align: 'right' });
 
   doc.save(`Quotation_${quotation.quotation_number}.pdf`);
 };

@@ -38,3 +38,7 @@ release/
 backup/
 
 *.tsbuildinfo
+
+# Graphify cache
+graphify-out/cache/
+

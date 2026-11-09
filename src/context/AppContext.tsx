@@ -1040,7 +1040,35 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     bankNotificationsRef.current = bankNotifications;
   }, [bankNotifications]);
 
-  const lastProcessedWebhookSigRef = useRef<string>('');
+  const lastProcessedWebhookSigRef = useRef<string>(
+    typeof window !== 'undefined' ? localStorage.getItem('pos_last_bank_webhook_sig') || '' : ''
+  );
+  const seenWebhookSigsRef = useRef<Set<string>>(
+    new Set(
+      typeof window !== 'undefined'
+        ? (() => {
+            try {
+              const saved = localStorage.getItem('pos_seen_bank_webhook_sigs');
+              return saved ? JSON.parse(saved) : [];
+            } catch {
+              return [];
+            }
+          })()
+        : []
+    )
+  );
+
+  const markWebhookSigSeen = useCallback((sig: string) => {
+    lastProcessedWebhookSigRef.current = sig;
+    seenWebhookSigsRef.current.add(sig);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('pos_last_bank_webhook_sig', sig);
+        const arr = Array.from(seenWebhookSigsRef.current).slice(-100);
+        localStorage.setItem('pos_seen_bank_webhook_sigs', JSON.stringify(arr));
+      } catch {}
+    }
+  }, []);
 
   const playBankAlertChime = useCallback(() => {
     try {
@@ -1091,24 +1119,33 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   }, []);
 
   const handleIncomingBankWebhook = useCallback(
-    (rawPayload: any) => {
+    (rawPayload: any, options?: { silent?: boolean }) => {
       if (!rawPayload || (!rawPayload.body && !rawPayload.text && !rawPayload.title && !rawPayload.message && !rawPayload.big_text)) return;
       const parsed = parseBankNotificationPayload(rawPayload);
       if (!parsed.body && (!parsed.title || parsed.title === 'Bank Alert')) return;
 
-      const sig = `${parsed.title}|${parsed.body}|${rawPayload.timestamp || parsed.receivedAt || ''}`;
-      if (lastProcessedWebhookSigRef.current === sig) return;
+      const hasExplicitTimestamp = !isNaN(Number(rawPayload.timestamp)) && Number(rawPayload.timestamp) > 1000000000;
+      const contentSig = `${parsed.title}|${parsed.body}`;
+      const sig = `${parsed.title}|${parsed.body}|${rawPayload._rowUpdatedAt || (hasExplicitTimestamp ? rawPayload.timestamp : '')}`;
+
+      if (lastProcessedWebhookSigRef.current === sig || seenWebhookSigsRef.current.has(sig)) return;
+      if (!hasExplicitTimestamp && seenWebhookSigsRef.current.has(contentSig)) {
+        markWebhookSigSeen(sig);
+        return;
+      }
 
       const currentList = bankNotificationsRef.current || [];
       const isDuplicate = currentList.some((existing) => {
         if (existing.body !== parsed.body) return false;
+        if (!hasExplicitTimestamp) return true;
         const tA = new Date(existing.receivedAt).getTime();
         const tB = new Date(parsed.receivedAt).getTime();
         if (!isNaN(tA) && !isNaN(tB) && Math.abs(tA - tB) < 60000) return true;
         return existing.receivedAt === parsed.receivedAt;
       });
 
-      lastProcessedWebhookSigRef.current = sig;
+      markWebhookSigSeen(sig);
+      markWebhookSigSeen(contentSig);
       if (isDuplicate) return;
 
       const next = [parsed, ...currentList].slice(0, 50);
@@ -1116,18 +1153,22 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       setBankNotifications(next);
       syncBankNotificationsToCloud(next);
 
-      // Trigger prominent non-clickable pill popup from top (shows for 4-5 seconds)
-      setActiveTopBankAlert(parsed);
-      if (topBankAlertTimerRef.current) clearTimeout(topBankAlertTimerRef.current);
-      topBankAlertTimerRef.current = setTimeout(() => {
-        setActiveTopBankAlert(null);
-      }, 4500);
+      // Only show live popup & chime if not a silent initial sync and notification is recent (< 90s)
+      const rowAgeMs = rawPayload._rowUpdatedAt ? Date.now() - new Date(rawPayload._rowUpdatedAt).getTime() : 0;
+      const isStaleWebhook = !isNaN(rowAgeMs) && rowAgeMs > 90000;
+      if (!options?.silent && !isStaleWebhook) {
+        setActiveTopBankAlert(parsed);
+        if (topBankAlertTimerRef.current) clearTimeout(topBankAlertTimerRef.current);
+        topBankAlertTimerRef.current = setTimeout(() => {
+          setActiveTopBankAlert(null);
+        }, 4500);
 
-      playBankAlertChime();
-      const amtText = parsed.amount !== null ? `${parsed.currency} ${parsed.amount.toFixed(2)}` : parsed.title;
-      showSuccess(`🏦 Bank Transfer Received: ${amtText}${parsed.senderOrRef ? ` (${parsed.senderOrRef})` : ''}`);
+        playBankAlertChime();
+        const amtText = parsed.amount !== null ? `${parsed.currency} ${parsed.amount.toFixed(2)}` : parsed.title;
+        showSuccess(`🏦 Bank Transfer Received: ${amtText}${parsed.senderOrRef ? ` (${parsed.senderOrRef})` : ''}`);
+      }
     },
-    [playBankAlertChime, syncBankNotificationsToCloud]
+    [markWebhookSigSeen, playBankAlertChime, syncBankNotificationsToCloud]
   );
 
   // Cloud catch-up sync for bank webhooks that arrived while phone or POS was locked/offline
@@ -1199,9 +1240,11 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       for (const row of webhookRows) {
         if (row.settings) {
           if (Array.isArray(row.settings.queue)) {
-            row.settings.queue.forEach((item: any) => handleIncomingBankWebhook(item));
+            row.settings.queue.forEach((item: any) =>
+              handleIncomingBankWebhook({ ...item, _rowUpdatedAt: row.updated_at })
+            );
           } else {
-            handleIncomingBankWebhook(row.settings);
+            handleIncomingBankWebhook({ ...row.settings, _rowUpdatedAt: row.updated_at });
           }
           // Clean up one-off queued webhook rows (keep primary bank_webhook_incoming row)
           if (row.category !== 'bank_webhook_incoming' && row.id) {
@@ -1965,7 +2008,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         }
 
         // Sync cloud quotations
-        const quoteRow = data.find((r: any) => r.category === 'pos_quotations');
+        const quoteRow = settingsData.find((r: any) => r.category === 'pos_quotations');
         if (quoteRow?.settings && Array.isArray(quoteRow.settings.quotations)) {
           setQuotations(quoteRow.settings.quotations);
           if (typeof window !== 'undefined') {
@@ -1982,7 +2025,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         );
         webhookRows.forEach((row: any) => {
           if (row.settings) {
-            handleIncomingBankWebhook(row.settings);
+            handleIncomingBankWebhook({ ...row.settings, _rowUpdatedAt: row.updated_at }, { silent: true });
           }
         });
 
@@ -2132,7 +2175,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         const row = payload.new as any;
         if (row && row.category && row.settings) {
           if (row.category === 'bank_webhook_incoming') {
-            handleIncomingBankWebhook(row.settings);
+            handleIncomingBankWebhook({ ...row.settings, _rowUpdatedAt: row.updated_at });
             return;
           }
           if (row.category === 'bank_notifications_log') {

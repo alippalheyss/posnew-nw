@@ -127,10 +127,10 @@
     "semantic_hash": "ab4cd3743cd1f8d9d6779066b9dd7fca"
   },
   "src/components/BankAlertPill.tsx": {
-    "mtime": 1793970471.9409568,
-    "seen": 1794238973.9763937,
-    "ast_hash": "d17895fa9758f4631f31633e6a44edec",
-    "semantic_hash": "d17895fa9758f4631f31633e6a44edec"
+    "mtime": 1794242760.4446523,
+    "seen": 1794243223.2068827,
+    "ast_hash": "c3d5a3a94b24a9ae4ec5b4c20f798af5",
+    "semantic_hash": ""
   },
   "src/components/BankNotificationsDialog.tsx": {
     "mtime": 1793889710.7112217,
@@ -625,10 +625,10 @@
     "semantic_hash": "5bff9ea3904b15a9e1908b128c88e75f"
   },
   "src/context/AppContext.tsx": {
-    "mtime": 1794029971.5421493,
-    "seen": 1794238973.987895,
-    "ast_hash": "a540629c057cc55093db23baf4e0cd9e",
-    "semantic_hash": "a540629c057cc55093db23baf4e0cd9e"
+    "mtime": 1794242952.4419715,
+    "seen": 1794243223.2328553,
+    "ast_hash": "6dda9d831c4a8b1a522b310844e06d08",
+    "semantic_hash": ""
   },
   "src/context/AppProviderWithPriceDialog.tsx": {
     "mtime": 1769530137.5409143,
@@ -775,10 +775,10 @@
     "semantic_hash": "a976bc2bdae4b91634d95b411e846b94"
   },
   "src/pages/POS.tsx": {
-    "mtime": 1794037133.4723585,
-    "seen": 1794238973.9918928,
-    "ast_hash": "01f60d369bb3c8dae73a110e872bde50",
-    "semantic_hash": "01f60d369bb3c8dae73a110e872bde50"
+    "mtime": 1794243168.9134574,
+    "seen": 1794243223.2382667,
+    "ast_hash": "70fadd947f45e7624a94818df7784ada",
+    "semantic_hash": ""
   },
   "src/pages/Products.tsx": {
     "mtime": 1793942239.215036,
@@ -859,10 +859,10 @@
     "semantic_hash": "68ad72d3629cdccf7f3196325523e415"
   },
   "src/utils/bankNotificationParser.ts": {
-    "mtime": 1793813259.8718028,
-    "seen": 1794238973.9937675,
-    "ast_hash": "a74e9d7a7334d5f774c9bd68c1127768",
-    "semantic_hash": "a74e9d7a7334d5f774c9bd68c1127768"
+    "mtime": 1794242802.967637,
+    "seen": 1794243223.241905,
+    "ast_hash": "f687e492cc9d9c20a8f6e655ab76f600",
+    "semantic_hash": ""
   },
   "src/utils/dhivehiTranslator.ts": {
     "mtime": 1790430826.0232644,
@@ -977,5 +977,137 @@
     "seen": 1794238973.9963226,
     "ast_hash": "be6d07b1a4ced213e2a8163f00d34398",
     "semantic_hash": "be6d07b1a4ced213e2a8163f00d34398"
+  },
+  "AI_RULES.md": {
+    "mtime": 1769364465.691062,
+    "seen": 1794243223.2475288,
+    "ast_hash": "31731bbd555e3183478d140eb9351dc3",
+    "semantic_hash": ""
+  },
+  "CLOUDFLARE_STORAGE_SETUP.md": {
+    "mtime": 1790500874.2997491,
+    "seen": 1794243223.2475345,
+    "ast_hash": "d56575cc18229b9812bb2851f52af21e",
+    "semantic_hash": ""
+  },
+  "CREATE_ADMIN_USER.md": {
+    "mtime": 1769580707.137105,
+    "seen": 1794243223.2475374,
+    "ast_hash": "4e6f3a5daa481751f56dd0ec8ab86be9",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1769364465.6949692,
+    "seen": 1794243223.2475402,
+    "ast_hash": "bda212e5dd974bdec4cb3e1268f9a698",
+    "semantic_hash": ""
+  },
+  "SUPABASE_SETUP.md": {
+    "mtime": 1769578700.6539369,
+    "seen": 1794243223.2475426,
+    "ast_hash": "425f9deb9fa8884b5ea7c7bddd14ef03",
+    "semantic_hash": ""
+  },
+  "VERCEL_DEPLOYMENT.md": {
+    "mtime": 1769578732.210549,
+    "seen": 1794243223.2475457,
+    "ast_hash": "746a128c333db74e68d28bdc09936864",
+    "semantic_hash": ""
+  },
+  "VERCEL_FIX.md": {
+    "mtime": 1769592866.376592,
+    "seen": 1794243223.2475479,
+    "ast_hash": "e7557eaaf38db9947318ff2120a2dc1c",
+    "semantic_hash": ""
+  },
+  "index.html": {
+    "mtime": 1790581685.4594738,
+    "seen": 1794243223.24755,
+    "ast_hash": "e8f215d5c08b85c3dd6dc21d710e6150",
+    "semantic_hash": ""
+  },
+  "public/banking/bml.html": {
+    "mtime": 1790444309.5466864,
+    "seen": 1794243223.2475626,
+    "ast_hash": "34202116378a7908fb59bb5d70680aac",
+    "semantic_hash": ""
+  },
+  "public/banking/mib.html": {
+    "mtime": 1790444316.5364735,
+    "seen": 1794243223.2475648,
+    "ast_hash": "8827a213f63b1f37858fbfefd7a4727d",
+    "semantic_hash": ""
+  },
+  "public/robots.txt": {
+    "mtime": 1769364465.749747,
+    "seen": 1794243223.2475672,
+    "ast_hash": "a9b03494151fe90e5decd2405400e106",
+    "semantic_hash": ""
+  },
+  "electron/icon.png": {
+    "mtime": 1769364465.7415812,
+    "seen": 1794243223.24764,
+    "ast_hash": "4b057dc10f2722176aa7c836725e3f77",
+    "semantic_hash": ""
+  },
+  "public/apple-touch-icon.png": {
+    "mtime": 1792902439.7108629,
+    "seen": 1794243223.2476423,
+    "ast_hash": "ddda61b13eb946003a78caa73e452642",
+    "semantic_hash": ""
+  },
+  "public/icon-256.png": {
+    "mtime": 1792902439.7250688,
+    "seen": 1794243223.2476444,
+    "ast_hash": "5749724dd1490a5a6847a3504c10d652",
+    "semantic_hash": ""
+  },
+  "public/logo.png": {
+    "mtime": 1792902439.653562,
+    "seen": 1794243223.2476466,
+    "ast_hash": "b090e1afe28602aa8cc0f3d3b929ca6e",
+    "semantic_hash": ""
+  },
+  "public/placeholder.svg": {
+    "mtime": 1769364465.7481947,
+    "seen": 1794243223.2476487,
+    "ast_hash": "35707bd9960ba5281c72af927b79291f",
+    "semantic_hash": ""
+  },
+  "public/pwa-192x192.png": {
+    "mtime": 1792902439.7191222,
+    "seen": 1794243223.2476513,
+    "ast_hash": "7e46d4b6ca617d5860192c7dcb18d45d",
+    "semantic_hash": ""
+  },
+  "public/pwa-512x512.png": {
+    "mtime": 1792902439.6967773,
+    "seen": 1794243223.2476535,
+    "ast_hash": "ddda61b13eb946003a78caa73e452642",
+    "semantic_hash": ""
+  },
+  "public/pwa-maskable-512x512.png": {
+    "mtime": 1792902439.7037168,
+    "seen": 1794243223.2476554,
+    "ast_hash": "ddda61b13eb946003a78caa73e452642",
+    "semantic_hash": ""
+  },
+  "src/assets/icon.png": {
+    "mtime": 1792902439.7191222,
+    "seen": 1794243223.2476575,
+    "ast_hash": "7e46d4b6ca617d5860192c7dcb18d45d",
+    "semantic_hash": ""
+  },
+  "src/assets/logo.png": {
+    "mtime": 1792902439.653562,
+    "seen": 1794243223.2476597,
+    "ast_hash": "b090e1afe28602aa8cc0f3d3b929ca6e",
+    "semantic_hash": ""
+  },
+  "package-lock.json": {
+    "mtime": 1792763637.862281,
+    "seen": 1794243223.2476616,
+    "ast_hash": "906b0883fbf7c58ed9cfd6ac1de2ed39",
+    "semantic_hash": ""
   }
 }

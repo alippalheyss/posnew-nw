@@ -38,6 +38,7 @@ export function parseBankNotificationPayload(payload: {
   text?: string;
   message?: string;
   timestamp?: string | number;
+  _rowUpdatedAt?: string;
   app?: string;
 }): BankNotification {
   const cleanedTitle = cleanMacroPlaceholders(String(payload.title || payload.app || ''));
@@ -115,8 +116,8 @@ export function parseBankNotificationPayload(payload: {
     senderOrRef = `Ref: ${refMatch[1].trim()}`;
   }
 
-  // Parse timestamp or fallback to current time
-  let receivedAt = new Date().toISOString();
+  // Parse timestamp or fallback to row updated_at / current time
+  let receivedAt = '';
   if (payload.timestamp) {
     const tsNum = Number(payload.timestamp);
     if (!isNaN(tsNum) && tsNum > 1000000000) {
@@ -125,12 +126,21 @@ export function parseBankNotificationPayload(payload: {
       if (!isNaN(d.getTime())) {
         receivedAt = d.toISOString();
       }
-    } else if (typeof payload.timestamp === 'string') {
+    } else if (typeof payload.timestamp === 'string' && !payload.timestamp.includes('{') && !payload.timestamp.includes('%')) {
       const d = new Date(payload.timestamp);
       if (!isNaN(d.getTime())) {
         receivedAt = d.toISOString();
       }
     }
+  }
+  if (!receivedAt && payload._rowUpdatedAt) {
+    const d = new Date(payload._rowUpdatedAt);
+    if (!isNaN(d.getTime())) {
+      receivedAt = d.toISOString();
+    }
+  }
+  if (!receivedAt) {
+    receivedAt = new Date().toISOString();
   }
 
   return {

@@ -175,8 +175,8 @@
     "semantic_hash": "945d8d9f9cd40004d268e45cb1e5c0dc"
   },
   "src/components/ImageTextStampDialog.tsx": {
-    "mtime": 1794286162.2460704,
-    "seen": 1794286223.144187,
+    "mtime": 1794286330.491001,
+    "seen": 1794302639.3698413,
     "ast_hash": "c78cd20eae5a419c8a615001ce78a0ab",
     "semantic_hash": ""
   },
@@ -235,8 +235,8 @@
     "semantic_hash": "42e192c481307d91af8345617c3d3442"
   },
   "src/components/ProductDialog.tsx": {
-    "mtime": 1794286181.2105746,
-    "seen": 1794286223.14777,
+    "mtime": 1794286330.6654024,
+    "seen": 1794302639.373225,
     "ast_hash": "76a58316ae330cc335581fe07b7614f7",
     "semantic_hash": ""
   },
@@ -277,10 +277,10 @@
     "semantic_hash": "cecd17903db0f90caa1ac6b45b6d2675"
   },
   "src/components/Sidebar.tsx": {
-    "mtime": 1793975687.6325715,
-    "seen": 1794238973.9798958,
-    "ast_hash": "7462ebee16a6ca93646d44e4f234ea4e",
-    "semantic_hash": "7462ebee16a6ca93646d44e4f234ea4e"
+    "mtime": 1794302598.0958486,
+    "seen": 1794302639.3749764,
+    "ast_hash": "4d25eba3f67801ca676ae9e8302196b3",
+    "semantic_hash": ""
   },
   "src/components/StockTransferDialog.tsx": {
     "mtime": 1792307964.9784882,
@@ -625,8 +625,8 @@
     "semantic_hash": "5bff9ea3904b15a9e1908b128c88e75f"
   },
   "src/context/AppContext.tsx": {
-    "mtime": 1794286090.195466,
-    "seen": 1794286223.167667,
+    "mtime": 1794286330.8525205,
+    "seen": 1794302639.3933837,
     "ast_hash": "a2fdd74fc57a762a9a9bd86b9fea957a",
     "semantic_hash": ""
   },
@@ -829,8 +829,8 @@
     "semantic_hash": "89baa7b980b29b32287d5db85e5ec345"
   },
   "src/services/productImageService.ts": {
-    "mtime": 1794286183.2585394,
-    "seen": 1794286223.1803374,
+    "mtime": 1794286330.881922,
+    "seen": 1794302639.4003446,
     "ast_hash": "2b0f592bacecd984b4808d23cc7b6165",
     "semantic_hash": ""
   },
@@ -859,8 +859,8 @@
     "semantic_hash": "68ad72d3629cdccf7f3196325523e415"
   },
   "src/utils/bankNotificationParser.ts": {
-    "mtime": 1794285935.8048396,
-    "seen": 1794286223.181649,
+    "mtime": 1794286330.9332852,
+    "seen": 1794302639.4011917,
     "ast_hash": "a5f10c48fbbdbff4cd30a6d5c99a8f36",
     "semantic_hash": ""
   },

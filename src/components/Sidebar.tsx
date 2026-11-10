@@ -4,12 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Home, Package, Boxes, Users, DollarSign, Settings, BarChart, 
-  Receipt, CalendarDays, AlertTriangle, Building2, LogOut, FileText, ChevronRight, ChevronLeft, Activity, Pin, PinOff, Wallet, Menu, X,
+  Receipt, CalendarDays, AlertTriangle, Building2, LogOut, FileText, ChevronRight, ChevronLeft, ChevronDown, Activity, Pin, PinOff, Wallet, Menu, X,
   ShieldCheck, Check, Lock, Edit3, Save, User as UserIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth, UserPermissions } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAppContext } from '@/context/AppContext';
 import { Button } from './ui/button';
@@ -78,30 +78,382 @@ const Sidebar = () => {
     { key: 'canDeleteSales', labelDv: 'ސޭލްސް ފޮހެލުމުގެ ހުއްދަ', labelEn: 'Delete Sales Transactions', granted: can('canDeleteSales') },
   ];
 
-  const allNavItems = [
-    { name_dv: t('pos_title'), name_en: t('pos_title', { lng: 'en' }), icon: Home, path: '/', permission: 'canAccessPOS' as const },
-    { name_dv: t('products'), name_en: t('products', { lng: 'en' }), icon: Package, path: '/products', permission: 'canAccessProducts' as const },
-    { name_dv: t('credit_outstanding'), name_en: t('credit_outstanding', { lng: 'en' }), icon: DollarSign, path: '/credit-outstanding', permission: 'canAccessSales' as const },
-    { name_dv: t('credit_invoices'), name_en: t('credit_invoices', { lng: 'en' }), icon: Receipt, path: '/credit-invoices', permission: 'canAccessSales' as const },
-    { name_dv: t('customers'), name_en: t('customers', { lng: 'en' }), icon: Users, path: '/customers', permission: 'canAccessCustomers' as const },
-    { name_dv: t('daily_sales'), name_en: t('daily_sales', { lng: 'en' }), icon: CalendarDays, path: '/daily-sales', permission: 'canAccessSales' as const },
-    { name_dv: 'އަންދާސީ ހިސާބު', name_en: 'Quotations', icon: FileText, path: '/quotations', permission: 'canAccessSales' as const },
-    { name_dv: t('stock'), name_en: t('stock', { lng: 'en' }), icon: Boxes, path: '/stock', permission: 'canAccessStock' as const },
-    // Stock Audit is kept as a route but intentionally hidden from sidebar navigation
-    { name_dv: t('sales_reports'), name_en: t('sales_reports', { lng: 'en' }), icon: BarChart, path: '/sales-reports', permission: 'canAccessReports' as const },
-    { name_dv: t('expenses') || 'ޚަރަދުތައް', name_en: t('expenses', { lng: 'en' }) || 'Expenses', icon: Wallet, path: '/expenses', permission: 'canAccessSales' as const },
-    { name_dv: t('expiry_alerts'), name_en: t('expiry_alerts', { lng: 'en' }), icon: AlertTriangle, path: '/expiry-alerts', permission: 'canAccessStock' as const },
-    { name_dv: "Shrinkage Report", name_en: "Shrinkage Report", icon: FileText, path: '/shrinkage-report', permission: 'canAccessReports' as const },
-    { name_dv: t('gst_reports'), name_en: t('gst_reports', { lng: 'en' }), icon: Receipt, path: '/gst-reports', permission: 'canAccessReports' as const },
-    { name_dv: t('admin_settings'), name_en: t('admin_settings', { lng: 'en' }), icon: Settings, path: '/admin', permission: 'canAccessAdmin' as const },
+  type NavLeafItem = {
+    type: 'item';
+    id: string;
+    name_dv: string;
+    name_en: string;
+    icon: React.ComponentType<{ className?: string }>;
+    path: string;
+    permission: keyof UserPermissions;
+    anchorBottom?: boolean;
+  };
+
+  type NavGroupItem = {
+    type: 'group';
+    id: string;
+    name_dv: string;
+    name_en: string;
+    icon: React.ComponentType<{ className?: string }>;
+    children: Omit<NavLeafItem, 'type' | 'anchorBottom'>[];
+  };
+
+  type NavEntry = NavLeafItem | NavGroupItem;
+
+  // Stock Audit is kept as a route but intentionally hidden from sidebar navigation
+  const navigationSchema: NavEntry[] = [
+    // Top-Level Standalone Operational Tabs
+    {
+      type: 'item',
+      id: 'pos',
+      name_dv: t('pos_title'),
+      name_en: t('pos_title', { lng: 'en' }),
+      icon: Home,
+      path: '/',
+      permission: 'canAccessPOS',
+    },
+    {
+      type: 'item',
+      id: 'products',
+      name_dv: t('products'),
+      name_en: t('products', { lng: 'en' }),
+      icon: Package,
+      path: '/products',
+      permission: 'canAccessProducts',
+    },
+    {
+      type: 'item',
+      id: 'credit-outstanding',
+      name_dv: t('credit_outstanding'),
+      name_en: t('credit_outstanding', { lng: 'en' }),
+      icon: DollarSign,
+      path: '/credit-outstanding',
+      permission: 'canAccessSales',
+    },
+
+    // Categorized Accordion Groups
+    {
+      type: 'group',
+      id: 'sales-invoicing',
+      name_dv: 'ވިޔަފާރިއާއި ބިލްތައް',
+      name_en: 'Sales & Invoicing',
+      icon: Receipt,
+      children: [
+        {
+          id: 'daily-sales',
+          name_dv: t('daily_sales'),
+          name_en: t('daily_sales', { lng: 'en' }),
+          icon: CalendarDays,
+          path: '/daily-sales',
+          permission: 'canAccessSales',
+        },
+        {
+          id: 'quotations',
+          name_dv: 'އަންދާސީ ހިސާބު',
+          name_en: 'Quotations',
+          icon: FileText,
+          path: '/quotations',
+          permission: 'canAccessSales',
+        },
+        {
+          id: 'credit-invoices',
+          name_dv: t('credit_invoices'),
+          name_en: t('credit_invoices', { lng: 'en' }),
+          icon: Receipt,
+          path: '/credit-invoices',
+          permission: 'canAccessSales',
+        },
+        {
+          id: 'sales-reports',
+          name_dv: t('sales_reports'),
+          name_en: t('sales_reports', { lng: 'en' }),
+          icon: BarChart,
+          path: '/sales-reports',
+          permission: 'canAccessReports',
+        },
+      ],
+    },
+    {
+      type: 'group',
+      id: 'inventory-stock',
+      name_dv: 'ސްޓޮކް އަދި މުދާ',
+      name_en: 'Inventory & Stock',
+      icon: Boxes,
+      children: [
+        {
+          id: 'stock',
+          name_dv: t('stock'),
+          name_en: t('stock', { lng: 'en' }),
+          icon: Boxes,
+          path: '/stock',
+          permission: 'canAccessStock',
+        },
+        {
+          id: 'expiry-alerts',
+          name_dv: t('expiry_alerts'),
+          name_en: t('expiry_alerts', { lng: 'en' }),
+          icon: AlertTriangle,
+          path: '/expiry-alerts',
+          permission: 'canAccessStock',
+        },
+        {
+          id: 'shrinkage-report',
+          name_dv: 'Shrinkage Report',
+          name_en: 'Shrinkage Report',
+          icon: FileText,
+          path: '/shrinkage-report',
+          permission: 'canAccessReports',
+        },
+      ],
+    },
+    {
+      type: 'group',
+      id: 'financials',
+      name_dv: 'ފައިސާއާއި ޓެކްސް',
+      name_en: 'Financials',
+      icon: Wallet,
+      children: [
+        {
+          id: 'expenses',
+          name_dv: t('expenses') || 'ޚަރަދުތައް',
+          name_en: t('expenses', { lng: 'en' }) || 'Expenses',
+          icon: Wallet,
+          path: '/expenses',
+          permission: 'canAccessSales',
+        },
+        {
+          id: 'gst-reports',
+          name_dv: t('gst_reports'),
+          name_en: t('gst_reports', { lng: 'en' }),
+          icon: Receipt,
+          path: '/gst-reports',
+          permission: 'canAccessReports',
+        },
+      ],
+    },
+    {
+      type: 'group',
+      id: 'people-crm',
+      name_dv: 'ކަސްޓަމަރުން',
+      name_en: 'People & CRM',
+      icon: Users,
+      children: [
+        {
+          id: 'customers',
+          name_dv: t('customers'),
+          name_en: t('customers', { lng: 'en' }),
+          icon: Users,
+          path: '/customers',
+          permission: 'canAccessCustomers',
+        },
+      ],
+    },
+
+    // Bottom-Anchored Standalone Tab
+    {
+      type: 'item',
+      id: 'admin',
+      name_dv: t('admin_settings'),
+      name_en: t('admin_settings', { lng: 'en' }),
+      icon: Settings,
+      path: '/admin',
+      permission: 'canAccessAdmin',
+      anchorBottom: true,
+    },
   ];
 
   const { sidebarCollapsed, setSidebarCollapsed, pendingSlipsCount, settings } = useAppContext();
-  const navItems = allNavItems.filter(item => can(item.permission));
+
+  // Filter navigation entries based on user permissions
+  const filteredNavigation: NavEntry[] = navigationSchema
+    .map((entry) => {
+      if (entry.type === 'item') {
+        return can(entry.permission) ? entry : null;
+      }
+      const permittedChildren = entry.children.filter((child) => can(child.permission));
+      if (permittedChildren.length === 0) return null;
+      return {
+        ...entry,
+        children: permittedChildren,
+      };
+    })
+    .filter((entry): entry is NavEntry => entry !== null);
+
+  const mainNavEntries = filteredNavigation.filter(
+    (entry) => !(entry.type === 'item' && entry.anchorBottom)
+  );
+  const bottomAnchoredEntries = filteredNavigation.filter(
+    (entry): entry is NavLeafItem => entry.type === 'item' && Boolean(entry.anchorBottom)
+  );
+
+  // Track expanded accordion groups and auto-expand the group containing the active route
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    navigationSchema.forEach((entry) => {
+      if (entry.type === 'group' && entry.children.some((c) => c.path === location.pathname)) {
+        initial[entry.id] = true;
+      }
+    });
+    return initial;
+  });
+
+  useEffect(() => {
+    navigationSchema.forEach((entry) => {
+      if (entry.type === 'group' && entry.children.some((c) => c.path === location.pathname)) {
+        setExpandedGroups((prev) => (prev[entry.id] ? prev : { ...prev, [entry.id]: true }));
+      }
+    });
+  }, [location.pathname]);
+
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [groupId]: !prev[groupId],
+    }));
+  };
 
   if (location.pathname === '/mobile-purchase' || location.pathname === '/stock-audit' || location.pathname === '/audit') {
     return null;
   }
+
+  const renderStandaloneItem = (item: Omit<NavLeafItem, 'type' | 'anchorBottom'>, isMobile = false, isSubItem = false) => {
+    const isActive = location.pathname === item.path;
+    const isCreditOutstanding = item.path === '/credit-outstanding';
+    const IconComponent = item.icon;
+
+    return (
+      <li key={item.path}>
+        <Link
+          to={item.path}
+          onClick={() => isMobile && setMobileOpen(false)}
+          className={cn(
+            "flex items-center justify-between rounded-2xl transition-colors duration-100 group relative overflow-hidden",
+            isSubItem ? "p-2.5 pr-3" : "p-3",
+            isActive
+              ? "bg-primary text-white font-bold shadow-[0_10px_25px_-5px_rgba(0,132,255,0.4)] border border-white/20"
+              : "text-muted-foreground hover:text-foreground hover:bg-white/10 dark:hover:bg-white/5"
+          )}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className={cn(
+                "rounded-xl flex items-center justify-center transition-all shrink-0",
+                isSubItem ? "h-8 w-8" : "h-9 w-9",
+                isActive
+                  ? "bg-white/20 text-white shadow-inner"
+                  : "bg-muted/80 text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary"
+              )}
+            >
+              <IconComponent className={cn(isSubItem ? "h-4 w-4" : "h-4.5 w-4.5")} />
+            </div>
+            <div className="flex flex-col text-right">
+              <span
+                className={cn(
+                  "font-black leading-tight mb-0.5 whitespace-nowrap",
+                  isSubItem ? "text-[13px] sm:text-[14px]" : "text-[14px] sm:text-[15px]"
+                )}
+              >
+                {item.name_dv}
+              </span>
+              <span
+                className={cn(
+                  "font-bold uppercase tracking-wide whitespace-nowrap font-mono",
+                  isSubItem ? "text-[9px] sm:text-[10px]" : "text-[10px] sm:text-[11px]",
+                  isActive ? "text-white/80" : "text-muted-foreground/70"
+                )}
+              >
+                {item.name_en}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {isCreditOutstanding && pendingSlipsCount > 0 && (
+              <span className="px-2 py-0.5 text-[10px] font-black bg-amber-400 text-black rounded-full animate-pulse shadow-[0_0_12px_rgba(251,191,36,0.6)]">
+                {pendingSlipsCount}
+              </span>
+            )}
+            <ChevronRight
+              className={cn(
+                "h-3.5 w-3.5 transition-all shrink-0",
+                isActive ? "text-white opacity-100" : "opacity-0 group-hover:opacity-40"
+              )}
+            />
+          </div>
+        </Link>
+      </li>
+    );
+  };
+
+  const renderGroupEntry = (group: NavGroupItem, isMobile = false) => {
+    const hasActiveChild = group.children.some((child) => location.pathname === child.path);
+    const isOpen = Boolean(expandedGroups[group.id]);
+    const GroupIcon = group.icon;
+
+    return (
+      <li key={group.id} className="space-y-1">
+        <button
+          type="button"
+          onClick={() => toggleGroup(group.id)}
+          aria-expanded={isOpen}
+          className={cn(
+            "w-full flex items-center justify-between p-3 rounded-2xl transition-colors duration-150 group relative overflow-hidden cursor-pointer text-right",
+            hasActiveChild
+              ? "bg-primary/12 text-foreground border border-primary/25 shadow-xs"
+              : isOpen
+              ? "bg-white/10 dark:bg-white/5 text-foreground"
+              : "text-muted-foreground hover:text-foreground hover:bg-white/10 dark:hover:bg-white/5"
+          )}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className={cn(
+                "h-9 w-9 rounded-xl flex items-center justify-center transition-all shrink-0",
+                hasActiveChild
+                  ? "bg-primary text-white shadow-xs"
+                  : isOpen
+                  ? "bg-primary/15 text-primary"
+                  : "bg-muted/80 text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary"
+              )}
+            >
+              <GroupIcon className="h-4.5 w-4.5" />
+            </div>
+            <div className="flex flex-col text-right">
+              <span className="text-[14px] sm:text-[15px] font-black leading-tight mb-0.5 whitespace-nowrap">
+                {group.name_dv}
+              </span>
+              <span
+                className={cn(
+                  "text-[10px] sm:text-[11px] font-bold uppercase tracking-wide whitespace-nowrap font-mono",
+                  hasActiveChild ? "text-primary" : "text-muted-foreground/70"
+                )}
+              >
+                {group.name_en}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {hasActiveChild && !isOpen && (
+              <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+            )}
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 transition-transform duration-200 shrink-0",
+                isOpen ? "rotate-180 text-primary" : "text-muted-foreground/70 group-hover:text-foreground"
+              )}
+            />
+          </div>
+        </button>
+
+        {isOpen && (
+          <ul className="mr-3.5 pr-2.5 border-r-2 border-primary/20 dark:border-white/10 space-y-1 py-0.5">
+            {group.children.map((child) => renderStandaloneItem(child, isMobile, true))}
+          </ul>
+        )}
+      </li>
+    );
+  };
 
   const renderNavContent = (isMobile = false) => (
     <div className="flex flex-col h-full font-faruma text-foreground" dir="rtl">
@@ -124,57 +476,20 @@ const Sidebar = () => {
       </div>
 
       {/* Navigation Links */}
-      <div className="flex-1 overflow-y-auto px-3.5 custom-scrollbar whitespace-nowrap py-2">
+      <div className="flex-1 overflow-y-auto px-3.5 custom-scrollbar whitespace-nowrap py-2 flex flex-col justify-between gap-2">
         <ul className="space-y-1.5">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            const isCreditOutstanding = item.path === '/credit-outstanding';
-            return (
-              <li key={item.path}>
-                <Link
-                  to={item.path}
-                  onClick={() => isMobile && setMobileOpen(false)}
-                  className={cn(
-                    "flex items-center justify-between p-3 rounded-2xl transition-colors duration-100 group relative overflow-hidden",
-                    isActive 
-                      ? "bg-primary text-white font-bold shadow-[0_10px_25px_-5px_rgba(0,132,255,0.4)] border border-white/20" 
-                      : "text-muted-foreground hover:text-foreground hover:bg-white/10 dark:hover:bg-white/5"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "h-9 w-9 rounded-xl flex items-center justify-center transition-all shrink-0",
-                      isActive 
-                        ? "bg-white/20 text-white shadow-inner" 
-                        : "bg-muted/80 text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary"
-                    )}>
-                      <item.icon className="h-4.5 w-4.5" />
-                    </div>
-                    <div className="flex flex-col text-right">
-                      <span className="text-[14px] sm:text-[15px] font-black leading-tight mb-0.5 whitespace-nowrap">{item.name_dv}</span>
-                      <span className={cn(
-                        "text-[10px] sm:text-[11px] font-bold uppercase tracking-wide whitespace-nowrap font-mono",
-                        isActive ? "text-white/80" : "text-muted-foreground/70"
-                      )}>{item.name_en}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {isCreditOutstanding && pendingSlipsCount > 0 && (
-                      <span className="px-2 py-0.5 text-[10px] font-black bg-amber-400 text-black rounded-full animate-pulse shadow-[0_0_12px_rgba(251,191,36,0.6)]">
-                        {pendingSlipsCount}
-                      </span>
-                    )}
-                    <ChevronRight className={cn(
-                      "h-3.5 w-3.5 transition-all shrink-0",
-                      isActive ? "text-white opacity-100" : "opacity-0 group-hover:opacity-40"
-                    )} />
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
+          {mainNavEntries.map((entry) =>
+            entry.type === 'item'
+              ? renderStandaloneItem(entry, isMobile, false)
+              : renderGroupEntry(entry, isMobile)
+          )}
         </ul>
+
+        {bottomAnchoredEntries.length > 0 && (
+          <ul className="space-y-1.5 pt-2 mt-2 border-t border-white/10">
+            {bottomAnchoredEntries.map((item) => renderStandaloneItem(item, isMobile, false))}
+          </ul>
+        )}
       </div>
 
       {/* Bottom User Section */}

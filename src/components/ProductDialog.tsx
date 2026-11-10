@@ -1565,11 +1565,18 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
         )}
 
         {/* Text on Image Stamp Tool */}
-        {editedProduct && imagePreviewUrl && (
+        {editedProduct && (
             <ImageTextStampDialog
                 isOpen={isImageTextStampOpen}
                 onClose={() => setIsImageTextStampOpen(false)}
-                imageUrl={imagePreviewUrl}
+                imageUrl={
+                    localDataUrlRef.current ||
+                    getAdaptedImageUrl(
+                        imagePreviewUrl || editedProduct.image,
+                        editedProduct.name_en || editedProduct.name_dv,
+                        editedProduct.item_code
+                    )
+                }
                 productName={editedProduct.name_en || editedProduct.name_dv || ''}
                 flavourNames={flavours.map(f => f.name)}
                 onApplyImage={handleApplyStampedImage}

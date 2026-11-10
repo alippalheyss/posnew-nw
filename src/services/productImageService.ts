@@ -139,17 +139,36 @@ export async function searchProductImages(query: string, barcode?: string): Prom
 export async function saveOnlineImageToBucket(imageUrl: string, productCode: string): Promise<string> {
   if (!imageUrl) return '';
 
-  try {
-    const res = await fetch(imageUrl, { mode: 'cors' });
-    if (res.ok) {
-      const blob = await res.blob();
-      const uploadResult = await uploadProductImage(blob, productCode || 'prod');
-      if (uploadResult.url) {
-        return uploadResult.bucketPath || uploadResult.url;
+  const proxyWsrv = `https://wsrv.nl/?url=${encodeURIComponent(imageUrl)}&w=800&output=webp`;
+  const proxyCorsIo = `https://corsproxy.io/?${encodeURIComponent(imageUrl)}`;
+  const isKnownCorsHost =
+    imageUrl.includes('.supabase.co') ||
+    imageUrl.includes('wikimedia.org') ||
+    imageUrl.includes('wikipedia.org') ||
+    imageUrl.includes('openfoodfacts.');
+
+  const candidates = isKnownCorsHost
+    ? [imageUrl, proxyWsrv, proxyCorsIo]
+    : [proxyWsrv, proxyCorsIo, imageUrl];
+
+  for (const candidateUrl of candidates) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 6000);
+      const res = await fetch(candidateUrl, { mode: 'cors', signal: controller.signal });
+      clearTimeout(timeout);
+      if (res.ok) {
+        const blob = await res.blob();
+        if (blob && blob.size > 0) {
+          const uploadResult = await uploadProductImage(blob, productCode || 'prod');
+          if (uploadResult.url) {
+            return uploadResult.bucketPath || uploadResult.url;
+          }
+        }
       }
+    } catch {
+      // Try next candidate
     }
-  } catch {
-    // If CORS prevents canvas conversion or direct fetch, the external URL will be used directly
   }
 
   return imageUrl;

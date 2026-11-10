@@ -175,10 +175,10 @@
     "semantic_hash": "945d8d9f9cd40004d268e45cb1e5c0dc"
   },
   "src/components/ImageTextStampDialog.tsx": {
-    "mtime": 1792661331.2167718,
-    "seen": 1794238973.9775093,
-    "ast_hash": "e0a884cf26708dc2960df6529295b722",
-    "semantic_hash": "e0a884cf26708dc2960df6529295b722"
+    "mtime": 1794286162.2460704,
+    "seen": 1794286223.144187,
+    "ast_hash": "c78cd20eae5a419c8a615001ce78a0ab",
+    "semantic_hash": ""
   },
   "src/components/InvoiceViewDialog.tsx": {
     "mtime": 1794037190.360215,
@@ -235,10 +235,10 @@
     "semantic_hash": "42e192c481307d91af8345617c3d3442"
   },
   "src/components/ProductDialog.tsx": {
-    "mtime": 1793889710.8834236,
-    "seen": 1794238973.9788654,
-    "ast_hash": "0adaf710672fb91b95ecd9e277fedd3a",
-    "semantic_hash": "0adaf710672fb91b95ecd9e277fedd3a"
+    "mtime": 1794286181.2105746,
+    "seen": 1794286223.14777,
+    "ast_hash": "76a58316ae330cc335581fe07b7614f7",
+    "semantic_hash": ""
   },
   "src/components/ProductImportDialog.tsx": {
     "mtime": 1790401118.146401,
@@ -625,9 +625,9 @@
     "semantic_hash": "5bff9ea3904b15a9e1908b128c88e75f"
   },
   "src/context/AppContext.tsx": {
-    "mtime": 1794243237.5849257,
-    "seen": 1794284637.2744918,
-    "ast_hash": "6dda9d831c4a8b1a522b310844e06d08",
+    "mtime": 1794286090.195466,
+    "seen": 1794286223.167667,
+    "ast_hash": "a2fdd74fc57a762a9a9bd86b9fea957a",
     "semantic_hash": ""
   },
   "src/context/AppProviderWithPriceDialog.tsx": {
@@ -829,10 +829,10 @@
     "semantic_hash": "89baa7b980b29b32287d5db85e5ec345"
   },
   "src/services/productImageService.ts": {
-    "mtime": 1792227610.0280666,
-    "seen": 1794238973.9930851,
-    "ast_hash": "a54f4c6642c72af485a74c213ff34198",
-    "semantic_hash": "a54f4c6642c72af485a74c213ff34198"
+    "mtime": 1794286183.2585394,
+    "seen": 1794286223.1803374,
+    "ast_hash": "2b0f592bacecd984b4808d23cc7b6165",
+    "semantic_hash": ""
   },
   "src/services/reportService.ts": {
     "mtime": 1790500283.8508236,
@@ -859,9 +859,9 @@
     "semantic_hash": "68ad72d3629cdccf7f3196325523e415"
   },
   "src/utils/bankNotificationParser.ts": {
-    "mtime": 1794243237.7968986,
-    "seen": 1794284637.2800422,
-    "ast_hash": "f687e492cc9d9c20a8f6e655ab76f600",
+    "mtime": 1794285935.8048396,
+    "seen": 1794286223.181649,
+    "ast_hash": "a5f10c48fbbdbff4cd30a6d5c99a8f36",
     "semantic_hash": ""
   },
   "src/utils/dhivehiTranslator.ts": {

@@ -143,8 +143,17 @@ export function parseBankNotificationPayload(payload: {
     receivedAt = new Date().toISOString();
   }
 
+  // Deterministic ID based on title + body so the same webhook never creates different random IDs across refreshes/devices
+  const deterministicKey = `${rawTitle.trim().toLowerCase()}|${rawBody.trim().toLowerCase()}`;
+  let hash = 2166136261;
+  for (let i = 0; i < deterministicKey.length; i++) {
+    hash ^= deterministicKey.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  const deterministicId = `bnotif-${(hash >>> 0).toString(36)}`;
+
   return {
-    id: payload.id || `bnotif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    id: payload.id || deterministicId,
     title: rawTitle,
     body: rawBody,
     amount,
@@ -154,4 +163,56 @@ export function parseBankNotificationPayload(payload: {
     receivedAt,
     status: 'unclaimed',
   };
+}
+
+/**
+ * Deduplicates a list of bank notifications by ID and normalized title+body content.
+ * Preserves 'verified' or 'dismissed' status over 'unclaimed' and keeps the earliest receivedAt timestamp.
+ */
+export function deduplicateBankNotifications(list: BankNotification[]): BankNotification[] {
+  if (!Array.isArray(list) || list.length === 0) return [];
+
+  const byContentKey = new Map<string, BankNotification>();
+
+  for (const item of list) {
+    if (!item || (!item.body && !item.title)) continue;
+    const key = `${String(item.title || '').trim().toLowerCase()}|${String(item.body || '').trim().toLowerCase()}`;
+    const existing = byContentKey.get(key);
+
+    if (!existing) {
+      byContentKey.set(key, item);
+    } else {
+      // Merge: prefer verified > dismissed > unclaimed
+      const statusPriority = { verified: 3, dismissed: 2, unclaimed: 1 };
+      const bestStatus =
+        (statusPriority[item.status] || 1) > (statusPriority[existing.status] || 1)
+          ? item.status
+          : existing.status;
+
+      // Keep earliest valid receivedAt so refreshes don't bump old alerts to "Just now"
+      const tExisting = new Date(existing.receivedAt).getTime();
+      const tItem = new Date(item.receivedAt).getTime();
+      const earliestReceivedAt =
+        !isNaN(tExisting) && !isNaN(tItem)
+          ? tItem < tExisting
+            ? item.receivedAt
+            : existing.receivedAt
+          : existing.receivedAt || item.receivedAt;
+
+      byContentKey.set(key, {
+        ...existing,
+        ...item,
+        id: existing.id || item.id,
+        status: bestStatus,
+        receivedAt: earliestReceivedAt,
+        matchedCustomerName: existing.matchedCustomerName || item.matchedCustomerName || null,
+        matchedSaleId: existing.matchedSaleId || item.matchedSaleId || null,
+        verifiedAt: existing.verifiedAt || item.verifiedAt || null,
+      });
+    }
+  }
+
+  return Array.from(byContentKey.values())
+    .sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime())
+    .slice(0, 50);
 }

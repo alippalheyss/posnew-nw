@@ -6,6 +6,63 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Type, Sparkles, Check, Undo2, LayoutTemplate, Palette } from 'lucide-react';
+import { getAdaptedImageUrl } from '@/utils/imageUtils';
+import { showError } from '@/utils/toast';
+
+/**
+ * Generates a clean, CORS-safe 600x600 fallback product card data URL
+ * so that broken/404 or CORS-blocked external images never hang on "Loading image preview..."
+ * and never taint the HTMLCanvasElement.
+ */
+function createFallbackProductCardDataUrl(productName: string): string {
+  const offscreen = document.createElement('canvas');
+  offscreen.width = 600;
+  offscreen.height = 600;
+  const ctx = offscreen.getContext('2d');
+  if (!ctx) return '';
+
+  // Soft sky/slate gradient background
+  const grad = ctx.createLinearGradient(0, 0, 600, 600);
+  grad.addColorStop(0, '#f0f9ff');
+  grad.addColorStop(1, '#e0f2fe');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 600, 600);
+
+  // Decorative inner frame
+  ctx.strokeStyle = '#bae6fd';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(24, 24, 552, 552);
+
+  // Center product title (word-wrapped)
+  const title = (productName || 'PRODUCT').trim();
+  ctx.fillStyle = '#0369a1';
+  ctx.font = '800 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  const words = title.split(/\s+/);
+  const lines: string[] = [];
+  let currentLine = '';
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    if (ctx.measureText(testLine).width > 460 && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+
+  const displayLines = lines.slice(0, 4);
+  const lineHeight = 46;
+  const startY = 300 - ((displayLines.length - 1) * lineHeight) / 2;
+  displayLines.forEach((line, idx) => {
+    ctx.fillText(line, 300, startY + idx * lineHeight);
+  });
+
+  return offscreen.toDataURL('image/png');
+}
 
 interface ImageTextStampDialogProps {
   isOpen: boolean;
@@ -48,28 +105,127 @@ export const ImageTextStampDialog: React.FC<ImageTextStampDialogProps> = ({
   const sourceImageRef = useRef<HTMLImageElement | null>(null);
   const [imageLoaded, setImageLoaded] = useState<boolean>(false);
 
-  // Load image when dialog opens or imageUrl changes
+  // Load image when dialog opens or imageUrl changes (CORS-safe blob/data loading so canvas is never tainted)
   useEffect(() => {
-    if (isOpen && imageUrl) {
-      setImageLoaded(false);
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        sourceImageRef.current = img;
-        setImageLoaded(true);
-      };
-      img.onerror = () => {
-        // Fallback for CORS issues if any: re-attempt without crossOrigin
-        const fallbackImg = new Image();
-        fallbackImg.onload = () => {
-          sourceImageRef.current = fallbackImg;
-          setImageLoaded(true);
-        };
-        fallbackImg.src = imageUrl;
-      };
-      img.src = imageUrl;
-    }
-  }, [isOpen, imageUrl]);
+    if (!isOpen) return;
+
+    let isCancelled = false;
+    let activeObjectUrl: string | null = null;
+    setImageLoaded(false);
+
+    const loadImageFromSafeSource = (safeSrc: string): Promise<HTMLImageElement> =>
+      new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = (err) => reject(err);
+        img.src = safeSrc;
+      });
+
+    const fetchBlobWithTimeout = async (url: string, timeoutMs = 5000): Promise<Blob | null> => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch(url, { mode: 'cors', signal: controller.signal });
+        if (!res.ok) return null;
+        const blob = await res.blob();
+        if (!blob || blob.size === 0) return null;
+        if (blob.type && !blob.type.startsWith('image/') && !blob.type.includes('octet-stream')) {
+          return null;
+        }
+        return blob;
+      } catch {
+        return null;
+      } finally {
+        clearTimeout(timer);
+      }
+    };
+
+    const loadSafeCanvasImage = async () => {
+      const resolvedUrl = getAdaptedImageUrl(imageUrl || '', productName);
+
+      // 1. Direct data: or blob: URLs are already same-origin / CORS-clean
+      if (resolvedUrl.startsWith('data:') || resolvedUrl.startsWith('blob:')) {
+        try {
+          const img = await loadImageFromSafeSource(resolvedUrl);
+          if (!isCancelled) {
+            sourceImageRef.current = img;
+            setImageLoaded(true);
+          }
+          return;
+        } catch {
+          // Fall through to generated card
+        }
+      }
+
+      // 2. For HTTP(S) URLs, fetch as a CORS-clean Blob -> ObjectURL so the canvas is never tainted.
+      // For third-party websites without CORS headers (e.g. cool.sa), route via wsrv.nl / corsproxy first
+      // so the browser never logs a CORS error or taints the canvas.
+      if (resolvedUrl.startsWith('http://') || resolvedUrl.startsWith('https://')) {
+        const isKnownCorsHost =
+          resolvedUrl.includes('.supabase.co') ||
+          resolvedUrl.includes('placehold.co') ||
+          resolvedUrl.includes('wikimedia.org') ||
+          resolvedUrl.includes('wikipedia.org') ||
+          resolvedUrl.includes('openfoodfacts.') ||
+          resolvedUrl.includes('wsrv.nl');
+
+        const proxyWsrv = `https://wsrv.nl/?url=${encodeURIComponent(resolvedUrl)}&w=800&output=jpg`;
+        const proxyCorsIo = `https://corsproxy.io/?${encodeURIComponent(resolvedUrl)}`;
+        const proxyAllOrigins = `https://api.allorigins.win/raw?url=${encodeURIComponent(resolvedUrl)}`;
+
+        const candidateUrls = isKnownCorsHost
+          ? [resolvedUrl, proxyWsrv, proxyCorsIo]
+          : [proxyWsrv, proxyCorsIo, proxyAllOrigins];
+
+        for (const candidate of candidateUrls) {
+          if (isCancelled) return;
+          const blob = await fetchBlobWithTimeout(candidate, 5500);
+          if (blob && !isCancelled) {
+            try {
+              activeObjectUrl = URL.createObjectURL(blob);
+              const img = await loadImageFromSafeSource(activeObjectUrl);
+              if (!isCancelled) {
+                sourceImageRef.current = img;
+                setImageLoaded(true);
+                return;
+              }
+            } catch {
+              if (activeObjectUrl) {
+                URL.revokeObjectURL(activeObjectUrl);
+                activeObjectUrl = null;
+              }
+            }
+          }
+        }
+      }
+
+      // 3. Ultimate fallback: if external image is dead (404) or unreachable, generate a clean local canvas card
+      if (!isCancelled) {
+        const fallbackDataUrl = createFallbackProductCardDataUrl(productName);
+        if (fallbackDataUrl) {
+          try {
+            const img = await loadImageFromSafeSource(fallbackDataUrl);
+            if (!isCancelled) {
+              sourceImageRef.current = img;
+              setImageLoaded(true);
+            }
+          } catch {
+            setImageLoaded(true);
+          }
+        }
+      }
+    };
+
+    loadSafeCanvasImage();
+
+    return () => {
+      isCancelled = true;
+      if (activeObjectUrl) {
+        URL.revokeObjectURL(activeObjectUrl);
+      }
+    };
+  }, [isOpen, imageUrl, productName]);
 
   // Render on canvas whenever text, preset, color, or image changes
   useEffect(() => {
@@ -175,13 +331,14 @@ export const ImageTextStampDialog: React.FC<ImageTextStampDialogProps> = ({
   }, [imageLoaded, stampText, stylePreset, colorTheme, fontScale, isUppercase]);
 
   const handleApply = () => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current || !imageLoaded) return;
     try {
       const dataUrl = canvasRef.current.toDataURL('image/jpeg', 0.92);
       onApplyImage(dataUrl);
       onClose();
     } catch (e) {
       console.error('Failed to export canvas:', e);
+      showError('Could not export image. Please try another image.');
     }
   };
 
@@ -363,7 +520,7 @@ export const ImageTextStampDialog: React.FC<ImageTextStampDialogProps> = ({
           <Button
             type="button"
             onClick={handleApply}
-            disabled={!stampText.trim()}
+            disabled={!stampText.trim() || !imageLoaded}
             className="rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs px-5 gap-1.5 shadow-md"
           >
             <Check className="h-4 w-4" />

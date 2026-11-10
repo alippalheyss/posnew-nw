@@ -16,7 +16,7 @@ import {
   sendAutoTransferToCreditNotification,
 } from '@/services/telegramService';
 import { putStoreBatch, getStoreAll, STORES } from '@/lib/indexedDb';
-import { BankNotification, parseBankNotificationPayload } from '@/utils/bankNotificationParser';
+import { BankNotification, parseBankNotificationPayload, deduplicateBankNotifications } from '@/utils/bankNotificationParser';
 import { BANK_WEBHOOK_ROW_ID } from '@/components/BankNotificationsDialog';
 
 export interface ProductFlavour {
@@ -1018,7 +1018,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     if (typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem('pos_bank_notifications');
-        return saved ? JSON.parse(saved) : [];
+        return saved ? deduplicateBankNotifications(JSON.parse(saved)) : [];
       } catch {
         return [];
       }
@@ -1094,7 +1094,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   }, []);
 
   const syncBankNotificationsToCloud = useCallback(async (list: BankNotification[]) => {
-    const trimmed = list.slice(0, 50);
+    const trimmed = deduplicateBankNotifications(list).slice(0, 50);
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem('pos_bank_notifications', JSON.stringify(trimmed));
@@ -1125,30 +1125,28 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       if (!parsed.body && (!parsed.title || parsed.title === 'Bank Alert')) return;
 
       const hasExplicitTimestamp = !isNaN(Number(rawPayload.timestamp)) && Number(rawPayload.timestamp) > 1000000000;
-      const contentSig = `${parsed.title}|${parsed.body}`;
-      const sig = `${parsed.title}|${parsed.body}|${rawPayload._rowUpdatedAt || (hasExplicitTimestamp ? rawPayload.timestamp : '')}`;
+      const contentSig = `${parsed.title.trim().toLowerCase()}|${parsed.body.trim().toLowerCase()}`;
+      const sig = `${contentSig}|${hasExplicitTimestamp ? rawPayload.timestamp : rawPayload._rowUpdatedAt || ''}`;
 
-      if (lastProcessedWebhookSigRef.current === sig || seenWebhookSigsRef.current.has(sig)) return;
-      if (!hasExplicitTimestamp && seenWebhookSigsRef.current.has(contentSig)) {
+      if (lastProcessedWebhookSigRef.current === sig || seenWebhookSigsRef.current.has(sig) || seenWebhookSigsRef.current.has(contentSig)) {
         markWebhookSigSeen(sig);
+        markWebhookSigSeen(contentSig);
         return;
       }
 
       const currentList = bankNotificationsRef.current || [];
-      const isDuplicate = currentList.some((existing) => {
-        if (existing.body !== parsed.body) return false;
-        if (!hasExplicitTimestamp) return true;
-        const tA = new Date(existing.receivedAt).getTime();
-        const tB = new Date(parsed.receivedAt).getTime();
-        if (!isNaN(tA) && !isNaN(tB) && Math.abs(tA - tB) < 60000) return true;
-        return existing.receivedAt === parsed.receivedAt;
-      });
+      const isDuplicate = currentList.some(
+        (existing) =>
+          existing.id === parsed.id ||
+          (existing.body.trim().toLowerCase() === parsed.body.trim().toLowerCase() &&
+            existing.title.trim().toLowerCase() === parsed.title.trim().toLowerCase())
+      );
 
       markWebhookSigSeen(sig);
       markWebhookSigSeen(contentSig);
       if (isDuplicate) return;
 
-      const next = [parsed, ...currentList].slice(0, 50);
+      const next = deduplicateBankNotifications([parsed, ...currentList]);
       bankNotificationsRef.current = next;
       setBankNotifications(next);
       syncBankNotificationsToCloud(next);
@@ -1171,9 +1169,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     [markWebhookSigSeen, playBankAlertChime, syncBankNotificationsToCloud]
   );
 
+  const isSyncingBankWebhooksRef = useRef(false);
+
   // Cloud catch-up sync for bank webhooks that arrived while phone or POS was locked/offline
   const syncBankWebhooksFromCloud = useCallback(async () => {
-    if (!supabase || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
+    if (!supabase || (typeof navigator !== 'undefined' && !navigator.onLine) || isSyncingBankWebhooksRef.current) return;
+    isSyncingBankWebhooksRef.current = true;
     try {
       const { data } = await supabase
         .from('settings')
@@ -1182,34 +1183,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
       if (!data || data.length === 0) return;
 
-      // 1. Merge bank_notifications_log with local notifications so nothing is overwritten
+      // 1. Merge bank_notifications_log with local notifications and deduplicate
       const logRow = data.find((r: any) => r.category === 'bank_notifications_log');
       if (logRow?.settings && Array.isArray(logRow.settings.notifications)) {
         const cloudList: BankNotification[] = logRow.settings.notifications;
         const localList = bankNotificationsRef.current || [];
-        const map = new Map<string, BankNotification>();
-        localList.forEach((n) => map.set(n.id, n));
-        cloudList.forEach((cn) => {
-          const existing = map.get(cn.id);
-          if (!existing) {
-            // Also check if same body + timestamp within 60s already exists locally
-            const dup = Array.from(map.values()).find(
-              (loc) =>
-                loc.body === cn.body &&
-                Math.abs(new Date(loc.receivedAt).getTime() - new Date(cn.receivedAt).getTime()) < 60000
-            );
-            if (!dup) {
-              map.set(cn.id, cn);
-            } else if (cn.status !== 'unclaimed' && dup.status === 'unclaimed') {
-              map.set(dup.id, { ...dup, status: cn.status, matchedCustomerName: cn.matchedCustomerName, verifiedAt: cn.verifiedAt });
-            }
-          } else if (cn.status !== 'unclaimed' && existing.status === 'unclaimed') {
-            map.set(cn.id, cn);
-          }
-        });
-        const merged = Array.from(map.values())
-          .sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime())
-          .slice(0, 50);
+        const merged = deduplicateBankNotifications([...localList, ...cloudList]);
+
         if (merged.length !== localList.length || JSON.stringify(merged) !== JSON.stringify(localList)) {
           bankNotificationsRef.current = merged;
           setBankNotifications(merged);
@@ -1218,6 +1198,11 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
               localStorage.setItem('pos_bank_notifications', JSON.stringify(merged));
             } catch {}
           }
+        }
+
+        // If cloud log had duplicates, persist the cleaned deduplicated list back to cloud
+        if (merged.length < cloudList.length) {
+          syncBankNotificationsToCloud(merged);
         }
 
         // Sync cloud quotations
@@ -1254,8 +1239,10 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
       }
     } catch (err) {
       // Silent background sync
+    } finally {
+      isSyncingBankWebhooksRef.current = false;
     }
-  }, [handleIncomingBankWebhook]);
+  }, [handleIncomingBankWebhook, syncBankNotificationsToCloud]);
 
   const verifyBankNotification = useCallback(
     (id: string, matchedCustomerName?: string) => {
@@ -1981,29 +1968,16 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         if (bankLogRow && bankLogRow.settings && Array.isArray(bankLogRow.settings.notifications)) {
           const cloudList: BankNotification[] = bankLogRow.settings.notifications;
           const localList = bankNotificationsRef.current || [];
-          const map = new Map<string, BankNotification>();
-          localList.forEach((n) => map.set(n.id, n));
-          cloudList.forEach((cn) => {
-            if (!map.has(cn.id)) {
-              const dup = Array.from(map.values()).find(
-                (loc) =>
-                  loc.body === cn.body &&
-                  Math.abs(new Date(loc.receivedAt).getTime() - new Date(cn.receivedAt).getTime()) < 60000
-              );
-              if (!dup) map.set(cn.id, cn);
-            } else if (cn.status !== 'unclaimed') {
-              map.set(cn.id, cn);
-            }
-          });
-          const merged = Array.from(map.values())
-            .sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime())
-            .slice(0, 50);
+          const merged = deduplicateBankNotifications([...localList, ...cloudList]);
           bankNotificationsRef.current = merged;
           setBankNotifications(merged);
           if (typeof window !== 'undefined') {
             try {
               localStorage.setItem('pos_bank_notifications', JSON.stringify(merged));
             } catch {}
+          }
+          if (merged.length < cloudList.length) {
+            syncBankNotificationsToCloud(merged);
           }
         }
 
@@ -2180,10 +2154,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
           }
           if (row.category === 'bank_notifications_log') {
             if (Array.isArray(row.settings?.notifications)) {
-              setBankNotifications(row.settings.notifications);
+              const deduped = deduplicateBankNotifications(row.settings.notifications);
+              bankNotificationsRef.current = deduped;
+              setBankNotifications(deduped);
               if (typeof window !== 'undefined') {
                 try {
-                  localStorage.setItem('pos_bank_notifications', JSON.stringify(row.settings.notifications));
+                  localStorage.setItem('pos_bank_notifications', JSON.stringify(deduped));
                 } catch {}
               }
             }

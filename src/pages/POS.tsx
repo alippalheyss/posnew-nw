@@ -228,71 +228,6 @@ const POS = () => {
   const [isTransferSlipsDialogOpen, setIsTransferSlipsDialogOpen] = useState(false);
   const [isBankNotificationsDialogOpen, setIsBankNotificationsDialogOpen] = useState(false);
   const [longPressedCartId, setLongPressedCartId] = useState<string | null>(null);
-  const [cartWidth, setCartWidth] = usePersistedState<number>('pos_cart_width_px', 480);
-  const [isResizingCart, setIsResizingCart] = useState(false);
-  const cartPanelRef = useRef<HTMLDivElement>(null);
-  const [windowWidth, setWindowWidth] = useState<number>(() =>
-    typeof window !== 'undefined' ? window.innerWidth : 1440
-  );
-
-  useEffect(() => {
-    const onResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-
-  const effectiveCartWidth = useMemo(() => {
-    const maxW = Math.max(360, Math.min(780, Math.floor(windowWidth * 0.56)));
-    const minW = 300;
-    return Math.max(minW, Math.min(maxW, Number(cartWidth) || 480));
-  }, [cartWidth, windowWidth]);
-
-  const cartScale = useMemo(() => {
-    return Math.min(1.35, Math.max(0.64, Number((effectiveCartWidth / 480).toFixed(3))));
-  }, [effectiveCartWidth]);
-
-  const productCardMinWidth = useMemo(() => {
-    const baseAvail = Math.max(400, windowWidth - 480);
-    const currentAvail = Math.max(300, windowWidth - effectiveCartWidth);
-    const ratio = currentAvail / baseAvail;
-    const baseCardPx = windowWidth >= 1920 ? 156 : windowWidth >= 1440 ? 142 : 130;
-    return Math.max(96, Math.min(200, Math.round(baseCardPx * ratio)));
-  }, [effectiveCartWidth, windowWidth]);
-
-  const adjustCartWidthBy = (delta: number) => {
-    const maxW = Math.max(360, Math.min(780, Math.floor(windowWidth * 0.56)));
-    const minW = 300;
-    setCartWidth(Math.max(minW, Math.min(maxW, effectiveCartWidth + delta)));
-  };
-
-  const handleCartResizeStart = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const cartEl = cartPanelRef.current;
-    if (!cartEl) return;
-    const rect = cartEl.getBoundingClientRect();
-    const startX = e.clientX;
-    const startWidth = rect.width;
-    const isCartOnLeft = rect.left < window.innerWidth / 2;
-
-    setIsResizingCart(true);
-
-    const onPointerMove = (moveEvent: PointerEvent) => {
-      const deltaX = moveEvent.clientX - startX;
-      const rawWidth = isCartOnLeft ? startWidth + deltaX : startWidth - deltaX;
-      const maxW = Math.max(360, Math.min(780, Math.floor(window.innerWidth * 0.56)));
-      const minW = 300;
-      setCartWidth(Math.max(minW, Math.min(maxW, Math.round(rawWidth))));
-    };
-
-    const onPointerUp = () => {
-      setIsResizingCart(false);
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-    };
-
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', onPointerUp);
-  };
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [shouldPrintCashReceipt, setShouldPrintCashReceipt] = useState<boolean>(false);
   const cashDialogOpenedAt = useRef<number>(0);
@@ -1679,10 +1614,7 @@ const POS = () => {
         </div>
 
         <ScrollArea className="flex-1 p-3 sm:p-4 custom-scrollbar">
-          <div
-            style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${productCardMinWidth}px, 1fr))` }}
-            className="grid gap-2.5 xl:gap-3 transition-all duration-150"
-          >
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 min-[1850px]:grid-cols-9 min-[2150px]:grid-cols-10 gap-2.5 xl:gap-3">
             {displayProducts.map((product) => {
               const isLowStock = product.stock_shop < LOW_STOCK_THRESHOLD;
               const cardColors = [
@@ -1700,11 +1632,10 @@ const POS = () => {
                 <div
                   key={product.id}
                   onClick={() => handleProductSelection(product)}
-                  style={{ containerType: 'inline-size', padding: 'clamp(6px, 5.5cqw, 12px)' }}
-                  className="group apple-glass-card hover:-translate-y-1 hover:shadow-xl border border-white/25 dark:border-white/10 rounded-2xl transition-all duration-300 cursor-pointer relative active:scale-[0.98]"
+                  className="group apple-glass-card hover:-translate-y-1 hover:shadow-xl border border-white/25 dark:border-white/10 rounded-2xl p-2 sm:p-2.5 transition-all duration-300 cursor-pointer relative active:scale-[0.98]"
                 >
                   <div className={cn(
-                    "aspect-square w-full rounded-xl mb-1.5 flex items-center justify-center overflow-hidden relative border border-white/20 dark:border-white/10 shadow-xs",
+                    "aspect-square max-h-36 2xl:max-h-32 rounded-xl mb-1.5 sm:mb-2 flex items-center justify-center overflow-hidden relative border border-white/20 dark:border-white/10 shadow-xs",
                     product.image ? "bg-muted/30" : colorClass
                   )}>
                     {product.image ? (
@@ -1717,10 +1648,7 @@ const POS = () => {
                         }}
                       />
                     ) : (
-                      <div
-                        style={{ fontSize: 'clamp(9px, 8.2cqw, 14px)' }}
-                        className="font-black uppercase tracking-tighter text-center px-1.5 leading-tight drop-shadow-sm line-clamp-2"
-                      >
+                      <div className="font-black text-sm 2xl:text-xs uppercase tracking-tighter text-center px-1.5 leading-tight drop-shadow-sm line-clamp-2">
                         {product.name_en}
                       </div>
                     )}
@@ -1742,31 +1670,13 @@ const POS = () => {
                   </div>
 
                   <div className="text-center px-0.5">
-                    <h3
-                      style={{ fontSize: 'clamp(10px, 8.8cqw, 15px)' }}
-                      className="font-black text-foreground leading-tight truncate mb-0.5"
-                    >
-                      {product.name_dv}
-                    </h3>
-                    <p
-                      style={{ fontSize: 'clamp(8px, 6.8cqw, 12px)' }}
-                      className="font-bold text-muted-foreground truncate uppercase tracking-normal mb-1 font-mono"
-                    >
-                      {product.name_en}
-                    </p>
+                    <h3 className="text-xs sm:text-sm 2xl:text-xs font-black text-foreground leading-tight truncate mb-0.5">{product.name_dv}</h3>
+                    <p className="text-[10px] sm:text-[11px] 2xl:text-[10px] font-bold text-muted-foreground truncate uppercase tracking-normal mb-1 font-mono">{product.name_en}</p>
 
                     <div className="flex items-center justify-center gap-1.5">
-                      <span
-                        style={{ fontSize: 'clamp(10px, 8.8cqw, 15px)' }}
-                        className="font-black text-primary font-mono leading-none"
-                      >
-                        {settings.shop.currency} {product.price.toFixed(2)}
-                      </span>
-                      <div
-                        style={{ width: 'clamp(20px, 16cqw, 32px)', height: 'clamp(20px, 16cqw, 32px)' }}
-                        className="rounded-full bg-primary flex items-center justify-center text-white scale-0 group-hover:scale-100 transition-transform shadow-[0_0_15px_rgba(0,132,255,0.5)] shrink-0"
-                      >
-                        <PlusCircle className="h-3.5 w-3.5" />
+                      <span className="text-xs sm:text-sm font-black text-primary font-mono leading-none">{settings.shop.currency} {product.price.toFixed(2)}</span>
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary flex items-center justify-center text-white scale-0 group-hover:scale-100 transition-transform shadow-[0_0_15px_rgba(0,132,255,0.5)]">
+                        <PlusCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </div>
                     </div>
                   </div>
@@ -1795,88 +1705,30 @@ const POS = () => {
         </ScrollArea>
       </div>
 
-      {/* Interactive Drag Resize Handle between Product Catalogue and Cart Panel */}
-      <div
-        onPointerDown={handleCartResizeStart}
-        onDoubleClick={() => setCartWidth(480)}
-        title="Drag to resize cart & auto-scale POS (Double-click to reset)"
-        className={cn(
-          "group relative w-3 -mx-1.5 z-30 cursor-col-resize flex items-center justify-center select-none touch-none transition-colors",
-          isResizingCart ? "bg-primary/20" : "hover:bg-primary/10"
-        )}
-      >
-        <div
-          className={cn(
-            "w-1 h-16 rounded-full transition-all duration-200",
-            isResizingCart
-              ? "bg-primary h-28 w-1.5 shadow-[0_0_14px_rgba(0,132,255,0.8)]"
-              : "bg-border/80 group-hover:bg-primary/80 group-hover:h-24"
-          )}
-        />
-      </div>
-
-      <div
-        ref={cartPanelRef}
-        style={{ width: `${effectiveCartWidth}px` }}
-        className="shrink-0 h-screen flex flex-col apple-liquid-glass glass3d border-l border-white/20 dark:border-white/10 shadow-2xl z-20 overflow-hidden"
-      >
-        <div style={{ zoom: cartScale }} className="p-5 pb-2 shrink-0">
-          <div className="flex items-center justify-between gap-1 bg-muted p-1 rounded-2xl border border-border mb-4">
-            <div className="flex items-center gap-1">
-              <div className="flex items-center gap-2.5 px-3.5 py-1.5 bg-primary/20 rounded-xl text-primary border border-primary/20">
-                <ShoppingCart className="h-4 w-4" />
-                <div className="flex flex-col items-start leading-none gap-0.5">
-                  <span className="text-[9px] font-black uppercase text-primary/80 tracking-tighter">(Cart)</span>
-                  <span className="text-xs font-black">{t('cart')}</span>
-                </div>
+      <div className="w-[30rem] xl:w-[34rem] 2xl:w-[36rem] max-w-[42vw] flex flex-col apple-liquid-glass glass3d border-l border-white/20 dark:border-white/10 shadow-2xl z-20">
+        <div className="p-6 pb-2">
+          <div className="flex items-center gap-1 bg-muted p-1 rounded-2xl border border-border mb-6">
+            <div className="flex items-center gap-3 px-4 py-1.5 bg-primary/20 rounded-xl text-primary border border-primary/20">
+              <ShoppingCart className="h-4 w-4" />
+              <div className="flex flex-col items-start leading-none gap-0.5">
+                <span className="text-[9px] font-black uppercase text-primary/80 tracking-tighter">(Cart)</span>
+                <span className="text-xs font-black">{t('cart')}</span>
               </div>
-
-              <div className="w-px h-8 bg-muted/80 mx-0.5" />
-
-              <Button
-                onClick={createNewCart}
-                variant="ghost"
-                className="h-10 px-3 text-foreground hover:bg-muted/80 rounded-xl flex items-center gap-2.5 group transition-all"
-              >
-                <PlusCircle className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                <div className="flex flex-col items-end leading-none gap-0.5">
-                  <span className="text-xs font-black">{t('add_new_cart')}</span>
-                  <span className="text-[9px] font-bold uppercase text-muted-foreground tracking-tight">(Add New Cart)</span>
-                </div>
-              </Button>
             </div>
 
-            {/* Quick Cart Size & Scale Adjuster */}
-            <div
-              dir="ltr"
-              className="flex items-center gap-0.5 bg-background/80 border border-border/80 rounded-xl px-1 py-0.5 mr-1 shrink-0"
-              title="Adjust Cart Size (or drag the edge divider)"
+            <div className="w-px h-8 bg-muted/80 mx-1" />
+
+            <Button
+              onClick={createNewCart}
+              variant="ghost"
+              className="h-10 px-4 text-foreground hover:bg-muted/80 rounded-xl flex items-center gap-3 group transition-all"
             >
-              <button
-                type="button"
-                onClick={() => adjustCartWidthBy(-32)}
-                className="h-7 w-6 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
-                title="Make Cart Smaller"
-              >
-                <Minus className="h-3 w-3" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setCartWidth(480)}
-                className="px-1.5 h-7 text-[10px] font-mono font-black text-primary hover:bg-primary/10 rounded-md transition-colors"
-                title="Reset Cart Size (100%)"
-              >
-                {Math.round(cartScale * 100)}%
-              </button>
-              <button
-                type="button"
-                onClick={() => adjustCartWidthBy(32)}
-                className="h-7 w-6 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
-                title="Make Cart Larger"
-              >
-                <Plus className="h-3 w-3" />
-              </button>
-            </div>
+              <PlusCircle className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+              <div className="flex flex-col items-end leading-none gap-0.5">
+                <span className="text-xs font-black">{t('add_new_cart')}</span>
+                <span className="text-[9px] font-bold uppercase text-muted-foreground tracking-tight">(Add New Cart)</span>
+              </div>
+            </Button>
           </div>
           <TooltipProvider delayDuration={150}>
             <div className="flex flex-wrap gap-2 mb-3">
@@ -2169,14 +2021,14 @@ const POS = () => {
           )}
         </div>
 
-        <ScrollArea className="flex-1 min-h-0 px-4 custom-scrollbar">
+        <ScrollArea className="flex-1 px-4 custom-scrollbar">
           {(!activeCart || activeCart.items.length === 0) ? (
-            <div style={{ zoom: cartScale }} className="flex flex-col items-center justify-center h-[360px] opacity-20">
+            <div className="flex flex-col items-center justify-center h-[400px] opacity-20">
               <ShoppingCart className="h-20 w-20 mb-4" />
               <p className="text-lg font-black uppercase tracking-widest">{renderBoth('cart_empty')}</p>
             </div>
           ) : (
-            <div style={{ zoom: cartScale }} className="space-y-1.5 pb-4">
+            <div className="space-y-1.5 pb-4">
               {activeCart.items.map((item, idx) => {
                 const itemKey = `${item.id}-${item.selected_unit || 'Piece'}-${item.selected_flavour || 'base'}`;
                 const isSelected = selectedCartItemKey === itemKey;
@@ -2342,7 +2194,7 @@ const POS = () => {
           )}
         </ScrollArea>
 
-        <div style={{ zoom: cartScale }} className="p-5 bg-muted border-t border-border space-y-3.5 shrink-0">
+        <div className="p-6 bg-muted border-t border-border space-y-4">
           <div className="space-y-2">
             <div className="flex justify-between text-xs font-bold text-muted-foreground">
               <span>{renderBoth('subtotal')}</span>

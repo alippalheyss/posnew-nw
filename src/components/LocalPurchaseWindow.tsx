@@ -1093,41 +1093,111 @@ const LocalPurchaseWindow = () => {
         </div>
       </div>
 
-      {/* Quick Entry Dialog — after picking a product from catalog */}
+      {/* Sleek Quick Entry Dialog — after picking a product from catalog */}
       {quickEntryProduct && (
         <div
-          className="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in"
-          onClick={(e) => { if (e.target === e.currentTarget) { setQuickEntryProduct(null); setIsCatalogPickerOpen(true); } }}
+          className="fixed inset-0 z-[150] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setQuickEntryProduct(null);
+              setIsCatalogPickerOpen(true);
+            }
+          }}
         >
           <div
-            className="w-full max-w-sm bg-card border border-primary/30 rounded-3xl p-6 shadow-2xl shadow-primary/10 space-y-5 font-faruma text-foreground animate-in zoom-in-95"
-            dir="rtl"
+            className="w-full max-w-md bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden font-faruma text-foreground animate-in zoom-in-95"
+            dir="ltr"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="flex items-start justify-between gap-3">
+            {/* Top Product Banner */}
+            <div className="px-5 py-4 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b border-slate-200/80 dark:border-slate-800 flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="h-10 w-10 rounded-xl bg-primary/15 border border-primary/25 text-primary flex items-center justify-center shrink-0 mt-0.5">
+                  <Package className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-primary">
+                      Quick Line Entry
+                    </span>
+                    {isProductZeroTax(quickEntryProduct) ? (
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25">
+                        0% Zero GST
+                      </span>
+                    ) : (
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/25">
+                        {taxRate}% GST
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="font-black text-sm sm:text-base text-slate-900 dark:text-white line-clamp-1 mt-0.5">
+                    {quickEntryProduct.name_en || quickEntryProduct.name_dv}
+                  </h4>
+                  {quickEntryProduct.name_dv && (
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 line-clamp-1">
+                      {quickEntryProduct.name_dv}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-2 mt-1.5 text-[10px] font-mono text-slate-500">
+                    <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-bold">
+                      Stock: {quickEntryProduct.stock_shop ?? 0}
+                    </span>
+                    {quickEntryProduct.price > 0 && (
+                      <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                        Sell: {currency} {Number(quickEntryProduct.price).toFixed(2)}
+                      </span>
+                    )}
+                    {quickEntryProduct.barcode && (
+                      <span className="truncate">#{quickEntryProduct.barcode}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <button
                 type="button"
-                onClick={() => { setQuickEntryProduct(null); setIsCatalogPickerOpen(true); }}
-                className="h-8 w-8 rounded-xl border border-border bg-muted/50 hover:bg-muted text-muted-foreground flex items-center justify-center shrink-0 mt-0.5"
+                onClick={() => {
+                  setQuickEntryProduct(null);
+                  setIsCatalogPickerOpen(true);
+                }}
+                className="h-8 w-8 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 flex items-center justify-center shrink-0 transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
-              <div className="text-right flex-1 min-w-0">
-                <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-1">Quick Entry — ޕްރޮޑަކްޓް</p>
-                <p className="font-black text-base text-foreground line-clamp-2">{quickEntryProduct.name_dv || quickEntryProduct.name_en}</p>
-                <p className="text-[11px] text-muted-foreground font-mono line-clamp-1">{quickEntryProduct.name_en}</p>
-                {isProductZeroTax(quickEntryProduct) && (
-                  <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/10 text-amber-500 border border-amber-500/20">0% GST</span>
-                )}
-              </div>
             </div>
 
-            {/* Fields with Enter-key navigation */}
-            <div className="space-y-3">
-              {/* Qty */}
-              <div className="space-y-1 text-right">
-                <label className="text-[11px] font-black uppercase text-muted-foreground block">Quantity (ތަދާދު)*</label>
+            {/* Body Inputs */}
+            <div className="p-5 space-y-4">
+              {/* Row 1: Quantity + Quick Presets */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    1. Invoice Quantity (ތަދާދު)*
+                  </label>
+                  <div className="flex items-center gap-1">
+                    {[1, 6, 12, 24, 50].map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => {
+                          const nextQty = String(preset);
+                          setQuickEntryQty(nextQty);
+                          const uc = parseFloat(quickEntryUnitCost) || 0;
+                          if (uc > 0) setQuickEntrySubtotal((preset * uc).toFixed(2));
+                          quickEntryUnitCostRef.current?.focus();
+                        }}
+                        className={cn(
+                          "px-2 py-0.5 rounded-md text-[10px] font-black font-mono border transition-all",
+                          Number(quickEntryQty) === preset
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-primary/50"
+                        )}
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <input
                   ref={quickEntryQtyRef}
                   dir="ltr"
@@ -1142,199 +1212,269 @@ const LocalPurchaseWindow = () => {
                     if (qty > 0 && uc > 0) setQuickEntrySubtotal((qty * uc).toFixed(2));
                   }}
                   onFocus={(e) => e.target.select()}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); quickEntryUnitCostRef.current?.focus(); } }}
-                  className="w-full h-14 bg-muted border border-border text-center font-black text-2xl font-mono rounded-2xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      quickEntryUnitCostRef.current?.focus();
+                    }
+                  }}
+                  className="w-full h-11 px-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center font-black text-lg font-mono rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                   placeholder="1"
                   autoFocus
                 />
               </div>
 
-              {/* Unit Cost */}
-              <div className="space-y-1 text-right">
-                <label className="text-[11px] font-black uppercase text-muted-foreground block">Unit Cost — {currency} (ޔުނިޓް ކޮސްޓް)</label>
-                <input
-                  ref={quickEntryUnitCostRef}
-                  dir="ltr"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={quickEntryUnitCost}
-                  onChange={(e) => {
-                    setQuickEntryUnitCost(e.target.value);
-                    const qty = parseFloat(quickEntryQty) || 0;
-                    const uc = parseFloat(e.target.value) || 0;
-                    if (qty > 0 && uc > 0) setQuickEntrySubtotal((qty * uc).toFixed(2));
-                  }}
-                  onFocus={(e) => e.target.select()}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); quickEntrySubtotalRef.current?.focus(); } }}
-                  className="w-full h-14 bg-muted border border-border text-center font-black text-2xl font-mono rounded-2xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                  placeholder="0.00"
-                />
+              {/* Row 2: Unit Cost & Subtotal Side-by-Side */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                    2. Unit Cost ({currency})
+                  </label>
+                  <input
+                    ref={quickEntryUnitCostRef}
+                    dir="ltr"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={quickEntryUnitCost}
+                    onChange={(e) => {
+                      setQuickEntryUnitCost(e.target.value);
+                      const qty = parseFloat(quickEntryQty) || 0;
+                      const uc = parseFloat(e.target.value) || 0;
+                      if (qty > 0 && uc > 0) setQuickEntrySubtotal((qty * uc).toFixed(2));
+                    }}
+                    onFocus={(e) => e.target.select()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        quickEntrySubtotalRef.current?.focus();
+                      }
+                    }}
+                    className="w-full h-11 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center font-black text-base font-mono rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black uppercase tracking-wider text-primary block">
+                    3. Line Subtotal ({currency})
+                  </label>
+                  <input
+                    ref={quickEntrySubtotalRef}
+                    dir="ltr"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={quickEntrySubtotal}
+                    onChange={(e) => {
+                      setQuickEntrySubtotal(e.target.value);
+                      const qty = parseFloat(quickEntryQty) || 0;
+                      const sub = parseFloat(e.target.value) || 0;
+                      if (qty > 0 && sub > 0) setQuickEntryUnitCost((sub / qty).toFixed(4));
+                    }}
+                    onFocus={(e) => e.target.select()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleConfirmQuickEntry();
+                      }
+                    }}
+                    className="w-full h-11 px-3 bg-primary/10 border border-primary/40 text-center font-black text-base font-mono rounded-xl text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                    placeholder="0.00"
+                  />
+                </div>
               </div>
 
-              {/* Subtotal — highlighted */}
-              <div className="space-y-1 text-right">
-                <label className="text-[11px] font-black uppercase text-muted-foreground block">Subtotal — {currency} (ސަބްޓޯޓަލް)</label>
-                <input
-                  ref={quickEntrySubtotalRef}
-                  dir="ltr"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={quickEntrySubtotal}
-                  onChange={(e) => {
-                    setQuickEntrySubtotal(e.target.value);
-                    const qty = parseFloat(quickEntryQty) || 0;
-                    const sub = parseFloat(e.target.value) || 0;
-                    if (qty > 0 && sub > 0) setQuickEntryUnitCost((sub / qty).toFixed(4));
-                  }}
-                  onFocus={(e) => e.target.select()}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleConfirmQuickEntry(); } }}
-                  className="w-full h-14 bg-primary/10 border-2 border-primary/40 text-center font-black text-2xl font-mono rounded-2xl text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                  placeholder="0.00"
-                />
-                <p className="text-[10px] text-muted-foreground text-center">Enter on Subtotal to confirm</p>
+              {/* Helper Strip */}
+              <div className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200/70 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500">
+                <span>Press <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-[10px]">Enter</kbd> to jump fields & confirm</span>
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  New Stock: {(Number(quickEntryProduct.stock_shop) || 0) + (parseFloat(quickEntryQty) || 0)}
+                </span>
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex gap-3 pt-1">
-              <button
+            {/* Footer Actions */}
+            <div className="px-5 py-3.5 bg-slate-50 dark:bg-slate-900/80 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2.5">
+              <Button
                 type="button"
-                onClick={() => { setQuickEntryProduct(null); setIsCatalogPickerOpen(true); }}
-                className="flex-1 h-12 rounded-2xl border border-border bg-muted hover:bg-muted/80 text-foreground font-bold text-xs transition-all"
+                variant="outline"
+                onClick={() => {
+                  setQuickEntryProduct(null);
+                  setIsCatalogPickerOpen(true);
+                }}
+                className="flex-1 h-10 rounded-xl font-bold text-xs"
               >
-                ← Back
-              </button>
-              <button
+                ← Back to Catalog
+              </Button>
+              <Button
                 ref={quickEntryConfirmRef}
                 type="button"
                 onClick={handleConfirmQuickEntry}
                 disabled={!quickEntryQty || parseFloat(quickEntryQty) <= 0}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmQuickEntry(); }}
-                className="flex-1 h-12 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-black text-sm gap-2 shadow-lg shadow-primary/20 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleConfirmQuickEntry();
+                }}
+                className="flex-1 h-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs gap-1.5 shadow-md shadow-primary/20"
               >
                 <Check className="h-4 w-4" />
-                Add to Bill
-              </button>
+                <span>Add to Bill (އިތުރުކުރޭ)</span>
+              </Button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Full Product Catalog Browser Modal */}
+      {/* Sleek Product Catalog Browser Modal */}
       {isCatalogPickerOpen && (
         <div 
-          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in"
+          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in"
           onClick={(e) => {
             e.stopPropagation();
             setIsCatalogPickerOpen(false);
           }}
         >
           <div 
-            className="w-full max-w-4xl max-h-[85vh] bg-card border border-border rounded-3xl p-6 shadow-2xl flex flex-col font-faruma text-foreground relative animate-in zoom-in-95"
-            dir="rtl"
+            className="w-full max-w-5xl max-h-[88vh] bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl flex flex-col font-faruma text-foreground relative overflow-hidden animate-in zoom-in-95"
+            dir="ltr"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Catalog Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-border gap-4 shrink-0">
+            <div className="px-5 py-3.5 bg-slate-50/80 dark:bg-slate-900/70 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4 shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="h-9 w-9 rounded-xl bg-indigo-500/15 border border-indigo-500/25 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                  <Layers className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-black text-slate-900 dark:text-white truncate">
+                      Product Catalog Browser (ޕްރޮޑަކްޓް ލިސްޓް)
+                    </h3>
+                    <Badge variant="secondary" className="font-mono text-[10px] font-bold">
+                      {catalogFilteredProducts.length} items
+                    </Badge>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                    Select any product to enter quantity & cost for this purchase bill
+                  </p>
+                </div>
+              </div>
+
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
                 onClick={() => setIsCatalogPickerOpen(false)}
-                className="h-9 w-9 rounded-xl border border-border bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground"
+                className="h-8 w-8 rounded-lg border-slate-200 dark:border-slate-800 text-slate-500 hover:text-foreground shrink-0"
               >
                 <X className="h-4 w-4" />
               </Button>
-              <div className="text-right">
-                <h3 className="text-lg font-black flex items-center justify-end gap-2 text-foreground">
-                  <span>Product Catalog Browser (ޕްރޮޑަކްޓް ލިސްޓް)</span>
-                  <Package className="w-5 h-5 text-primary" />
-                </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Click any product to add it directly into the local purchase invoice.
-                </p>
-              </div>
             </div>
 
-            {/* Search and Filters */}
-            <div className="py-4 grid grid-cols-1 sm:grid-cols-3 gap-3 shrink-0">
-              <div className="sm:col-span-2 relative">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            {/* Search & Category Filter Strip */}
+            <div className="px-5 py-3 border-b border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-950 flex flex-col sm:flex-row gap-2.5 shrink-0">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
-                  placeholder="Search by product name, barcode, code..."
+                  placeholder="Search product by English/Dhivehi name, barcode, or item code..."
                   value={catalogSearchQuery}
                   onChange={(e) => {
                     setCatalogSearchQuery(e.target.value);
-                    setCatalogVisibleCount(36);
+                    setCatalogVisibleCount(48);
                   }}
-                  className="h-11 pr-9 bg-muted border-border font-bold text-xs sm:text-sm rounded-xl text-right"
+                  className="h-9 pl-9 pr-8 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 font-semibold text-xs rounded-xl"
                   autoFocus
                 />
+                {catalogSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setCatalogSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
 
-              <div>
+              <div className="w-full sm:w-56 shrink-0">
                 <Select 
                   value={catalogSelectedCategory} 
                   onValueChange={(val) => {
                     setCatalogSelectedCategory(val);
-                    setCatalogVisibleCount(36);
+                    setCatalogVisibleCount(48);
                   }}
                 >
-                  <SelectTrigger className="h-11 bg-muted border-border rounded-xl font-bold text-xs text-right">
+                  <SelectTrigger className="h-9 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-xl font-bold text-xs">
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
-                  <SelectContent className="bg-card border-border text-foreground !z-[140]">
-                    <SelectItem value="all" className="text-right font-bold text-xs">All Categories (ހުރިހާ ބައިތައް)</SelectItem>
+                  <SelectContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-foreground !z-[140]">
+                    <SelectItem value="all" className="font-bold text-xs">All Categories (ހުރިހާ ބައިތައް)</SelectItem>
                     {catalogCategories.map(cat => (
-                      <SelectItem key={cat} value={cat} className="text-right font-bold text-xs">{cat}</SelectItem>
+                      <SelectItem key={cat} value={cat} className="font-bold text-xs">{cat}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            {/* Catalog Grid */}
-            <ScrollArea className="flex-1 max-h-[50vh] custom-scrollbar">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 p-1">
+            {/* High-Density Sleek Catalog Grid */}
+            <ScrollArea className="flex-1 p-4 bg-slate-50/50 dark:bg-slate-950/50 custom-scrollbar">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
                 {displayCatalogProducts.map(prod => {
                   const pStock = Number(prod.stock_shop) || 0;
                   const isZero = isProductZeroTax(prod);
+                  const existingInBill = items.find(i => i.productId === prod.id);
                   return (
                     <div
                       key={prod.id}
                       onClick={() => handleAddProductFromCatalog(prod)}
-                      className="p-3.5 rounded-2xl bg-muted/50 hover:bg-primary/10 border border-border/80 hover:border-primary/50 cursor-pointer transition-all flex flex-col justify-between group shadow-xs active:scale-[0.98]"
+                      className={cn(
+                        "p-3 rounded-xl border cursor-pointer transition-all flex flex-col justify-between group active:scale-[0.98]",
+                        existingInBill
+                          ? "bg-primary/5 border-primary/40 hover:border-primary"
+                          : "bg-white dark:bg-slate-900 hover:bg-primary/5 border-slate-200/80 dark:border-slate-800 hover:border-primary/40 shadow-2xs"
+                      )}
                     >
                       <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className={cn(
-                            "text-[9px] font-black px-2 py-0.5 rounded-md font-mono",
-                            pStock < 0 ? "bg-red-500/20 text-red-500" : "bg-card text-muted-foreground border border-border"
-                          )}>
-                            Stock: {pStock}
-                          </span>
+                        <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                          <div className="flex items-center gap-1">
+                            <span className={cn(
+                              "text-[9px] font-black px-1.5 py-0.5 rounded font-mono",
+                              pStock < 0
+                                ? "bg-red-500/15 text-red-600 dark:text-red-400"
+                                : pStock <= 5
+                                  ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                                  : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                            )}>
+                              Stock: {pStock}
+                            </span>
+                            {existingInBill && (
+                              <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-primary text-primary-foreground font-mono">
+                                In Bill: {existingInBill.quantity}
+                              </span>
+                            )}
+                          </div>
                           {isZero && (
-                            <span className="text-[9px] font-black text-amber-500 bg-amber-500/15 px-1.5 py-0.5 rounded">
-                              0% Tax
+                            <span className="text-[9px] font-black text-amber-600 dark:text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded">
+                              0% GST
                             </span>
                           )}
                         </div>
-                        <p className="font-black text-xs sm:text-sm text-foreground group-hover:text-primary transition-colors line-clamp-1">
-                          {prod.name_dv || prod.name_en}
+
+                        <p className="font-black text-xs text-slate-900 dark:text-slate-100 group-hover:text-primary transition-colors line-clamp-1">
+                          {prod.name_en || prod.name_dv}
                         </p>
-                        <p className="text-[10px] text-muted-foreground font-mono line-clamp-1 mt-0.5">
-                          {prod.name_en}
+                        <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
+                          {prod.name_dv || prod.item_code || '—'}
                         </p>
                       </div>
 
-                      <div className="pt-2 mt-2 border-t border-border/60 flex items-center justify-between text-xs">
-                        <span className="text-[10px] font-bold text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                          + Add to Bill
+                      <div className="pt-2 mt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
+                        <span className="font-mono font-black text-slate-800 dark:text-slate-200 text-[11px]">
+                          Cost: {currency} {prod.cost_price ? Number(prod.cost_price).toFixed(2) : (Number(prod.price) || 0).toFixed(2)}
                         </span>
-                        <span className="font-mono font-bold text-foreground">
-                          {currency} {prod.cost_price ? Number(prod.cost_price).toFixed(2) : (Number(prod.price) || 0).toFixed(2)}
+                        <span className="text-[10px] font-black text-primary flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                          <Plus className="h-3 w-3" /> Select
                         </span>
                       </div>
                     </div>
@@ -1347,8 +1487,8 @@ const LocalPurchaseWindow = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setCatalogVisibleCount(prev => prev + 36)}
-                    className="h-9 px-6 rounded-xl border border-border bg-card hover:bg-muted text-xs font-black text-primary transition-all shadow-xs"
+                    onClick={() => setCatalogVisibleCount(prev => prev + 48)}
+                    className="h-9 px-6 rounded-xl text-xs font-black text-primary"
                   >
                     Load More Products ({catalogFilteredProducts.length - catalogVisibleCount} remaining)
                   </Button>
@@ -1356,124 +1496,145 @@ const LocalPurchaseWindow = () => {
               )}
 
               {catalogFilteredProducts.length === 0 && (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Package className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
-                  <p className="font-bold text-sm">No products found matching search</p>
+                <div className="text-center py-12 text-slate-400">
+                  <Package className="h-9 w-9 mx-auto opacity-30 mb-2" />
+                  <p className="font-bold text-xs">No products found matching your search</p>
                 </div>
               )}
             </ScrollArea>
 
             {/* Catalog Modal Footer */}
-            <div className="pt-4 border-t border-border flex justify-end shrink-0 mt-2">
+            <div className="px-5 py-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
+              <span className="text-[11px] text-slate-500">
+                Bill currently has <strong className="text-slate-800 dark:text-slate-200">{items.filter(i => i.productId).length}</strong> item(s)
+              </span>
               <Button
                 type="button"
                 onClick={() => setIsCatalogPickerOpen(false)}
-                className="h-10 px-5 rounded-xl bg-primary text-primary-foreground font-black text-xs"
+                className="h-9 px-5 rounded-xl bg-primary text-primary-foreground font-black text-xs"
               >
-                Done / Return to Bill (ނިމުނީ)
+                Done / Back to Bill (ނިމުނީ)
               </Button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Quick Add Vendor Modal */}
+      {/* Sleek Quick Add Vendor Modal */}
       {isQuickAddVendorOpen && (
         <div 
-          className="fixed inset-0 z-[140] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in"
+          className="fixed inset-0 z-[140] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in"
           onClick={(e) => {
             e.stopPropagation();
             setIsQuickAddVendorOpen(false);
           }}
         >
           <div 
-            className="w-full max-w-md bg-card border border-border rounded-3xl p-6 shadow-2xl space-y-4 font-faruma text-foreground relative animate-in zoom-in-95"
-            dir="rtl"
+            className="w-full max-w-md bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-2xl space-y-4 font-faruma text-foreground relative animate-in zoom-in-95"
+            dir="ltr"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between pb-3 border-b border-border">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                    {t('add_vendor') || 'Add New Vendor'} (އައު ވެންޑަރ)
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Enter supplier name, phone, and GST TIN number
+                  </p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsQuickAddVendorOpen(false)}
-                className="h-8 w-8 rounded-xl border border-border bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
+                className="h-8 w-8 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-foreground flex items-center justify-center"
               >
                 <X className="h-4 w-4" />
               </button>
-              <div className="text-right">
-                <h3 className="text-lg font-black flex items-center justify-end gap-2">
-                  <span>{t('add_vendor') || 'Add New Vendor'}</span>
-                  <Building2 className="w-5 h-5 text-primary" />
-                </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Enter vendor name and contact details
-                </p>
-              </div>
             </div>
 
-            <form onSubmit={handleQuickAddVendor} className="space-y-4 pt-1">
-              <div className="space-y-1.5 text-right">
-                <Label className="text-xs font-bold text-muted-foreground">{t('vendor_name') || 'Vendor Name'}*</Label>
+            <form onSubmit={handleQuickAddVendor} className="space-y-3.5">
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-slate-600 dark:text-slate-300">{t('vendor_name') || 'Vendor Name'}*</Label>
                 <Input
                   value={quickVendorName}
                   onChange={(e) => setQuickVendorName(e.target.value)}
                   placeholder="Vendor name / ވެންޑަރ ނަން"
-                  className="text-right bg-muted border-border font-bold h-11 rounded-xl"
+                  className="h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 font-bold text-xs"
                   autoFocus
                   required
                 />
               </div>
-              <div className="space-y-1.5 text-right">
-                <Label className="text-xs font-bold text-muted-foreground">{t('phone') || 'Phone'}</Label>
-                <Input
-                  value={quickVendorPhone}
-                  onChange={(e) => setQuickVendorPhone(e.target.value)}
-                  placeholder="Phone number / ފޯނު ނަންބަރު"
-                  className="text-right bg-muted border-border h-11 rounded-xl"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-600 dark:text-slate-300">{t('phone') || 'Phone'}</Label>
+                  <Input
+                    value={quickVendorPhone}
+                    onChange={(e) => setQuickVendorPhone(e.target.value)}
+                    placeholder="Phone number"
+                    className="h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-xs font-mono"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-600 dark:text-slate-300">{t('tin_number') || 'TIN Number'}</Label>
+                  <Input
+                    maxLength={13}
+                    value={quickVendorTin}
+                    onChange={(e) => setQuickVendorTin(e.target.value.toUpperCase().replace(/\s+/g, ''))}
+                    placeholder="1021550GST501"
+                    className="h-10 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 font-mono text-xs"
+                  />
+                </div>
               </div>
-              <div className="space-y-1.5 text-right">
-                <Label className="text-xs font-bold text-muted-foreground">{t('tin_number') || 'TIN Number'}</Label>
-                <Input
-                  maxLength={13}
-                  value={quickVendorTin}
-                  onChange={(e) => setQuickVendorTin(e.target.value.toUpperCase().replace(/\s+/g, ''))}
-                  placeholder="e.g. 1021550GST501 (13 chars)"
-                  className="text-right bg-muted border-border h-11 rounded-xl font-mono"
-                />
-              </div>
-              <div className="pt-2 flex gap-3">
+              <div className="pt-2 flex gap-2.5">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setIsQuickAddVendorOpen(false)}
-                  className="flex-1 h-11 rounded-xl border border-border font-bold text-xs"
+                  className="flex-1 h-10 rounded-xl font-bold text-xs"
                 >
                   {t('cancel') || 'Cancel'}
                 </Button>
                 <Button
                   type="submit"
                   disabled={isAddingVendor || !quickVendorName.trim()}
-                  className="flex-1 h-11 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs shadow-lg"
+                  className="flex-1 h-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs shadow-md"
                 >
-                  {isAddingVendor ? (t('saving') || 'Saving...') : (t('add_vendor') || 'Add Vendor')}
+                  {isAddingVendor ? (t('saving') || 'Saving...') : (t('add_vendor') || 'Save Vendor')}
                 </Button>
               </div>
             </form>
           </div>
         </div>
       )}
-      {/* Recent Purchases History Drawer Modal */}
+
+      {/* Sleek Recent Purchases History Modal */}
       {isHistoryOpen && (
         <div 
-          className="fixed inset-0 z-[160] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in"
+          className="fixed inset-0 z-[160] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in"
           onClick={() => setIsHistoryOpen(false)}
         >
           <div 
-            className="w-full max-w-2xl max-h-[85vh] bg-card border border-border rounded-3xl p-6 shadow-2xl flex flex-col font-faruma text-foreground animate-in zoom-in-95"
-            dir="rtl"
+            className="w-full max-w-2xl max-h-[85vh] bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-2xl flex flex-col font-faruma text-foreground animate-in zoom-in-95"
+            dir="ltr"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between pb-3 border-b border-border mb-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center">
+                  <History className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                    Recent Local Purchase Bills (ފަހުގެ ލޯކަލް ޕާޗޭސް ބިލްތައް)
+                  </h3>
+                  <p className="text-[11px] text-slate-500">Select any bill to load and edit</p>
+                </div>
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
@@ -1482,33 +1643,50 @@ const LocalPurchaseWindow = () => {
               >
                 <X className="h-4 w-4" />
               </Button>
-              <div className="text-right">
-                <h3 className="text-lg font-black text-foreground flex items-center gap-2 justify-end">
-                  <span>ފަހުގެ ލޯކަލް ޕާޗޭސް ބިލްތައް</span>
-                  <History className="h-5 w-5 text-primary" />
-                </h3>
-                <p className="text-xs text-muted-foreground">Select any bill to edit or view details</p>
-              </div>
             </div>
 
             <ScrollArea className="flex-1 pr-1">
               {purchases.length === 0 ? (
-                <div className="text-center py-16 text-muted-foreground font-bold">
+                <div className="text-center py-14 text-slate-400 font-bold text-xs">
                   No local purchase bills saved yet
                 </div>
               ) : (
-                <div className="space-y-2.5">
+                <div className="space-y-2">
                   {purchases.map(p => (
                     <div 
                       key={p.id}
                       className={cn(
-                        "p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 text-right group",
+                        "p-3 rounded-xl border transition-all flex items-center justify-between gap-3 group",
                         editingPurchase?.id === p.id 
                           ? "bg-amber-500/10 border-amber-500/40" 
-                          : "bg-muted/40 border-border hover:bg-muted/70 hover:border-primary/30"
+                          : "bg-slate-50 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-800 hover:border-primary/40"
                       )}
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <span className="text-xs font-black text-slate-900 dark:text-white block truncate">
+                          {p.vendorName || p.vendor || 'Unknown Vendor'}
+                        </span>
+                        <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
+                          <Badge variant="outline" className="font-mono text-[10px] px-1.5 py-0 h-4">
+                            #{p.billNumber}
+                          </Badge>
+                          <span>{p.date ? p.date.split('T')[0] : ''}</span>
+                          {p.items && p.items.length > 0 && (
+                            <span className="text-[10px] font-mono">• {p.items.length} items</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="text-right font-mono shrink-0">
+                        <span className="text-xs font-black text-primary block">
+                          {currency} {(Number(p.amount || 0) + Number(p.gstAmount || 0)).toFixed(2)}
+                        </span>
+                        <span className="text-[10px] text-slate-400 block">
+                          GST: {currency} {Number(p.gstAmount || 0).toFixed(2)}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <Button
                           size="sm"
                           variant="outline"
@@ -1517,10 +1695,10 @@ const LocalPurchaseWindow = () => {
                             setIsHistoryOpen(false);
                             showSuccess(`Editing bill #${p.billNumber}`);
                           }}
-                          className="h-9 px-3 rounded-xl border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary font-bold text-xs gap-1.5"
+                          className="h-8 px-2.5 rounded-lg border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary font-bold text-xs gap-1"
                         >
-                          <Pencil className="h-3.5 w-3.5" />
-                          <span>Edit (ބަދަލުކުރޭ)</span>
+                          <Pencil className="h-3 w-3" />
+                          <span>Edit</span>
                         </Button>
                         <Button
                           size="icon"
@@ -1533,35 +1711,11 @@ const LocalPurchaseWindow = () => {
                               }
                             }
                           }}
-                          className="h-9 w-9 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-xl"
+                          className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg"
                           title="Delete"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
-                      </div>
-
-                      <div className="text-left font-mono">
-                        <span className="text-sm font-black text-primary block">
-                          {currency} {(Number(p.amount || 0) + Number(p.gstAmount || 0)).toFixed(2)}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground block">
-                          GST: {currency} {Number(p.gstAmount || 0).toFixed(2)}
-                        </span>
-                      </div>
-
-                      <div className="text-right flex-1 min-w-0">
-                        <span className="text-xs font-black text-foreground block truncate">
-                          {p.vendorName || p.vendor || 'Unknown Vendor'}
-                        </span>
-                        <div className="flex items-center gap-2 justify-end text-[11px] text-muted-foreground mt-0.5">
-                          <Badge variant="outline" className="font-mono text-[10px] px-1.5 py-0 h-4">
-                            #{p.billNumber}
-                          </Badge>
-                          <span>{p.date ? p.date.split('T')[0] : ''}</span>
-                          {p.items && p.items.length > 0 && (
-                            <span className="text-[10px] font-mono opacity-80">({p.items.length} items)</span>
-                          )}
-                        </div>
                       </div>
                     </div>
                   ))}

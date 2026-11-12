@@ -105,137 +105,354 @@ const Stock = () => {
     </>
   );
 
+  const lowStockCount = products.filter(p => p.stock_shop < LOW_STOCK_THRESHOLD).length;
+  const warningStockCount = products.filter(p => p.stock_shop >= LOW_STOCK_THRESHOLD && p.stock_shop < WARNING_STOCK_THRESHOLD).length;
+  const healthyStockCount = products.filter(p => p.stock_shop >= WARNING_STOCK_THRESHOLD).length;
+  const totalShopUnits = products.reduce((sum, p) => sum + (Number(p.stock_shop) || 0), 0);
+  const totalGodownUnits = products.reduce((sum, p) => sum + (Number(p.stock_godown) || 0), 0);
+
   return (
-    <div className="p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
-      {/* Header Section */}
-      <div className="flex justify-between items-center mb-8">
-        <div className="text-right">
-           <h1 className="text-3xl font-black text-foreground flex items-center justify-end gap-3">
-             {renderBoth('stock_inventory')} <Boxes className="h-8 w-8 text-primary" />
-           </h1>
-           <p className="text-sm text-muted-foreground mt-1">Monitor and manage stock levels across locations</p>
+    <div className="p-4 sm:p-5 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="ltr">
+      {/* Sleek Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/15 border border-primary/25 flex items-center justify-center text-primary shrink-0 shadow-xs">
+            <Boxes className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
+                {t('stock_inventory', { lng: 'en' }) || 'Stock & Inventory'}
+              </h1>
+              <span className="text-xs font-bold text-muted-foreground">
+                ({t('stock_inventory')})
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Monitor real-time shop & godown stock levels, transfer inventory, and run quick stock updates
+            </p>
+          </div>
         </div>
 
-        <div className="flex gap-3">
-           <Button 
-             onClick={() => navigate('/stock-audit')}
-             className="gap-2 bg-emerald-600 hover:bg-emerald-500 text-white h-10 px-5 rounded-xl font-black shadow-lg shadow-emerald-600/20"
-           >
-               <Smartphone className="h-4 w-4" /> Stock Audit (Mobile)
-           </Button>
-           <Button onClick={() => setIsQuickStockOpen(true)} className="gap-2 bg-primary hover:bg-primary/90 h-10 px-6 rounded-xl font-black shadow-[0_0_20px_rgba(0,132,255,0.3)]">
-               <PackagePlus className="h-4 w-4" /> Quick Stock
-           </Button>
-           <div className="apple-glass-card rounded-2xl p-1 border border-white/20 dark:border-white/10 flex gap-1 shadow-sm">
-              {['all', 'low', 'warning', 'high'].map((filter) => (
-                <Button 
-                  key={filter}
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setStockFilter(filter as any)}
-                  className={cn(
-                    "px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                    stockFilter === filter ? "bg-primary text-white shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-white/10"
-                  )}
-                >
-                  {filter}
-                </Button>
-              ))}
-           </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button 
+            size="sm"
+            onClick={() => navigate('/stock-audit')}
+            className="gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white h-9 px-3.5 rounded-xl font-black text-xs shadow-md shadow-emerald-600/20"
+          >
+            <Smartphone className="h-3.5 w-3.5" />
+            <span>Stock Audit (Mobile)</span>
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setIsQuickStockOpen(true)}
+            className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground h-9 px-4 rounded-xl font-black text-xs shadow-md shadow-primary/20"
+          >
+            <PackagePlus className="h-3.5 w-3.5" />
+            <span>Quick Stock</span>
+          </Button>
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative mb-8" dir="ltr">
-         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 pointer-events-none" />
-         <Input 
-           dir="ltr"
-           placeholder="Search stock by name, code or barcode..."
-           value={searchTerm}
-           onChange={(e) => { setSearchTerm(e.target.value); setVisibleCount(20); }}
-           className="w-full apple-glass-input rounded-2xl pl-12 pr-10 h-14 text-left font-bold transition-all text-lg shadow-sm"
-         />
-         {searchTerm && (
-           <button
-             onClick={() => { setSearchTerm(''); setVisibleCount(20); }}
-             className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors"
-             title="Clear search"
-           >
-             <X className="h-4 w-4" />
-           </button>
-         )}
+      {/* Interactive KPI Filter Strip */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mb-4 shrink-0">
+        <button
+          type="button"
+          onClick={() => setStockFilter('all')}
+          className={cn(
+            "p-3 rounded-2xl border text-left transition-all flex items-center justify-between gap-2",
+            stockFilter === 'all'
+              ? "bg-primary/10 border-primary/40 shadow-xs"
+              : "bg-card/80 border-border hover:border-primary/30"
+          )}
+        >
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block">
+              All Inventory SKUs
+            </span>
+            <span className="text-lg font-black font-mono text-foreground">
+              {products.length}
+            </span>
+            <span className="text-[10px] text-muted-foreground block font-mono">
+              Shop: {totalShopUnits} • Godown: {totalGodownUnits}
+            </span>
+          </div>
+          <div className="h-9 w-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
+            <Boxes className="h-4 w-4" />
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStockFilter('low')}
+          className={cn(
+            "p-3 rounded-2xl border text-left transition-all flex items-center justify-between gap-2",
+            stockFilter === 'low'
+              ? "bg-rose-500/15 border-rose-500/50 shadow-xs"
+              : "bg-card/80 border-border hover:border-rose-500/30"
+          )}
+        >
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-wider text-rose-600 dark:text-rose-400 block">
+              Critical / Low (&lt;{LOW_STOCK_THRESHOLD})
+            </span>
+            <span className="text-lg font-black font-mono text-rose-600 dark:text-rose-400">
+              {lowStockCount}
+            </span>
+            <span className="text-[10px] text-muted-foreground block">
+              Needs restock soon
+            </span>
+          </div>
+          <div className="h-9 w-9 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+            <TrendingDown className="h-4 w-4" />
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStockFilter('warning')}
+          className={cn(
+            "p-3 rounded-2xl border text-left transition-all flex items-center justify-between gap-2",
+            stockFilter === 'warning'
+              ? "bg-amber-500/15 border-amber-500/50 shadow-xs"
+              : "bg-card/80 border-border hover:border-amber-500/30"
+          )}
+        >
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 block">
+              Moderate ({LOW_STOCK_THRESHOLD}–{WARNING_STOCK_THRESHOLD - 1})
+            </span>
+            <span className="text-lg font-black font-mono text-amber-600 dark:text-amber-400">
+              {warningStockCount}
+            </span>
+            <span className="text-[10px] text-muted-foreground block">
+              Watch stock level
+            </span>
+          </div>
+          <div className="h-9 w-9 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+            <AlertTriangle className="h-4 w-4" />
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStockFilter('high')}
+          className={cn(
+            "p-3 rounded-2xl border text-left transition-all flex items-center justify-between gap-2",
+            stockFilter === 'high'
+              ? "bg-emerald-500/15 border-emerald-500/50 shadow-xs"
+              : "bg-card/80 border-border hover:border-emerald-500/30"
+          )}
+        >
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">
+              Healthy Stock ({WARNING_STOCK_THRESHOLD}+)
+            </span>
+            <span className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">
+              {healthyStockCount}
+            </span>
+            <span className="text-[10px] text-muted-foreground block">
+              Well stocked items
+            </span>
+          </div>
+          <div className="h-9 w-9 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            <TrendingUp className="h-4 w-4" />
+          </div>
+        </button>
       </div>
 
-      {/* Stock Grid */}
-      <ScrollArea className="flex-1 custom-scrollbar">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-6">
-          {displayStockItems.map((item) => (
-            <Card key={item.id} className="apple-glass-card border border-white/20 dark:border-white/10 hover:border-primary/50 transition-all duration-300 rounded-[2rem] overflow-hidden group relative shadow-md hover:shadow-xl">
-               <CardContent className="p-0">
-                  <div className="p-6">
-                     <div className="flex justify-between items-start mb-6">
-                        <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                           <Boxes className="h-6 w-6" />
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                           <Badge variant="glass" className="font-mono text-[10px] font-black px-3 py-1">{item.item_code}</Badge>
-                           {item.stock_shop < LOW_STOCK_THRESHOLD && (
-                             <Badge variant="destructive" className="text-[8px] font-black px-2 py-0.5 animate-pulse">CRITICAL STOCK</Badge>
-                           )}
-                        </div>
-                     </div>
+      {/* Unified Search & Filter Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 mb-4 p-2 rounded-2xl bg-card/80 border border-border shadow-2xs shrink-0">
+        <div className="relative flex-1">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input 
+            dir="ltr"
+            placeholder="Search stock by English/Dhivehi name, item code, or barcode..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setVisibleCount(30);
+            }}
+            className="w-full bg-background border-border/80 rounded-xl pl-9 pr-9 h-9 text-left font-semibold text-xs"
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm('');
+                setVisibleCount(30);
+              }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors"
+              title="Clear search"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
 
-                     <div className="text-right mb-6">
-                        <h3 className="text-xl font-black text-foreground leading-tight mb-1 truncate">{item.name_dv}</h3>
-                        <p className="text-xs sm:text-[13px] font-bold text-muted-foreground uppercase tracking-wider truncate">{item.name_en}</p>
-                     </div>
-
-                     <div className="grid grid-cols-2 gap-4 mb-6">
-                        <div className="apple-glass-card p-4 rounded-2xl border border-white/20 dark:border-white/10 transition-all">
-                           <div className="flex items-center justify-end gap-2 text-xs font-black text-muted-foreground uppercase tracking-wider mb-2">
-                              {renderBoth('shop')} <Store className="h-3.5 w-3.5" />
-                           </div>
-                           <p className={cn(
-                             "text-2xl font-black text-right",
-                             item.stock_shop < LOW_STOCK_THRESHOLD ? "text-red-500" : item.stock_shop < WARNING_STOCK_THRESHOLD ? "text-orange-500" : "text-emerald-500"
-                           )}>{item.stock_shop}</p>
-                        </div>
-                        <div className="apple-glass-card p-4 rounded-2xl border border-white/20 dark:border-white/10 transition-all">
-                           <div className="flex items-center justify-end gap-2 text-xs font-black text-muted-foreground uppercase tracking-wider mb-2">
-                              {renderBoth('godown')} <Warehouse className="h-3.5 w-3.5" />
-                           </div>
-                           <p className="text-2xl font-black text-foreground text-right">{item.stock_godown}</p>
-                        </div>
-                     </div>
-
-                     <div className="flex gap-2">
-                        <Button 
-                          variant="outline"
-                          onClick={() => handleUpdateStockClick(item)}
-                          className="flex-1 text-[10px] font-black h-11 rounded-xl apple-glass-pill"
-                        >
-                          MANUAL UPDATE
-                        </Button>
-                        <Button 
-                          variant="default"
-                          onClick={() => handleTransferClick(item, 'to_shop')}
-                          className="flex-1 text-[10px] font-black h-11 rounded-xl gap-2 apple-glass-pill"
-                        >
-                          <ArrowRightLeft className="h-3 w-3" /> TRANSFER
-                        </Button>
-                     </div>
-                  </div>
-               </CardContent>
-            </Card>
+        <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border/60 shrink-0">
+          {([
+            { id: 'all', label: 'All', count: products.length },
+            { id: 'low', label: 'Critical', count: lowStockCount },
+            { id: 'warning', label: 'Moderate', count: warningStockCount },
+            { id: 'high', label: 'Healthy', count: healthyStockCount },
+          ] as const).map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setStockFilter(tab.id)}
+              className={cn(
+                "h-7 px-2.5 rounded-lg text-[11px] font-black transition-all flex items-center gap-1",
+                stockFilter === tab.id
+                  ? "bg-primary text-primary-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <span>{tab.label}</span>
+              <span className="text-[10px] opacity-80 font-mono">({tab.count})</span>
+            </button>
           ))}
+        </div>
+      </div>
+
+      {/* Sleek Compact Stock Grid */}
+      <ScrollArea className="flex-1 custom-scrollbar">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3 pb-6">
+          {displayStockItems.map((item) => {
+            const shopQty = Number(item.stock_shop) || 0;
+            const godownQty = Number(item.stock_godown) || 0;
+            const isCritical = shopQty < LOW_STOCK_THRESHOLD;
+            const isWarning = shopQty >= LOW_STOCK_THRESHOLD && shopQty < WARNING_STOCK_THRESHOLD;
+
+            return (
+              <Card
+                key={item.id}
+                className={cn(
+                  "bg-card/90 border transition-all duration-200 rounded-2xl overflow-hidden group hover:shadow-md flex flex-col justify-between",
+                  isCritical
+                    ? "border-rose-500/30 hover:border-rose-500/60"
+                    : isWarning
+                      ? "border-amber-500/25 hover:border-amber-500/50"
+                      : "border-border hover:border-primary/40"
+                )}
+              >
+                <CardContent className="p-3.5 flex flex-col h-full justify-between gap-3">
+                  {/* Top Info: Code, Status Badge, Edit button, Names */}
+                  <div>
+                    <div className="flex items-center justify-between gap-1.5 mb-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-[10px] font-mono font-black px-2 py-0.5 rounded-md bg-muted border border-border text-foreground truncate">
+                          {item.item_code || 'SKU'}
+                        </span>
+                        {isCritical ? (
+                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+                            {shopQty < 0 ? 'Minus' : 'Low'}
+                          </span>
+                        ) : isWarning ? (
+                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                            Moderate
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                            In Stock
+                          </span>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleEditProductClick(item)}
+                        title="Edit Product Details"
+                        className="h-6 w-6 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted flex items-center justify-center transition-colors shrink-0"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                    </div>
+
+                    <h3 className="text-sm font-black text-foreground leading-tight line-clamp-1">
+                      {item.name_en || item.name_dv}
+                    </h3>
+                    <p className="text-[11px] font-bold text-muted-foreground line-clamp-1 mt-0.5">
+                      {item.name_dv || item.category || 'General'}
+                    </p>
+                    {item.barcode && (
+                      <p className="text-[10px] font-mono text-muted-foreground/70 truncate mt-0.5">
+                        #{item.barcode}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Shop vs Godown Stock Boxes */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className={cn(
+                      "p-2.5 rounded-xl border transition-all",
+                      isCritical
+                        ? "bg-rose-500/5 border-rose-500/25"
+                        : isWarning
+                          ? "bg-amber-500/5 border-amber-500/20"
+                          : "bg-emerald-500/5 border-emerald-500/20"
+                    )}>
+                      <div className="flex items-center justify-between text-[10px] font-bold text-muted-foreground uppercase mb-0.5">
+                        <span>Shop</span>
+                        <Store className="h-3 w-3 opacity-70" />
+                      </div>
+                      <p className={cn(
+                        "text-lg font-black font-mono leading-tight",
+                        isCritical
+                          ? "text-rose-600 dark:text-rose-400"
+                          : isWarning
+                            ? "text-amber-600 dark:text-amber-400"
+                            : "text-emerald-600 dark:text-emerald-400"
+                      )}>
+                        {shopQty}
+                      </p>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-muted/40 border border-border/70">
+                      <div className="flex items-center justify-between text-[10px] font-bold text-muted-foreground uppercase mb-0.5">
+                        <span>Godown</span>
+                        <Warehouse className="h-3 w-3 opacity-70" />
+                      </div>
+                      <p className="text-lg font-black font-mono text-foreground leading-tight">
+                        {godownQty}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Compact Action Buttons */}
+                  <div className="flex items-center gap-1.5">
+                    <Button 
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleUpdateStockClick(item)}
+                      className="flex-1 text-[10px] font-black h-8 px-2.5 rounded-lg border-border hover:bg-muted"
+                    >
+                      Update Stock
+                    </Button>
+                    <Button 
+                      type="button"
+                      variant="default"
+                      size="sm"
+                      onClick={() => handleTransferClick(item, 'to_shop')}
+                      className="flex-1 text-[10px] font-black h-8 px-2.5 rounded-lg gap-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                    >
+                      <ArrowRightLeft className="h-3 w-3" />
+                      <span>Transfer</span>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {visibleCount < filteredStockItems.length && (
-          <div className="flex justify-center py-8">
+          <div className="flex justify-center pb-8">
             <Button 
-              onClick={() => setVisibleCount(prev => prev + 20)}
+              onClick={() => setVisibleCount(prev => prev + 30)}
               variant="outline"
-              className="bg-muted border-border hover:bg-muted/80 px-8 h-12 rounded-xl text-[10px] font-black uppercase tracking-widest"
+              className="rounded-xl px-6 h-10 font-black text-xs uppercase tracking-wider border-border hover:bg-muted"
             >
               Load More Items ({filteredStockItems.length - visibleCount} remaining)
             </Button>

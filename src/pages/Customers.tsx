@@ -220,141 +220,86 @@ const Customers = () => {
     return `${t(key, options)} (${t(key, { ...options, lng: 'en' })})`;
   };
 
+  const totalOutstanding = useMemo(
+    () => customers.reduce((sum, c) => sum + Number(c.outstanding_balance || 0), 0),
+    [customers]
+  );
+  const customersWithBalanceCount = useMemo(
+    () => customers.filter((c) => Number(c.outstanding_balance || 0) > 0).length,
+    [customers]
+  );
+  const telegramLinkedCount = useMemo(
+    () => customers.filter((c) => Boolean(c.telegram_chat_id)).length,
+    [customers]
+  );
+
   return (
-    <div className="p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
-      {/* Header Section */}
-      <div className="flex justify-between items-center mb-8">
-        <div className="text-right">
-           <h1 className="text-3xl font-black text-foreground flex items-center justify-end gap-3">
-             {renderBoth('customers')} <Users className="h-8 w-8 text-primary" />
-           </h1>
-           <p className="text-sm text-muted-foreground mt-1">Manage your clients, credit limits and loyalty points</p>
+    <div className="p-4 sm:p-5 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="ltr">
+      {/* Sleek Header & KPI Strip */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/15 border border-primary/25 flex items-center justify-center text-primary shrink-0 shadow-xs">
+            <Users className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
+                {t('customers', { lng: 'en' }) || 'Customers'}
+              </h1>
+              <span className="text-xs font-bold text-muted-foreground">
+                ({t('customers')})
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Manage client profiles, credit limits, loyalty points, and instant statements
+            </p>
+          </div>
         </div>
 
-        <div className="flex gap-3">
-           <Button 
-             variant="outline"
-             onClick={() => refreshCustomers(true)}
-             className="gap-2 border-border hover:bg-muted h-11 px-6 rounded-xl font-black text-foreground"
-           >
-             <RefreshCcw className="h-4 w-4" /> Sync All Customers
-           </Button>
-           <Button 
-             onClick={() => setIsAddCustomerDialogOpen(true)}
-             className="gap-2 bg-primary hover:bg-primary/90 h-11 px-6 rounded-xl font-black shadow-[0_0_20px_rgba(0,132,255,0.3)]"
-           >
-             <PlusCircle className="h-4 w-4" /> {renderBoth('add_new_customer')}
-           </Button>
+        {/* KPI Pills & Actions */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="hidden sm:flex items-center gap-2 mr-1">
+            <div className="px-3 py-1.5 rounded-xl bg-card border border-border flex items-center gap-2 text-xs">
+              <span className="text-muted-foreground font-bold">Total:</span>
+              <span className="font-mono font-black text-foreground">{customers.length}</span>
+            </div>
+            <div className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center gap-2 text-xs">
+              <span className="text-amber-600 dark:text-amber-400 font-bold">Active Credit:</span>
+              <span className="font-mono font-black text-amber-600 dark:text-amber-400">
+                {customersWithBalanceCount} ({settings.shop.currency} {totalOutstanding.toFixed(0)})
+              </span>
+            </div>
+            <div className="px-3 py-1.5 rounded-xl bg-[#229ED9]/10 border border-[#229ED9]/25 flex items-center gap-1.5 text-xs">
+              <TelegramIcon className="h-3.5 w-3.5 text-[#229ED9]" />
+              <span className="font-mono font-black text-[#229ED9]">{telegramLinkedCount}</span>
+            </div>
+          </div>
+
+          <Button 
+            variant="outline"
+            size="sm"
+            onClick={() => refreshCustomers(true)}
+            className="gap-1.5 border-border hover:bg-muted h-9 px-3.5 rounded-xl font-bold text-xs text-foreground"
+          >
+            <RefreshCcw className="h-3.5 w-3.5" />
+            <span>Sync</span>
+          </Button>
+          <Button 
+            size="sm"
+            onClick={() => setIsAddCustomerDialogOpen(true)}
+            className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground h-9 px-4 rounded-xl font-black text-xs shadow-md shadow-primary/20"
+          >
+            <PlusCircle className="h-3.5 w-3.5" />
+            <span>{renderBoth('add_new_customer')}</span>
+          </Button>
         </div>
       </div>
 
-      {/* Filter and Search Controls */}
-      <div className="space-y-3 mb-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-muted/30 p-2 rounded-2xl border border-white/10 dark:border-white/5 backdrop-blur-md">
-          {/* Filter Type Tabs: All, By Name, By Code */}
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant={filterType === 'ALL' ? "default" : "outline"}
-              onClick={() => setFilterType('ALL')}
-              className={cn(
-                "h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5",
-                filterType === 'ALL'
-                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
-                  : "bg-card/70 border-border text-muted-foreground hover:text-foreground hover:bg-card"
-              )}
-            >
-              <Users className="h-3.5 w-3.5" />
-              <span>All (ހުރިހާ)</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono font-black ml-1 bg-black/20 text-white">
-                {customers.length}
-              </span>
-            </Button>
-
-            <Button
-              type="button"
-              size="sm"
-              variant={filterType === 'BY_NAME' ? "default" : "outline"}
-              onClick={() => setFilterType('BY_NAME')}
-              className={cn(
-                "h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5",
-                filterType === 'BY_NAME'
-                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/25 hover:bg-blue-500"
-                  : "bg-card/70 border-border text-muted-foreground hover:text-foreground hover:bg-card"
-              )}
-            >
-              <User className="h-3.5 w-3.5" />
-              <span>By Name (ނަމުން)</span>
-            </Button>
-
-            <Button
-              type="button"
-              size="sm"
-              variant={filterType === 'BY_CODE' ? "default" : "outline"}
-              onClick={() => setFilterType('BY_CODE')}
-              className={cn(
-                "h-9 px-3.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5",
-                filterType === 'BY_CODE'
-                  ? "bg-amber-600 text-white shadow-md shadow-amber-600/25 hover:bg-amber-500"
-                  : "bg-card/70 border-border text-muted-foreground hover:text-foreground hover:bg-card"
-              )}
-            >
-              <Hash className="h-3.5 w-3.5" />
-              <span>By Code (ކޯޑުން)</span>
-            </Button>
-          </div>
-
-          {/* Quick Sort Options */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold text-muted-foreground flex items-center gap-1">
-              <ArrowUpDown className="h-3 w-3" /> ތަރުތީބު:
-            </span>
-            <Button
-              type="button"
-              size="sm"
-              variant={sortBy === 'NAME_ASC' ? 'secondary' : 'ghost'}
-              onClick={() => setSortBy(prev => prev === 'NAME_ASC' ? 'DEFAULT' : 'NAME_ASC')}
-              className={cn(
-                "h-8 px-2.5 text-xs font-bold rounded-xl border transition-all",
-                sortBy === 'NAME_ASC' ? "border-blue-500/50 bg-blue-500/15 text-blue-400 font-black" : "border-border/60 text-muted-foreground"
-              )}
-              title="Sort Alphabetically by Name"
-            >
-              ނަމުން (A-Z)
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={sortBy === 'CODE_ASC' ? 'secondary' : 'ghost'}
-              onClick={() => setSortBy(prev => prev === 'CODE_ASC' ? 'DEFAULT' : 'CODE_ASC')}
-              className={cn(
-                "h-8 px-2.5 text-xs font-bold rounded-xl border transition-all",
-                sortBy === 'CODE_ASC' ? "border-amber-500/50 bg-amber-500/15 text-amber-400 font-black" : "border-border/60 text-muted-foreground"
-              )}
-              title="Sort Numerically by Code"
-            >
-              ކޯޑުން (1-9)
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={sortBy === 'BALANCE_DESC' ? 'secondary' : 'ghost'}
-              onClick={() => setSortBy(prev => prev === 'BALANCE_DESC' ? 'DEFAULT' : 'BALANCE_DESC')}
-              className={cn(
-                "h-8 px-2.5 text-xs font-bold rounded-xl border transition-all",
-                sortBy === 'BALANCE_DESC' ? "border-red-500/50 bg-red-500/15 text-red-400 font-black" : "border-border/60 text-muted-foreground"
-              )}
-              title="Sort by Outstanding Balance (Highest First)"
-            >
-              ދަރަނި
-            </Button>
-          </div>
-        </div>
-
-        {/* Search Bar with Dynamic Placeholder */}
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 pointer-events-none" />
+      {/* Unified Compact Search, Filter & Sort Toolbar */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2.5 mb-4 p-2 rounded-2xl bg-card/80 border border-border shadow-2xs shrink-0">
+        {/* Search Input */}
+        <div className="relative flex-1">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input 
             dir="auto"
             placeholder={
@@ -362,171 +307,320 @@ const Customers = () => {
                 ? "Search customer by name... / ނަމުން ކަސްޓަމަރު ހޯދާ"
                 : filterType === 'BY_CODE'
                   ? "Search customer by code (e.g. 001)... / ކޯޑުން ހޯދާ"
-                  : "Search customer name, code, phone..."
+                  : "Search customer by name, code, or phone..."
             }
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full apple-glass-input rounded-2xl pl-12 pr-12 h-14 text-left font-sans font-bold transition-all text-base shadow-sm"
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setVisibleCount(36);
+            }}
+            className="w-full bg-background border-border/80 rounded-xl pl-9 pr-9 h-9 text-left font-semibold text-xs"
           />
           {searchTerm && (
             <button
               type="button"
               onClick={() => setSearchTerm('')}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1.5 rounded-full hover:bg-muted-foreground/10 transition-colors"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted transition-colors"
               title="Clear search"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
+
+        {/* Filter Mode Pills */}
+        <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border/60 shrink-0">
+          <button
+            type="button"
+            onClick={() => setFilterType('ALL')}
+            className={cn(
+              "h-7 px-2.5 rounded-lg text-[11px] font-black transition-all flex items-center gap-1",
+              filterType === 'ALL'
+                ? "bg-primary text-primary-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Users className="h-3 w-3" />
+            <span>All</span>
+            <span className="text-[10px] opacity-80 font-mono">({customers.length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterType('BY_NAME')}
+            className={cn(
+              "h-7 px-2.5 rounded-lg text-[11px] font-black transition-all flex items-center gap-1",
+              filterType === 'BY_NAME'
+                ? "bg-blue-600 text-white shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <User className="h-3 w-3" />
+            <span>Name (ނަމުން)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterType('BY_CODE')}
+            className={cn(
+              "h-7 px-2.5 rounded-lg text-[11px] font-black transition-all flex items-center gap-1",
+              filterType === 'BY_CODE'
+                ? "bg-amber-600 text-white shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Hash className="h-3 w-3" />
+            <span>Code (ކޯޑުން)</span>
+          </button>
+        </div>
+
+        {/* Sort Pills */}
+        <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border/60 shrink-0">
+          <span className="text-[10px] font-bold text-muted-foreground px-1.5 flex items-center gap-1">
+            <ArrowUpDown className="h-3 w-3" /> Sort:
+          </span>
+          <button
+            type="button"
+            onClick={() => setSortBy(prev => prev === 'NAME_ASC' ? 'DEFAULT' : 'NAME_ASC')}
+            className={cn(
+              "h-7 px-2 text-[11px] font-bold rounded-lg transition-all",
+              sortBy === 'NAME_ASC'
+                ? "bg-background text-blue-600 dark:text-blue-400 font-black shadow-2xs border border-blue-500/30"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            A-Z
+          </button>
+          <button
+            type="button"
+            onClick={() => setSortBy(prev => prev === 'CODE_ASC' ? 'DEFAULT' : 'CODE_ASC')}
+            className={cn(
+              "h-7 px-2 text-[11px] font-bold rounded-lg transition-all",
+              sortBy === 'CODE_ASC'
+                ? "bg-background text-amber-600 dark:text-amber-400 font-black shadow-2xs border border-amber-500/30"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            #Code
+          </button>
+          <button
+            type="button"
+            onClick={() => setSortBy(prev => prev === 'BALANCE_DESC' ? 'DEFAULT' : 'BALANCE_DESC')}
+            className={cn(
+              "h-7 px-2 text-[11px] font-bold rounded-lg transition-all",
+              sortBy === 'BALANCE_DESC'
+                ? "bg-background text-rose-600 dark:text-rose-400 font-black shadow-2xs border border-rose-500/30"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Balance (ދަރަނި)
+          </button>
+        </div>
       </div>
 
-      {/* Customers Grid */}
+      {/* Compact, Sleek Customers Grid */}
       <ScrollArea className="flex-1 custom-scrollbar">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-6">
-          {filteredCustomers.slice(0, visibleCount).map((customer) => (
-            <Card key={customer.id} className="apple-glass-card border border-white/20 dark:border-white/10 hover:border-primary/50 transition-all duration-300 rounded-3xl overflow-hidden group shadow-sm hover:shadow-lg">
-              <CardContent className="p-0">
-                 <div className="p-6">
-                    <div className="flex justify-between items-start mb-6">
-                        <div className="flex items-center gap-2">
-                           <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                              <Users className="h-6 w-6" />
-                           </div>
-                           <Button
-                             type="button"
-                             size="sm"
-                             variant="ghost"
-                             onClick={() => handleOpenTelegramConnect(customer)}
-                             className={
-                               customer.telegram_chat_id
-                                 ? "h-7 px-2 text-[10px] font-bold rounded-lg bg-[#229ED9]/15 text-[#229ED9] hover:bg-[#229ED9]/25 gap-1"
-                                 : "h-7 px-2 text-[10px] font-bold rounded-lg bg-white/10 dark:bg-white/5 text-muted-foreground hover:text-[#229ED9] hover:bg-[#229ED9]/10 gap-1"
-                             }
-                             title={customer.telegram_chat_id ? `Telegram Linked (Chat ID: ${customer.telegram_chat_id})` : "Click to connect Telegram"}
-                           >
-                             <TelegramIcon className="h-3 w-3" />
-                             <span>{customer.telegram_chat_id ? 'Linked' : 'Bot Connect'}</span>
-                           </Button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3 pb-6">
+          {filteredCustomers.slice(0, visibleCount).map((customer) => {
+            const outBal = Number(customer.outstanding_balance || 0);
+            const credLim = Number(customer.credit_limit || 0);
+            const usagePct = credLim > 0 ? Math.min(100, Math.round((outBal / credLim) * 100)) : (outBal > 0 ? 100 : 0);
+            const initials = (customer.name_en || customer.name_dv || 'C')
+              .trim()
+              .split(/\s+/)
+              .slice(0, 2)
+              .map(w => w[0])
+              .join('')
+              .toUpperCase();
+
+            return (
+              <Card
+                key={customer.id}
+                className={cn(
+                  "bg-card/90 border transition-all duration-200 rounded-2xl overflow-hidden group hover:shadow-md flex flex-col justify-between",
+                  outBal > 0
+                    ? "border-amber-500/25 hover:border-amber-500/50"
+                    : "border-border hover:border-primary/40"
+                )}
+              >
+                <CardContent className="p-3.5 flex flex-col h-full justify-between gap-2.5">
+                  {/* Top Section: Avatar + Name + Code + Quick Menu */}
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div className={cn(
+                          "w-9 h-9 rounded-xl border flex items-center justify-center text-xs font-black shrink-0",
+                          outBal > 0
+                            ? "bg-amber-500/10 border-amber-500/25 text-amber-600 dark:text-amber-400"
+                            : "bg-primary/10 border-primary/20 text-primary"
+                        )}>
+                          {initials}
                         </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <h3 className="text-sm font-black text-foreground truncate leading-tight">
+                              {customer.name_en || customer.name_dv}
+                            </h3>
+                          </div>
+                          {customer.name_dv && (
+                            <p className="text-[11px] font-bold text-muted-foreground truncate leading-tight mt-0.5">
+                              {customer.name_dv}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Code Badge + Actions Dropdown */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <span className={cn(
+                          "text-[10px] font-mono font-black px-2 py-0.5 rounded-md border",
+                          filterType === 'BY_CODE'
+                            ? "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/40"
+                            : "bg-muted text-foreground border-border"
+                        )}>
+                          #{customer.code}
+                        </span>
+
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/50 hover:text-foreground hover:bg-white/10">
-                              <MoreVertical className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground">
+                              <MoreVertical className="h-3.5 w-3.5" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent className="apple-glass-dialog border-white/20 dark:border-white/10 text-foreground" dir="rtl">
-                            <DropdownMenuItem onClick={() => handleEditClick(customer)} className="gap-2 text-right justify-end hover:bg-white/10 cursor-pointer">
-                              {renderBoth('edit')} <PencilLine className="h-4 w-4 text-blue-400" />
+                          <DropdownMenuContent align="end" className="bg-card border-border text-foreground rounded-xl">
+                            <DropdownMenuItem onClick={() => handleEditClick(customer)} className="gap-2 text-xs font-bold cursor-pointer">
+                              <PencilLine className="h-3.5 w-3.5 text-blue-500" />
+                              <span>{renderBoth('edit')}</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleOpenTelegramConnect(customer)} className="gap-2 text-right justify-end hover:bg-white/10 cursor-pointer text-[#229ED9]">
-                              <span>Connect Telegram (QR)</span> <QrCode className="h-4 w-4" />
+                            <DropdownMenuItem onClick={() => handleOpenTelegramConnect(customer)} className="gap-2 text-xs font-bold cursor-pointer text-[#229ED9]">
+                              <QrCode className="h-3.5 w-3.5" />
+                              <span>Connect Telegram (QR)</span>
                             </DropdownMenuItem>
-                            {customer.outstanding_balance > 0 && customer.telegram_chat_id && (
-                              <DropdownMenuItem onClick={() => handleSendCustomerTelegram(customer)} className="gap-2 text-right justify-end hover:bg-white/10 cursor-pointer text-emerald-400">
-                                <span>Send Telegram Statement</span> <Send className="h-4 w-4" />
+                            {outBal > 0 && customer.telegram_chat_id && (
+                              <DropdownMenuItem onClick={() => handleSendCustomerTelegram(customer)} className="gap-2 text-xs font-bold cursor-pointer text-emerald-500">
+                                <Send className="h-3.5 w-3.5" />
+                                <span>Send Telegram Statement</span>
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
                         </DropdownMenu>
-                     </div>
-
-                    <div className="text-right mb-6">
-                       <h3 className="text-xl font-black text-foreground leading-tight mb-1">{customer.name_dv}</h3>
-                       <p className="text-xs sm:text-[13px] font-bold text-muted-foreground uppercase tracking-wider">{customer.name_en}</p>
-                       <div className="mt-2 flex items-center justify-end">
-                         <span className={cn(
-                           "text-xs font-mono font-bold px-2.5 py-0.5 rounded-lg border",
-                           filterType === 'BY_CODE'
-                             ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
-                             : "bg-primary/10 text-primary border-primary/20"
-                         )}>
-                           ID: {customer.code}
-                         </span>
-                       </div>
+                      </div>
                     </div>
 
-                    <div className="space-y-3 mb-6">
-                       <div className="flex items-center justify-end gap-3 text-muted-foreground">
-                          <span className="text-xs font-bold">{customer.phone}</span>
-                          <Phone className="h-3.5 w-3.5 text-muted-foreground/70" />
-                       </div>
-                       {customer.email && (
-                         <div className="flex items-center justify-end gap-3 text-muted-foreground">
-                            <span className="text-xs font-bold truncate max-w-[150px]">{customer.email}</span>
-                            <Mail className="h-3.5 w-3.5 text-muted-foreground/70" />
-                         </div>
-                       )}
+                    {/* Meta Strip: Phone, Loyalty Points & Telegram Status */}
+                    <div className="flex items-center justify-between gap-2 mt-2.5 pt-2 border-t border-border/50 text-[11px]">
+                      <div className="flex items-center gap-1.5 text-muted-foreground min-w-0">
+                        <Phone className="h-3 w-3 shrink-0 text-muted-foreground/70" />
+                        <span className="font-mono font-bold truncate">{customer.phone || 'No phone'}</span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {Number(customer.loyalty_points || 0) > 0 && (
+                          <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono font-black text-[10px]">
+                            {Number(customer.loyalty_points || 0).toFixed(0)} PTS
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenTelegramConnect(customer)}
+                          className={cn(
+                            "h-5 px-1.5 rounded text-[9px] font-black flex items-center gap-1 transition-colors",
+                            customer.telegram_chat_id
+                              ? "bg-[#229ED9]/15 text-[#229ED9] hover:bg-[#229ED9]/25"
+                              : "bg-muted text-muted-foreground hover:text-[#229ED9]"
+                          )}
+                          title={customer.telegram_chat_id ? `Telegram Linked (${customer.telegram_chat_id})` : "Connect Telegram Bot"}
+                        >
+                          <TelegramIcon className="h-2.5 w-2.5" />
+                          <span>{customer.telegram_chat_id ? 'Linked' : 'Link'}</span>
+                        </button>
+                      </div>
                     </div>
-                     <div className="space-y-4 mb-6">
-                        <div className="space-y-2">
-                           <div className="flex justify-between text-xs font-black uppercase tracking-wider mb-1">
-                              <span className="text-primary">{settings.shop.currency} {customer.outstanding_balance.toFixed(2)}</span>
-                              <span className="text-muted-foreground font-bold">Used Credit</span>
-                           </div>
-                           <Progress value={Math.min(100, (customer.outstanding_balance / (customer.credit_limit || 1)) * 100)} className="h-1.5 bg-black/10 dark:bg-white/10" />
-                           <div className="flex justify-between text-xs font-bold text-muted-foreground">
-                              <span>Limit: {settings.shop.currency} {customer.credit_limit.toFixed(2)}</span>
-                              <span>{Math.round((customer.outstanding_balance / (customer.credit_limit || 1)) * 100)}%</span>
-                           </div>
-                        </div>
+                  </div>
 
-                        <div className="grid grid-cols-2 gap-3">
-                           <div className="apple-glass-card p-3 rounded-2xl border border-white/20 dark:border-white/10 text-right">
-                              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-1">{renderBoth('loyalty_points')}</p>
-                              <p className="text-sm font-black text-blue-400">{(customer.loyalty_points || 0).toFixed(0)} <span className="text-[9px] font-normal opacity-70">PTS</span></p>
-                           </div>
-                           <div className="apple-glass-card p-3 rounded-2xl border border-white/20 dark:border-white/10 text-right">
-                              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider mb-1">{renderBoth('credit_limit')}</p>
-                              <p className="text-sm font-black text-orange-500">{settings.shop.currency} {customer.credit_limit.toFixed(0)}</p>
-                           </div>
-                        </div>
-                     </div>
+                  {/* Credit Balance & Limit Box */}
+                  <div className={cn(
+                    "p-2.5 rounded-xl border",
+                    outBal > 0
+                      ? "bg-amber-500/5 border-amber-500/20"
+                      : "bg-muted/40 border-border/60"
+                  )}>
+                    <div className="flex items-baseline justify-between gap-2 mb-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Balance
+                      </span>
+                      <span className={cn(
+                        "font-mono font-black text-sm",
+                        outBal > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"
+                      )}>
+                        {settings.shop.currency} {outBal.toFixed(2)}
+                      </span>
+                    </div>
+                    <Progress
+                      value={usagePct}
+                      className="h-1 bg-black/10 dark:bg-white/10"
+                    />
+                    <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-1 font-mono">
+                      <span>Limit: {settings.shop.currency} {credLim.toFixed(0)}</span>
+                      <span>{usagePct}%</span>
+                    </div>
+                  </div>
 
-                     {customer.outstanding_balance > 0 && (
-                        <div className="space-y-1.5 mb-2">
-                          <Button
-                            type="button"
-                            onClick={() => handleSendCustomerTelegram(customer)}
-                            disabled={isSendingTelegram === customer.id}
-                            className="w-full bg-[#229ED9]/15 hover:bg-[#229ED9]/25 text-[#229ED9] border border-[#229ED9]/30 text-[10px] font-black h-9 rounded-xl transition-all gap-2 flex items-center justify-center active:scale-95"
-                          >
-                            {isSendingTelegram === customer.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <TelegramIcon className="h-3.5 w-3.5 fill-current" />
-                            )}
-                            <span>{customer.telegram_chat_id ? 'Send Statement via Telegram (ޓެލެގްރާމް)' : 'Link Telegram to Send Statement'}</span>
-                          </Button>
+                  {/* Compact Bottom Action Row */}
+                  <div className="flex items-center gap-1.5 pt-0.5">
+                    {outBal > 0 && (
+                      <>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => handleSendCustomerTelegram(customer)}
+                          disabled={isSendingTelegram === customer.id}
+                          title={customer.telegram_chat_id ? 'Send Statement via Telegram' : 'Link Telegram to Send Statement'}
+                          className="h-8 px-2.5 flex-1 bg-[#229ED9]/15 hover:bg-[#229ED9] text-[#229ED9] hover:text-white border border-[#229ED9]/30 text-[10px] font-black rounded-lg transition-all gap-1"
+                        >
+                          {isSendingTelegram === customer.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <TelegramIcon className="h-3 w-3 fill-current" />
+                          )}
+                          <span>Telegram</span>
+                        </Button>
 
-                          <Button
-                            type="button"
-                            onClick={() => handleShareCustomerViber(customer)}
-                            className="w-full bg-[#7360F2]/15 hover:bg-[#7360F2]/25 text-[#7360F2] border border-[#7360F2]/30 text-[10px] font-black h-9 rounded-xl transition-all gap-2 flex items-center justify-center active:scale-95"
-                          >
-                            <ViberIcon className="h-3.5 w-3.5 fill-current" />
-                            <span>Send Statement via Viber (ވައިބަރ)</span>
-                          </Button>
-                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => handleShareCustomerViber(customer)}
+                          title="Send Statement via Viber"
+                          className="h-8 px-2.5 flex-1 bg-[#7360F2]/15 hover:bg-[#7360F2] text-[#7360F2] hover:text-white border border-[#7360F2]/30 text-[10px] font-black rounded-lg transition-all gap-1"
+                        >
+                          <ViberIcon className="h-3 w-3 fill-current" />
+                          <span>Viber</span>
+                        </Button>
+                      </>
+                    )}
+
+                    <Button 
+                      type="button"
+                      size="sm"
+                      onClick={() => handleEditClick(customer)}
+                      className={cn(
+                        "h-8 px-3 bg-muted hover:bg-primary hover:text-primary-foreground text-foreground text-[10px] font-black rounded-lg border border-border transition-all gap-1",
+                        outBal > 0 ? "shrink-0" : "w-full"
                       )}
-
-                     <Button 
-                       onClick={() => handleEditClick(customer)}
-                       className="w-full bg-muted hover:bg-muted/80 text-foreground text-[10px] font-black h-10 rounded-xl border border-border transition-all uppercase tracking-widest"
-                     >
-                       View Details & Edit
-                     </Button>
-                 </div>
-              </CardContent>
-            </Card>
-          ))}
+                    >
+                      <PencilLine className="h-3 w-3" />
+                      <span>{outBal > 0 ? 'Edit' : 'Edit Customer'}</span>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
         {filteredCustomers.length > visibleCount && (
           <div className="flex justify-center pb-8">
             <Button
               variant="outline"
               onClick={() => setVisibleCount(prev => prev + 36)}
-              className="rounded-2xl px-8 h-11 font-black text-xs uppercase tracking-widest border-border hover:bg-muted"
+              className="rounded-xl px-6 h-10 font-black text-xs uppercase tracking-wider border-border hover:bg-muted"
             >
               Load More Customers ({filteredCustomers.length - visibleCount} remaining)
             </Button>

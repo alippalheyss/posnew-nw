@@ -235,9 +235,9 @@
     "semantic_hash": "42e192c481307d91af8345617c3d3442"
   },
   "src/components/ProductDialog.tsx": {
-    "mtime": 1794485788.801009,
-    "seen": 1794486543.3034635,
-    "ast_hash": "3e6842adcc05d3074b97de88185e44ce",
+    "mtime": 1794488045.8401527,
+    "seen": 1794490290.4899232,
+    "ast_hash": "3a5f898ee85fb2f01df4766cf3024c6d",
     "semantic_hash": ""
   },
   "src/components/ProductImportDialog.tsx": {
@@ -697,9 +697,9 @@
     "semantic_hash": "b19bf63f2210616b3157188ac3940bb1"
   },
   "src/pages/Admin.tsx": {
-    "mtime": 1794486725.5754683,
-    "seen": 1794486812.1870582,
-    "ast_hash": "d3b3e684e3d3666dde170d3990c47fd8",
+    "mtime": 1794488985.9548354,
+    "seen": 1794490290.518841,
+    "ast_hash": "9febb730b022fc7c5b009d283f6175d4",
     "semantic_hash": ""
   },
   "src/pages/CreditInvoices.tsx": {
@@ -709,9 +709,9 @@
     "semantic_hash": ""
   },
   "src/pages/CreditOutstanding.tsx": {
-    "mtime": 1794485949.4666128,
-    "seen": 1794486543.3257384,
-    "ast_hash": "09795b3af16e59d5c59866cef7ce3b44",
+    "mtime": 1794488165.4730153,
+    "seen": 1794490290.5190623,
+    "ast_hash": "dd59a71ad3ae70116e065aad95d8e8c9",
     "semantic_hash": ""
   },
   "src/pages/CustomerDisplay.tsx": {
@@ -793,9 +793,9 @@
     "semantic_hash": "2f088d57ec1348909ce1048d23680fb8"
   },
   "src/pages/SalesReports.tsx": {
-    "mtime": 1794486143.450102,
-    "seen": 1794486543.3289075,
-    "ast_hash": "fa4655f69e8a40cd35b8c9c16b6d3a7c",
+    "mtime": 1794490227.6289074,
+    "seen": 1794490290.5221932,
+    "ast_hash": "92da1cb278175c25df42f6fc6766067c",
     "semantic_hash": ""
   },
   "src/pages/ShrinkageReport.tsx": {

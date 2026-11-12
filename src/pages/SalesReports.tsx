@@ -30,7 +30,14 @@ import {
   Sparkles,
   RotateCcw,
   ChevronRight,
-  Hash
+  Hash,
+  Users,
+  AlertTriangle,
+  Clock,
+  Truck,
+  Boxes,
+  Award,
+  Percent
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -50,9 +57,35 @@ import {
   CartesianGrid
 } from 'recharts';
 
+type DetailModalType =
+  | 'today'
+  | 'week'
+  | 'month'
+  | 'year'
+  | 'all_time'
+  | 'avg_basket'
+  | 'hourly_peak'
+  | 'cash'
+  | 'card'
+  | 'transfer'
+  | 'credit'
+  | 'profit'
+  | 'top_products'
+  | 'categories'
+  | 'slow_products'
+  | 'low_stock'
+  | 'expiry_watch'
+  | 'inventory_valuation'
+  | 'returns'
+  | 'gst'
+  | 'top_customers'
+  | 'credit_overview'
+  | 'purchases'
+  | null;
+
 const SalesReports = () => {
   const { t } = useTranslation();
-  const { sales, settings, products, processReturn } = useAppContext();
+  const { sales, settings, products, customers, purchases, vendors, processReturn } = useAppContext();
 
   // --- Return Sale State ---
   const [returnSale, setReturnSale] = useState<Sale | null>(null);
@@ -150,11 +183,31 @@ const SalesReports = () => {
   const yearProfit = calculateProfitForPeriod('year');
 
   // --- Drill-down Detail Modal State ---
-  const [activeDetailModal, setActiveDetailModal] = useState<
-    'today' | 'month' | 'year' | 'cash' | 'card' | 'transfer' | 'credit' | 'profit' | 'top_products' | 'returns' | 'gst' | null
-  >(null);
+  const [activeDetailModal, setActiveDetailModal] = useState<DetailModalType>(null);
   const [detailSearchQuery, setDetailSearchQuery] = useState('');
   const [detailPeriodFilter, setDetailPeriodFilter] = useState<'today' | 'month' | 'all'>('today');
+
+  // Week & All-Time Stats
+  const weekStats = useMemo(() => {
+    const cutoff = Date.now() - 7 * 86400000;
+    const items = sales.filter(s => s.date && new Date(s.date).getTime() >= cutoff);
+    const total = items.reduce((sum, s) => sum + (Number(s.grandTotal) || 0), 0);
+    return { total, count: items.length, items };
+  }, [sales]);
+
+  const allTimeStats = useMemo(() => {
+    const total = sales.reduce((sum, s) => sum + (Number(s.grandTotal) || 0), 0);
+    let totalItemsSold = 0;
+    let maxInvoice = 0;
+    sales.forEach(s => {
+      const g = Number(s.grandTotal) || 0;
+      if (g > maxInvoice) maxInvoice = g;
+      (s.items || []).forEach(i => { totalItemsSold += Number(i.qty || 0); });
+    });
+    const avgBasket = sales.length > 0 ? total / sales.length : 0;
+    const avgItems = sales.length > 0 ? totalItemsSold / sales.length : 0;
+    return { total, count: sales.length, totalItemsSold, avgBasket, avgItems, maxInvoice };
+  }, [sales]);
 
   // Breakdown of sales by payment method across periods
   const paymentMethodStats = useMemo(() => {
@@ -276,6 +329,217 @@ const SalesReports = () => {
 
     return Array.from(map.values()).sort((a, b) => b.totalRevenue - a.totalRevenue);
   }, [sales, dayStats.items, monthStats.items, products, detailPeriodFilter]);
+
+  // Category Breakdown
+  const categoryRanking = useMemo(() => {
+    const map = new Map<string, { category: string; productCount: number; qtySold: number; revenue: number; cost: number; profit: number }>();
+    products.forEach(p => {
+      const cat = (p.category || 'GENERAL').toUpperCase();
+      const entry = map.get(cat) || { category: cat, productCount: 0, qtySold: 0, revenue: 0, cost: 0, profit: 0 };
+      entry.productCount += 1;
+      map.set(cat, entry);
+    });
+    const targetSales = detailPeriodFilter === 'today' ? dayStats.items : detailPeriodFilter === 'month' ? monthStats.items : sales;
+    targetSales.forEach(sale => {
+      (sale.items || []).forEach(item => {
+        const prod = products.find(p => p.id === item.id);
+        const cat = (prod?.category || item.category || 'GENERAL').toUpperCase();
+        const entry = map.get(cat) || { category: cat, productCount: 0, qtySold: 0, revenue: 0, cost: 0, profit: 0 };
+        const qty = Number(item.qty || 0);
+        const rev = Number(item.price || 0) * qty;
+        const cst = Number(prod?.cost_price || 0) * qty;
+        entry.qtySold += qty;
+        entry.revenue += rev;
+        entry.cost += cst;
+        entry.profit += (rev - cst);
+        map.set(cat, entry);
+      });
+    });
+    return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
+  }, [products, sales, dayStats.items, monthStats.items, detailPeriodFilter]);
+
+  // Inventory & Stock Intelligence
+  const inventoryStats = useMemo(() => {
+    let totalShopUnits = 0;
+    let totalGodownUnits = 0;
+    let retailValue = 0;
+    let costValue = 0;
+    const lowStockList: typeof products = [];
+    const outOfStockList: typeof products = [];
+    const expiringList: { product: (typeof products)[number]; daysLeft: number }[] = [];
+    const now = Date.now();
+
+    products.forEach(p => {
+      const shop = Math.max(0, Number(p.stock_shop || 0));
+      const godown = Math.max(0, Number(p.stock_godown || 0));
+      const total = shop + godown;
+      totalShopUnits += shop;
+      totalGodownUnits += godown;
+      retailValue += total * Number(p.price || 0);
+      costValue += total * Number(p.cost_price || 0);
+
+      if (total <= 0) {
+        outOfStockList.push(p);
+        lowStockList.push(p);
+      } else if (total <= 10) {
+        lowStockList.push(p);
+      }
+
+      if (p.expiry_date) {
+        const expTime = new Date(p.expiry_date).getTime();
+        if (!isNaN(expTime)) {
+          const daysLeft = Math.ceil((expTime - now) / 86400000);
+          if (daysLeft <= 60) {
+            expiringList.push({ product: p, daysLeft });
+          }
+        }
+      }
+    });
+
+    lowStockList.sort((a, b) => ((Number(a.stock_shop || 0) + Number(a.stock_godown || 0)) - (Number(b.stock_shop || 0) + Number(b.stock_godown || 0))));
+    expiringList.sort((a, b) => a.daysLeft - b.daysLeft);
+
+    // Slow-moving / unsold items across all time
+    const soldMap = new Map<string, number>();
+    sales.forEach(s => {
+      (s.items || []).forEach(it => {
+        soldMap.set(it.id, (soldMap.get(it.id) || 0) + Number(it.qty || 0));
+      });
+    });
+    const slowProducts = products
+      .map(p => ({
+        product: p,
+        qtySold: soldMap.get(p.id) || 0,
+        stock: Number(p.stock_shop || 0) + Number(p.stock_godown || 0),
+        tiedValue: (Number(p.stock_shop || 0) + Number(p.stock_godown || 0)) * Number(p.cost_price || p.price || 0),
+      }))
+      .sort((a, b) => a.qtySold - b.qtySold || b.stock - a.stock);
+
+    return {
+      totalProducts: products.length,
+      totalShopUnits,
+      totalGodownUnits,
+      retailValue,
+      costValue,
+      potentialProfit: retailValue - costValue,
+      lowStockList,
+      outOfStockCount: outOfStockList.length,
+      expiringList,
+      slowProducts,
+    };
+  }, [products, sales]);
+
+  // Customer Intelligence & Credit Summary
+  const customerStats = useMemo(() => {
+    const spendMap = new Map<string, { customer: any; invoiceCount: number; totalSpent: number; creditSpent: number; lastPurchase: string }>();
+    sales.forEach(s => {
+      const cid = s.customer?.id || s.customerId || s.customer_id;
+      if (!cid) return;
+      const cust = customers.find(c => c.id === cid) || s.customer;
+      if (!cust) return;
+      const entry = spendMap.get(cid) || { customer: cust, invoiceCount: 0, totalSpent: 0, creditSpent: 0, lastPurchase: s.date || '' };
+      entry.invoiceCount += 1;
+      const g = Number(s.grandTotal || 0);
+      entry.totalSpent += g;
+      if ((s.paymentMethod || '').toLowerCase() === 'credit') entry.creditSpent += g;
+      if (s.date && (!entry.lastPurchase || new Date(s.date) > new Date(entry.lastPurchase))) {
+        entry.lastPurchase = s.date;
+      }
+      spendMap.set(cid, entry);
+    });
+    const topCustomers = Array.from(spendMap.values()).sort((a, b) => b.totalSpent - a.totalSpent);
+
+    const debtors = customers.filter(c => Number(c.outstanding_balance || 0) > 0).sort((a, b) => Number(b.outstanding_balance || 0) - Number(a.outstanding_balance || 0));
+    const totalOutstanding = debtors.reduce((sum, c) => sum + Number(c.outstanding_balance || 0), 0);
+    const totalCollected = customers.reduce((sum, c) => sum + (c.settlement_history || []).reduce((acc, st) => acc + Number(st.amount_paid || 0), 0), 0);
+
+    return {
+      totalCustomers: customers.length,
+      topCustomers,
+      debtors,
+      totalOutstanding,
+      totalCollected,
+    };
+  }, [sales, customers]);
+
+  // Local Purchases & Vendors Summary
+  const purchaseStats = useMemo(() => {
+    const totalSpend = (purchases || []).reduce((sum, p) => sum + Number(p.amount || 0), 0);
+    const totalInputGst = (purchases || []).reduce((sum, p) => sum + Number(p.gstAmount || 0), 0);
+    return {
+      count: (purchases || []).length,
+      vendorCount: (vendors || []).length,
+      totalSpend,
+      totalInputGst,
+      list: [...(purchases || [])].sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime()),
+    };
+  }, [purchases, vendors]);
+
+  // Hourly Sales Pattern
+  const hourlyStats = useMemo(() => {
+    const hours = Array.from({ length: 24 }, (_, h) => ({
+      hour: h,
+      label: `${String(h).padStart(2, '0')}:00`,
+      count: 0,
+      revenue: 0,
+    }));
+    const targetSales = detailPeriodFilter === 'today' ? dayStats.items : detailPeriodFilter === 'month' ? monthStats.items : sales;
+    targetSales.forEach(s => {
+      if (!s.date) return;
+      const d = new Date(s.date);
+      if (!isNaN(d.getTime())) {
+        const h = d.getHours();
+        hours[h].count += 1;
+        hours[h].revenue += Number(s.grandTotal || 0);
+      }
+    });
+    const peak = [...hours].sort((a, b) => b.revenue - a.revenue)[0] || { hour: 12, label: '12:00', count: 0, revenue: 0 };
+    return { hours, peak };
+  }, [sales, dayStats.items, monthStats.items, detailPeriodFilter]);
+
+  // Filtered Product Ranking for Drill-down Modal
+  const filteredProductRanking = useMemo(() => {
+    const q = detailSearchQuery.trim().toLowerCase();
+    if (!q) return productRanking;
+    return productRanking.filter(p =>
+      (p.nameEn || '').toLowerCase().includes(q) ||
+      (p.nameDv || '').toLowerCase().includes(q) ||
+      (p.category || '').toLowerCase().includes(q) ||
+      (p.barcode || '').toLowerCase().includes(q) ||
+      (p.itemCode || '').toLowerCase().includes(q)
+    );
+  }, [productRanking, detailSearchQuery]);
+
+  // Filtered Drill-down Sales for Modal
+  const filteredDrilldownSales = useMemo(() => {
+    let baseList: Sale[] = [];
+    if (activeDetailModal === 'today') {
+      baseList = dayStats.items;
+    } else if (activeDetailModal === 'week') {
+      baseList = weekStats.items;
+    } else if (activeDetailModal === 'month') {
+      baseList = monthStats.items;
+    } else if (activeDetailModal === 'year') {
+      baseList = yearStats.items;
+    } else if (activeDetailModal === 'all_time' || activeDetailModal === 'avg_basket' || activeDetailModal === 'profit' || activeDetailModal === 'gst') {
+      baseList = detailPeriodFilter === 'today' ? dayStats.items : detailPeriodFilter === 'month' ? monthStats.items : sales;
+    } else if (activeDetailModal === 'cash' || activeDetailModal === 'card' || activeDetailModal === 'transfer' || activeDetailModal === 'credit' || activeDetailModal === 'returns') {
+      const bucket = detailPeriodFilter === 'today' ? paymentMethodStats.today : detailPeriodFilter === 'month' ? paymentMethodStats.month : paymentMethodStats.all;
+      baseList = bucket[activeDetailModal]?.list || [];
+    } else {
+      baseList = detailPeriodFilter === 'today' ? dayStats.items : detailPeriodFilter === 'month' ? monthStats.items : sales;
+    }
+
+    const q = detailSearchQuery.trim().toLowerCase();
+    if (!q) return baseList;
+    return baseList.filter(s => {
+      const inv = String(s.invoiceNumber || s.id || '').toLowerCase();
+      const cust = s.customer ? `${s.customer.name_en || ''} ${s.customer.name_dv || ''} ${s.customer.phone || ''}`.toLowerCase() : 'walk-in';
+      const method = String(s.paymentMethod || 'cash').toLowerCase();
+      const itemsText = (s.items || []).map(i => `${i.name_en || ''} ${i.name_dv || ''} ${i.barcode || ''}`).join(' ').toLowerCase();
+      return inv.includes(q) || cust.includes(q) || method.includes(q) || itemsText.includes(q);
+    });
+  }, [activeDetailModal, detailPeriodFilter, detailSearchQuery, dayStats.items, weekStats.items, monthStats.items, yearStats.items, sales, paymentMethodStats]);
 
   // --- Custom Report State ---
   const [customPeriodType, setCustomPeriodType] = usePersistedState<'date' | 'month' | 'quarter' | 'year'>('sales_reports_period_type', 'date');
@@ -1164,50 +1428,57 @@ const SalesReports = () => {
     return null;
   };
 
-  const StatCard = ({ title, stats, icon: Icon, color, profit, onDownload, downloadLabel, onClick }: any) => (
-    <Card 
+
+  const StatCard = ({ title, stats, icon: Icon, accentBorder, chipClass, profit, onDownload, downloadLabel, onClick }: any) => (
+    <Card
       onClick={onClick}
       className={cn(
-        "apple-glass-card border border-white/20 dark:border-white/10 hover:border-primary/50 transition-all duration-300 rounded-[2rem] overflow-hidden group flex flex-col justify-between shadow-md hover:shadow-xl",
+        "bg-card border border-border border-t-4 hover:border-primary/60 transition-all rounded-xl overflow-hidden group flex flex-col justify-between shadow-xs hover:shadow-md",
+        accentBorder || "border-t-primary",
         onClick && "cursor-pointer select-none"
       )}
     >
-      <CardContent className="p-6 text-right flex-1 flex flex-col justify-between">
+      <CardContent className="p-5 text-right flex-1 flex flex-col justify-between">
         <div>
-          <div className="flex justify-between items-center mb-6">
-            <div className={cn("p-3.5 rounded-2xl bg-white/40 dark:bg-white/10 border border-white/20 dark:border-white/10 group-hover:scale-110 transition-transform shadow-xs", color)}>
-              <Icon className="h-6 w-6" />
+          <div className="flex justify-between items-center mb-4">
+            <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border", chipClass || "bg-primary/10 text-primary border-primary/20")}>
+              <Icon className="h-5 w-5" />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="text-right">
+              <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">{title}</p>
               {onClick && (
-                <span className="text-[9px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
-                  Click for details
+                <span className="inline-block mt-0.5 text-[9px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
+                  Click to inspect
                 </span>
               )}
-              <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">{title}</p>
             </div>
           </div>
-          
-          <div className="space-y-1 mb-6">
-             <p className="text-3xl font-black text-foreground font-mono">
-               {settings.shop.currency} {stats.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-             </p>
-             <div className="flex items-center justify-end gap-2">
-                <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">{stats.count} TRANSACTIONS</span>
-                <Activity className="h-3 w-3 text-primary/40" />
-             </div>
+
+          <div className="space-y-1 mb-4">
+            <p className="text-2xl sm:text-3xl font-black text-foreground font-mono tabular-nums tracking-tight" dir="ltr">
+              {settings.shop.currency} {stats.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+            <div className="flex items-center justify-end gap-2">
+              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest tabular-nums">{stats.count} INVOICES</span>
+              <span className="text-[10px] text-muted-foreground">•</span>
+              <span className="text-[10px] font-bold text-muted-foreground font-mono tabular-nums" dir="ltr">
+                Avg {settings.shop.currency} {(stats.count > 0 ? stats.total / stats.count : 0).toFixed(0)}
+              </span>
+            </div>
           </div>
 
           {profit && (
-            <div className="pt-4 border-t border-white/15 dark:border-white/10 flex justify-between items-center mb-4">
-               <div className="flex items-center gap-1 text-emerald-500">
-                  <ArrowUpRight className="h-3.5 w-3.5" />
-                  <span className="text-[11px] font-black">{profit.margin.toFixed(1)}% MARGIN</span>
-               </div>
-               <div className="text-right">
-                  <p className="text-[8px] font-black text-muted-foreground/60 uppercase tracking-widest">EST. PROFIT</p>
-                  <p className="text-sm font-black text-foreground font-mono">{settings.shop.currency} {profit.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-               </div>
+            <div className="pt-3 border-t border-border flex justify-between items-center mb-3">
+              <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-black tabular-nums">
+                <ArrowUpRight className="h-3 w-3" />
+                <span>{profit.margin.toFixed(1)}% MARGIN</span>
+              </div>
+              <div className="text-right">
+                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">EST. NET PROFIT</p>
+                <p className="text-sm font-black text-foreground font-mono tabular-nums" dir="ltr">
+                  {settings.shop.currency} {profit.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
             </div>
           )}
         </div>
@@ -1220,9 +1491,9 @@ const SalesReports = () => {
               e.stopPropagation();
               onDownload();
             }}
-            className="w-full mt-2 h-9.5 rounded-xl transition-all text-xs font-bold gap-2 flex items-center justify-center group/btn apple-glass-pill"
+            className="w-full mt-1 h-9 rounded-lg bg-muted/50 hover:bg-muted border-border text-xs font-black gap-2 flex items-center justify-center"
           >
-            <FileSpreadsheet className="h-4 w-4 text-emerald-500 group-hover/btn:text-primary transition-colors" />
+            <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
             <span>{downloadLabel || "Download Excel (އެކްސެލް ޑައުންލޯޑް)"}</span>
           </Button>
         )}
@@ -1236,8 +1507,11 @@ const SalesReports = () => {
     value,
     badge,
     subValue,
+    sharePct,
+    barColor,
+    accentBorder,
+    chipClass,
     icon: Icon,
-    iconColor,
     onClick,
   }: {
     titleEn: string;
@@ -1245,22 +1519,28 @@ const SalesReports = () => {
     value: string | number;
     badge?: string;
     subValue?: string;
+    sharePct?: number;
+    barColor?: string;
+    accentBorder?: string;
+    chipClass?: string;
     icon: any;
-    iconColor: string;
     onClick?: () => void;
   }) => (
     <Card
       onClick={onClick}
-      className="apple-glass-card border border-white/20 dark:border-white/10 hover:border-primary/50 transition-all duration-300 rounded-3xl overflow-hidden group cursor-pointer hover:shadow-xl hover:-translate-y-0.5 flex flex-col justify-between select-none shadow-sm"
+      className={cn(
+        "bg-card border border-border border-l-4 hover:border-primary/60 transition-all rounded-xl overflow-hidden group cursor-pointer hover:shadow-md flex flex-col justify-between select-none",
+        accentBorder || "border-l-primary"
+      )}
     >
-      <CardContent className="p-5 text-right flex-1 flex flex-col justify-between">
+      <CardContent className="p-4 text-right flex-1 flex flex-col justify-between">
         <div>
-          <div className="flex justify-between items-center mb-3">
-            <div className={cn("p-2.5 rounded-2xl bg-white/40 dark:bg-white/10 border border-white/20 dark:border-white/10 group-hover:scale-110 transition-transform shadow-xs shrink-0", iconColor)}>
-              <Icon className="h-5 w-5" />
+          <div className="flex justify-between items-center mb-2.5">
+            <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border", chipClass || "bg-primary/10 text-primary border-primary/20")}>
+              <Icon className="h-4 w-4" />
             </div>
             {badge && (
-              <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-white/40 dark:bg-white/10 border-white/20 px-2 py-0.5">
+              <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-muted/70 border-border px-2 py-0.5 tabular-nums">
                 {badge}
               </Badge>
             )}
@@ -1268,136 +1548,121 @@ const SalesReports = () => {
 
           <div className="space-y-0.5 text-right">
             <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">{titleEn}</p>
-            <p className="text-xs font-bold text-foreground/80 font-faruma">{titleDv}</p>
+            <p className="text-xs font-bold text-foreground/85 font-faruma">{titleDv}</p>
           </div>
 
-          <div className="mt-3">
-            <p className="text-2xl font-black font-mono text-foreground tracking-tight">
+          <div className="mt-2.5">
+            <p className="text-xl font-black font-mono tabular-nums text-foreground tracking-tight truncate" dir="ltr">
               {value}
             </p>
             {subValue && (
-              <p className="text-[11px] font-bold text-muted-foreground mt-0.5">
+              <p className="text-[11px] font-bold text-muted-foreground mt-0.5 line-clamp-1" dir="ltr">
                 {subValue}
               </p>
             )}
           </div>
+
+          {typeof sharePct === 'number' && (
+            <div className="mt-2.5 space-y-1" dir="ltr">
+              <div className="flex justify-between text-[10px] font-black text-muted-foreground uppercase">
+                <span>Share of Today</span>
+                <span className="tabular-nums">{sharePct.toFixed(1)}%</span>
+              </div>
+              <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                <div
+                  className={cn("h-full rounded-full transition-all", barColor || "bg-primary")}
+                  style={{ width: `${Math.min(100, Math.max(2, sharePct))}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="pt-3 mt-3 border-t border-white/10 flex items-center justify-between text-[10px] font-black text-primary group-hover:translate-x-[-2px] transition-transform">
-          <ChevronRight className="h-3.5 w-3.5 rotate-180 text-primary" />
-          <span>Click to view details</span>
+        <div className="pt-2.5 mt-3 border-t border-border flex items-center justify-between text-[10px] font-black text-primary">
+          <ChevronRight className="h-3.5 w-3.5 rotate-180 text-primary group-hover:-translate-x-0.5 transition-transform" />
+          <span>View full breakdown</span>
         </div>
       </CardContent>
     </Card>
   );
 
+  const todayShare = (amt: number) => (dayStats.total > 0 ? (amt / dayStats.total) * 100 : 0);
+
   return (
     <div className="p-4 sm:p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
-      {/* Unified Top Header Bar */}
+      {/* Solid Pro Top Header Bar */}
       <div className="shrink-0 mb-4 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-4 apple-glass-card border border-white/20 dark:border-white/10 rounded-3xl p-4 sm:px-6 shadow-sm">
-          {/* Title & Subtitle (Right side in RTL) */}
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-card border border-border rounded-xl p-4 sm:px-5 shadow-xs">
           <div className="flex items-center gap-3.5 text-right">
-            <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary shrink-0 shadow-xs">
-              <BarChart3 className="h-6 w-6" />
+            <div className="w-11 h-11 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shrink-0">
+              <BarChart3 className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-black text-foreground leading-tight">
+              <h1 className="text-lg sm:text-xl font-black text-foreground leading-tight">
                 {renderBoth('sales_reports')}
               </h1>
               <p className="text-xs text-muted-foreground mt-0.5" dir="ltr">
-                Sales analytics, profit metrics &amp; MIRA GST reports
+                Complete shop intelligence — click any card below to inspect invoices, products, stock, customers &amp; tax
               </p>
             </div>
           </div>
 
-          {/* Today's Summary + Quick Export Action Buttons (Left side in RTL) */}
-          <div className="flex flex-wrap items-center gap-2.5 mr-auto sm:mr-0" dir="ltr">
-            {/* Compact Today's Sales Summary Card */}
-            <div className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-primary/10 border border-primary/20">
-              <div className="w-8 h-8 rounded-xl bg-primary/20 text-primary flex items-center justify-center shrink-0">
+          <div className="flex flex-wrap items-center gap-2 mr-auto sm:mr-0" dir="ltr">
+            <div
+              onClick={() => { setDetailPeriodFilter('today'); setActiveDetailModal('today'); }}
+              className="flex items-center gap-3 px-3.5 py-1.5 rounded-lg bg-muted/60 border border-border cursor-pointer hover:border-primary/50 transition-colors"
+            >
+              <div className="w-8 h-8 rounded-md bg-primary/15 text-primary flex items-center justify-center shrink-0">
                 <DollarSign className="h-4 w-4" />
               </div>
               <div className="text-left">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">
-                    Today&apos;s Sales
-                  </span>
-                  <span className="text-[9px] font-black bg-primary/20 text-primary px-1.5 py-0.2 rounded-md font-mono">
+                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Today</span>
+                  <span className="text-[9px] font-black bg-primary/15 text-primary px-1.5 py-0.2 rounded font-mono tabular-nums">
                     {dayStats.count} txns
                   </span>
                 </div>
-                <p className="text-base sm:text-lg font-black font-mono text-foreground leading-tight">
+                <p className="text-sm sm:text-base font-black font-mono tabular-nums text-foreground leading-tight">
                   {settings.shop.currency} {dayStats.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
 
-            {/* Action Buttons for downloading daily, monthly, yearly, and GST statements */}
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportDailySales}
-                className="rounded-xl border-border bg-card hover:bg-muted transition-all text-xs font-black gap-1.5 h-10 px-3.5"
-                title="Download today's sales report as Excel"
-              >
-                <FileSpreadsheet className="h-4 w-4 text-primary" />
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Button variant="outline" size="sm" onClick={handleExportDailySales} className="rounded-lg border-border bg-card hover:bg-muted text-xs font-black gap-1.5 h-9 px-3">
+                <FileSpreadsheet className="h-3.5 w-3.5 text-primary" />
                 <span>Daily</span>
               </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportMonthlySales}
-                className="rounded-xl border-border bg-card hover:bg-muted transition-all text-xs font-black gap-1.5 h-10 px-3.5"
-                title="Download this month's sales report as Excel"
-              >
-                <FileSpreadsheet className="h-4 w-4 text-purple-500" />
+              <Button variant="outline" size="sm" onClick={handleExportMonthlySales} className="rounded-lg border-border bg-card hover:bg-muted text-xs font-black gap-1.5 h-9 px-3">
+                <FileSpreadsheet className="h-3.5 w-3.5 text-violet-500" />
                 <span>Monthly</span>
               </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportYearlySales}
-                className="rounded-xl border-border bg-card hover:bg-muted transition-all text-xs font-black gap-1.5 h-10 px-3.5"
-                title="Download this year's sales report as Excel"
-              >
-                <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+              <Button variant="outline" size="sm" onClick={handleExportYearlySales} className="rounded-lg border-border bg-card hover:bg-muted text-xs font-black gap-1.5 h-9 px-3">
+                <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500" />
                 <span>Yearly</span>
               </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleExportGSTOutputTaxStatement()}
-                className="rounded-xl border-blue-500/30 hover:border-blue-500/60 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 transition-all text-xs font-black gap-1.5 h-10 px-3.5"
-                title="Download MIRA GST Output Tax Statement"
-              >
-                <Download className="h-4 w-4" />
-                <span className="hidden sm:inline">GST Statement</span>
-                <span className="sm:hidden">GST</span>
+              <Button variant="outline" size="sm" onClick={() => handleExportGSTOutputTaxStatement()} className="rounded-lg border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 text-xs font-black gap-1.5 h-9 px-3">
+                <Download className="h-3.5 w-3.5" />
+                <span>MIRA GST</span>
               </Button>
             </div>
           </div>
         </div>
 
-        {/* Unified Custom Period Filter Bar */}
-        <div className="apple-glass-card border border-white/20 dark:border-white/10 rounded-2xl p-2.5 sm:p-3 flex flex-wrap items-center justify-between gap-3" dir="ltr">
+        {/* Custom Period Filter Bar */}
+        <div className="bg-card border border-border rounded-xl p-2.5 sm:px-4 flex flex-wrap items-center justify-between gap-3 shadow-xs" dir="ltr">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-black text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mr-1">
-              <Calendar className="h-3.5 w-3.5 text-primary" /> Period:
+            <span className="text-[11px] font-black text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 mr-1">
+              <Calendar className="h-3.5 w-3.5 text-primary" /> Custom Period:
             </span>
 
-            {/* Period Type Selector */}
-            <div className="flex bg-muted rounded-xl p-0.5 gap-1 border border-border/60">
+            <div className="flex bg-muted rounded-lg p-0.5 gap-0.5 border border-border">
               {(['date', 'month', 'quarter', 'year'] as const).map(pt => (
                 <button
                   key={pt}
                   onClick={() => { setCustomPeriodType(pt); setShowCustomPreview(false); }}
                   className={cn(
-                    'px-2.5 py-1 rounded-lg text-xs font-black transition-all',
+                    'px-2.5 py-1 rounded-md text-xs font-black transition-all',
                     customPeriodType === pt
                       ? 'bg-primary text-primary-foreground shadow-xs'
                       : 'text-muted-foreground hover:text-foreground'
@@ -1408,13 +1673,12 @@ const SalesReports = () => {
               ))}
             </div>
 
-            {/* Period Picker */}
             {customPeriodType === 'date' && (
               <input
                 type="date"
                 value={customDate}
                 onChange={e => { setCustomDate(e.target.value); setShowCustomPreview(false); }}
-                className="h-9 px-3 rounded-xl border border-border bg-muted text-foreground text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary"
+                className="h-8 px-2.5 rounded-lg border border-border bg-background text-foreground text-xs font-bold"
               />
             )}
             {customPeriodType === 'month' && (
@@ -1422,16 +1686,15 @@ const SalesReports = () => {
                 type="month"
                 value={customMonth}
                 onChange={e => { setCustomMonth(e.target.value); setShowCustomPreview(false); }}
-                className="h-9 px-3 rounded-xl border border-border bg-muted text-foreground text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary"
+                className="h-8 px-2.5 rounded-lg border border-border bg-background text-foreground text-xs font-bold"
               />
             )}
             {customPeriodType === 'quarter' && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <select
                   value={customQuarter}
                   onChange={e => { setCustomQuarter(e.target.value); setShowCustomPreview(false); }}
-                  className="h-9 px-3 rounded-xl border border-border bg-muted text-foreground text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
-                  dir="ltr"
+                  className="h-8 px-2.5 rounded-lg border border-border bg-background text-foreground text-xs font-bold cursor-pointer"
                 >
                   <option value="1">Q1 (Jan - Mar)</option>
                   <option value="2">Q2 (Apr - Jun)</option>
@@ -1444,8 +1707,7 @@ const SalesReports = () => {
                   min="2020"
                   max="2099"
                   onChange={e => { setCustomYear(e.target.value); setShowCustomPreview(false); }}
-                  className="h-9 px-3 w-20 rounded-xl border border-border bg-muted text-foreground text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary"
-                  dir="ltr"
+                  className="h-8 px-2.5 w-20 rounded-lg border border-border bg-background text-foreground text-xs font-bold"
                 />
               </div>
             )}
@@ -1456,8 +1718,7 @@ const SalesReports = () => {
                 min="2020"
                 max="2099"
                 onChange={e => { setCustomYear(e.target.value); setShowCustomPreview(false); }}
-                className="h-9 px-3 w-24 rounded-xl border border-border bg-muted text-foreground text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary"
-                dir="ltr"
+                className="h-8 px-2.5 w-24 rounded-lg border border-border bg-background text-foreground text-xs font-bold"
               />
             )}
 
@@ -1465,26 +1726,21 @@ const SalesReports = () => {
               variant={showCustomPreview ? "default" : "outline"}
               size="sm"
               onClick={() => setShowCustomPreview(!showCustomPreview)}
-              className="h-9 rounded-xl text-xs font-black gap-1.5 border-primary/40"
+              className="h-8 rounded-lg text-xs font-black gap-1.5"
             >
               <Eye className="h-3.5 w-3.5" />
-              <span>{showCustomPreview ? 'Hide Details' : 'Preview Details'}</span>
+              <span>{showCustomPreview ? 'Hide Table' : 'Preview Table'}</span>
             </Button>
           </div>
 
-          {/* Quick period summary metrics */}
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/60 border border-border">
+            <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-muted/60 border border-border">
               <span className="text-[11px] font-bold text-muted-foreground">{getCustomPeriodLabel()}:</span>
-              <span className="font-mono font-black text-foreground">{settings.shop.currency} {customTotalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              <span className="text-[10px] text-muted-foreground font-mono">({customSales.length} txns)</span>
+              <span className="font-mono font-black tabular-nums text-foreground">{settings.shop.currency} {customTotalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span className="text-[10px] text-muted-foreground font-mono tabular-nums">({customSales.length} txns)</span>
             </div>
 
-            <Button
-              onClick={handleExportCustomReport}
-              size="sm"
-              className="h-9 rounded-xl text-xs font-black gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white"
-            >
+            <Button onClick={handleExportCustomReport} size="sm" className="h-8 rounded-lg text-xs font-black gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white">
               <FileSpreadsheet className="h-3.5 w-3.5" />
               <span>Export Custom</span>
             </Button>
@@ -1493,391 +1749,545 @@ const SalesReports = () => {
       </div>
 
       <ScrollArea className="flex-1 custom-scrollbar">
-        <div className="space-y-6 pb-6">
+        <div className="space-y-6 pb-8">
 
-          {/* ── Custom Report Preview Panel (Shown when preview is enabled) ── */}
+          {/* Custom Report Preview Panel */}
           {showCustomPreview && (
-            <div className="apple-glass-card border border-white/20 dark:border-white/10 rounded-[2rem] overflow-hidden shadow-md">
-              <div className="p-6 space-y-5">
-                {/* Summary Cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {[
-                    { label: 'Total Sales', value: customTotalSales, color: 'text-primary' },
-                    { label: 'Cash', value: customCashTotal, color: 'text-emerald-500' },
-                    { label: 'Transfer', value: customTransferTotal, color: 'text-blue-500' },
-                    { label: 'Credit', value: customCreditTotal, color: 'text-amber-500' },
-                  ].map(item => (
-                    <div key={item.label} className="bg-muted/50 rounded-2xl p-4 text-right border border-border">
-                      <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">{item.label}</p>
-                      <p className={cn('text-lg font-black', item.color)}>
-                        {settings.shop.currency} {item.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      onClick={handleExportCustomReport}
-                      size="sm"
-                      className="h-9 rounded-xl text-xs font-black gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
-                    >
-                      <FileSpreadsheet className="h-3.5 w-3.5" />
-                      Download Excel Report
-                    </Button>
-                    <Button
-                      onClick={() => handleExportGSTOutputTaxStatement(customSales, getCustomPeriodLabel())}
-                      size="sm"
-                      variant="outline"
-                      className="h-9 rounded-xl text-xs font-black gap-1.5 border-blue-500/40 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white"
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                      Download GST Output Tax Statement
-                    </Button>
+            <div className="bg-card border border-border rounded-xl overflow-hidden shadow-xs p-5 space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { label: 'Total Sales', value: customTotalSales, color: 'text-primary' },
+                  { label: 'Cash', value: customCashTotal, color: 'text-emerald-500' },
+                  { label: 'Transfer', value: customTransferTotal, color: 'text-blue-500' },
+                  { label: 'Credit', value: customCreditTotal, color: 'text-amber-500' },
+                ].map(item => (
+                  <div key={item.label} className="bg-muted/40 rounded-lg p-3.5 text-right border border-border">
+                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">{item.label}</p>
+                    <p className={cn('text-base font-black font-mono tabular-nums', item.color)} dir="ltr">
+                      {settings.shop.currency} {item.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground font-bold">
-                    {customSales.length} transaction{customSales.length !== 1 ? 's' : ''} for <span className="text-foreground">{getCustomPeriodLabel()}</span>
-                  </p>
-                </div>
-
-                {/* Transactions Table */}
-                {customSales.length === 0 ? (
-                  <div className="text-center py-10 text-muted-foreground">
-                    <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                    <p className="text-sm font-bold">No sales found for this period</p>
-                  </div>
-                ) : (
-                  <div className="overflow-auto rounded-2xl border border-border" dir="ltr">
-                    <table className="w-full text-xs min-w-[640px]">
-                      <thead>
-                        <tr className="bg-muted/60 border-b border-border">
-                          {['Invoice', 'Date', 'Time', 'Customer', 'Method', 'Items', `Total (${settings.shop.currency})`, 'Return'].map(h => (
-                            <th key={h} className="px-3 py-2.5 text-left font-black text-muted-foreground uppercase tracking-wider whitespace-nowrap">{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        {customSales.map(sale => {
-                          const sDate = new Date(sale.date);
-                          const itemsSummary = (sale.items || []).slice(0, 3).map(i => `${i.qty}× ${i.name_en || i.name_dv || '?'}`).join(', ') + (sale.items && sale.items.length > 3 ? ` +${sale.items.length - 3} more` : '');
-                          const customerName = sale.customer ? (sale.customer.name_en || sale.customer.name_dv) : 'Walk-in';
-                          const methodColors: Record<string, string> = {
-                            cash: 'bg-emerald-500/10 text-emerald-500',
-                            card: 'bg-blue-500/10 text-blue-500',
-                            transfer: 'bg-blue-500/10 text-blue-500',
-                            credit: 'bg-amber-500/10 text-amber-500'
-                          };
-                          const method = (sale.paymentMethod || 'cash').toLowerCase();
-                          return (
-                            <tr key={sale.id} className={cn('hover:bg-muted/30 transition-colors', (sale.paymentMethod as any) === 'return' && 'bg-red-500/5')}>
-                              <td className="px-3 py-2.5 font-mono text-[10px] text-muted-foreground">{(sale.invoiceNumber || sale.id || '').toString().slice(-8)}</td>
-                              <td className="px-3 py-2.5 font-bold whitespace-nowrap">{sDate.toLocaleDateString('en-US', { day: '2-digit', month: 'short' })}</td>
-                              <td className="px-3 py-2.5 text-muted-foreground whitespace-nowrap">{formatTime(sale.date)}</td>
-                              <td className="px-3 py-2.5 font-bold max-w-[120px] truncate">{customerName}</td>
-                              <td className="px-3 py-2.5">
-                                <span className={cn('px-2 py-0.5 rounded-full font-black text-[10px]', methodColors[method] || 'bg-muted text-muted-foreground')}>
-                                  {(sale.paymentMethod || 'Cash').toUpperCase()}
-                                </span>
-                              </td>
-                              <td className="px-3 py-2.5 text-muted-foreground max-w-[180px] truncate">{itemsSummary || '—'}</td>
-                              <td className="px-3 py-2.5 font-black text-right">{num(sale.grandTotal).toFixed(2)}</td>
-                              <td className="px-3 py-2.5 text-center">
-                                {(sale.paymentMethod as any) !== 'return' && !String(sale.invoiceNumber || '').startsWith('RET-') && (
-                                  <button
-                                    type="button"
-                                    onClick={() => openReturnDialog(sale)}
-                                    title="Process Return"
-                                    className="h-7 w-7 flex items-center justify-center rounded-lg bg-orange-500/10 text-orange-500 hover:bg-orange-500/25 border border-orange-500/20 transition-all"
-                                  >
-                                    <Undo2 className="h-3.5 w-3.5" />
-                                  </button>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                      <tfoot>
-                        <tr className="bg-muted/60 border-t-2 border-border font-black">
-                          <td colSpan={7} className="px-3 py-2.5 text-right text-xs uppercase tracking-wider">Total</td>
-                          <td className="px-3 py-2.5 text-right text-sm text-primary">{customTotalSales.toFixed(2)}</td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-                )}
+                ))}
               </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button onClick={handleExportCustomReport} size="sm" className="h-8 rounded-lg text-xs font-black gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white">
+                    <FileSpreadsheet className="h-3.5 w-3.5" />
+                    Download Excel Report
+                  </Button>
+                  <Button onClick={() => handleExportGSTOutputTaxStatement(customSales, getCustomPeriodLabel())} size="sm" variant="outline" className="h-8 rounded-lg text-xs font-black gap-1.5 border-blue-500/40 text-blue-500">
+                    <Download className="h-3.5 w-3.5" />
+                    Download GST Output Tax Statement
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground font-bold" dir="ltr">
+                  {customSales.length} transaction{customSales.length !== 1 ? 's' : ''} for <span className="text-foreground">{getCustomPeriodLabel()}</span>
+                </p>
+              </div>
+
+              {customSales.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                  <p className="text-sm font-bold">No sales found for this period</p>
+                </div>
+              ) : (
+                <div className="overflow-auto rounded-lg border border-border max-h-80" dir="ltr">
+                  <table className="w-full text-xs min-w-[640px]">
+                    <thead>
+                      <tr className="bg-muted/70 border-b border-border">
+                        {['Invoice', 'Date', 'Time', 'Customer', 'Method', 'Items', `Total (${settings.shop.currency})`, 'Return'].map(h => (
+                          <th key={h} className="px-3 py-2.5 text-left font-black text-muted-foreground uppercase tracking-wider whitespace-nowrap text-[10px]">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {customSales.map(sale => {
+                        const sDate = new Date(sale.date);
+                        const itemsSummary = (sale.items || []).slice(0, 3).map(i => `${i.qty}× ${i.name_en || i.name_dv || '?'}`).join(', ') + (sale.items && sale.items.length > 3 ? ` +${sale.items.length - 3} more` : '');
+                        const customerName = sale.customer ? (sale.customer.name_en || sale.customer.name_dv) : 'Walk-in';
+                        const method = (sale.paymentMethod || 'cash').toLowerCase();
+                        return (
+                          <tr key={sale.id} className="hover:bg-muted/30 transition-colors">
+                            <td className="px-3 py-2 font-mono text-[11px] font-bold">{(sale.invoiceNumber || sale.id || '').toString().slice(-8)}</td>
+                            <td className="px-3 py-2 font-bold whitespace-nowrap">{sDate.toLocaleDateString('en-US', { day: '2-digit', month: 'short' })}</td>
+                            <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{formatTime(sale.date)}</td>
+                            <td className="px-3 py-2 font-bold max-w-[120px] truncate">{customerName}</td>
+                            <td className="px-3 py-2 uppercase font-black text-[10px]">{method}</td>
+                            <td className="px-3 py-2 text-muted-foreground max-w-[180px] truncate">{itemsSummary || '—'}</td>
+                            <td className="px-3 py-2 font-black font-mono tabular-nums text-right">{num(sale.grandTotal).toFixed(2)}</td>
+                            <td className="px-3 py-2 text-center">
+                              {(sale.paymentMethod as any) !== 'return' && !String(sale.invoiceNumber || '').startsWith('RET-') && (
+                                <button
+                                  type="button"
+                                  onClick={() => openReturnDialog(sale)}
+                                  title="Process Return"
+                                  className="h-7 w-7 inline-flex items-center justify-center rounded-md bg-orange-500/10 text-orange-500 hover:bg-orange-500/25 border border-orange-500/20"
+                                >
+                                  <Undo2 className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Main Stats with direct Download buttons */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <StatCard 
-              title={t('today_sales')} 
-              stats={dayStats} 
-              icon={TrendingUp} 
-              color="text-primary" 
-              profit={dayProfit}
-              onClick={() => { setDetailPeriodFilter('today'); setActiveDetailModal('today'); }}
-              onDownload={handleExportDailySales}
-              downloadLabel="Download Daily Sales (މިއަދުގެ ސޭލްސް)"
-            />
-            <StatCard 
-              title={t('this_month')} 
-              stats={monthStats} 
-              icon={BarChart3} 
-              color="text-purple-500" 
-              profit={monthProfit}
-              onClick={() => { setDetailPeriodFilter('month'); setActiveDetailModal('month'); }}
-              onDownload={handleExportMonthlySales}
-              downloadLabel="Download Monthly Sales (މިމަހުގެ ސޭލްސް)"
-            />
-            <StatCard 
-              title={t('this_year')} 
-              stats={yearStats} 
-              icon={PieChart} 
-              color="text-green-500" 
-              profit={yearProfit}
-              onClick={() => { setDetailPeriodFilter('all'); setActiveDetailModal('year'); }}
-              onDownload={handleExportYearlySales}
-              downloadLabel="Download Yearly Sales (މިއަހަރުގެ ސޭލްސް)"
-            />
-          </div>
-
-          {/* Shop Sales Breakdown & Highlights Grid (Clickable interactive cards) */}
+          {/* ── SECTION 1: Primary Period Revenue Cards ── */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                Interactive Sales Drilldown &amp; Payment Channels
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest" dir="ltr">
+                1. Revenue &amp; Time Horizons (Click any card for invoices)
               </span>
-              <h3 className="text-sm font-black text-foreground flex items-center gap-1.5 font-faruma">
-                <span>ސޭލްސް އަދި ވިޔަފާރީގެ ތަފްޞީލުތައް</span>
-                <Sparkles className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-black text-foreground flex items-center gap-1.5">
+                <span>ސޭލްސް އަދި އާމްދަނީގެ ޚުލާޞާ</span>
+                <TrendingUp className="h-4 w-4 text-primary" />
               </h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <StatCard
+                title={t('today_sales')}
+                stats={dayStats}
+                icon={TrendingUp}
+                accentBorder="border-t-blue-500"
+                chipClass="bg-blue-500/10 text-blue-500 border-blue-500/20"
+                profit={dayProfit}
+                onClick={() => { setDetailPeriodFilter('today'); setActiveDetailModal('today'); }}
+                onDownload={handleExportDailySales}
+                downloadLabel="Download Daily Excel (މިއަދުގެ ސޭލްސް)"
+              />
+              <StatCard
+                title={t('this_month')}
+                stats={monthStats}
+                icon={BarChart3}
+                accentBorder="border-t-violet-500"
+                chipClass="bg-violet-500/10 text-violet-500 border-violet-500/20"
+                profit={monthProfit}
+                onClick={() => { setDetailPeriodFilter('month'); setActiveDetailModal('month'); }}
+                onDownload={handleExportMonthlySales}
+                downloadLabel="Download Monthly Excel (މިމަހުގެ ސޭލްސް)"
+              />
+              <StatCard
+                title={t('this_year')}
+                stats={yearStats}
+                icon={PieChart}
+                accentBorder="border-t-emerald-500"
+                chipClass="bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                profit={yearProfit}
+                onClick={() => { setDetailPeriodFilter('all'); setActiveDetailModal('year'); }}
+                onDownload={handleExportYearlySales}
+                downloadLabel="Download Yearly Excel (މިއަހަރުގެ ސޭލްސް)"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+              <InteractiveKpiCard
+                titleEn="Last 7 Days Sales"
+                titleDv="ފާއިތުވި 7 ދުވަހުގެ ސޭލްސް"
+                value={`${settings.shop.currency} ${weekStats.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                subValue={`${weekStats.count} invoices • Daily avg ${settings.shop.currency} ${(weekStats.total / 7).toFixed(0)}`}
+                badge={`${weekStats.count} txns`}
+                accentBorder="border-l-indigo-500"
+                chipClass="bg-indigo-500/10 text-indigo-500 border-indigo-500/20"
+                icon={Calendar}
+                onClick={() => { setDetailPeriodFilter('all'); setActiveDetailModal('week'); }}
+              />
+              <InteractiveKpiCard
+                titleEn="All-Time Shop Revenue"
+                titleDv="މުޅި ފިހާރައިގެ ޖުމްލަ ސޭލްސް"
+                value={`${settings.shop.currency} ${allTimeStats.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                subValue={`${allTimeStats.count} total bills • ${allTimeStats.totalItemsSold.toLocaleString()} items sold`}
+                badge={`${allTimeStats.count} bills`}
+                accentBorder="border-l-cyan-500"
+                chipClass="bg-cyan-500/10 text-cyan-500 border-cyan-500/20"
+                icon={Award}
+                onClick={() => { setDetailPeriodFilter('all'); setActiveDetailModal('all_time'); }}
+              />
+              <InteractiveKpiCard
+                titleEn="Average Basket & Bill Size"
+                titleDv="އެވްރެޖް ބިލް އަދި ވިޔަފާރި"
+                value={`${settings.shop.currency} ${allTimeStats.avgBasket.toFixed(2)}`}
+                subValue={`Avg ${allTimeStats.avgItems.toFixed(1)} items/bill • Max bill ${settings.shop.currency} ${allTimeStats.maxInvoice.toFixed(0)}`}
+                badge="Basket KPI"
+                accentBorder="border-l-fuchsia-500"
+                chipClass="bg-fuchsia-500/10 text-fuchsia-500 border-fuchsia-500/20"
+                icon={ShoppingBag}
+                onClick={() => { setDetailPeriodFilter('all'); setActiveDetailModal('avg_basket'); }}
+              />
+              <InteractiveKpiCard
+                titleEn="Peak Shopping Hours"
+                titleDv="އެންމެ ބާރުބޮޑު ގަޑިތައް"
+                value={hourlyStats.peak.count > 0 ? hourlyStats.peak.label : 'No sales yet'}
+                subValue={hourlyStats.peak.count > 0 ? `Peak: ${hourlyStats.peak.count} bills (${settings.shop.currency} ${hourlyStats.peak.revenue.toFixed(0)})` : 'Click for hourly breakdown'}
+                badge="24h Pattern"
+                accentBorder="border-l-amber-500"
+                chipClass="bg-amber-500/10 text-amber-500 border-amber-500/20"
+                icon={Clock}
+                onClick={() => { setDetailPeriodFilter('all'); setActiveDetailModal('hourly_peak'); }}
+              />
+            </div>
+          </div>
+
+          {/* ── SECTION 2: Payment Channels & Tender Breakdown ── */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest" dir="ltr">
+                2. Payment Channels &amp; Cashflow (Click to inspect channel transactions)
+              </span>
+              <h3 className="text-sm font-black text-foreground flex items-center gap-1.5">
+                <span>ފައިސާ ލިބުނު ގޮތްތަކުގެ ތަފްޞީލް</span>
+                <Wallet className="h-4 w-4 text-emerald-500" />
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
               <InteractiveKpiCard
                 titleEn="Cash Sales"
                 titleDv="ނަގުދު ފައިސާ"
                 value={`${settings.shop.currency} ${paymentMethodStats.today.cash.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                subValue={`${paymentMethodStats.today.cash.count} transactions today • Month: ${settings.shop.currency} ${paymentMethodStats.month.cash.total.toFixed(0)}`}
-                badge={`${paymentMethodStats.today.cash.count} txns`}
+                subValue={`Month: ${settings.shop.currency} ${paymentMethodStats.month.cash.total.toFixed(0)} • All: ${settings.shop.currency} ${paymentMethodStats.all.cash.total.toFixed(0)}`}
+                badge={`${paymentMethodStats.today.cash.count} today`}
+                sharePct={todayShare(paymentMethodStats.today.cash.total)}
+                barColor="bg-emerald-500"
+                accentBorder="border-l-emerald-500"
+                chipClass="bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
                 icon={Wallet}
-                iconColor="text-emerald-500"
                 onClick={() => { setDetailPeriodFilter('today'); setActiveDetailModal('cash'); }}
               />
-
               <InteractiveKpiCard
                 titleEn="Card Payments"
                 titleDv="ކާޑު ޕޭމަންޓް"
                 value={`${settings.shop.currency} ${paymentMethodStats.today.card.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                subValue={`${paymentMethodStats.today.card.count} card swipes today • Month: ${settings.shop.currency} ${paymentMethodStats.month.card.total.toFixed(0)}`}
-                badge={`${paymentMethodStats.today.card.count} txns`}
+                subValue={`Month: ${settings.shop.currency} ${paymentMethodStats.month.card.total.toFixed(0)} • All: ${settings.shop.currency} ${paymentMethodStats.all.card.total.toFixed(0)}`}
+                badge={`${paymentMethodStats.today.card.count} today`}
+                sharePct={todayShare(paymentMethodStats.today.card.total)}
+                barColor="bg-violet-500"
+                accentBorder="border-l-violet-500"
+                chipClass="bg-violet-500/10 text-violet-500 border-violet-500/20"
                 icon={CreditCard}
-                iconColor="text-purple-500"
                 onClick={() => { setDetailPeriodFilter('today'); setActiveDetailModal('card'); }}
               />
-
               <InteractiveKpiCard
                 titleEn="Bank Transfer (BML Pay)"
                 titleDv="ބޭންކް ޓްރާންސްފަރ"
                 value={`${settings.shop.currency} ${paymentMethodStats.today.transfer.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                subValue={`${paymentMethodStats.today.transfer.count} transfers verified • Month: ${settings.shop.currency} ${paymentMethodStats.month.transfer.total.toFixed(0)}`}
-                badge={`${paymentMethodStats.today.transfer.count} txns`}
+                subValue={`Month: ${settings.shop.currency} ${paymentMethodStats.month.transfer.total.toFixed(0)} • All: ${settings.shop.currency} ${paymentMethodStats.all.transfer.total.toFixed(0)}`}
+                badge={`${paymentMethodStats.today.transfer.count} today`}
+                sharePct={todayShare(paymentMethodStats.today.transfer.total)}
+                barColor="bg-blue-500"
+                accentBorder="border-l-blue-500"
+                chipClass="bg-blue-500/10 text-blue-500 border-blue-500/20"
                 icon={Receipt}
-                iconColor="text-blue-500"
                 onClick={() => { setDetailPeriodFilter('today'); setActiveDetailModal('transfer'); }}
               />
-
               <InteractiveKpiCard
-                titleEn="Credit (Customer Dharani)"
+                titleEn="Credit Sales (Dharani)"
                 titleDv="ދަރަންޏަށް ދޫކުރި ސޭލްސް"
                 value={`${settings.shop.currency} ${paymentMethodStats.today.credit.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                subValue={`${paymentMethodStats.today.credit.count} credit invoices • Month: ${settings.shop.currency} ${paymentMethodStats.month.credit.total.toFixed(0)}`}
-                badge={`${paymentMethodStats.today.credit.count} txns`}
+                subValue={`Month: ${settings.shop.currency} ${paymentMethodStats.month.credit.total.toFixed(0)} • All: ${settings.shop.currency} ${paymentMethodStats.all.credit.total.toFixed(0)}`}
+                badge={`${paymentMethodStats.today.credit.count} today`}
+                sharePct={todayShare(paymentMethodStats.today.credit.total)}
+                barColor="bg-amber-500"
+                accentBorder="border-l-amber-500"
+                chipClass="bg-amber-500/10 text-amber-500 border-amber-500/20"
                 icon={DollarSign}
-                iconColor="text-amber-500"
                 onClick={() => { setDetailPeriodFilter('today'); setActiveDetailModal('credit'); }}
-              />
-
-              <InteractiveKpiCard
-                titleEn="Top Selling Products"
-                titleDv="އެންމެ ގިނައިން ވިކުނު ތަކެތި"
-                value={productRanking.length > 0 ? (productRanking[0].name_en || productRanking[0].name_dv || 'Top Product') : 'No items sold'}
-                subValue={productRanking.length > 0 ? `#1: ${productRanking[0].totalQty} sold (${settings.shop.currency} ${productRanking[0].totalRevenue.toFixed(0)})` : 'Click to view product ranking'}
-                badge={`${productRanking.length} products`}
-                icon={Package}
-                iconColor="text-amber-400"
-                onClick={() => { setDetailPeriodFilter('today'); setActiveDetailModal('top_products'); }}
-              />
-
-              <InteractiveKpiCard
-                titleEn="Gross Profit & Margin"
-                titleDv="ޖުމްލަ ފައިދާ އަދި މާރޖިން"
-                value={`${settings.shop.currency} ${dayProfit.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                subValue={`${dayProfit.margin.toFixed(1)}% margin today • Cost: ${settings.shop.currency} ${dayProfit.cost.toFixed(0)}`}
-                badge={`${dayProfit.margin.toFixed(0)}% Margin`}
-                icon={ArrowUpRight}
-                iconColor="text-emerald-400"
-                onClick={() => { setDetailPeriodFilter('today'); setActiveDetailModal('profit'); }}
-              />
-
-              <InteractiveKpiCard
-                titleEn="Returns & Exchanges"
-                titleDv="ރިޓާން އަދި ރީފަންޑް"
-                value={`${paymentMethodStats.today.returns.count} Returns`}
-                subValue={`Total Refunded: ${settings.shop.currency} ${paymentMethodStats.today.returns.total.toFixed(2)} (${paymentMethodStats.month.returns.count} this month)`}
-                badge={`${paymentMethodStats.today.returns.count} returned`}
-                icon={RotateCcw}
-                iconColor="text-orange-500"
-                onClick={() => { setDetailPeriodFilter('today'); setActiveDetailModal('returns'); }}
-              />
-
-              <InteractiveKpiCard
-                titleEn="MIRA 8% GST Collected"
-                titleDv="ޖީއެސްޓީ ޓެކްސް"
-                value={`${settings.shop.currency} ${paymentMethodStats.today.gst.totalGst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                subValue={`Taxable: ${settings.shop.currency} ${paymentMethodStats.today.gst.taxable.toFixed(0)} • Zero: ${settings.shop.currency} ${paymentMethodStats.today.gst.zeroRated.toFixed(0)}`}
-                badge={`MIRA Output GST`}
-                icon={Layers}
-                iconColor="text-sky-500"
-                onClick={() => { setDetailPeriodFilter('today'); setActiveDetailModal('gst'); }}
               />
             </div>
           </div>
 
-          {/* Performance Analysis */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-             <Card className="bg-card border-border rounded-[2rem] p-8">
-                <CardHeader className="p-0 mb-6 flex flex-row items-center justify-between">
-                   <CardTitle className="text-xl font-black text-foreground flex items-center gap-2">
-                      <Activity className="h-5 w-5 text-primary" /> {renderBoth('monthly_growth')}
-                   </CardTitle>
-                   <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest bg-muted px-2.5 py-1 rounded-lg border border-border">
-                     Last 6 Months
-                   </span>
-                </CardHeader>
-                <div className="h-64 w-full" dir="ltr">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={monthlyGrowthData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="growthGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4}/>
-                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.6} />
-                      <XAxis 
-                        dataKey="name" 
-                        stroke="hsl(var(--muted-foreground))" 
-                        fontSize={11}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis 
-                        stroke="hsl(var(--muted-foreground))" 
-                        fontSize={10}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(value) => `${value >= 1000 ? `${(value/1000).toFixed(0)}k` : value}`}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Area 
-                        type="monotone" 
-                        dataKey="revenue" 
-                        stroke="hsl(var(--primary))" 
-                        strokeWidth={2.5}
-                        fillOpacity={1} 
-                        fill="url(#growthGradient)" 
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-             </Card>
+          {/* ── SECTION 3: Products, Categories & Shop Inventory Intelligence ── */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest" dir="ltr">
+                3. Products, Categories &amp; Stock Intelligence (Click to view item lists)
+              </span>
+              <h3 className="text-sm font-black text-foreground flex items-center gap-1.5">
+                <span>މުދަލާއި ސްޓޮކްގެ ތަފްޞީލް</span>
+                <Package className="h-4 w-4 text-amber-500" />
+              </h3>
+            </div>
 
-             <Card className="bg-card border-border rounded-[2rem] p-8">
-                <CardHeader className="p-0 mb-6 flex flex-row items-center justify-between">
-                   <CardTitle className="text-xl font-black text-foreground flex items-center gap-2">
-                      <ShoppingBag className="h-5 w-5 text-orange-500" /> {renderBoth('key_insights')}
-                   </CardTitle>
-                </CardHeader>
-                <div className="space-y-4">
-                   <div className="p-4 bg-muted rounded-2xl border border-border flex items-center justify-between">
-                      <ArrowUpRight className="h-5 w-5 text-green-500 shrink-0" />
-                      <div className="text-right">
-                         <p className="text-sm font-black text-foreground">{renderBoth('highest_revenue_day')}</p>
-                         <p className="text-[11px] text-muted-foreground font-bold tracking-wide mt-0.5">{keyInsights.highestDayLabel}</p>
-                      </div>
-                   </div>
-                   <div className="p-4 bg-muted rounded-2xl border border-border flex items-center justify-between">
-                      <TrendingUp className="h-5 w-5 text-blue-500 shrink-0" />
-                      <div className="text-right">
-                         <p className="text-sm font-black text-foreground">{renderBoth('best_selling_category')}</p>
-                         <p className="text-[11px] text-muted-foreground font-bold tracking-wide mt-0.5">{keyInsights.bestCategoryLabel}</p>
-                      </div>
-                   </div>
-                   <div className="p-4 bg-muted rounded-2xl border border-border flex items-center justify-between">
-                      <Activity className="h-5 w-5 text-purple-500 shrink-0" />
-                      <div className="text-right">
-                         <p className="text-sm font-black text-foreground">{renderBoth('average_basket_value')}</p>
-                         <p className="text-[11px] text-muted-foreground font-bold tracking-wide mt-0.5">{keyInsights.avgBasketLabel}</p>
-                      </div>
-                   </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              <InteractiveKpiCard
+                titleEn="Top Selling Products"
+                titleDv="އެންމެ ގިނައިން ވިކުނު ތަކެތި"
+                value={productRanking.length > 0 ? (productRanking[0].nameEn || productRanking[0].nameDv || 'Top Product') : 'No items sold'}
+                subValue={productRanking.length > 0 ? `#1: ${productRanking[0].totalQty} sold (${settings.shop.currency} ${productRanking[0].totalRevenue.toFixed(0)})` : 'Click to view product ranking'}
+                badge={`${productRanking.length} sold`}
+                accentBorder="border-l-amber-500"
+                chipClass="bg-amber-500/10 text-amber-500 border-amber-500/20"
+                icon={Package}
+                onClick={() => { setDetailPeriodFilter('all'); setActiveDetailModal('top_products'); }}
+              />
+              <InteractiveKpiCard
+                titleEn="Sales by Category"
+                titleDv="ކެޓަގަރީތަކުން ވިކުނު މިންވަރު"
+                value={categoryRanking.length > 0 ? categoryRanking[0].category : 'No categories'}
+                subValue={categoryRanking.length > 0 ? `Top: ${settings.shop.currency} ${categoryRanking[0].revenue.toFixed(0)} (${categoryRanking[0].qtySold} units)` : 'Category revenue & profit'}
+                badge={`${categoryRanking.length} categories`}
+                accentBorder="border-l-purple-500"
+                chipClass="bg-purple-500/10 text-purple-500 border-purple-500/20"
+                icon={Layers}
+                onClick={() => { setDetailPeriodFilter('all'); setActiveDetailModal('categories'); }}
+              />
+              <InteractiveKpiCard
+                titleEn="Slow-Moving & Unsold Items"
+                titleDv="ނުވިކި ހުރި ނުވަތަ މަދުން ވިކޭ މުދާ"
+                value={`${inventoryStats.slowProducts.filter(x => x.qtySold === 0).length} Unsold`}
+                subValue={`Out of ${inventoryStats.totalProducts} catalogue items • Click to inspect`}
+                badge="Dead Stock"
+                accentBorder="border-l-slate-500"
+                chipClass="bg-slate-500/10 text-slate-500 border-slate-500/20"
+                icon={Boxes}
+                onClick={() => { setDetailPeriodFilter('all'); setActiveDetailModal('slow_products'); }}
+              />
+              <InteractiveKpiCard
+                titleEn="Low Stock & Out of Stock"
+                titleDv="ސްޓޮކް މަދުވެފައިވާ މުދާ"
+                value={`${inventoryStats.lowStockList.length} Items Low`}
+                subValue={`${inventoryStats.outOfStockCount} out of stock (0 qty) • Reorder alert`}
+                badge={`${inventoryStats.outOfStockCount} empty`}
+                accentBorder="border-l-rose-500"
+                chipClass="bg-rose-500/10 text-rose-500 border-rose-500/20"
+                icon={AlertTriangle}
+                onClick={() => { setDetailPeriodFilter('all'); setActiveDetailModal('low_stock'); }}
+              />
+              <InteractiveKpiCard
+                titleEn="Expiry & Clearance Watch"
+                titleDv="މުއްދަތު ހަމަވާ މުދާ"
+                value={`${inventoryStats.expiringList.length} Expiring`}
+                subValue={`Within 60 days or expired • Click to inspect dates`}
+                badge="60d Watch"
+                accentBorder="border-l-orange-500"
+                chipClass="bg-orange-500/10 text-orange-500 border-orange-500/20"
+                icon={Calendar}
+                onClick={() => { setDetailPeriodFilter('all'); setActiveDetailModal('expiry_watch'); }}
+              />
+              <InteractiveKpiCard
+                titleEn="Shop & Godown Stock Value"
+                titleDv="ފިހާރަ އަދި ގުދަނުގެ ސްޓޮކް އަގު"
+                value={`${settings.shop.currency} ${inventoryStats.retailValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+                subValue={`Cost: ${settings.shop.currency} ${inventoryStats.costValue.toFixed(0)} • Shop: ${inventoryStats.totalShopUnits} / Godown: ${inventoryStats.totalGodownUnits}`}
+                badge={`${inventoryStats.totalProducts} SKUs`}
+                accentBorder="border-l-teal-500"
+                chipClass="bg-teal-500/10 text-teal-500 border-teal-500/20"
+                icon={Boxes}
+                onClick={() => { setDetailPeriodFilter('all'); setActiveDetailModal('inventory_valuation'); }}
+              />
+            </div>
+          </div>
+
+          {/* ── SECTION 4: Profit, Tax, Customers, Returns & Purchases ── */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest" dir="ltr">
+                4. Profit, GST Tax, Customers, Credit &amp; Local Purchases
+              </span>
+              <h3 className="text-sm font-black text-foreground flex items-center gap-1.5">
+                <span>ފައިދާ، ޓެކްސް، ކަސްޓަމަރުން އަދި ޕާޗޭސް</span>
+                <Sparkles className="h-4 w-4 text-primary" />
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              <InteractiveKpiCard
+                titleEn="Gross Profit & Margin"
+                titleDv="ޖުމްލަ ފައިދާ އަދި މާރޖިން"
+                value={`${settings.shop.currency} ${dayProfit.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                subValue={`Today ${dayProfit.margin.toFixed(1)}% • Month Profit: ${settings.shop.currency} ${monthProfit.profit.toFixed(0)}`}
+                badge={`${dayProfit.margin.toFixed(0)}% Margin`}
+                accentBorder="border-l-emerald-500"
+                chipClass="bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                icon={ArrowUpRight}
+                onClick={() => { setDetailPeriodFilter('today'); setActiveDetailModal('profit'); }}
+              />
+              <InteractiveKpiCard
+                titleEn="MIRA 8% Output GST"
+                titleDv="ޖީއެސްޓީ ޓެކްސް"
+                value={`${settings.shop.currency} ${paymentMethodStats.today.gst.totalGst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                subValue={`Month GST: ${settings.shop.currency} ${paymentMethodStats.month.gst.totalGst.toFixed(2)} • Taxable & Zero-rated`}
+                badge="MIRA Tax"
+                accentBorder="border-l-sky-500"
+                chipClass="bg-sky-500/10 text-sky-500 border-sky-500/20"
+                icon={Percent}
+                onClick={() => { setDetailPeriodFilter('month'); setActiveDetailModal('gst'); }}
+              />
+              <InteractiveKpiCard
+                titleEn="Returns & Refunds"
+                titleDv="ރިޓާން އަދި ރީފަންޑް"
+                value={`${paymentMethodStats.all.returns.count} Returns`}
+                subValue={`Today: ${paymentMethodStats.today.returns.count} (${settings.shop.currency} ${paymentMethodStats.today.returns.total.toFixed(2)}) • Month: ${paymentMethodStats.month.returns.count}`}
+                badge={`${paymentMethodStats.today.returns.count} today`}
+                accentBorder="border-l-orange-500"
+                chipClass="bg-orange-500/10 text-orange-500 border-orange-500/20"
+                icon={RotateCcw}
+                onClick={() => { setDetailPeriodFilter('all'); setActiveDetailModal('returns'); }}
+              />
+              <InteractiveKpiCard
+                titleEn="Top Buying Customers"
+                titleDv="އެންމެ ގިނައިން ވިޔަފާރިކުރި ކަސްޓަމަރުން"
+                value={customerStats.topCustomers.length > 0 ? (customerStats.topCustomers[0].customer.name_en || customerStats.topCustomers[0].customer.name_dv) : `${customerStats.totalCustomers} Customers`}
+                subValue={customerStats.topCustomers.length > 0 ? `#1 Spend: ${settings.shop.currency} ${customerStats.topCustomers[0].totalSpent.toFixed(0)} (${customerStats.topCustomers[0].invoiceCount} bills)` : 'Customer ranking by revenue'}
+                badge={`${customerStats.totalCustomers} profiles`}
+                accentBorder="border-l-pink-500"
+                chipClass="bg-pink-500/10 text-pink-500 border-pink-500/20"
+                icon={Users}
+                onClick={() => { setDetailPeriodFilter('all'); setActiveDetailModal('top_customers'); }}
+              />
+              <InteractiveKpiCard
+                titleEn="Credit Outstanding & Collected"
+                titleDv="ނުލިބިވާ ދަރަނި އަދި ލިބުނު ފައިސާ"
+                value={`${settings.shop.currency} ${customerStats.totalOutstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                subValue={`${customerStats.debtors.length} debtors • Settled: ${settings.shop.currency} ${customerStats.totalCollected.toFixed(0)}`}
+                badge={`${customerStats.debtors.length} debtors`}
+                accentBorder="border-l-red-500"
+                chipClass="bg-red-500/10 text-red-500 border-red-500/20"
+                icon={DollarSign}
+                onClick={() => { setDetailPeriodFilter('all'); setActiveDetailModal('credit_overview'); }}
+              />
+              <InteractiveKpiCard
+                titleEn="Local Purchases & Vendors"
+                titleDv="ފިހާރައަށް ގަތް މުދަލާއި ބިލްތައް"
+                value={`${settings.shop.currency} ${purchaseStats.totalSpend.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                subValue={`${purchaseStats.count} purchase bills • ${purchaseStats.vendorCount} vendors • Input GST ${settings.shop.currency} ${purchaseStats.totalInputGst.toFixed(0)}`}
+                badge={`${purchaseStats.count} bills`}
+                accentBorder="border-l-lime-500"
+                chipClass="bg-lime-500/10 text-lime-600 dark:text-lime-400 border-lime-500/20"
+                icon={Truck}
+                onClick={() => { setDetailPeriodFilter('all'); setActiveDetailModal('purchases'); }}
+              />
+            </div>
+          </div>
+
+          {/* Performance Analysis Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card className="bg-card border border-border rounded-xl p-5 shadow-xs">
+              <CardHeader className="p-0 mb-4 flex flex-row items-center justify-between">
+                <CardTitle className="text-base font-black text-foreground flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-primary" /> {renderBoth('monthly_growth')}
+                </CardTitle>
+                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest bg-muted px-2.5 py-1 rounded-md border border-border">
+                  Last 6 Months
+                </span>
+              </CardHeader>
+              <div className="h-60 w-full" dir="ltr">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={monthlyGrowthData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="growthGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.6} />
+                    <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value) => `${value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value}`} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={2.5} fillOpacity={1} fill="url(#growthGradient)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+
+            <Card className="bg-card border border-border rounded-xl p-5 shadow-xs">
+              <CardHeader className="p-0 mb-4 flex flex-row items-center justify-between">
+                <CardTitle className="text-base font-black text-foreground flex items-center gap-2">
+                  <ShoppingBag className="h-4 w-4 text-orange-500" /> {renderBoth('key_insights')}
+                </CardTitle>
+              </CardHeader>
+              <div className="space-y-3">
+                <div className="p-3.5 bg-muted/40 rounded-lg border border-border flex items-center justify-between">
+                  <ArrowUpRight className="h-5 w-5 text-emerald-500 shrink-0" />
+                  <div className="text-right">
+                    <p className="text-xs font-black text-foreground">{renderBoth('highest_revenue_day')}</p>
+                    <p className="text-xs text-muted-foreground font-mono font-bold mt-0.5" dir="ltr">{keyInsights.highestDayLabel}</p>
+                  </div>
                 </div>
-             </Card>
+                <div className="p-3.5 bg-muted/40 rounded-lg border border-border flex items-center justify-between">
+                  <TrendingUp className="h-5 w-5 text-blue-500 shrink-0" />
+                  <div className="text-right">
+                    <p className="text-xs font-black text-foreground">{renderBoth('best_selling_category')}</p>
+                    <p className="text-xs text-muted-foreground font-mono font-bold mt-0.5" dir="ltr">{keyInsights.bestCategoryLabel}</p>
+                  </div>
+                </div>
+                <div className="p-3.5 bg-muted/40 rounded-lg border border-border flex items-center justify-between">
+                  <Activity className="h-5 w-5 text-violet-500 shrink-0" />
+                  <div className="text-right">
+                    <p className="text-xs font-black text-foreground">{renderBoth('average_basket_value')}</p>
+                    <p className="text-xs text-muted-foreground font-mono font-bold mt-0.5" dir="ltr">{keyInsights.avgBasketLabel}</p>
+                  </div>
+                </div>
+              </div>
+            </Card>
           </div>
         </div>
       </ScrollArea>
 
-      {/* ── Drill-down Detail Modal Dialog ── */}
+      {/* ── Solid Pro Drill-down Detail Modal Dialog ── */}
       {activeDetailModal && (
         <Dialog open={Boolean(activeDetailModal)} onOpenChange={(open) => { if (!open) { setActiveDetailModal(null); setDetailSearchQuery(''); } }}>
-          <DialogContent className="max-w-5xl max-h-[90vh] apple-glass-dialog border border-white/20 dark:border-white/10 rounded-3xl p-0 flex flex-col overflow-hidden text-foreground z-[180]">
-            <DialogHeader className="p-6 pb-4 border-b border-white/15 dark:border-white/10 space-y-3">
+          <DialogContent className="max-w-5xl max-h-[90vh] bg-card border border-border rounded-xl p-0 flex flex-col overflow-hidden text-foreground z-[180] shadow-2xl">
+            <DialogHeader className="p-5 pb-4 border-b border-border bg-muted/30 space-y-3">
               <div className="flex items-center justify-between gap-4">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="icon"
                   onClick={() => { setActiveDetailModal(null); setDetailSearchQuery(''); }}
-                  className="h-8 w-8 rounded-xl border border-white/20 dark:border-white/10 hover:bg-white/10"
+                  className="h-8 w-8 rounded-lg border-border"
                 >
                   <X className="h-4 w-4" />
                 </Button>
                 <div className="text-right flex-1">
-                  <DialogTitle className="text-lg font-black text-foreground flex items-center justify-end gap-2">
+                  <DialogTitle className="text-base sm:text-lg font-black text-foreground flex items-center justify-end gap-2">
                     <span>
                       {activeDetailModal === 'cash' && 'Cash Sales (ނަގުދު ފައިސާގެ ތަފްޞީލް)'}
                       {activeDetailModal === 'card' && 'Card Payments (ކާޑު ޕޭމަންޓްގެ ތަފްޞީލް)'}
                       {activeDetailModal === 'transfer' && 'Bank Transfer Sales (ބޭންކް ޓްރާންސްފަރގެ ތަފްޞީލް)'}
                       {activeDetailModal === 'credit' && 'Credit Sales (ދަރަންޏަށް ދޫކުރި ސޭލްސް)'}
                       {activeDetailModal === 'top_products' && 'Top Selling Products (އެންމެ ގިނައިން ވިކުނު ތަކެތި)'}
+                      {activeDetailModal === 'categories' && 'Sales by Category (ކެޓަގަރީތަކުގެ ތަފްޞީލް)'}
+                      {activeDetailModal === 'slow_products' && 'Slow-Moving & Unsold Products (ނުވިކި ހުރި މުދާ)'}
+                      {activeDetailModal === 'low_stock' && 'Low Stock & Out of Stock Alert (ސްޓޮކް މަދު މުދާ)'}
+                      {activeDetailModal === 'expiry_watch' && 'Expiry & Clearance Watch (މުއްދަތު ހަމަވާ މުދާ)'}
+                      {activeDetailModal === 'inventory_valuation' && 'Shop & Godown Stock Valuation (ސްޓޮކްގެ އަގު)'}
                       {activeDetailModal === 'profit' && 'Estimated Profit & Margins (ފައިދާ އަދި މާރޖިން)'}
                       {activeDetailModal === 'returns' && 'Returns & Refunds History (ރިޓާން އަދި ރީފަންޑް)'}
                       {activeDetailModal === 'gst' && 'MIRA 8% Output GST Statement (ޖީއެސްޓީ ޓެކްސް)'}
+                      {activeDetailModal === 'top_customers' && 'Top Buying Customers (ކަސްޓަމަރުންގެ ވިޔަފާރި)'}
+                      {activeDetailModal === 'credit_overview' && 'Credit Outstanding Debtors (ނުލިބިވާ ދަރަނީގެ ލިސްޓް)'}
+                      {activeDetailModal === 'purchases' && 'Local Purchases & Vendor Bills (ޕާޗޭސް ބިލްތައް)'}
+                      {activeDetailModal === 'hourly_peak' && '24-Hour Shopping Pattern (ގަޑިތަކުން ވިޔަފާރި)'}
                       {activeDetailModal === 'today' && "Today's All Invoices (މިއަދުގެ ހުރިހާ ސޭލްސް)"}
+                      {activeDetailModal === 'week' && "Last 7 Days Invoices (ފާއިތުވި 7 ދުވަހުގެ ސޭލްސް)"}
                       {activeDetailModal === 'month' && "This Month's Invoices (މިމަހުގެ ހުރިހާ ސޭލްސް)"}
                       {activeDetailModal === 'year' && "This Year's Invoices (މިއަހަރުގެ ހުރިހާ ސޭލްސް)"}
+                      {activeDetailModal === 'all_time' && "All-Time Shop Invoices (ހުރިހާ ސޭލްސް ބިލްތައް)"}
+                      {activeDetailModal === 'avg_basket' && "Invoices Ranked by Basket Size (ބިލްތަކުގެ ތަފްޞީލް)"}
                     </span>
-                    <Sparkles className="h-5 w-5 text-primary" />
+                    <BarChart3 className="h-5 w-5 text-primary" />
                   </DialogTitle>
                   <p className="text-xs text-muted-foreground mt-0.5" dir="ltr">
-                    Detailed shop transactions, items breakdown &amp; return management
+                    Filter by period, search records, process invoice returns, or export to Excel
                   </p>
                 </div>
               </div>
 
-              {/* Period Filter Tabs & Search Bar */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-2" dir="ltr">
-                <div className="flex bg-muted/80 p-0.5 rounded-xl border border-border">
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-1" dir="ltr">
+                <div className="flex bg-muted p-0.5 rounded-lg border border-border">
                   {(['today', 'month', 'all'] as const).map(p => (
                     <button
                       key={p}
                       onClick={() => setDetailPeriodFilter(p)}
                       className={cn(
-                        "px-3 py-1 rounded-lg text-xs font-black transition-all",
-                        detailPeriodFilter === p ? "bg-primary text-white shadow-xs" : "text-muted-foreground hover:text-foreground"
+                        "px-3 py-1 rounded-md text-xs font-black transition-all",
+                        detailPeriodFilter === p ? "bg-primary text-primary-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
                       )}
                     >
                       {p === 'today' ? "Today" : p === 'month' ? "This Month" : "All Time"}
@@ -1888,10 +2298,10 @@ const SalesReports = () => {
                 <div className="relative flex-1 min-w-[220px] max-w-sm">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
-                    placeholder="Search invoice #, customer, or item..."
+                    placeholder="Search records..."
                     value={detailSearchQuery}
                     onChange={(e) => setDetailSearchQuery(e.target.value)}
-                    className="h-9 pl-9 pr-8 rounded-xl apple-glass-input text-xs font-bold"
+                    className="h-8 pl-9 pr-8 rounded-lg bg-background border-border text-xs font-bold"
                   />
                   {detailSearchQuery && (
                     <button
@@ -1905,9 +2315,8 @@ const SalesReports = () => {
               </div>
             </DialogHeader>
 
-            <ScrollArea className="flex-1 p-6 custom-scrollbar max-h-[60vh]">
+            <ScrollArea className="flex-1 p-5 custom-scrollbar max-h-[62vh]">
               {activeDetailModal === 'top_products' ? (
-                /* Top Products Ranking Table */
                 <div>
                   {filteredProductRanking.length === 0 ? (
                     <div className="text-center py-12 text-muted-foreground">
@@ -1915,20 +2324,20 @@ const SalesReports = () => {
                       <p className="text-sm font-bold">No product sales found for this period</p>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto rounded-2xl border border-border" dir="ltr">
+                    <div className="overflow-x-auto rounded-lg border border-border" dir="ltr">
                       <table className="w-full text-xs min-w-[700px]">
                         <thead>
                           <tr className="bg-muted/70 border-b border-border text-muted-foreground font-black uppercase tracking-wider text-[10px]">
-                            <th className="px-3 py-3 text-center w-12"># Rank</th>
-                            <th className="px-3 py-3 text-left">Product Name</th>
-                            <th className="px-3 py-3 text-left">Category</th>
-                            <th className="px-3 py-3 text-left">Barcode / Code</th>
-                            <th className="px-3 py-3 text-right">Price</th>
-                            <th className="px-3 py-3 text-right">Cost</th>
-                            <th className="px-3 py-3 text-center">Qty Sold</th>
-                            <th className="px-3 py-3 text-right">Total Revenue</th>
-                            <th className="px-3 py-3 text-right">Est. Profit</th>
-                            <th className="px-3 py-3 text-right">Margin</th>
+                            <th className="px-3 py-2.5 text-center w-12">#</th>
+                            <th className="px-3 py-2.5 text-left">Product Name</th>
+                            <th className="px-3 py-2.5 text-left">Category</th>
+                            <th className="px-3 py-2.5 text-left">Barcode / Code</th>
+                            <th className="px-3 py-2.5 text-right">Price</th>
+                            <th className="px-3 py-2.5 text-right">Cost</th>
+                            <th className="px-3 py-2.5 text-center">Qty Sold</th>
+                            <th className="px-3 py-2.5 text-right">Revenue</th>
+                            <th className="px-3 py-2.5 text-right">Est. Profit</th>
+                            <th className="px-3 py-2.5 text-right">Margin</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
@@ -1936,64 +2345,237 @@ const SalesReports = () => {
                             const marginPct = p.totalRevenue > 0 ? ((p.totalProfit / p.totalRevenue) * 100) : 0;
                             return (
                               <tr key={p.id + idx} className="hover:bg-muted/40 transition-colors">
-                                <td className="px-3 py-2.5 text-center font-mono font-black text-primary">
-                                  #{idx + 1}
-                                </td>
-                                <td className="px-3 py-2.5">
-                                  <p className="font-black text-foreground truncate max-w-[180px]">{p.name_en || p.nameEn}</p>
+                                <td className="px-3 py-2 text-center font-mono font-black text-primary">#{idx + 1}</td>
+                                <td className="px-3 py-2">
+                                  <p className="font-black text-foreground truncate max-w-[180px]">{p.nameEn}</p>
                                   {p.nameDv && <p className="text-[11px] font-bold text-muted-foreground font-faruma" dir="rtl">{p.nameDv}</p>}
                                 </td>
-                                <td className="px-3 py-2.5">
-                                  <Badge variant="outline" className="text-[9px] font-black uppercase tracking-wider bg-primary/10 text-primary border-primary/20">
-                                    {p.category}
-                                  </Badge>
+                                <td className="px-3 py-2">
+                                  <Badge variant="outline" className="text-[9px] font-black uppercase tracking-wider">{p.category}</Badge>
                                 </td>
-                                <td className="px-3 py-2.5 font-mono text-[11px] text-muted-foreground">
-                                  {p.barcode || p.itemCode || '—'}
-                                </td>
-                                <td className="px-3 py-2.5 text-right font-mono font-bold">
-                                  {settings.shop.currency} {p.price.toFixed(2)}
-                                </td>
-                                <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">
-                                  {p.costPrice > 0 ? `${settings.shop.currency} ${p.costPrice.toFixed(2)}` : '—'}
-                                </td>
-                                <td className="px-3 py-2.5 text-center font-mono font-black text-sm text-foreground">
-                                  {p.totalQty}
-                                </td>
-                                <td className="px-3 py-2.5 text-right font-mono font-black text-sm text-primary">
-                                  {settings.shop.currency} {p.totalRevenue.toFixed(2)}
-                                </td>
-                                <td className="px-3 py-2.5 text-right font-mono font-black text-xs text-emerald-500">
-                                  {settings.shop.currency} {p.totalProfit.toFixed(2)}
-                                </td>
-                                <td className="px-3 py-2.5 text-right font-mono font-black text-xs">
-                                  <span className={cn(
-                                    "px-1.5 py-0.5 rounded",
-                                    marginPct >= 30 ? "bg-emerald-500/15 text-emerald-500" : marginPct > 0 ? "bg-amber-500/15 text-amber-500" : "text-muted-foreground"
-                                  )}>
-                                    {marginPct.toFixed(1)}%
-                                  </span>
-                                </td>
+                                <td className="px-3 py-2 font-mono text-[11px] text-muted-foreground">{p.barcode || p.itemCode || '—'}</td>
+                                <td className="px-3 py-2 text-right font-mono tabular-nums font-bold">{settings.shop.currency} {p.price.toFixed(2)}</td>
+                                <td className="px-3 py-2 text-right font-mono tabular-nums text-muted-foreground">{p.costPrice > 0 ? `${settings.shop.currency} ${p.costPrice.toFixed(2)}` : '—'}</td>
+                                <td className="px-3 py-2 text-center font-mono tabular-nums font-black text-sm">{p.totalQty}</td>
+                                <td className="px-3 py-2 text-right font-mono tabular-nums font-black text-sm text-primary">{settings.shop.currency} {p.totalRevenue.toFixed(2)}</td>
+                                <td className="px-3 py-2 text-right font-mono tabular-nums font-black text-emerald-500">{settings.shop.currency} {p.totalProfit.toFixed(2)}</td>
+                                <td className="px-3 py-2 text-right font-mono tabular-nums font-black">{marginPct.toFixed(1)}%</td>
                               </tr>
                             );
                           })}
                         </tbody>
-                        <tfoot>
-                          <tr className="bg-muted/80 border-t-2 border-border font-black text-xs">
-                            <td colSpan={6} className="px-3 py-3 text-right uppercase tracking-wider">Total Ranking Summary</td>
-                            <td className="px-3 py-3 text-center font-mono">{filteredProductRanking.reduce((sum, p) => sum + p.totalQty, 0)} pcs</td>
-                            <td className="px-3 py-3 text-right font-mono text-primary">
-                              {settings.shop.currency} {filteredProductRanking.reduce((sum, p) => sum + p.totalRevenue, 0).toFixed(2)}
-                            </td>
-                            <td className="px-3 py-3 text-right font-mono text-emerald-500">
-                              {settings.shop.currency} {filteredProductRanking.reduce((sum, p) => sum + p.totalProfit, 0).toFixed(2)}
-                            </td>
-                            <td></td>
-                          </tr>
-                        </tfoot>
                       </table>
                     </div>
                   )}
+                </div>
+              ) : activeDetailModal === 'categories' ? (
+                <div className="overflow-x-auto rounded-lg border border-border" dir="ltr">
+                  <table className="w-full text-xs min-w-[600px]">
+                    <thead>
+                      <tr className="bg-muted/70 border-b border-border text-muted-foreground font-black uppercase tracking-wider text-[10px]">
+                        <th className="px-3 py-2.5 text-left">Category</th>
+                        <th className="px-3 py-2.5 text-center">Catalogue Items</th>
+                        <th className="px-3 py-2.5 text-center">Units Sold</th>
+                        <th className="px-3 py-2.5 text-right">Total Revenue</th>
+                        <th className="px-3 py-2.5 text-right">Total Cost</th>
+                        <th className="px-3 py-2.5 text-right">Gross Profit</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {categoryRanking
+                        .filter(c => !detailSearchQuery || c.category.toLowerCase().includes(detailSearchQuery.toLowerCase()))
+                        .map((c) => (
+                          <tr key={c.category} className="hover:bg-muted/40">
+                            <td className="px-3 py-2.5 font-black text-foreground">{c.category}</td>
+                            <td className="px-3 py-2.5 text-center font-mono tabular-nums">{c.productCount}</td>
+                            <td className="px-3 py-2.5 text-center font-mono tabular-nums font-black">{c.qtySold}</td>
+                            <td className="px-3 py-2.5 text-right font-mono tabular-nums font-black text-primary">{settings.shop.currency} {c.revenue.toFixed(2)}</td>
+                            <td className="px-3 py-2.5 text-right font-mono tabular-nums text-muted-foreground">{settings.shop.currency} {c.cost.toFixed(2)}</td>
+                            <td className="px-3 py-2.5 text-right font-mono tabular-nums font-black text-emerald-500">{settings.shop.currency} {c.profit.toFixed(2)}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : activeDetailModal === 'slow_products' ? (
+                <div className="overflow-x-auto rounded-lg border border-border" dir="ltr">
+                  <table className="w-full text-xs min-w-[640px]">
+                    <thead>
+                      <tr className="bg-muted/70 border-b border-border text-muted-foreground font-black uppercase tracking-wider text-[10px]">
+                        <th className="px-3 py-2.5 text-left">Product</th>
+                        <th className="px-3 py-2.5 text-left">Code / Barcode</th>
+                        <th className="px-3 py-2.5 text-left">Category</th>
+                        <th className="px-3 py-2.5 text-center">All-Time Sold</th>
+                        <th className="px-3 py-2.5 text-center">Current Stock</th>
+                        <th className="px-3 py-2.5 text-right">Price</th>
+                        <th className="px-3 py-2.5 text-right">Stock Value</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {inventoryStats.slowProducts
+                        .filter(x => !detailSearchQuery || (x.product.name_en || '').toLowerCase().includes(detailSearchQuery.toLowerCase()) || (x.product.name_dv || '').includes(detailSearchQuery))
+                        .slice(0, 150)
+                        .map(({ product: p, qtySold, stock, tiedValue }) => (
+                          <tr key={p.id} className="hover:bg-muted/40">
+                            <td className="px-3 py-2">
+                              <p className="font-black text-foreground">{p.name_en}</p>
+                              {p.name_dv && <p className="text-[11px] text-muted-foreground font-faruma" dir="rtl">{p.name_dv}</p>}
+                            </td>
+                            <td className="px-3 py-2 font-mono text-[11px] text-muted-foreground">{p.item_code || p.barcode || '—'}</td>
+                            <td className="px-3 py-2 uppercase text-[10px] font-black">{p.category}</td>
+                            <td className="px-3 py-2 text-center font-mono tabular-nums font-black text-amber-500">{qtySold}</td>
+                            <td className="px-3 py-2 text-center font-mono tabular-nums font-bold">{stock}</td>
+                            <td className="px-3 py-2 text-right font-mono tabular-nums">{settings.shop.currency} {Number(p.price || 0).toFixed(2)}</td>
+                            <td className="px-3 py-2 text-right font-mono tabular-nums font-black">{settings.shop.currency} {tiedValue.toFixed(2)}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : activeDetailModal === 'low_stock' || activeDetailModal === 'inventory_valuation' ? (
+                <div className="overflow-x-auto rounded-lg border border-border" dir="ltr">
+                  <table className="w-full text-xs min-w-[640px]">
+                    <thead>
+                      <tr className="bg-muted/70 border-b border-border text-muted-foreground font-black uppercase tracking-wider text-[10px]">
+                        <th className="px-3 py-2.5 text-left">Product</th>
+                        <th className="px-3 py-2.5 text-left">Category</th>
+                        <th className="px-3 py-2.5 text-center">Shop Stock</th>
+                        <th className="px-3 py-2.5 text-center">Godown</th>
+                        <th className="px-3 py-2.5 text-right">Selling Price</th>
+                        <th className="px-3 py-2.5 text-right">Cost Price</th>
+                        <th className="px-3 py-2.5 text-right">Retail Value</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {(activeDetailModal === 'low_stock' ? inventoryStats.lowStockList : products)
+                        .filter(p => !detailSearchQuery || (p.name_en || '').toLowerCase().includes(detailSearchQuery.toLowerCase()) || (p.name_dv || '').includes(detailSearchQuery) || (p.barcode || '').includes(detailSearchQuery))
+                        .slice(0, 200)
+                        .map(p => {
+                          const total = Math.max(0, Number(p.stock_shop || 0)) + Math.max(0, Number(p.stock_godown || 0));
+                          return (
+                            <tr key={p.id} className="hover:bg-muted/40">
+                              <td className="px-3 py-2">
+                                <p className="font-black text-foreground">{p.name_en}</p>
+                                {p.name_dv && <p className="text-[11px] text-muted-foreground font-faruma" dir="rtl">{p.name_dv}</p>}
+                              </td>
+                              <td className="px-3 py-2 uppercase text-[10px] font-black">{p.category}</td>
+                              <td className={cn("px-3 py-2 text-center font-mono tabular-nums font-black", Number(p.stock_shop || 0) <= 0 ? "text-red-500" : "text-foreground")}>{p.stock_shop}</td>
+                              <td className="px-3 py-2 text-center font-mono tabular-nums">{p.stock_godown}</td>
+                              <td className="px-3 py-2 text-right font-mono tabular-nums">{settings.shop.currency} {Number(p.price || 0).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right font-mono tabular-nums text-muted-foreground">{settings.shop.currency} {Number(p.cost_price || 0).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right font-mono tabular-nums font-black text-primary">{settings.shop.currency} {(total * Number(p.price || 0)).toFixed(2)}</td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : activeDetailModal === 'expiry_watch' ? (
+                <div className="overflow-x-auto rounded-lg border border-border" dir="ltr">
+                  <table className="w-full text-xs min-w-[600px]">
+                    <thead>
+                      <tr className="bg-muted/70 border-b border-border text-muted-foreground font-black uppercase tracking-wider text-[10px]">
+                        <th className="px-3 py-2.5 text-left">Product</th>
+                        <th className="px-3 py-2.5 text-left">Expiry Date</th>
+                        <th className="px-3 py-2.5 text-center">Status</th>
+                        <th className="px-3 py-2.5 text-center">Stock</th>
+                        <th className="px-3 py-2.5 text-right">Price</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {inventoryStats.expiringList.map(({ product: p, daysLeft }) => (
+                        <tr key={p.id} className="hover:bg-muted/40">
+                          <td className="px-3 py-2 font-black">{p.name_en || p.name_dv}</td>
+                          <td className="px-3 py-2 font-mono font-bold">{p.expiry_date}</td>
+                          <td className="px-3 py-2 text-center">
+                            <Badge variant="outline" className={cn("text-[10px] font-black", daysLeft < 0 ? "bg-red-500/15 text-red-500 border-red-500/30" : "bg-amber-500/15 text-amber-500 border-amber-500/30")}>
+                              {daysLeft < 0 ? `Expired ${Math.abs(daysLeft)}d ago` : `${daysLeft} days left`}
+                            </Badge>
+                          </td>
+                          <td className="px-3 py-2 text-center font-mono tabular-nums font-bold">{Number(p.stock_shop || 0) + Number(p.stock_godown || 0)}</td>
+                          <td className="px-3 py-2 text-right font-mono tabular-nums font-black">{settings.shop.currency} {Number(p.price || 0).toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : activeDetailModal === 'top_customers' || activeDetailModal === 'credit_overview' ? (
+                <div className="overflow-x-auto rounded-lg border border-border" dir="ltr">
+                  <table className="w-full text-xs min-w-[640px]">
+                    <thead>
+                      <tr className="bg-muted/70 border-b border-border text-muted-foreground font-black uppercase tracking-wider text-[10px]">
+                        <th className="px-3 py-2.5 text-left">Customer</th>
+                        <th className="px-3 py-2.5 text-left">Phone</th>
+                        <th className="px-3 py-2.5 text-center">Loyalty Pts</th>
+                        <th className="px-3 py-2.5 text-right">Credit Limit</th>
+                        <th className="px-3 py-2.5 text-right">Outstanding Due</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {(activeDetailModal === 'credit_overview' ? customerStats.debtors : customers)
+                        .filter(c => !detailSearchQuery || (c.name_en || '').toLowerCase().includes(detailSearchQuery.toLowerCase()) || (c.name_dv || '').includes(detailSearchQuery) || (c.phone || '').includes(detailSearchQuery))
+                        .map(c => (
+                          <tr key={c.id} className="hover:bg-muted/40">
+                            <td className="px-3 py-2">
+                              <p className="font-black text-foreground">{c.name_en || c.name_dv}</p>
+                              <p className="text-[10px] font-mono text-muted-foreground">{c.code}</p>
+                            </td>
+                            <td className="px-3 py-2 font-mono">{c.phone || '—'}</td>
+                            <td className="px-3 py-2 text-center font-mono tabular-nums">{c.loyalty_points || 0}</td>
+                            <td className="px-3 py-2 text-right font-mono tabular-nums text-muted-foreground">{settings.shop.currency} {Number(c.credit_limit || 0).toFixed(2)}</td>
+                            <td className={cn("px-3 py-2 text-right font-mono tabular-nums font-black", Number(c.outstanding_balance || 0) > 0 ? "text-red-500" : "text-emerald-500")}>
+                              {settings.shop.currency} {Number(c.outstanding_balance || 0).toFixed(2)}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : activeDetailModal === 'purchases' ? (
+                <div className="overflow-x-auto rounded-lg border border-border" dir="ltr">
+                  <table className="w-full text-xs min-w-[640px]">
+                    <thead>
+                      <tr className="bg-muted/70 border-b border-border text-muted-foreground font-black uppercase tracking-wider text-[10px]">
+                        <th className="px-3 py-2.5 text-left">Bill / Invoice #</th>
+                        <th className="px-3 py-2.5 text-left">Date</th>
+                        <th className="px-3 py-2.5 text-left">Vendor</th>
+                        <th className="px-3 py-2.5 text-center">Items</th>
+                        <th className="px-3 py-2.5 text-right">Input GST</th>
+                        <th className="px-3 py-2.5 text-right">Total Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {purchaseStats.list
+                        .filter(p => !detailSearchQuery || (p.billNumber || '').toLowerCase().includes(detailSearchQuery.toLowerCase()) || (p.vendorName || p.vendor || '').toLowerCase().includes(detailSearchQuery.toLowerCase()))
+                        .map(p => (
+                          <tr key={p.id} className="hover:bg-muted/40">
+                            <td className="px-3 py-2 font-mono font-bold">{p.billNumber || p.id.slice(-8)}</td>
+                            <td className="px-3 py-2">{formatDate(p.date)}</td>
+                            <td className="px-3 py-2 font-black">{p.vendorName || p.vendor || 'Vendor'}</td>
+                            <td className="px-3 py-2 text-center font-mono tabular-nums">{(p.items || []).length}</td>
+                            <td className="px-3 py-2 text-right font-mono tabular-nums text-muted-foreground">{settings.shop.currency} {Number(p.gstAmount || 0).toFixed(2)}</td>
+                            <td className="px-3 py-2 text-right font-mono tabular-nums font-black text-primary">{settings.shop.currency} {Number(p.amount || 0).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : activeDetailModal === 'hourly_peak' ? (
+                <div className="space-y-2" dir="ltr">
+                  {hourlyStats.hours.map(h => {
+                    const maxRev = Math.max(1, hourlyStats.peak.revenue);
+                    const pct = (h.revenue / maxRev) * 100;
+                    return (
+                      <div key={h.hour} className="flex items-center gap-3 p-2 rounded-lg bg-muted/30 border border-border">
+                        <span className="w-14 font-mono text-xs font-black text-muted-foreground">{h.label}</span>
+                        <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden">
+                          <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="w-20 text-right font-mono text-xs font-bold tabular-nums">{h.count} bills</span>
+                        <span className="w-28 text-right font-mono text-xs font-black tabular-nums text-primary">{settings.shop.currency} {h.revenue.toFixed(2)}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 /* Standard Invoices / Transactions Table */
@@ -2004,19 +2586,19 @@ const SalesReports = () => {
                       <p className="text-sm font-bold">No transactions found for this period</p>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto rounded-2xl border border-border" dir="ltr">
+                    <div className="overflow-x-auto rounded-lg border border-border" dir="ltr">
                       <table className="w-full text-xs min-w-[700px]">
                         <thead>
                           <tr className="bg-muted/70 border-b border-border text-muted-foreground font-black uppercase tracking-wider text-[10px]">
-                            <th className="px-3 py-3 text-left">Invoice #</th>
-                            <th className="px-3 py-3 text-left">Date / Time</th>
-                            <th className="px-3 py-3 text-left">Customer</th>
-                            <th className="px-3 py-3 text-left">Method</th>
-                            <th className="px-3 py-3 text-left">Items Sold</th>
-                            <th className="px-3 py-3 text-right">Subtotal</th>
-                            <th className="px-3 py-3 text-right">GST (8%)</th>
-                            <th className="px-3 py-3 text-right">Grand Total</th>
-                            <th className="px-3 py-3 text-center">Action</th>
+                            <th className="px-3 py-2.5 text-left">Invoice #</th>
+                            <th className="px-3 py-2.5 text-left">Date / Time</th>
+                            <th className="px-3 py-2.5 text-left">Customer</th>
+                            <th className="px-3 py-2.5 text-left">Method</th>
+                            <th className="px-3 py-2.5 text-left">Items Sold</th>
+                            <th className="px-3 py-2.5 text-right">Subtotal</th>
+                            <th className="px-3 py-2.5 text-right">GST (8%)</th>
+                            <th className="px-3 py-2.5 text-right">Grand Total</th>
+                            <th className="px-3 py-2.5 text-center">Action</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
@@ -2030,17 +2612,17 @@ const SalesReports = () => {
 
                             return (
                               <tr key={sale.id} className={cn("hover:bg-muted/40 transition-colors", isReturnRecord && "bg-orange-500/5")}>
-                                <td className="px-3 py-2.5 font-mono font-bold text-foreground">
+                                <td className="px-3 py-2 font-mono font-bold text-foreground">
                                   {sale.invoiceNumber || sale.id.slice(-8)}
                                 </td>
-                                <td className="px-3 py-2.5 whitespace-nowrap">
+                                <td className="px-3 py-2 whitespace-nowrap">
                                   <p className="font-bold">{formatDate(sale.date)}</p>
                                   <p className="text-[10px] text-muted-foreground">{formatTime(sale.date)}</p>
                                 </td>
-                                <td className="px-3 py-2.5 font-bold truncate max-w-[130px]">
+                                <td className="px-3 py-2 font-bold truncate max-w-[130px]">
                                   {customerName}
                                 </td>
-                                <td className="px-3 py-2.5">
+                                <td className="px-3 py-2">
                                   <Badge variant="outline" className={cn(
                                     "text-[9px] font-black uppercase tracking-wider px-2 py-0.5",
                                     method === 'cash' ? "bg-emerald-500/15 text-emerald-500 border-emerald-500/30" :
@@ -2052,26 +2634,25 @@ const SalesReports = () => {
                                     {(sale.paymentMethod || 'CASH').toUpperCase()}
                                   </Badge>
                                 </td>
-                                <td className="px-3 py-2.5 text-muted-foreground max-w-[200px] truncate" title={itemsSummary}>
+                                <td className="px-3 py-2 text-muted-foreground max-w-[200px] truncate" title={itemsSummary}>
                                   {itemsSummary || '—'}
                                 </td>
-                                <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">
+                                <td className="px-3 py-2 text-right font-mono tabular-nums text-muted-foreground">
                                   {settings.shop.currency} {sub.toFixed(2)}
                                 </td>
-                                <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">
+                                <td className="px-3 py-2 text-right font-mono tabular-nums text-muted-foreground">
                                   {settings.shop.currency} {gst.toFixed(2)}
                                 </td>
-                                <td className="px-3 py-2.5 text-right font-mono font-black text-sm text-foreground">
+                                <td className="px-3 py-2 text-right font-mono tabular-nums font-black text-sm text-foreground">
                                   {settings.shop.currency} {num(sale.grandTotal).toFixed(2)}
                                 </td>
-                                <td className="px-3 py-2.5 text-center">
+                                <td className="px-3 py-2 text-center">
                                   {!isReturnRecord && (
                                     <Button
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => openReturnDialog(sale)}
-                                      className="h-7 px-2 rounded-lg text-[10px] font-black text-orange-500 hover:bg-orange-500/15 gap-1"
-                                      title="Process return or exchange for this invoice"
+                                      className="h-7 px-2 rounded-md text-[10px] font-black text-orange-500 hover:bg-orange-500/15 gap-1"
                                     >
                                       <Undo2 className="h-3 w-3" />
                                       <span>Return</span>
@@ -2084,19 +2665,19 @@ const SalesReports = () => {
                         </tbody>
                         <tfoot>
                           <tr className="bg-muted/80 border-t-2 border-border font-black text-xs">
-                            <td colSpan={5} className="px-3 py-3 text-right uppercase tracking-wider">
+                            <td colSpan={5} className="px-3 py-2.5 text-right uppercase tracking-wider">
                               Total ({filteredDrilldownSales.length} transactions)
                             </td>
-                            <td className="px-3 py-3 text-right font-mono text-muted-foreground">
+                            <td className="px-3 py-2.5 text-right font-mono tabular-nums text-muted-foreground">
                               {settings.shop.currency} {filteredDrilldownSales.reduce((sum, s) => sum + (num(s.grandTotal) / (1 + (Number(settings.shop.taxRate || 8) / 100))), 0).toFixed(2)}
                             </td>
-                            <td className="px-3 py-3 text-right font-mono text-muted-foreground">
+                            <td className="px-3 py-2.5 text-right font-mono tabular-nums text-muted-foreground">
                               {settings.shop.currency} {filteredDrilldownSales.reduce((sum, s) => {
                                 const sub = num(s.grandTotal) / (1 + (Number(settings.shop.taxRate || 8) / 100));
                                 return sum + (num(s.grandTotal) - sub);
                               }, 0).toFixed(2)}
                             </td>
-                            <td className="px-3 py-3 text-right font-mono text-primary text-sm">
+                            <td className="px-3 py-2.5 text-right font-mono tabular-nums text-primary text-sm">
                               {settings.shop.currency} {filteredDrilldownSales.reduce((sum, s) => sum + num(s.grandTotal), 0).toFixed(2)}
                             </td>
                             <td></td>
@@ -2109,12 +2690,22 @@ const SalesReports = () => {
               )}
             </ScrollArea>
 
-            {/* Modal Footer with quick export */}
-            <div className="p-4 px-6 border-t border-white/15 dark:border-white/10 flex items-center justify-between gap-4 bg-muted/40" dir="ltr">
+            <div className="p-4 px-5 border-t border-border flex items-center justify-between gap-4 bg-muted/30" dir="ltr">
               <span className="text-xs font-bold text-muted-foreground">
-                Showing {activeDetailModal === 'top_products' ? filteredProductRanking.length : filteredDrilldownSales.length} items
+                Ready to export current view
               </span>
               <div className="flex items-center gap-2">
+                {activeDetailModal === 'gst' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleExportGSTOutputTaxStatement(filteredDrilldownSales, detailPeriodFilter)}
+                    className="rounded-lg text-xs font-black gap-1.5 h-9 border-blue-500/40 text-blue-500"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>MIRA GST Statement</span>
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -2123,15 +2714,7 @@ const SalesReports = () => {
                       const data = [
                         ['Rank', 'Product Name', 'Category', 'Barcode / Code', 'Price', 'Cost', 'Qty Sold', 'Total Revenue', 'Est. Profit', 'Margin %'],
                         ...filteredProductRanking.map((p, idx) => [
-                          idx + 1,
-                          p.name_en || p.nameEn,
-                          p.category,
-                          p.barcode || p.itemCode,
-                          p.price,
-                          p.costPrice,
-                          p.totalQty,
-                          p.totalRevenue,
-                          p.totalProfit,
+                          idx + 1, p.nameEn, p.category, p.barcode || p.itemCode, p.price, p.costPrice, p.totalQty, p.totalRevenue, p.totalProfit,
                           p.totalRevenue > 0 ? ((p.totalProfit / p.totalRevenue) * 100).toFixed(1) + '%' : '0%'
                         ])
                       ];
@@ -2166,14 +2749,14 @@ const SalesReports = () => {
                       showSuccess('Sales drilldown Excel report downloaded!');
                     }
                   }}
-                  className="rounded-xl text-xs font-black gap-1.5 h-9"
+                  className="rounded-lg text-xs font-black gap-1.5 h-9"
                 >
                   <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
                   <span>Download Excel</span>
                 </Button>
                 <Button
                   onClick={() => { setActiveDetailModal(null); setDetailSearchQuery(''); }}
-                  className="rounded-xl text-xs font-black h-9 px-4 bg-primary text-white"
+                  className="rounded-lg text-xs font-black h-9 px-4 bg-primary text-primary-foreground"
                 >
                   Close
                 </Button>
@@ -2183,16 +2766,15 @@ const SalesReports = () => {
         </Dialog>
       )}
 
-      {/* Return Sale Dialog */}
+      {/* Solid Pro Return Sale Dialog */}
       {returnSale && (
         <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/40 dark:bg-black/60 backdrop-blur-md p-4 animate-in fade-in"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4 animate-in fade-in"
           onClick={(e) => { if (e.target === e.currentTarget) setReturnSale(null); }}
         >
-          <div className="w-full max-w-lg apple-glass-dialog border border-orange-500/30 rounded-3xl p-6 shadow-2xl space-y-5 text-foreground animate-in zoom-in-95" onClick={(e) => e.stopPropagation()}>
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-white/15 dark:border-white/10 pb-3">
-              <button type="button" onClick={() => setReturnSale(null)} className="h-8 w-8 rounded-xl border border-white/20 dark:border-white/10 bg-white/10 hover:bg-white/20 text-foreground flex items-center justify-center">
+          <div className="w-full max-w-lg bg-card border border-border rounded-xl p-6 shadow-2xl space-y-5 text-foreground animate-in zoom-in-95" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <button type="button" onClick={() => setReturnSale(null)} className="h-8 w-8 rounded-lg border border-border bg-muted hover:bg-muted/80 text-foreground flex items-center justify-center">
                 <X className="h-4 w-4" />
               </button>
               <div className="text-right">
@@ -2200,22 +2782,19 @@ const SalesReports = () => {
                   <h3 className="text-base font-black text-foreground">Process Return</h3>
                   <Undo2 className="h-5 w-5 text-orange-500" />
                 </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Invoice: {returnSale.invoiceNumber || returnSale.id.slice(-8)} •{' '}
-                  {(returnSale.paymentMethod || 'cash').toUpperCase()} •{' '}
-                  {settings.shop.currency} {Number(returnSale.grandTotal).toFixed(2)}
+                <p className="text-[11px] text-muted-foreground" dir="ltr">
+                  Invoice: {returnSale.invoiceNumber || returnSale.id.slice(-8)} • {(returnSale.paymentMethod || 'cash').toUpperCase()} • {settings.shop.currency} {Number(returnSale.grandTotal).toFixed(2)}
                 </p>
               </div>
             </div>
 
-            {/* Items List */}
             <div className="space-y-2 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
               <p className="text-[11px] font-black uppercase text-muted-foreground">Select quantities to return:</p>
               {(returnSale.items || []).map(item => (
-                <div key={item.id} className="flex items-center justify-between gap-4 p-3 apple-glass-card rounded-2xl border border-white/20 dark:border-white/10">
+                <div key={item.id} className="flex items-center justify-between gap-4 p-3 bg-muted/40 rounded-lg border border-border">
                   <div className="flex-1 min-w-0 text-right">
                     <p className="font-black text-sm text-foreground line-clamp-1">{item.name_dv || item.name_en || 'Item'}</p>
-                    <p className="text-[10px] text-muted-foreground font-mono">
+                    <p className="text-[10px] text-muted-foreground font-mono tabular-nums" dir="ltr">
                       Sold: {item.qty} × {settings.shop.currency} {Number(item.price || 0).toFixed(2)}
                     </p>
                   </div>
@@ -2232,49 +2811,49 @@ const SalesReports = () => {
                         setReturnQtys(prev => ({ ...prev, [item.id]: v }));
                       }}
                       onFocus={(e) => e.target.select()}
-                      className="w-16 h-9 text-center font-black font-mono text-sm apple-glass-input rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      className="w-16 h-9 text-center font-black font-mono text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Refund Summary */}
             {(() => {
               const refundTotal = (returnSale.items || []).reduce((sum, item) => {
                 const qty = returnQtys[item.id] || 0;
                 return sum + qty * Number(item.price || 0);
               }, 0);
               return refundTotal > 0 ? (
-                <div className="p-3 bg-orange-500/15 border border-orange-500/30 rounded-2xl flex items-center justify-between">
-                  <span className="font-mono font-black text-orange-500 text-lg">{settings.shop.currency} {refundTotal.toFixed(2)}</span>
+                <div className="p-3 bg-orange-500/15 border border-orange-500/30 rounded-lg flex items-center justify-between">
+                  <span className="font-mono font-black text-orange-500 text-lg tabular-nums" dir="ltr">{settings.shop.currency} {refundTotal.toFixed(2)}</span>
                   <span className="text-sm font-black text-foreground">Refund Total</span>
                 </div>
               ) : (
-                <div className="p-3 apple-glass-card rounded-2xl text-center text-xs text-muted-foreground font-bold">
+                <div className="p-3 bg-muted/40 border border-border rounded-lg text-center text-xs text-muted-foreground font-bold">
                   Enter return quantities above
                 </div>
               );
             })()}
 
-            {/* Info note for credit */}
             {(returnSale.paymentMethod || '').toLowerCase() === 'credit' && (
               <p className="text-[11px] text-amber-500 font-bold text-right">
                 ⚠ Credit sale — customer's outstanding balance will be reduced by the refund amount.
               </p>
             )}
 
-            {/* Actions */}
             <div className="flex gap-3">
-              <button type="button" onClick={() => setReturnSale(null)}
-                className="flex-1 h-11 rounded-2xl border border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold text-xs transition-all">
+              <button
+                type="button"
+                onClick={() => setReturnSale(null)}
+                className="flex-1 h-10 rounded-lg border border-border bg-muted hover:bg-muted/80 text-foreground font-bold text-xs transition-all"
+              >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleConfirmReturn}
                 disabled={isProcessingReturn || Object.values(returnQtys).every(v => v === 0)}
-                className="flex-1 h-11 rounded-2xl bg-orange-500 hover:bg-orange-500/90 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="flex-1 h-10 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-black text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 <Undo2 className="h-4 w-4" />
                 {isProcessingReturn ? 'Processing...' : 'Confirm Return'}

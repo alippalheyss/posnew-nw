@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { ChevronDown, ChevronUp, Upload, Image as ImageIcon, Trash2, Settings, Landmark, Monitor, Layout, FileText, Printer, Building2, X, Edit, UserPlus, Shield, Database, Languages, Palette, Globe, CreditCard, Receipt, Percent, LogOut, Gift, Clock, Users, CheckCircle2, Copy, ExternalLink, RefreshCw, Loader2, Send, Moon, BellRing, Cloud } from 'lucide-react';
+import { ChevronDown, ChevronUp, Upload, Download, Image as ImageIcon, Trash2, Settings, Landmark, Monitor, Layout, FileText, Printer, Building2, X, Edit, UserPlus, Shield, Database, Languages, Palette, Globe, CreditCard, Receipt, Percent, LogOut, Gift, Clock, Users, CheckCircle2, Copy, ExternalLink, RefreshCw, Loader2, Send, Moon, BellRing, Cloud } from 'lucide-react';
 import { testTelegramBot, setTelegramWebhook, getTelegramWebhookInfo, deleteTelegramWebhook, setBotCommands, BOT_COMMANDS, TelegramBotInfo, DEFAULT_TELEGRAM_BOT_TOKEN, DEFAULT_TELEGRAM_BOT_USERNAME, sendTelegramMessage, sendNightlyExecutiveBriefing } from '@/services/telegramService';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
@@ -28,7 +28,7 @@ import PosShortcutSettings from '@/components/PosShortcutSettings';
 
 const Admin = () => {
   const { t, i18n } = useTranslation();
-  const { settings, updateSettings, clearAllData, sales, customers } = useAppContext();
+  const { settings, updateSettings, clearAllData, sales, customers, products, vendors, purchases, setProducts, setCustomers, setSales, setVendors } = useAppContext();
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -439,8 +439,52 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
     }
   };
 
+  const handleDownloadFullBackup = () => {
+    try {
+      const snapshot = {
+        exportedAt: new Date().toISOString(),
+        settings,
+        products,
+        customers,
+        sales,
+        vendors,
+        purchases,
+      };
+      const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `mvpos_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showSuccess('Full system backup downloaded (.json)');
+    } catch (err: any) {
+      showError(err?.message || 'Failed to export backup');
+    }
+  };
+
   const handleDatabaseUploadClick = () => {
     document.getElementById('database-upload')?.click();
+  };
+
+  const handleDatabaseFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result || '{}'));
+        if (Array.isArray(parsed.products)) setProducts(parsed.products);
+        if (Array.isArray(parsed.customers)) setCustomers(parsed.customers);
+        if (Array.isArray(parsed.sales)) setSales(parsed.sales);
+        if (Array.isArray(parsed.vendors)) setVendors(parsed.vendors);
+        showSuccess('Backup restored successfully');
+      } catch (err: any) {
+        showError('Invalid backup JSON file');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   const handleAddOffer = (offer: CustomerDisplayOffer) => {
@@ -467,77 +511,95 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
 
 
 
-  return (
-    <div className="p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
-      <div className="flex justify-end items-center mb-8">
-        <div className="text-right">
-          <h1 className="text-3xl font-black text-foreground flex items-center justify-end gap-3">
-            {renderBoth('admin_settings')} <Settings className="h-8 w-8 text-primary" />
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">Configure your system, users and business logic</p>
-        </div>
-      </div>
+  const NAV_GROUPS: {
+    heading: string;
+    items: {
+      id: string;
+      label: React.ReactNode;
+      icon: React.ComponentType<{ className?: string }>;
+      chip: string;
+      desc: string;
+    }[];
+  }[] = [
+    { heading: 'Business', items: [
+      { id: 'shopSettings', label: renderBoth('shop_settings'), icon: Building2, chip: 'bg-blue-500/10 text-blue-500', desc: 'Store identity, currency, tax and POS shortcuts' },
+      { id: 'accountingSettings', label: renderBoth('accounting_settings'), icon: Landmark, chip: 'bg-amber-500/10 text-amber-500', desc: 'Credit sales and receivables rules' },
+      { id: 'generalSettings', label: renderBoth('general_settings'), icon: Layout, chip: 'bg-violet-500/10 text-violet-500', desc: 'Loyalty program and customer display' },
+    ] },
+    { heading: 'System', items: [
+      { id: 'softwareSettings', label: renderBoth('software_settings'), icon: Monitor, chip: 'bg-sky-500/10 text-sky-500', desc: 'Language, theme, app install and CDN' },
+      { id: 'printingSettings', label: renderBoth('printing_settings'), icon: Printer, chip: 'bg-emerald-500/10 text-emerald-500', desc: 'Receipt printers and direct printing' },
+      { id: 'reportSettings', label: renderBoth('report_settings'), icon: FileText, chip: 'bg-orange-500/10 text-orange-500', desc: 'Report layout and content options' },
+    ] },
+    { heading: 'Team & Data', items: [
+      { id: 'userManagement', label: renderBoth('user_management'), icon: Users, chip: 'bg-pink-500/10 text-pink-500', desc: 'Staff accounts, roles and permissions' },
+      { id: 'dataManagement', label: renderBoth('data_management'), icon: Database, chip: 'bg-rose-500/10 text-rose-500', desc: 'Sync, backup, restore and data wipe' },
+    ] },
+    { heading: 'Integrations', items: [
+      { id: 'telegramSettings', label: 'Telegram Bot (އޮޓޮމޭޝަން)', icon: TelegramIcon, chip: 'bg-[#229ED9]/10 text-[#229ED9]', desc: 'Bot connection, alerts and webhook' },
+    ] },
+  ];
+  const activeNav = NAV_GROUPS.flatMap(g => g.items).find(i => i.id === activeTab) || NAV_GROUPS[0].items[0];
+  const ActiveIcon = activeNav.icon;
 
-      <div className="flex-1 flex overflow-hidden max-w-7xl mx-auto w-full gap-6 pb-6">
-        {/* Navigation Sidebar */}
-        <div className="w-80 flex-shrink-0 apple-glass-card rounded-3xl border border-white/20 dark:border-white/10 p-3 flex flex-col gap-1.5 overflow-y-auto custom-scrollbar shadow-lg">
-          {[
-            { id: 'shopSettings', label: renderBoth('shop_settings'), icon: Building2 },
-            { id: 'accountingSettings', label: renderBoth('accounting_settings'), icon: Landmark },
-            { id: 'softwareSettings', label: renderBoth('software_settings'), icon: Monitor },
-            { id: 'generalSettings', label: renderBoth('general_settings'), icon: Layout },
-            { id: 'reportSettings', label: renderBoth('report_settings'), icon: FileText },
-            { id: 'printingSettings', label: renderBoth('printing_settings'), icon: Printer },
-            { id: 'telegramSettings', label: 'Telegram Bot (އޮޓޮމޭޝަން)', icon: TelegramIcon, special: true },
-            { id: 'userManagement', label: renderBoth('user_management'), icon: Users },
-            { id: 'dataManagement', label: renderBoth('data_management'), icon: Database },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id as any)}
-                className={cn(
-                  "flex items-center gap-3 w-full px-3.5 py-3 rounded-2xl text-xs font-black transition-all text-right",
-                  isActive
-                    ? "bg-primary text-white shadow-md shadow-primary/25 border border-primary/40"
-                    : tab.special
-                      ? "text-[#229ED9] hover:bg-[#229ED9]/10 border border-transparent"
-                      : "text-muted-foreground hover:text-foreground hover:bg-white/10 dark:hover:bg-white/5 border border-transparent"
-                )}
-              >
-                <div className={cn(
-                  "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform",
-                  isActive ? "bg-white/20 text-white" : "bg-muted/80 text-muted-foreground"
-                )}>
-                  <Icon className="h-4 w-4" />
-                </div>
-                <span className="flex-1 truncate">{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
+  return (
+    <div className="p-4 md:p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden max-w-7xl mx-auto w-full gap-4 md:gap-6">
+        {/* Navigation Rail */}
+        <nav className="md:w-72 flex-shrink-0 bg-card border border-border rounded-xl p-2 md:p-3 flex md:flex-col gap-1 overflow-x-auto md:overflow-y-auto custom-scrollbar">
+          <div className="hidden md:flex items-center gap-2.5 px-2 pt-1 pb-3 mb-1 border-b border-border">
+            <div className="w-9 h-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center"><Settings className="h-5 w-5" /></div>
+            <div className="text-right min-w-0">
+              <p className="text-sm font-black truncate">{renderBoth('admin_settings')}</p>
+              <p className="text-[10px] text-muted-foreground">Control panel</p>
+            </div>
+          </div>
+          {NAV_GROUPS.map((group) => (
+            <div key={group.heading} className="flex md:flex-col gap-1 md:mb-2">
+              <p className="hidden md:block px-2 pt-2 pb-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 text-right">{group.heading}</p>
+              {group.items.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={cn(
+                      "relative flex items-center gap-2.5 md:w-full px-2.5 py-2 rounded-lg text-xs font-bold transition-colors text-right whitespace-nowrap md:whitespace-normal",
+                      isActive ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                    )}
+                  >
+                    {isActive && <span className="absolute right-0 top-1.5 bottom-1.5 w-1 rounded-full bg-primary" />}
+                    <span className={cn("w-7 h-7 rounded-md flex items-center justify-center shrink-0", tab.chip)}>
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="flex-1 md:truncate">{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
 
         {/* Settings Content Pane */}
-        <ScrollArea className="flex-1 custom-scrollbar apple-glass-card rounded-3xl border border-white/20 dark:border-white/10 shadow-xl">
-          <div className="p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <ScrollArea className="flex-1 custom-scrollbar">
+          <div className="space-y-5 pb-6 pl-1">
+            <div className="flex items-center gap-3 bg-card border border-border rounded-xl px-5 py-4">
+              <div className={cn("w-11 h-11 rounded-lg flex items-center justify-center shrink-0", activeNav.chip)}>
+                <ActiveIcon className="h-5 w-5" />
+              </div>
+              <div className="text-right min-w-0">
+                <h1 className="text-lg font-black text-foreground leading-tight">{activeNav.label}</h1>
+                <p className="text-xs text-muted-foreground mt-0.5" dir="ltr">{activeNav.desc}</p>
+              </div>
+            </div>
             {/* Shop Settings */}
             {activeTab === 'shopSettings' && (
               <div className="space-y-6">
-                <div className="flex items-center justify-between pb-3 border-b border-white/15 dark:border-white/10">
-                  <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-primary/10 text-primary border-primary/25 px-2.5 py-0.5">
-                    Store Profile
-                  </Badge>
-                  <h3 className="text-xl font-black text-foreground flex items-center gap-2">
-                    <span>{renderBoth('shop_settings')}</span>
-                    <Building2 className="h-5 w-5 text-primary" />
-                  </h3>
-                </div>
 
                 {/* Identity & Logo Grid */}
-                <div className="apple-glass-card p-6 rounded-3xl border border-white/20 dark:border-white/10 space-y-6 shadow-xs">
+                <div className="bg-card p-5 rounded-xl border border-border space-y-6 shadow-xs">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                     <div className="space-y-3.5">
                       <div className="space-y-1">
@@ -547,7 +609,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         <Input
                           value={shopSettings.shopName}
                           onChange={(e) => handleSettingsChange('shop', 'shopName', e.target.value)}
-                          className="apple-glass-input h-11 rounded-xl text-right font-bold text-sm"
+                          className="bg-background border-border h-11 rounded-xl text-right font-bold text-sm"
                         />
                       </div>
                       <div className="space-y-1">
@@ -557,7 +619,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         <Input
                           value={shopSettings.shopAddress}
                           onChange={(e) => handleSettingsChange('shop', 'shopAddress', e.target.value)}
-                          className="apple-glass-input h-11 rounded-xl text-right font-bold text-sm"
+                          className="bg-background border-border h-11 rounded-xl text-right font-bold text-sm"
                         />
                       </div>
                       <div className="space-y-1">
@@ -567,7 +629,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         <Input
                           value={shopSettings.shopPhone}
                           onChange={(e) => handleSettingsChange('shop', 'shopPhone', e.target.value)}
-                          className="apple-glass-input h-11 rounded-xl text-right font-mono text-sm"
+                          className="bg-background border-border h-11 rounded-xl text-right font-mono text-sm"
                           dir="ltr"
                         />
                       </div>
@@ -579,20 +641,20 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                           value={shopSettings.tinNumber ?? '1021550GST501'}
                           placeholder="1021550GST501"
                           onChange={(e) => handleSettingsChange('shop', 'tinNumber', e.target.value)}
-                          className="apple-glass-input h-11 rounded-xl text-left font-mono font-bold tracking-wider text-sm"
+                          className="bg-background border-border h-11 rounded-xl text-left font-mono font-bold tracking-wider text-sm"
                           dir="ltr"
                         />
                       </div>
                     </div>
 
-                    <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-white/20 dark:border-white/10 rounded-3xl bg-white/5 dark:bg-black/20 min-h-[260px] text-center">
+                    <div className="flex flex-col items-center justify-center p-5 border-2 border-dashed border-border rounded-xl bg-muted/40 min-h-[260px] text-center">
                       {shopSettings.logo ? (
                         <div className="relative group">
-                          <img src={shopSettings.logo} className="max-h-36 max-w-full object-contain drop-shadow-lg rounded-xl" alt="Shop Logo" />
+                          <img src={shopSettings.logo} className="max-h-36 max-w-full object-contain drop-shadow-sm rounded-xl" alt="Shop Logo" />
                           <Button
                             variant="destructive"
                             size="icon"
-                            className="absolute -top-2 -right-2 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                            className="absolute -top-2 -right-2 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
                             onClick={() => handleSettingsChange('shop', 'logo', '')}
                             title="Remove Logo"
                           >
@@ -601,7 +663,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         </div>
                       ) : (
                         <div className="space-y-3">
-                          <div className="w-14 h-14 rounded-2xl bg-white/10 dark:bg-white/5 border border-white/20 flex items-center justify-center mx-auto text-muted-foreground">
+                          <div className="w-14 h-14 rounded-lg bg-muted border border-border flex items-center justify-center mx-auto text-muted-foreground">
                             <ImageIcon className="h-7 w-7 opacity-60" />
                           </div>
                           <div>
@@ -617,7 +679,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
                     <div className="space-y-1">
                       <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right">
                         {renderBoth('currency')}*
@@ -625,7 +687,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                       <Input
                         value={shopSettings.currency}
                         onChange={(e) => handleSettingsChange('shop', 'currency', e.target.value)}
-                        className="apple-glass-input h-11 rounded-xl text-right font-black text-primary text-sm font-mono"
+                        className="bg-background border-border h-11 rounded-xl text-right font-black text-primary text-sm font-mono"
                       />
                     </div>
                     <div className="space-y-1">
@@ -637,13 +699,13 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         value={shopSettings.taxRate}
                         onChange={(e) => handleSettingsChange('shop', 'taxRate', parseFloat(e.target.value))}
                         dir="ltr"
-                        className="apple-glass-input h-11 rounded-xl text-left font-black font-mono text-sm"
+                        className="bg-background border-border h-11 rounded-xl text-left font-black font-mono text-sm"
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="apple-glass-card p-6 rounded-3xl border border-white/20 dark:border-white/10 shadow-xs">
+                <div className="bg-card p-5 rounded-xl border border-border shadow-xs">
                   <PosShortcutSettings
                     saved={shopSettings.posShortcuts}
                     onSave={(shortcuts) => handleSettingsChange('shop', 'posShortcuts', shortcuts)}
@@ -655,19 +717,10 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
             {/* Accounting Settings */}
             {activeTab === 'accountingSettings' && (
               <div className="space-y-6">
-                <div className="flex items-center justify-between pb-3 border-b border-white/15 dark:border-white/10">
-                  <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-500 border-amber-500/25 px-2.5 py-0.5">
-                    Receivables &amp; Credit
-                  </Badge>
-                  <h3 className="text-xl font-black text-foreground flex items-center gap-2">
-                    <span>{renderBoth('accounting_settings')}</span>
-                    <Landmark className="h-5 w-5 text-primary" />
-                  </h3>
-                </div>
 
-                <div className="apple-glass-card p-6 rounded-3xl border border-white/20 dark:border-white/10 space-y-6 shadow-xs">
+                <div className="bg-card p-5 rounded-xl border border-border space-y-6 shadow-xs">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="flex items-center justify-between p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10">
+                    <div className="flex items-center justify-between p-4 bg-muted/40 rounded-lg border border-border">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                           <CreditCard className="h-5 w-5" />
@@ -700,7 +753,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                           value={accountingSettings.creditLimit}
                           onChange={(e) => handleSettingsChange('accounting', 'creditLimit', parseFloat(e.target.value))}
                           dir="ltr"
-                          className="apple-glass-input h-11 rounded-xl text-left font-bold font-mono pl-14 pr-3 text-sm"
+                          className="bg-background border-border h-11 rounded-xl text-left font-bold font-mono pl-14 pr-3 text-sm"
                         />
                       </div>
                     </div>
@@ -712,49 +765,40 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
             {/* Software & PWA App Settings */}
             {activeTab === 'softwareSettings' && (
               <div className="space-y-6">
-                <div className="flex items-center justify-between pb-3 border-b border-white/15 dark:border-white/10">
-                  <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-sky-500/10 text-sky-500 border-sky-500/25 px-2.5 py-0.5">
-                    Platform &amp; Cache
-                  </Badge>
-                  <h3 className="text-xl font-black text-foreground flex items-center gap-2">
-                    <span>{renderBoth('software_settings')}</span>
-                    <Monitor className="h-5 w-5 text-primary" />
-                  </h3>
-                </div>
 
                 {/* System Language & Theme */}
-                <div className="apple-glass-card p-6 rounded-3xl border border-white/20 dark:border-white/10 space-y-4 shadow-xs">
+                <div className="bg-card p-5 rounded-xl border border-border space-y-4 shadow-xs">
                   <h4 className="text-sm font-black text-foreground flex items-center gap-2">
                     <Palette className="h-4 w-4 text-purple-400" />
                     <span>Display Preferences &amp; Languages</span>
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="flex items-center justify-between p-3.5 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10">
+                    <div className="flex items-center justify-between p-3.5 bg-muted/40 rounded-lg border border-border">
                       <div className="flex items-center gap-2.5">
                         <Languages className="h-4 w-4 text-primary" />
                         <span className="text-xs font-bold text-foreground">Language</span>
                       </div>
                       <Select value={softwareSettings.language} onValueChange={(val) => handleSettingsChange('software', 'language', val)}>
-                        <SelectTrigger className="w-[120px] apple-glass-input h-9 text-right font-bold text-xs rounded-xl">
+                        <SelectTrigger className="w-[120px] bg-background border-border h-9 text-right font-bold text-xs rounded-xl">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="apple-glass-dialog border border-white/20 text-foreground">
+                        <SelectContent className="bg-popover border border-border text-foreground">
                           <SelectItem value="dv" className="text-right">ދިވެހި</SelectItem>
                           <SelectItem value="en" className="text-right">English</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
-                    <div className="flex items-center justify-between p-3.5 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10">
+                    <div className="flex items-center justify-between p-3.5 bg-muted/40 rounded-lg border border-border">
                       <div className="flex items-center gap-2.5">
                         <Palette className="h-4 w-4 text-purple-400" />
                         <span className="text-xs font-bold text-foreground">Theme</span>
                       </div>
                       <Select value={softwareSettings.theme} onValueChange={(val) => handleSettingsChange('software', 'theme', val)}>
-                        <SelectTrigger className="w-[120px] apple-glass-input h-9 text-right font-bold text-xs rounded-xl">
+                        <SelectTrigger className="w-[120px] bg-background border-border h-9 text-right font-bold text-xs rounded-xl">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="apple-glass-dialog border border-white/20 text-foreground">
+                        <SelectContent className="bg-popover border border-border text-foreground">
                           <SelectItem value="dark" className="text-right">Dark Mode</SelectItem>
                           <SelectItem value="light" className="text-right">Light Mode</SelectItem>
                         </SelectContent>
@@ -764,7 +808,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                 </div>
 
                 {/* Progressive Web App (PWA) Card */}
-                <div className="apple-glass-card p-6 rounded-3xl border border-white/20 dark:border-white/10 space-y-6 shadow-xs">
+                <div className="bg-card p-5 rounded-xl border border-border space-y-6 shadow-xs">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="w-full md:w-64">
                       <PWAInstallButton />
@@ -780,15 +824,15 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-right pt-2 border-t border-white/10">
-                    <div className="p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10 space-y-1.5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-right pt-2 border-t border-border">
+                    <div className="p-4 bg-muted/40 rounded-lg border border-border space-y-1.5">
                       <h4 className="text-xs font-black text-orange-400">Silent Kiosk Printing in PWA</h4>
                       <p className="text-[11px] text-muted-foreground leading-relaxed">
                         To bypass the browser print dialog completely, add <code className="px-1.5 py-0.5 bg-background rounded text-foreground font-mono">--kiosk-printing</code> to the end of the Windows PWA desktop shortcut's <strong>Target</strong> property.
                       </p>
                     </div>
 
-                    <div className="p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10 space-y-1.5">
+                    <div className="p-4 bg-muted/40 rounded-lg border border-border space-y-1.5">
                       <h4 className="text-xs font-black text-emerald-400">Offline &amp; Fast Caching</h4>
                       <p className="text-[11px] text-muted-foreground leading-relaxed">
                         Once installed, MVPOS service worker precaches all core assets, icons, fonts, and UI scripts for lightning-fast loading even with slow connectivity.
@@ -798,7 +842,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                 </div>
 
                 {/* Cloudflare Storage CDN Card */}
-                <div className="apple-glass-card p-6 rounded-3xl border border-white/20 dark:border-white/10 space-y-6 shadow-xs">
+                <div className="bg-card p-5 rounded-xl border border-border space-y-6 shadow-xs">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
                       <Button
@@ -806,7 +850,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         variant="outline"
                         onClick={handleTestCloudflareCdn}
                         disabled={testingCdn}
-                        className="h-10 px-4 rounded-xl gap-2 font-bold text-xs apple-glass-pill"
+                        className="h-10 px-4 rounded-xl gap-2 font-bold text-xs bg-card border border-border"
                       >
                         {testingCdn ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4 text-primary" />}
                         <span>Test Connection</span>
@@ -833,14 +877,14 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                       value={softwareSettings.storageCdnUrl || ''}
                       onChange={(e) => handleSettingsChange('software', 'storageCdnUrl', e.target.value.trim())}
                       placeholder="https://pos-image-cdn.yourname.workers.dev"
-                      className="apple-glass-input h-11 rounded-xl text-left font-mono text-xs"
+                      className="bg-background border-border h-11 rounded-xl text-left font-mono text-xs"
                       dir="ltr"
                     />
                   </div>
 
                   {cdnTestResult && (
                     <div className={cn(
-                      "p-3 rounded-2xl border text-xs font-bold flex items-center gap-2",
+                      "p-3 rounded-lg border text-xs font-bold flex items-center gap-2",
                       cdnTestResult.success ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-red-500/10 border-red-500/30 text-red-400"
                     )}>
                       {cdnTestResult.success ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <X className="h-4 w-4 shrink-0" />}
@@ -848,7 +892,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                     </div>
                   )}
 
-                  <div className="p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10 space-y-2.5 text-right">
+                  <div className="p-4 bg-muted/40 rounded-lg border border-border space-y-2.5 text-right">
                     <div className="flex items-center justify-between">
                       <Button
                         size="sm"
@@ -878,19 +922,10 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
             {/* General Settings */}
             {activeTab === 'generalSettings' && (
               <div className="space-y-6">
-                <div className="flex items-center justify-between pb-3 border-b border-white/15 dark:border-white/10">
-                  <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-purple-500/10 text-purple-500 border-purple-500/25 px-2.5 py-0.5">
-                    Customer Experience
-                  </Badge>
-                  <h3 className="text-xl font-black text-foreground flex items-center gap-2">
-                    <span>{renderBoth('general_settings')}</span>
-                    <Layout className="h-5 w-5 text-primary" />
-                  </h3>
-                </div>
 
                 {/* Loyalty Program */}
-                <div className="apple-glass-card p-6 rounded-3xl border border-white/20 dark:border-white/10 space-y-6 shadow-xs">
-                  <div className="flex items-center justify-between pb-4 border-b border-white/10">
+                <div className="bg-card p-5 rounded-xl border border-border space-y-6 shadow-xs">
+                  <div className="flex items-center justify-between pb-4 border-b border-border">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                         <Gift className="h-5 w-5" />
@@ -920,7 +955,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         value={generalSettings.loyaltyAmountPerPoint ?? 20}
                         onChange={(e) => handleSettingsChange('general', 'loyaltyAmountPerPoint', parseFloat(e.target.value))}
                         dir="ltr"
-                        className="apple-glass-input h-11 rounded-xl text-left font-mono font-bold text-sm"
+                        className="bg-background border-border h-11 rounded-xl text-left font-mono font-bold text-sm"
                       />
                     </div>
                     <div className="space-y-1">
@@ -932,7 +967,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         value={generalSettings.loyaltyPointsValue ?? 10}
                         onChange={(e) => handleSettingsChange('general', 'loyaltyPointsValue', parseFloat(e.target.value))}
                         dir="ltr"
-                        className="apple-glass-input h-11 rounded-xl text-left font-mono font-bold text-sm"
+                        className="bg-background border-border h-11 rounded-xl text-left font-mono font-bold text-sm"
                       />
                     </div>
                     <div className="space-y-1">
@@ -944,15 +979,15 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         value={generalSettings.loyaltyMinRedeemPoints ?? 10}
                         onChange={(e) => handleSettingsChange('general', 'loyaltyMinRedeemPoints', parseFloat(e.target.value))}
                         dir="ltr"
-                        className="apple-glass-input h-11 rounded-xl text-left font-mono font-bold text-sm"
+                        className="bg-background border-border h-11 rounded-xl text-left font-mono font-bold text-sm"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Customer Dual Display & Ad Mode */}
-                <div className="apple-glass-card p-6 rounded-3xl border border-white/20 dark:border-white/10 space-y-6 shadow-xs">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+                <div className="bg-card p-5 rounded-xl border border-border space-y-6 shadow-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                         <Monitor className="h-5 w-5" />
@@ -983,7 +1018,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                           type="number"
                           value={generalSettings.customerDisplayIdleTimeout || 10}
                           onChange={(e) => handleSettingsChange('general', 'customerDisplayIdleTimeout', parseFloat(e.target.value))}
-                          className="apple-glass-input h-11 rounded-xl text-left font-mono font-bold text-sm pl-9"
+                          className="bg-background border-border h-11 rounded-xl text-left font-mono font-bold text-sm pl-9"
                           dir="ltr"
                         />
                       </div>
@@ -1007,7 +1042,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                     </Label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {(generalSettings.customerDisplayOffers || []).map((offer, idx) => (
-                        <div key={offer.id || idx} className="apple-glass-card rounded-2xl border border-white/20 dark:border-white/10 p-3 relative group overflow-hidden shadow-xs">
+                        <div key={offer.id || idx} className="bg-card rounded-lg border border-border p-3 relative group overflow-hidden shadow-xs">
                           <Button
                             variant="destructive"
                             size="icon"
@@ -1032,7 +1067,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         </div>
                       ))}
                       {(generalSettings.customerDisplayOffers || []).length === 0 && (
-                        <div className="col-span-full text-center py-8 text-muted-foreground border border-dashed border-white/20 rounded-2xl bg-white/5">
+                        <div className="col-span-full text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg bg-muted/50">
                           <ImageIcon className="h-7 w-7 mx-auto mb-1.5 opacity-30" />
                           <p className="text-xs font-bold">No promotional slides added yet</p>
                         </div>
@@ -1046,28 +1081,19 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
             {/* Printing Settings */}
             {activeTab === 'printingSettings' && (
               <div className="space-y-6">
-                <div className="flex items-center justify-between pb-3 border-b border-white/15 dark:border-white/10">
-                  <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border-emerald-500/25 px-2.5 py-0.5">
-                    Hardware &amp; Receipts
-                  </Badge>
-                  <h3 className="text-xl font-black text-foreground flex items-center gap-2">
-                    <span>{renderBoth('printing_settings')}</span>
-                    <Printer className="h-5 w-5 text-primary" />
-                  </h3>
-                </div>
 
-                <div className="apple-glass-card p-6 rounded-3xl border border-white/20 dark:border-white/10 space-y-6 shadow-xs">
+                <div className="bg-card p-5 rounded-xl border border-border space-y-6 shadow-xs">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="flex items-center justify-between p-3.5 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10">
+                    <div className="flex items-center justify-between p-3.5 bg-muted/40 rounded-lg border border-border">
                       <div className="flex items-center gap-2.5">
                         <Receipt className="h-4 w-4 text-primary" />
                         <span className="text-xs font-bold text-foreground">Print Trigger</span>
                       </div>
                       <Select value={printingSettings.printMode} onValueChange={(val) => handleSettingsChange('printing', 'printMode', val)}>
-                        <SelectTrigger className="w-[130px] apple-glass-input h-9 text-right font-bold text-xs rounded-xl">
+                        <SelectTrigger className="w-[130px] bg-background border-border h-9 text-right font-bold text-xs rounded-xl">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="apple-glass-dialog border border-white/20 text-foreground">
+                        <SelectContent className="bg-popover border border-border text-foreground">
                           <SelectItem value="auto" className="text-right">Automatic</SelectItem>
                           <SelectItem value="ask" className="text-right">Ask Always</SelectItem>
                           <SelectItem value="off" className="text-right">Disabled</SelectItem>
@@ -1075,16 +1101,16 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                       </Select>
                     </div>
 
-                    <div className="flex items-center justify-between p-3.5 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10">
+                    <div className="flex items-center justify-between p-3.5 bg-muted/40 rounded-lg border border-border">
                       <div className="flex items-center gap-2.5">
                         <Layout className="h-4 w-4 text-primary" />
                         <span className="text-xs font-bold text-foreground">Thermal Paper Width</span>
                       </div>
                       <Select value={printingSettings.thermalPrinterWidth} onValueChange={(val) => handleSettingsChange('printing', 'thermalPrinterWidth', val)}>
-                        <SelectTrigger className="w-[110px] apple-glass-input h-9 text-right font-bold text-xs rounded-xl">
+                        <SelectTrigger className="w-[110px] bg-background border-border h-9 text-right font-bold text-xs rounded-xl">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="apple-glass-dialog border border-white/20 text-foreground">
+                        <SelectContent className="bg-popover border border-border text-foreground">
                           <SelectItem value="58mm" className="text-right">58mm</SelectItem>
                           <SelectItem value="80mm" className="text-right">80mm</SelectItem>
                         </SelectContent>
@@ -1093,7 +1119,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                   </div>
 
                   {/* QZ Tray Direct Printing */}
-                  <div className="p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="p-4 bg-muted/40 rounded-lg border border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                         <Printer className="h-4 w-4" />
@@ -1107,7 +1133,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                       {printingSettings.useQzTray && (
                         <Input
                           placeholder="Exact Printer Name"
-                          className="w-[180px] apple-glass-input h-9 text-xs rounded-xl"
+                          className="w-[180px] bg-background border-border h-9 text-xs rounded-xl"
                           value={printingSettings.printerName || ''}
                           onChange={(e) => handleSettingsChange('printing', 'printerName', e.target.value)}
                         />
@@ -1120,7 +1146,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                   </div>
 
                   {/* Silent Printing Tip Box */}
-                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-start gap-3 text-right" dir="rtl">
+                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg flex items-start gap-3 text-right" dir="rtl">
                     <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
                       <Receipt className="h-4 w-4" />
                     </div>
@@ -1140,17 +1166,8 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
             {/* Report Settings */}
             {activeTab === 'reportSettings' && (
               <div className="space-y-6">
-                <div className="flex items-center justify-between pb-3 border-b border-white/15 dark:border-white/10">
-                  <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-500 border-blue-500/25 px-2.5 py-0.5">
-                    Headers &amp; Footers
-                  </Badge>
-                  <h3 className="text-xl font-black text-foreground flex items-center gap-2">
-                    <span>{renderBoth('report_settings')}</span>
-                    <FileText className="h-5 w-5 text-primary" />
-                  </h3>
-                </div>
 
-                <div className="apple-glass-card p-6 rounded-3xl border border-white/20 dark:border-white/10 space-y-4 shadow-xs">
+                <div className="bg-card p-5 rounded-xl border border-border space-y-4 shadow-xs">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1 text-right">
                       <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block">
@@ -1160,7 +1177,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         value={reportSettings.invoiceHeader || ''}
                         onChange={(e) => handleSettingsChange('reports', 'invoiceHeader', e.target.value)}
                         placeholder="Welcome to our store"
-                        className="apple-glass-input h-11 rounded-xl text-right text-xs font-bold"
+                        className="bg-background border-border h-11 rounded-xl text-right text-xs font-bold"
                       />
                     </div>
                     <div className="space-y-1 text-right">
@@ -1171,7 +1188,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         value={reportSettings.invoiceFooter || ''}
                         onChange={(e) => handleSettingsChange('reports', 'invoiceFooter', e.target.value)}
                         placeholder="Thank you for shopping with us!"
-                        className="apple-glass-input h-11 rounded-xl text-right text-xs font-bold"
+                        className="bg-background border-border h-11 rounded-xl text-right text-xs font-bold"
                       />
                     </div>
                   </div>
@@ -1181,79 +1198,85 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
 
             {/* User Management */}
             {activeTab === 'userManagement' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between pb-3 border-b border-white/15 dark:border-white/10">
+              <div className="space-y-5">
+                <div className="bg-card p-5 rounded-xl border border-border flex flex-wrap items-center justify-between gap-4 shadow-xs">
                   <Button
                     onClick={() => { setSelectedUser(null); setUserDialogOpen(true); }}
-                    className="bg-primary hover:bg-primary/90 h-10 px-5 rounded-xl font-black text-xs gap-1.5 shadow-sm"
+                    className="bg-primary hover:bg-primary/90 h-10 px-5 rounded-lg font-black text-xs gap-2 shadow-xs"
                   >
                     <UserPlus className="h-4 w-4" /> {renderBoth('add_user')}
                   </Button>
                   <div className="text-right">
-                    <h3 className="text-xl font-black text-foreground flex items-center justify-end gap-2">
-                      <span>{renderBoth('user_management')}</span>
-                      <Users className="h-5 w-5 text-primary" />
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">Manage system logins, roles and cashiers</p>
+                    <p className="text-sm font-black text-foreground">Active Staff Accounts ({users.length})</p>
+                    <p className="text-xs text-muted-foreground">Manage cashier &amp; administrator logins and module permissions</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {users.map((user) => (
-                    <div
-                      key={user.id}
-                      className="apple-glass-card p-4 rounded-3xl border border-white/20 dark:border-white/10 flex items-center justify-between group hover:border-primary/40 transition-all shadow-xs"
-                    >
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-xl hover:bg-blue-500/10 text-blue-400"
-                          onClick={() => { setSelectedUser(user); setUserDialogOpen(true); }}
-                          title="Edit User"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-xl hover:bg-red-500/10 text-red-400"
-                          onClick={async () => {
-                            const confirmMsg = `Are you sure you want to delete user "${user.username}" (${user.name_en || user.name_dv})?`;
-                            if (window.confirm(confirmMsg)) {
-                              try {
-                                await deleteUser(user.id);
-                                showSuccess('User deleted successfully');
-                              } catch (err: any) {
-                                showError(err?.message || 'Failed to delete user');
+                <div className="bg-card rounded-xl border border-border overflow-hidden shadow-xs">
+                  <div className="px-5 py-3 bg-muted/50 border-b border-border flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                    <span>Actions</span>
+                    <span>Account &amp; Role</span>
+                  </div>
+                  <div className="divide-y divide-border">
+                    {users.map((user) => (
+                      <div
+                        key={user.id}
+                        className="px-5 py-3.5 flex items-center justify-between hover:bg-muted/30 transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 px-3 rounded-lg text-xs font-bold gap-1.5 hover:bg-blue-500/10 hover:text-blue-500 hover:border-blue-500/30"
+                            onClick={() => { setSelectedUser(user); setUserDialogOpen(true); }}
+                            title="Edit User"
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                            <span>Edit</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg hover:bg-red-500/10 text-red-500 hover:border-red-500/30"
+                            onClick={async () => {
+                              const confirmMsg = `Are you sure you want to delete user "${user.username}" (${user.name_en || user.name_dv})?`;
+                              if (window.confirm(confirmMsg)) {
+                                try {
+                                  await deleteUser(user.id);
+                                  showSuccess('User deleted successfully');
+                                } catch (err: any) {
+                                  showError(err?.message || 'Failed to delete user');
+                                }
                               }
-                            }
-                          }}
-                          title="Delete User"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                            }}
+                            title="Delete User"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
 
-                      <div className="text-right flex items-center gap-3">
-                        <div>
-                          <div className="flex items-center justify-end gap-2 mb-0.5">
-                            <span className="text-sm font-black text-foreground">{user.name_dv || user.name_en}</span>
-                            <Badge className={cn(
-                              "text-[9px] font-black uppercase px-2 py-0.5 rounded-md",
-                              user.role === 'admin' ? "bg-primary/20 text-primary border-primary/30" : "bg-muted text-muted-foreground"
-                            )}>
-                              {user.role}
-                            </Badge>
+                        <div className="text-right flex items-center gap-3">
+                          <div>
+                            <div className="flex items-center justify-end gap-2 mb-0.5">
+                              <span className="text-sm font-black text-foreground">{user.name_dv || user.name_en}</span>
+                              <Badge className={cn(
+                                "text-[10px] font-black uppercase px-2 py-0.5 rounded-md",
+                                user.role === 'admin' ? "bg-primary/15 text-primary border border-primary/30" : "bg-muted text-muted-foreground border border-border"
+                              )}>
+                                {user.role}
+                              </Badge>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground font-mono font-bold tracking-wider" dir="ltr">
+                              @{user.username} {user.name_en && user.name_dv ? `• ${user.name_en}` : ''}
+                            </p>
                           </div>
-                          <p className="text-[11px] text-muted-foreground font-mono font-bold uppercase tracking-wider">@{user.username}</p>
-                        </div>
-                        <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center font-black text-xs shrink-0">
-                          {(user.name_en || user.name_dv || 'U').slice(0, 2).toUpperCase()}
+                          <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary border border-primary/20 flex items-center justify-center font-black text-xs shrink-0">
+                            {(user.name_en || user.name_dv || 'U').slice(0, 2).toUpperCase()}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -1261,19 +1284,67 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
             {/* Data Management */}
             {activeTab === 'dataManagement' && (
               <div className="space-y-6">
-                <div className="flex items-center justify-between pb-3 border-b border-white/15 dark:border-white/10">
-                  <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border-emerald-500/25 px-2.5 py-0.5">
-                    Multi-Terminal Mesh &amp; Storage
-                  </Badge>
-                  <h3 className="text-xl font-black text-foreground flex items-center gap-2">
-                    <span>{renderBoth('data_management')}</span>
-                    <Database className="h-5 w-5 text-primary" />
-                  </h3>
+                {/* Full Backup & Restore Card */}
+                <div className="bg-card p-5 rounded-xl border border-border space-y-4 shadow-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-border">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        onClick={handleDownloadFullBackup}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground h-10 px-4 rounded-lg font-black text-xs gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        <span>Download Full Backup (.JSON)</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleDatabaseUploadClick}
+                        className="h-10 px-4 rounded-lg font-black text-xs gap-2 border-border"
+                      >
+                        <Upload className="h-4 w-4" />
+                        <span>Restore Backup</span>
+                      </Button>
+                      <input
+                        id="database-upload"
+                        type="file"
+                        accept=".json"
+                        className="hidden"
+                        onChange={handleDatabaseFileChange}
+                      />
+                    </div>
+                    <div className="text-right">
+                      <h4 className="text-base font-black text-foreground">Local &amp; Cloud Snapshot Backup</h4>
+                      <p className="text-xs text-muted-foreground">Export or restore products, customers, sales, vendors, purchases and settings</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-right">
+                    <div className="p-3 rounded-lg bg-muted/40 border border-border">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Products</p>
+                      <p className="text-lg font-black font-mono tabular-nums text-foreground">{products.length}</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-muted/40 border border-border">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Customers</p>
+                      <p className="text-lg font-black font-mono tabular-nums text-foreground">{customers.length}</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-muted/40 border border-border">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sales Invoices</p>
+                      <p className="text-lg font-black font-mono tabular-nums text-foreground">{sales.length}</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-muted/40 border border-border">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Vendors</p>
+                      <p className="text-lg font-black font-mono tabular-nums text-foreground">{vendors.length}</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-muted/40 border border-border">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Purchases</p>
+                      <p className="text-lg font-black font-mono tabular-nums text-foreground">{purchases.length}</p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Realtime Live Multi-Computer Sync */}
-                <div className="apple-glass-card p-6 rounded-3xl border border-white/20 dark:border-white/10 space-y-6 shadow-xs">
-                  <div className="flex items-center justify-between pb-4 border-b border-white/10">
+                <div className="bg-card p-5 rounded-xl border border-border space-y-6 shadow-xs">
+                  <div className="flex items-center justify-between pb-4 border-b border-border">
                     <Badge variant="outline" className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30 font-bold px-3 py-1 text-xs flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block" />
                       <span>Live Mesh Active</span>
@@ -1283,28 +1354,28 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         <h4 className="text-base font-black text-foreground">Multi-Computer Live Sync</h4>
                         <p className="text-xs text-muted-foreground">Peer-to-peer WebSockets &amp; Delta Background Sync across counters</p>
                       </div>
-                      <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                         <Cloud className="h-5 w-5" />
                       </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-4 rounded-2xl bg-white/5 dark:bg-black/20 border border-white/15 dark:border-white/10 text-right space-y-1">
+                    <div className="p-4 rounded-lg bg-muted/40 border border-border text-right space-y-1">
                       <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Sales Sync</p>
                       <p className="text-sm font-bold text-foreground flex items-center justify-end gap-1.5 text-emerald-500">
                         <CheckCircle2 className="h-4 w-4" /> &lt; 50ms Realtime Mesh
                       </p>
                       <p className="text-[11px] text-muted-foreground">Syncs new sales &amp; credit edits across all active terminals immediately.</p>
                     </div>
-                    <div className="p-4 rounded-2xl bg-white/5 dark:bg-black/20 border border-white/15 dark:border-white/10 text-right space-y-1">
+                    <div className="p-4 rounded-lg bg-muted/40 border border-border text-right space-y-1">
                       <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Vendors &amp; Purchases</p>
                       <p className="text-sm font-bold text-foreground flex items-center justify-end gap-1.5 text-emerald-500">
                         <CheckCircle2 className="h-4 w-4" /> Instant Broadcast
                       </p>
                       <p className="text-[11px] text-muted-foreground">New vendors and purchase bills propagate instantly between computers.</p>
                     </div>
-                    <div className="p-4 rounded-2xl bg-white/5 dark:bg-black/20 border border-white/15 dark:border-white/10 text-right space-y-1">
+                    <div className="p-4 rounded-lg bg-muted/40 border border-border text-right space-y-1">
                       <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Awaiting Transfers</p>
                       <p className="text-sm font-bold text-foreground flex items-center justify-end gap-1.5 text-emerald-500">
                         <CheckCircle2 className="h-4 w-4" /> Live Slips Sync
@@ -1313,7 +1384,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                     </div>
                   </div>
 
-                  <div className="p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="p-4 bg-muted/40 rounded-lg border border-border flex flex-col sm:flex-row items-center justify-between gap-4">
                     <Button
                       type="button"
                       variant="outline"
@@ -1334,7 +1405,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                 </div>
 
                 {/* Wipe System Data */}
-                <div className="p-6 bg-red-500/10 border border-red-500/25 rounded-3xl apple-glass-card shadow-xs">
+                <div className="p-6 bg-red-500/10 border border-red-500/25 rounded-xl bg-card shadow-xs">
                   <div className="flex items-start gap-4 text-right">
                     <div className="flex-1">
                       <h4 className="text-base font-black text-red-500 mb-1">CRITICAL ACTION: CLEAR ALL DATA</h4>
@@ -1357,13 +1428,13 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                             showError("INVALID SECRET CODE");
                           }
                         }}
-                        className="bg-red-600 hover:bg-red-700 h-11 px-7 rounded-xl font-black gap-2 uppercase tracking-widest shadow-lg shadow-red-500/20 text-xs"
+                        className="bg-red-600 hover:bg-red-700 h-11 px-7 rounded-xl font-black gap-2 uppercase tracking-widest shadow-sm shadow-red-500/20 text-xs"
                         disabled={isClearingData}
                       >
                         <Trash2 className="h-4 w-4" /> {isClearingData ? "CLEARING..." : "WIPE SYSTEM DATA"}
                       </Button>
                     </div>
-                    <div className="w-12 h-12 rounded-2xl bg-red-500/20 flex items-center justify-center text-red-500 shrink-0">
+                    <div className="w-12 h-12 rounded-lg bg-red-500/20 flex items-center justify-center text-red-500 shrink-0">
                       <Shield className="h-6 w-6" />
                     </div>
                   </div>
@@ -1374,24 +1445,17 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
             {/* Telegram Integration Settings */}
             {activeTab === 'telegramSettings' && (
               <div className="space-y-6 text-right" dir="rtl">
-                <div className="flex items-center justify-between pb-3 border-b border-white/15 dark:border-white/10">
-                  <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-[#229ED9]/10 text-[#229ED9] border-[#229ED9]/25 px-2.5 py-0.5">
-                    Telegram Automation
-                  </Badge>
-                  <div className="text-right">
-                    <h3 className="text-xl font-black text-foreground flex items-center justify-end gap-2">
-                      <span>Telegram Bot Integration</span>
-                      <TelegramIcon className="h-6 w-6 text-[#229ED9]" />
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Configure automated payment receipts, QR code customer linking, and Telegram webhook
-                    </p>
+                <div className="flex items-center gap-3 bg-card border border-border rounded-xl px-5 py-4">
+                  <span className={cn("h-2.5 w-2.5 rounded-full shrink-0 ring-4", botInfo ? "bg-emerald-500 ring-emerald-500/20" : "bg-amber-500 ring-amber-500/20")} />
+                  <div className="text-right flex-1">
+                    <p className="text-sm font-black text-foreground">{botInfo ? 'Bot connected' : 'Connection not verified'}</p>
+                    <p className="text-xs text-muted-foreground" dir="ltr">{botInfo ? '@' + botInfo.username : (telegramSettings.botUsername ? '@' + telegramSettings.botUsername : 'No bot configured')} · {webhookLiveUrl ? 'Cloud webhook active' : 'Browser polling mode'}</p>
                   </div>
                 </div>
 
                 {/* Bot Credentials & Connection Test */}
-                <div className="apple-glass-card border border-white/20 dark:border-white/10 p-6 rounded-3xl space-y-6 shadow-xs">
-                  <div className="flex items-center justify-between pb-4 border-b border-white/10">
+                <div className="bg-card border border-border p-5 rounded-xl space-y-6 shadow-xs">
+                  <div className="flex items-center justify-between pb-4 border-b border-border">
                     <Button
                       type="button"
                       onClick={handleTestBot}
@@ -1408,7 +1472,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                   </div>
 
                   {botInfo && (
-                    <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-right space-y-1">
+                    <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-right space-y-1">
                       <p className="text-xs font-black text-emerald-500 flex items-center justify-end gap-1.5">
                         <span>Bot Verified &amp; Connected Successfully!</span>
                         <CheckCircle2 className="h-4 w-4" />
@@ -1428,7 +1492,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         value={telegramSettings.botUsername || ''}
                         onChange={(e) => handleSettingsChange('telegram', 'botUsername', e.target.value.replace('@', '').trim())}
                         placeholder="e.g. Bbacksh0p_bot"
-                        className="h-11 apple-glass-input rounded-xl font-mono text-left text-xs font-bold"
+                        className="h-11 bg-background border-border rounded-xl font-mono text-left text-xs font-bold"
                         dir="ltr"
                       />
                     </div>
@@ -1442,7 +1506,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         value={telegramSettings.botToken || ''}
                         onChange={(e) => handleSettingsChange('telegram', 'botToken', e.target.value.trim())}
                         placeholder="e.g. 8815725998:AAHVMSujW5JM-ND4CJAzPr_Qsj_enXm2cYQ"
-                        className="h-11 apple-glass-input rounded-xl font-mono text-left text-xs font-bold"
+                        className="h-11 bg-background border-border rounded-xl font-mono text-left text-xs font-bold"
                         dir="ltr"
                       />
                     </div>
@@ -1450,13 +1514,13 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                 </div>
 
                 {/* Automated Receipt Settings */}
-                <div className="apple-glass-card border border-white/20 dark:border-white/10 p-6 rounded-3xl space-y-4 shadow-xs">
-                  <h4 className="text-base font-black text-foreground pb-3 border-b border-white/10">
+                <div className="bg-card border border-border p-5 rounded-xl space-y-4 shadow-xs">
+                  <h4 className="text-base font-black text-foreground pb-3 border-b border-border">
                     Automated Receipt Delivery
                   </h4>
 
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10">
+                    <div className="flex items-center justify-between p-4 bg-muted/40 rounded-lg border border-border">
                       <Switch
                         checked={telegramSettings.autoSendPaymentReceipts !== false}
                         onCheckedChange={(val) => handleSettingsChange('telegram', 'autoSendPaymentReceipts', val)}
@@ -1469,7 +1533,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10">
+                    <div className="flex items-center justify-between p-4 bg-muted/40 rounded-lg border border-border">
                       <Switch
                         checked={Boolean(telegramSettings.autoSendSaleReceipts)}
                         onCheckedChange={(val) => handleSettingsChange('telegram', 'autoSendSaleReceipts', val)}
@@ -1485,8 +1549,8 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                 </div>
 
                 {/* Nightly Store Close Daily Briefing (B BACK Group) */}
-                <div className="apple-glass-card border border-white/20 dark:border-white/10 p-6 rounded-3xl space-y-4 shadow-xs">
-                  <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <div className="bg-card border border-border p-5 rounded-xl space-y-4 shadow-xs">
+                  <div className="flex items-center justify-between pb-3 border-b border-border">
                     <Button
                       type="button"
                       onClick={handleTestBriefing}
@@ -1513,7 +1577,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                   </div>
 
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10">
+                    <div className="flex items-center justify-between p-4 bg-muted/40 rounded-lg border border-border">
                       <span className="font-mono text-xs font-bold text-foreground bg-background/80 px-3 py-1.5 rounded-lg border border-border">
                         {groupChatIdInput || shopSettings?.telegramGroupChatId ? `Chat ID: ${groupChatIdInput || shopSettings?.telegramGroupChatId}` : '⚠️ Not configured'}
                       </span>
@@ -1525,7 +1589,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10">
+                    <div className="flex items-center justify-between p-4 bg-muted/40 rounded-lg border border-border">
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
                         Always Active
@@ -1541,13 +1605,13 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                 </div>
 
                 {/* Automated Customer Tab Overdue & 90% Threshold Reminders */}
-                <div className="apple-glass-card border border-white/20 dark:border-white/10 p-6 rounded-3xl space-y-4 shadow-xs">
-                  <h4 className="text-base font-black text-foreground pb-3 border-b border-white/10">
+                <div className="bg-card border border-border p-5 rounded-xl space-y-4 shadow-xs">
+                  <h4 className="text-base font-black text-foreground pb-3 border-b border-border">
                     Automated Customer Tab Overdue Reminders
                   </h4>
 
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10">
+                    <div className="flex items-center justify-between p-4 bg-muted/40 rounded-lg border border-border">
                       <Switch
                         checked={telegramSettings.autoMonthlyCreditReminder !== false}
                         onCheckedChange={(val) => handleSettingsChange('telegram', 'autoMonthlyCreditReminder', val)}
@@ -1560,7 +1624,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10">
+                    <div className="flex items-center justify-between p-4 bg-muted/40 rounded-lg border border-border">
                       <Switch
                         checked={telegramSettings.autoCreditReminderThreshold !== false}
                         onCheckedChange={(val) => handleSettingsChange('telegram', 'autoCreditReminderThreshold', val)}
@@ -1573,7 +1637,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                       </div>
                     </div>
 
-                    <div className="p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10 space-y-1.5 text-right">
+                    <div className="p-4 bg-muted/40 rounded-lg border border-border space-y-1.5 text-right">
                       <div className="flex items-center justify-between">
                         <span className="font-mono text-xs font-bold text-primary">
                           {telegramSettings.creditReminderThresholdPct || 90}%
@@ -1588,7 +1652,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         max="100"
                         value={telegramSettings.creditReminderThresholdPct || 90}
                         onChange={(e) => handleSettingsChange('telegram', 'creditReminderThresholdPct', Number(e.target.value))}
-                        className="h-10 apple-glass-input rounded-xl font-mono text-left w-32 text-xs"
+                        className="h-10 bg-background border-border rounded-xl font-mono text-left w-32 text-xs"
                         dir="ltr"
                       />
                     </div>
@@ -1596,8 +1660,8 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                 </div>
 
                 {/* 24/7 Cloud Webhook & Hosting Configuration */}
-                <div className="apple-glass-card border border-white/20 dark:border-white/10 p-6 rounded-3xl space-y-4 shadow-xs">
-                  <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <div className="bg-card border border-border p-5 rounded-xl space-y-4 shadow-xs">
+                  <div className="flex items-center justify-between pb-3 border-b border-border">
                     <div className="flex items-center gap-2">
                       <Button
                         type="button"
@@ -1634,7 +1698,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                   </div>
 
                   {/* Current Mode Badge */}
-                  <div className="p-4 rounded-2xl border bg-white/5 dark:bg-black/20 border-white/15 dark:border-white/10 flex items-center justify-between">
+                  <div className="p-4 rounded-lg border bg-muted/40 border-border flex items-center justify-between">
                     <div className="text-left">
                       {webhookLiveUrl ? (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
@@ -1660,7 +1724,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                   </div>
 
                   {/* 1-Click Activate Vercel Webhook */}
-                  <div className="p-4 rounded-2xl border border-primary/20 bg-primary/5 flex items-center justify-between">
+                  <div className="p-4 rounded-lg border border-primary/20 bg-primary/5 flex items-center justify-between">
                     <Button
                       type="button"
                       onClick={handleActivateVercelWebhook}
@@ -1700,7 +1764,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                           handleSettingsChange('telegram', 'webhookUrl', e.target.value);
                         }}
                         placeholder="https://YOUR_DOMAIN/api/telegram-webhook"
-                        className="h-11 apple-glass-input rounded-xl font-mono text-left text-xs"
+                        className="h-11 bg-background border-border rounded-xl font-mono text-left text-xs"
                         dir="ltr"
                       />
                     </div>
@@ -1708,8 +1772,8 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                 </div>
 
                 {/* B BACK Group Forwarding Card */}
-                <div className="apple-glass-card border border-white/20 dark:border-white/10 p-6 rounded-3xl space-y-4 shadow-xs">
-                  <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <div className="bg-card border border-border p-5 rounded-xl space-y-4 shadow-xs">
+                  <div className="flex items-center justify-between pb-3 border-b border-border">
                     <div className="flex items-center gap-2">
                       <Button
                         type="button"
@@ -1762,13 +1826,13 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                           value={groupChatIdInput}
                           onChange={(e) => setGroupChatIdInput(e.target.value)}
                           placeholder="e.g. -1001234567890"
-                          className="h-11 apple-glass-input rounded-xl font-mono text-left text-xs"
+                          className="h-11 bg-background border-border rounded-xl font-mono text-left text-xs"
                           dir="ltr"
                         />
                       </div>
                     </div>
 
-                    <div className="p-3.5 bg-white/5 dark:bg-black/20 border border-white/15 dark:border-white/10 rounded-2xl text-xs space-y-1 text-right" dir="rtl">
+                    <div className="p-3.5 bg-muted/40 border border-border rounded-lg text-xs space-y-1 text-right" dir="rtl">
                       <p className="font-bold text-foreground">އޮޓޮމެޓިކުން ގްރޫޕް ގުޅައިދޭނެ ގޮތް:</p>
                       <p className="text-muted-foreground text-[11px]">
                         1. ޓެލެގްރާމްގައި ހަދާފައިވާ "B BACK" ގްރޫޕަށް <span className="font-mono text-primary font-bold">@Bbacksh0p_bot</span> އެޑްކޮށްލައްވާ.
@@ -1784,8 +1848,8 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                 </div>
 
                 {/* Bot Commands Management Card */}
-                <div className="apple-glass-card border border-white/20 dark:border-white/10 p-6 rounded-3xl space-y-4 shadow-xs">
-                  <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <div className="bg-card border border-border p-5 rounded-xl space-y-4 shadow-xs">
+                  <div className="flex items-center justify-between pb-3 border-b border-border">
                     <Button
                       type="button"
                       onClick={handleSyncCommands}
@@ -1807,7 +1871,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3" dir="ltr">
                     {BOT_COMMANDS.map((cmd) => (
-                      <div key={cmd.command} className="p-3 bg-white/5 dark:bg-black/20 border border-white/15 dark:border-white/10 rounded-2xl flex items-start gap-3">
+                      <div key={cmd.command} className="p-3 bg-muted/40 border border-border rounded-lg flex items-start gap-3">
                         <code className="px-2 py-1 bg-primary/10 text-primary font-mono font-bold text-xs rounded-lg shrink-0">
                           /{cmd.command}
                         </code>
@@ -1825,7 +1889,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                 </div>
 
                 {/* Database Migration Instructions */}
-                <div className="apple-glass-card border border-white/20 dark:border-white/10 p-6 rounded-3xl space-y-4 shadow-xs">
+                <div className="bg-card border border-border p-5 rounded-xl space-y-4 shadow-xs">
                   <div className="flex items-center justify-between">
                     <Button
                       variant="outline"
@@ -1868,7 +1932,7 @@ GRANT ALL ON TABLE public.vendors TO anon, authenticated;`);
                     </h4>
                   </div>
 
-                  <div className="p-3 bg-white/5 dark:bg-black/20 border border-white/10 rounded-xl font-mono text-xs text-foreground/80 overflow-x-auto text-left" dir="ltr">
+                  <div className="p-3 bg-muted/40 border border-border rounded-xl font-mono text-xs text-foreground/80 overflow-x-auto text-left" dir="ltr">
                     <code>
                       -- Customers &amp; Telegram<br />
                       ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS telegram_chat_id BIGINT UNIQUE;<br />

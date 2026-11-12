@@ -611,265 +611,321 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
         event.target.select();
     };
 
+    const lbl = "text-right block text-[10px] font-bold uppercase text-muted-foreground tracking-wide";
+    const fld = "h-10 rounded-xl bg-background border-border text-sm";
+    const costNum = Number(editedProduct.cost_price);
+    const hasCost = editedProduct.cost_price !== undefined && editedProduct.cost_price !== null && (editedProduct.cost_price as any) !== '' && costNum > 0;
+    const marginPct = hasCost && editedProduct.price > 0 ? ((editedProduct.price - costNum) / costNum) * 100 : null;
+    const totalStock = Number(editedProduct.stock_shop || 0) + Number(editedProduct.stock_godown || 0);
+    const stockStatus = totalStock <= 0
+        ? { label: 'Out of stock', cls: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30' }
+        : totalStock <= 10
+            ? { label: 'Low stock', cls: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30' }
+            : { label: 'In stock', cls: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' };
+    const currency = settings.shop.currency;
+
+    const section = (icon: React.ReactNode, chip: string, title: string, children: React.ReactNode, action?: React.ReactNode) => (
+        <section className="rounded-xl bg-card border border-border overflow-hidden">
+            <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-border bg-muted/50">
+                <div className="flex items-center gap-2" dir="ltr">
+                    <span className={cn("h-7 w-7 rounded-lg flex items-center justify-center shrink-0", chip)}>{icon}</span>
+                    <h3 className="text-[11px] font-bold uppercase tracking-wide text-foreground">{title}</h3>
+                </div>
+                {action}
+            </div>
+            <div className="p-4 space-y-4">{children}</div>
+        </section>
+    );
+
     return (
         <>
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[66rem] 2xl:max-w-[74rem] w-[96vw] max-h-[92vh] overflow-hidden flex flex-col font-faruma apple-glass-dialog text-foreground border border-white/25 dark:border-white/10 p-0 shadow-2xl rounded-3xl" dir="rtl">
+            <DialogContent className="sm:max-w-5xl w-[96vw] h-[92vh] max-h-[92vh] overflow-hidden flex flex-col gap-0 font-faruma bg-background text-foreground border border-border p-0 shadow-xl rounded-xl" dir="rtl">
                 {/* Header */}
-                <DialogHeader className="text-right px-6 py-4 border-b border-border/60 bg-muted/30 backdrop-blur-md shrink-0">
+                <DialogHeader className="text-right px-5 py-3.5 border-b border-border bg-card shrink-0 space-y-0 pr-12">
                     <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2" dir="ltr">
-                            <Badge className="bg-primary/15 text-primary border border-primary/25 font-mono text-xs font-black px-2.5 py-0.5 rounded-lg">
+                            <Badge className="bg-muted text-foreground border border-border font-mono tabular-nums text-xs font-bold px-2.5 py-0.5 rounded-md shadow-none hover:bg-muted">
                                 {editedProduct.item_code ? `#${editedProduct.item_code}` : 'NEW'}
                             </Badge>
                             {editedProduct.is_zero_tax ? (
-                                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 text-[10px] font-black px-2 py-0.5 rounded-lg">
+                                <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded-md shadow-none hover:bg-emerald-500/10">
                                     0% GST
                                 </Badge>
                             ) : (
-                                <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-[10px] font-black px-2 py-0.5 rounded-lg">
+                                <Badge className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[10px] font-bold px-2 py-0.5 rounded-md shadow-none hover:bg-blue-500/10">
                                     {settings.shop?.taxRate || 8}% GST
                                 </Badge>
                             )}
                         </div>
 
-                        <div className="text-right">
-                            <DialogTitle className="text-lg sm:text-xl font-black flex items-center justify-end gap-2 text-foreground">
-                                <span>{product ? renderBoth('edit_product') : renderBoth('add_new_product')}</span>
-                                <Package className="h-5 w-5 text-primary shrink-0" />
-                            </DialogTitle>
-                            <DialogDescription className="text-muted-foreground text-xs mt-0.5">
-                                {product ? 'Update product details, pricing, barcodes and packaging units' : 'Create a new product in your catalog with barcodes and pricing'}
-                            </DialogDescription>
+                        <div className="flex items-center gap-3 text-right min-w-0">
+                            <div className="min-w-0">
+                                <DialogTitle className="text-base sm:text-lg font-bold text-foreground">
+                                    <span>{product ? renderBoth('edit_product') : renderBoth('add_new_product')}</span>
+                                </DialogTitle>
+                                <DialogDescription className="text-muted-foreground text-xs mt-0.5">
+                                    {product ? 'Update product details, pricing, barcodes and packaging units' : 'Create a new product in your catalog with barcodes and pricing'}
+                                </DialogDescription>
+                            </div>
+                            <span className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                                <Package className="h-5 w-5" />
+                            </span>
                         </div>
                     </div>
                 </DialogHeader>
 
-                {/* Content: Side-by-side Grid */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-5 sm:p-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-                        {/* Right Panel: Basic Product Info (7 cols) */}
-                        <div className="lg:col-span-7 space-y-4">
-                            {/* Card 1: Identity & Photo */}
-                            <div className="p-4 rounded-2xl bg-card border border-border/70 shadow-xs space-y-3.5">
-                                <div className="flex gap-4 items-start">
-                                    {/* Compact Image Upload */}
-                                    <div className="space-y-1.5 shrink-0 flex flex-col items-center">
-                                        <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest self-start">
-                                            {renderBoth('product_image')}
-                                        </Label>
-                                        <div className="w-24 h-24 rounded-2xl bg-muted/60 border-2 border-dashed border-border flex flex-col items-center justify-center relative overflow-hidden group shadow-inner">
-                                            {isUploadingImage ? (
-                                                <div className="flex flex-col items-center justify-center gap-2 text-primary p-2 text-center">
-                                                    <PulsatingDots dotClassName="h-2.5 w-2.5 rounded-full bg-primary" />
-                                                    <span className="text-[8px] font-black uppercase tracking-wider text-primary">Uploading...</span>
-                                                </div>
-                                            ) : imagePreviewUrl ? (
-                                                <img 
-                                                    src={getAdaptedImageUrl(imagePreviewUrl, editedProduct.name_en || editedProduct.name_dv, editedProduct.item_code)} 
-                                                    alt="Preview" 
-                                                    className="w-full h-full object-cover transition-transform group-hover:scale-105" 
-                                                    onError={(e) => {
-                                                        if (localDataUrlRef.current && (e.target as HTMLImageElement).src !== localDataUrlRef.current) {
-                                                            (e.target as HTMLImageElement).src = localDataUrlRef.current;
-                                                        } else {
-                                                            (e.target as HTMLImageElement).src = generatePlaceholderImage(editedProduct.name_en || editedProduct.name_dv, editedProduct.item_code);
-                                                        }
-                                                    }}
-                                                />
-                                            ) : (
-                                                <ImageIcon className="h-8 w-8 text-muted-foreground/30" />
-                                            )}
-                                            {!isUploadingImage && (
-                                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 backdrop-blur-xs">
-                                                    <Label htmlFor="image-upload" className="cursor-pointer bg-primary p-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white hover:bg-primary/90 transition-all flex items-center gap-1 shadow-sm" title="Upload local file">
-                                                        <Upload className="h-3 w-3" />
-                                                    </Label>
-                                                    <input id="image-upload" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setIsOnlineSearchOpen(true)}
-                                                        className="bg-amber-500 p-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white hover:bg-amber-600 transition-all flex items-center gap-1 shadow-sm"
-                                                        title="Find Image Online by Name"
-                                                    >
-                                                        <Sparkles className="h-3 w-3" />
-                                                    </button>
-                                                    {imagePreviewUrl && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setIsImageTextStampOpen(true)}
-                                                            className="bg-indigo-600 p-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white hover:bg-indigo-700 transition-all flex items-center gap-1 shadow-sm"
-                                                            title="Put text or flavour label on image"
-                                                        >
-                                                            <Type className="h-3 w-3" />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Action Buttons: Online Search + Stamp Text */}
-                                        <div className="flex gap-1 w-24">
-                                            <Button
-                                                type="button"
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() => setIsOnlineSearchOpen(true)}
-                                                className="h-6 flex-1 px-1 text-[8px] font-black border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 rounded-lg gap-0.5 shadow-xs"
-                                                title="Find product image on Google"
-                                            >
-                                                <Sparkles className="h-2 w-2 text-amber-500" />
-                                                <span>Google</span>
-                                            </Button>
-                                            {imagePreviewUrl && (
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => setIsImageTextStampOpen(true)}
-                                                    className="h-6 flex-1 px-1 text-[8px] font-black border-indigo-500/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10 rounded-lg gap-0.5 shadow-xs"
-                                                    title="Put text/flavour label on photo"
-                                                >
-                                                    <Type className="h-2 w-2 text-indigo-500" />
-                                                    <span>Text</span>
-                                                </Button>
-                                            )}
-                                        </div>
+                {/* Body: two columns */}
+                <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden" dir="ltr">
+                    {/* LEFT: sticky summary panel */}
+                    <aside className="lg:w-72 xl:w-80 shrink-0 border-b lg:border-b-0 lg:border-r border-border bg-muted/30 p-4 space-y-4 lg:overflow-y-auto custom-scrollbar" dir="rtl">
+                        <div className="space-y-2">
+                            <Label className={lbl}>{renderBoth('product_image')}</Label>
+                            <div className="aspect-square w-full max-w-[220px] mx-auto rounded-xl bg-card border border-dashed border-border flex items-center justify-center relative overflow-hidden group">
+                                {isUploadingImage ? (
+                                    <div className="flex flex-col items-center justify-center gap-2 text-primary p-2 text-center">
+                                        <PulsatingDots dotClassName="h-2.5 w-2.5 rounded-full bg-primary" />
+                                        <span className="text-[10px] font-bold uppercase tracking-wide text-primary">Uploading...</span>
                                     </div>
-
-                                    {/* Names */}
-                                    <div className="flex-1 space-y-2.5 min-w-0">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center justify-between">
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    onClick={handleAutoTranslateName}
-                                                    disabled={!editedProduct.name_en?.trim()}
-                                                    className="h-6 px-2 text-[10px] font-black text-primary hover:bg-primary/10 rounded-lg gap-1"
-                                                    title="Auto-translate English name to Dhivehi"
-                                                >
-                                                    <Sparkles className="h-3 w-3 text-primary animate-pulse" />
-                                                    <span>Auto Translate (ދިވެހިކުރޭ)</span>
-                                                </Button>
-                                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                                                    {renderBoth('product_name')} (ދިވެހި)*
-                                                </Label>
-                                            </div>
-                                            <Input 
-                                                dir="rtl"
-                                                value={editedProduct.name_dv} 
-                                                onChange={(e) => updateField('name_dv', e.target.value)} 
-                                                className="h-10 rounded-xl text-right font-faruma font-bold text-sm bg-muted/40 border-border focus:border-primary"
-                                                placeholder="ތަކެތީގެ ނަން"
-                                            />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                                                {renderBoth('product_name')} (English)*
-                                            </Label>
-                                            <Input 
-                                                dir="ltr"
-                                                value={editedProduct.name_en} 
-                                                onChange={(e) => updateField('name_en', e.target.value)} 
-                                                onBlur={() => {
-                                                    if (!editedProduct.name_dv?.trim() && editedProduct.name_en?.trim()) {
-                                                        const translated = translateEnglishToDhivehi(editedProduct.name_en);
-                                                        if (translated) updateField('name_dv', translated);
-                                                    }
-                                                }}
-                                                className="h-10 rounded-xl text-left font-bold text-sm bg-muted/40 border-border focus:border-primary"
-                                                placeholder="Product Name"
-                                            />
-                                        </div>
-                                    </div>
+                                ) : imagePreviewUrl ? (
+                                    <img
+                                        src={getAdaptedImageUrl(imagePreviewUrl, editedProduct.name_en || editedProduct.name_dv, editedProduct.item_code)}
+                                        alt="Preview"
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                            if (localDataUrlRef.current && (e.target as HTMLImageElement).src !== localDataUrlRef.current) {
+                                                (e.target as HTMLImageElement).src = localDataUrlRef.current;
+                                            } else {
+                                                (e.target as HTMLImageElement).src = generatePlaceholderImage(editedProduct.name_en || editedProduct.name_dv, editedProduct.item_code);
+                                            }
+                                        }}
+                                    />
+                                ) : (
+                                    <ImageIcon className="h-10 w-10 text-muted-foreground/40" />
+                                )}
+                            </div>
+                            <input id="image-upload" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                            <div className="grid grid-cols-1 gap-1.5" dir="ltr">
+                                <Label htmlFor="image-upload" className="cursor-pointer h-9 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold flex items-center justify-center gap-1.5" title="Upload local file">
+                                    <Upload className="h-3.5 w-3.5" /> Upload photo
+                                </Label>
+                                <div className="flex gap-1.5">
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => setIsOnlineSearchOpen(true)}
+                                        className="h-9 flex-1 px-2 text-xs font-bold rounded-lg gap-1.5 border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                                        title="Find product image on Google"
+                                    >
+                                        <Sparkles className="h-3.5 w-3.5" />
+                                        <span>Google</span>
+                                    </Button>
+                                    {imagePreviewUrl && (
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => setIsImageTextStampOpen(true)}
+                                            className="h-9 flex-1 px-2 text-xs font-bold rounded-lg gap-1.5 border-indigo-500/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10"
+                                            title="Put text/flavour label on photo"
+                                        >
+                                            <Type className="h-3.5 w-3.5" />
+                                            <span>Text</span>
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
+                        </div>
 
-                            {/* Row 2: Selling Price & Cost Price */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-1">
-                                    <div className="flex justify-between items-center">
-                                        {editedProduct.cost_price && Number(editedProduct.cost_price) > 0 && editedProduct.price > 0 && (
-                                            <span className={cn(
-                                                "text-[9px] font-black px-1.5 py-0.5 rounded-md",
-                                                editedProduct.price >= Number(editedProduct.cost_price)
-                                                    ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
-                                                    : "bg-red-500/10 text-red-500 border border-red-500/20"
-                                            )}>
-                                                {(((editedProduct.price - Number(editedProduct.cost_price)) / Number(editedProduct.cost_price)) * 100).toFixed(0)}% margin
+                        {/* Live summary */}
+                        <div className="rounded-xl bg-card border border-border divide-y divide-border">
+                            <div className="p-3 space-y-0.5">
+                                <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Summary</p>
+                                <p className="font-faruma font-bold text-sm text-right truncate" dir="rtl">{editedProduct.name_dv || '—'}</p>
+                                <p className="text-xs text-muted-foreground text-left truncate" dir="ltr">{editedProduct.name_en || '—'}</p>
+                            </div>
+                            <dl className="p-3 grid grid-cols-2 gap-x-3 gap-y-2.5 text-xs" dir="ltr">
+                                <div>
+                                    <dt className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Code</dt>
+                                    <dd className="font-mono tabular-nums font-bold truncate">{editedProduct.item_code || '—'}</dd>
+                                </div>
+                                <div>
+                                    <dt className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Price</dt>
+                                    <dd className="font-mono tabular-nums font-bold text-primary">{currency} {Number(editedProduct.price || 0).toFixed(2)}</dd>
+                                </div>
+                                <div>
+                                    <dt className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Cost</dt>
+                                    <dd className="font-mono tabular-nums font-bold">{hasCost ? `${currency} ${costNum.toFixed(2)}` : '—'}</dd>
+                                </div>
+                                <div>
+                                    <dt className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Margin</dt>
+                                    <dd>
+                                        {marginPct !== null ? (
+                                            <span className={cn("inline-block text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-md border", marginPct >= 0 ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30" : "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30")}>
+                                                {marginPct.toFixed(0)}%
                                             </span>
-                                        )}
-                                        <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                                            {renderBoth('selling_price')} (Piece)*
-                                        </Label>
+                                        ) : <span className="text-muted-foreground">—</span>}
+                                    </dd>
+                                </div>
+                                <div className="col-span-2 flex items-center justify-between">
+                                    <dt className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Stock</dt>
+                                    <dd className="flex items-center gap-2">
+                                        <span className="font-mono tabular-nums font-bold">{totalStock}</span>
+                                        <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-md border", stockStatus.cls)}>{stockStatus.label}</span>
+                                    </dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </aside>
+
+                    {/* RIGHT: scrollable sections */}
+                    <div className="flex-1 min-w-0 lg:overflow-y-auto custom-scrollbar p-4 sm:p-5 space-y-4" dir="rtl">
+                        {/* Basic info */}
+                        {section(<Tag className="h-4 w-4" />, "bg-primary/10 text-primary", "Basic info",
+                            <>
+                                <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={handleAutoTranslateName}
+                                            disabled={!editedProduct.name_en?.trim()}
+                                            className="h-6 px-2 text-[10px] font-bold text-primary hover:bg-primary/10 rounded-md gap-1"
+                                            title="Auto-translate English name to Dhivehi"
+                                        >
+                                            <Sparkles className="h-3 w-3" />
+                                            <span>Auto Translate (ދިވެހިކުރޭ)</span>
+                                        </Button>
+                                        <Label className={lbl}>{renderBoth('product_name')} (ދިވެހި)*</Label>
                                     </div>
-                                    <div className="relative">
-                                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-black text-primary">
-                                            {settings.shop.currency}
+                                    <Input
+                                        dir="rtl"
+                                        value={editedProduct.name_dv}
+                                        onChange={(e) => updateField('name_dv', e.target.value)}
+                                        className={cn(fld, "text-right font-faruma font-bold")}
+                                        placeholder="ތަކެތީގެ ނަން"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className={lbl}>{renderBoth('product_name')} (English)*</Label>
+                                    <Input
+                                        dir="ltr"
+                                        value={editedProduct.name_en}
+                                        onChange={(e) => updateField('name_en', e.target.value)}
+                                        onBlur={() => {
+                                            if (!editedProduct.name_dv?.trim() && editedProduct.name_en?.trim()) {
+                                                const translated = translateEnglishToDhivehi(editedProduct.name_en);
+                                                if (translated) updateField('name_dv', translated);
+                                            }
+                                        }}
+                                        className={cn(fld, "text-left font-bold")}
+                                        placeholder="Product Name"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <Label className={lbl}>{renderBoth('item_code')}*</Label>
+                                        <div className="relative">
+                                            <Hash className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60" />
+                                            <Input
+                                                dir="ltr"
+                                                value={editedProduct.item_code}
+                                                onChange={(e) => updateField('item_code', e.target.value.replace(/\D/g, ''))}
+                                                placeholder="1001"
+                                                className={cn(fld, "text-left pl-8 font-mono tabular-nums text-xs")}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className={lbl}>{renderBoth('category')}</Label>
+                                        <Select value={editedProduct.category} onValueChange={(val) => updateField('category', val)}>
+                                            <SelectTrigger className={cn(fld, "text-right text-xs font-bold")}>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-popover text-popover-foreground border border-border">
+                                                <SelectItem value="DRINKS" className="text-right">DRINKS</SelectItem>
+                                                <SelectItem value="FOOD" className="text-right">FOOD</SelectItem>
+                                                <SelectItem value="HARDWARE" className="text-right">HARDWARE</SelectItem>
+                                                <SelectItem value="COSMETICS" className="text-right">COSMETICS</SelectItem>
+                                                <SelectItem value="OTHER" className="text-right">OTHER</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {/* Pricing & tax */}
+                        {section(<DollarSign className="h-4 w-4" />, "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", "Pricing & tax",
+                            <>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <Label className={lbl}>{renderBoth('selling_price')} (Piece)*</Label>
+                                        <div className="relative">
+                                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-primary">{currency}</span>
+                                            <Input
+                                                dir="ltr"
+                                                type="number"
+                                                step="0.01"
+                                                value={editedProduct.price}
+                                                onChange={(e) => updateField('price', parseFloat(e.target.value) || 0)}
+                                                onFocus={handleFocus}
+                                                className={cn(fld, "h-11 text-left pl-14 pr-3 text-lg font-bold text-primary font-mono tabular-nums")}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className={lbl}>{renderBoth('cost_price')} (Piece)</Label>
+                                        <div className="relative">
+                                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-500">{currency}</span>
+                                            <Input
+                                                dir="ltr"
+                                                type="number"
+                                                step="0.01"
+                                                value={editedProduct.cost_price ?? ''}
+                                                onChange={(e) => updateField('cost_price', e.target.value === '' ? undefined : (parseFloat(e.target.value) || 0))}
+                                                onFocus={handleFocus}
+                                                placeholder="0.00"
+                                                className={cn(fld, "h-11 text-left pl-14 pr-3 text-lg font-bold text-foreground font-mono tabular-nums")}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                {marginPct !== null && (
+                                    <div className="flex items-center justify-between rounded-lg bg-muted/50 border border-border px-3 py-2 text-xs" dir="ltr">
+                                        <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Margin</span>
+                                        <span className={cn("font-bold tabular-nums", marginPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
+                                            {marginPct.toFixed(0)}% margin
                                         </span>
-                                        <Input 
-                                            dir="ltr"
-                                            type="number" 
-                                            step="0.01"
-                                            value={editedProduct.price} 
-                                            onChange={(e) => updateField('price', parseFloat(e.target.value) || 0)} 
-                                            onFocus={handleFocus}
-                                            className="apple-glass-input h-11 rounded-xl text-left pl-14 pr-3 text-lg font-black text-primary font-mono" 
-                                        />
                                     </div>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                                        {renderBoth('cost_price')} (Piece)
+                                )}
+                                <div className="rounded-lg border border-border bg-muted/40 px-3 py-2.5 flex items-center justify-between">
+                                    <Switch
+                                        checked={editedProduct.is_zero_tax}
+                                        onCheckedChange={(val) => updateField('is_zero_tax', val)}
+                                        className="data-[state=checked]:bg-primary"
+                                    />
+                                    <Label className="font-bold text-xs uppercase tracking-wide text-muted-foreground">
+                                        Zero Tax (0% GST)
                                     </Label>
-                                    <div className="relative">
-                                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-black text-emerald-500">
-                                            {settings.shop.currency}
-                                        </span>
-                                        <Input 
-                                            dir="ltr"
-                                            type="number" 
-                                            step="0.01"
-                                            value={editedProduct.cost_price ?? ''} 
-                                            onChange={(e) => updateField('cost_price', e.target.value === '' ? undefined : (parseFloat(e.target.value) || 0))} 
-                                            onFocus={handleFocus}
-                                            placeholder="0.00"
-                                            className="apple-glass-input h-11 rounded-xl text-left pl-14 pr-3 text-lg font-black text-foreground font-mono" 
-                                        />
-                                    </div>
                                 </div>
-                            </div>
+                            </>
+                        )}
 
-                            {/* Row 3: Item Code & Barcode */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-1">
-                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                                        {renderBoth('item_code')}*
-                                    </Label>
-                                    <div className="relative">
-                                        <Hash className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
-                                        <Input 
-                                            dir="ltr"
-                                            value={editedProduct.item_code} 
-                                            onChange={(e) => updateField('item_code', e.target.value.replace(/\D/g, ''))} 
-                                            placeholder="1001"
-                                            className="apple-glass-input h-11 rounded-xl text-left pl-8 font-mono text-xs" 
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <div className="flex items-center justify-between">
+                        {/* Barcodes */}
+                        {section(<Barcode className="h-4 w-4" />, "bg-blue-500/10 text-blue-600 dark:text-blue-400", "Barcodes",
+                            <>
+                                <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between gap-2 flex-wrap">
                                         <div className="flex items-center gap-1.5">
                                             <Button
                                                 type="button"
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={generateUniqueBarcode}
-                                                className="h-6 px-2 text-[10px] font-black text-primary border-primary/30 hover:bg-primary/10 rounded-lg gap-1 shadow-xs"
+                                                className="h-7 px-2 text-[10px] font-bold text-primary border-primary/30 hover:bg-primary/10 rounded-md gap-1"
                                                 title="Generate in-store barcode for non-barcode item"
                                             >
                                                 <Sparkles className="h-3 w-3" />
@@ -881,7 +937,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={handlePrintBarcodeLabel}
-                                                    className="h-6 px-2 text-[10px] font-black text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 rounded-lg gap-1 shadow-xs"
+                                                    className="h-7 px-2 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 rounded-md gap-1"
                                                     title="Print Barcode Label with Name & Price"
                                                 >
                                                     <Printer className="h-3 w-3" />
@@ -889,220 +945,197 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                 </Button>
                                             )}
                                         </div>
-                                        <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                                            {renderBoth('barcode')}*
-                                        </Label>
+                                        <Label className={lbl}>{renderBoth('barcode')}*</Label>
                                     </div>
                                     <div className="relative">
-                                        <Barcode className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
-                                        <Input 
-                                            dir="ltr"
-                                            value={editedProduct.barcode} 
-                                            onChange={(e) => updateField('barcode', e.target.value)} 
-                                            placeholder="Scan barcode or click Generate"
-                                            className="apple-glass-input h-11 rounded-xl text-left pl-8 font-mono text-xs" 
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Extra Barcodes Section (for products with multiple barcodes) */}
-                            <div className="p-3 rounded-2xl bg-white/5 dark:bg-black/20 border border-white/15 dark:border-white/10 space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-bold text-muted-foreground font-mono">
-                                        {extraBarcodes.length} extra barcode{extraBarcodes.length === 1 ? '' : 's'}
-                                    </span>
-                                    <Label className="text-right block text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-1.5">
-                                        <span>Extra Barcodes (އިތުރު ބާކޯޑުތައް)</span>
-                                        <Barcode className="h-3.5 w-3.5 text-primary" />
-                                    </Label>
-                                </div>
-                                <div className="flex gap-2" dir="ltr">
-                                    <div className="relative flex-1">
-                                        <Barcode className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
+                                        <Barcode className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60" />
                                         <Input
                                             dir="ltr"
-                                            value={extraBarcodeInput}
-                                            onChange={(e) => setExtraBarcodeInput(e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    e.preventDefault();
-                                                    handleAddExtraBarcode();
-                                                }
-                                            }}
-                                            placeholder="Scan or type another barcode for this product & press Enter..."
-                                            className="apple-glass-input h-9 rounded-xl text-left pl-8 font-mono text-xs"
+                                            value={editedProduct.barcode}
+                                            onChange={(e) => updateField('barcode', e.target.value)}
+                                            placeholder="Scan barcode or click Generate"
+                                            className={cn(fld, "text-left pl-8 font-mono tabular-nums text-xs")}
                                         />
                                     </div>
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        onClick={handleAddExtraBarcode}
-                                        disabled={!extraBarcodeInput.trim()}
-                                        className="h-9 px-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs gap-1 shrink-0"
-                                    >
-                                        <Plus className="h-3.5 w-3.5" />
-                                        <span>Add Barcode</span>
-                                    </Button>
-                                </div>
-                                {extraBarcodes.length > 0 && (
-                                    <div className="flex flex-wrap gap-1.5 pt-1" dir="ltr">
-                                        {extraBarcodes.map((code) => (
-                                            <Badge
-                                                key={code}
-                                                variant="secondary"
-                                                className="bg-primary/15 text-primary border border-primary/30 px-2.5 py-1 rounded-xl font-mono text-xs font-bold flex items-center gap-1.5"
-                                            >
-                                                <Barcode className="h-3 w-3 opacity-70" />
-                                                <span>{code}</span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleRemoveExtraBarcode(code)}
-                                                    className="ml-0.5 hover:bg-red-500/20 hover:text-red-500 rounded-full p-0.5 transition-colors"
-                                                    title="Remove barcode"
-                                                >
-                                                    <X className="h-3 w-3" />
-                                                </button>
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Barcode Label Live Preview Badge */}
-                            {editedProduct.barcode && (
-                                <div className="p-3 bg-muted/40 rounded-2xl border border-border/80 flex items-center justify-between gap-3 text-right">
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        onClick={handlePrintBarcodeLabel}
-                                        className="h-8 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs gap-1.5 shadow-sm"
-                                    >
-                                        <Printer className="h-3.5 w-3.5" />
-                                        <span>Print Sticker (50x30mm)</span>
-                                    </Button>
-                                    <div className="flex-1 text-right min-w-0">
-                                        <div className="flex items-center justify-end gap-2 text-xs font-black">
-                                            <span className="font-mono text-primary font-bold">{settings.shop.currency} {Number(editedProduct.price || 0).toFixed(2)}</span>
-                                            <span className="truncate">{editedProduct.name_dv || editedProduct.name_en || 'Product'}</span>
-                                        </div>
-                                        <p className="text-[10px] font-mono text-muted-foreground mt-0.5">
-                                            Scannable Barcode: {editedProduct.barcode}{extraBarcodes.length > 0 ? ` (+${extraBarcodes.length} extra)` : ''}
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Row 3: Category, Expiry Date, Zero Tax */}
-                            <div className="grid grid-cols-3 gap-3 items-end">
-                                <div className="space-y-1">
-                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                                        {renderBoth('category')}
-                                    </Label>
-                                    <Select value={editedProduct.category} onValueChange={(val) => updateField('category', val)}>
-                                        <SelectTrigger className="apple-glass-input h-11 rounded-xl text-right text-xs font-bold">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent className="apple-glass-dialog border border-white/20 text-foreground">
-                                            <SelectItem value="DRINKS" className="text-right">DRINKS</SelectItem>
-                                            <SelectItem value="FOOD" className="text-right">FOOD</SelectItem>
-                                            <SelectItem value="HARDWARE" className="text-right">HARDWARE</SelectItem>
-                                            <SelectItem value="COSMETICS" className="text-right">COSMETICS</SelectItem>
-                                            <SelectItem value="OTHER" className="text-right">OTHER</SelectItem>
-                                        </SelectContent>
-                                    </Select>
                                 </div>
 
-                                <div className="space-y-1">
+                                <Separator />
+
+                                <div className="space-y-2">
                                     <div className="flex items-center justify-between">
-                                        {expiryDate ? (
-                                            <button
-                                                type="button"
-                                                onClick={() => setExpiryDate(undefined)}
-                                                className="text-[9px] font-bold text-red-400 hover:text-red-500 flex items-center gap-0.5"
-                                                title="Clear expiry date"
-                                            >
-                                                <X className="h-2.5 w-2.5" /> Clear
-                                            </button>
-                                        ) : <span />}
-                                        <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                                            {renderBoth('expiry_date')}
+                                        <span className="text-[10px] font-bold text-muted-foreground font-mono tabular-nums">
+                                            {extraBarcodes.length} extra barcode{extraBarcodes.length === 1 ? '' : 's'}
+                                        </span>
+                                        <Label className="text-[10px] font-bold uppercase tracking-wide text-foreground">
+                                            Extra Barcodes (އިތުރު ބާކޯޑުތައް)
                                         </Label>
                                     </div>
-                                    <div className="flex items-center gap-1" dir="ltr">
-                                        <Input
-                                            type="date"
-                                            dir="ltr"
-                                            value={expiryDate ? format(expiryDate, 'yyyy-MM-dd') : ''}
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                if (!val) {
-                                                    setExpiryDate(undefined);
-                                                } else {
-                                                    const parsed = parseISO(val);
-                                                    if (!isNaN(parsed.getTime())) {
-                                                        setExpiryDate(parsed);
+                                    <div className="flex gap-2" dir="ltr">
+                                        <div className="relative flex-1 min-w-0">
+                                            <Barcode className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60" />
+                                            <Input
+                                                dir="ltr"
+                                                value={extraBarcodeInput}
+                                                onChange={(e) => setExtraBarcodeInput(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        handleAddExtraBarcode();
                                                     }
-                                                }
-                                            }}
-                                            className="apple-glass-input h-11 rounded-xl text-left font-mono font-bold text-xs flex-1 px-2.5"
-                                        />
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="icon"
-                                                    className="h-11 w-10 shrink-0 rounded-xl apple-glass-input hover:bg-white/10"
-                                                    title="Open Calendar Picker"
+                                                }}
+                                                placeholder="Scan or type another barcode & press Enter..."
+                                                className={cn(fld, "text-left pl-8 font-mono tabular-nums text-xs")}
+                                            />
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            onClick={handleAddExtraBarcode}
+                                            disabled={!extraBarcodeInput.trim()}
+                                            className="h-10 px-3 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs gap-1 shrink-0"
+                                        >
+                                            <Plus className="h-3.5 w-3.5" />
+                                            <span>Add Barcode</span>
+                                        </Button>
+                                    </div>
+                                    {extraBarcodes.length > 0 && (
+                                        <div className="flex flex-wrap gap-1.5" dir="ltr">
+                                            {extraBarcodes.map((code) => (
+                                                <Badge
+                                                    key={code}
+                                                    variant="secondary"
+                                                    className="bg-muted text-foreground border border-border px-2 py-1 rounded-md font-mono tabular-nums text-xs font-semibold flex items-center gap-1.5 shadow-none"
                                                 >
-                                                    <CalendarIcon className="h-4 w-4 text-primary" />
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0 apple-glass-dialog border border-white/20 z-[150]" align="center">
-                                                <Calendar
-                                                    mode="single"
-                                                    selected={expiryDate}
-                                                    onSelect={setExpiryDate}
-                                                    initialFocus
-                                                    className="text-foreground"
-                                                />
-                                            </PopoverContent>
-                                        </Popover>
+                                                    <Barcode className="h-3 w-3 opacity-60" />
+                                                    <span>{code}</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveExtraBarcode(code)}
+                                                        className="ml-0.5 hover:bg-red-500/15 hover:text-red-500 rounded-full p-0.5 transition-colors"
+                                                        title="Remove barcode"
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </button>
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {editedProduct.barcode && (
+                                    <div className="p-3 bg-muted/40 rounded-lg border border-border flex items-center justify-between gap-3 text-right">
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            onClick={handlePrintBarcodeLabel}
+                                            className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5 shrink-0"
+                                        >
+                                            <Printer className="h-3.5 w-3.5" />
+                                            <span>Print Sticker (50x30mm)</span>
+                                        </Button>
+                                        <div className="flex-1 text-right min-w-0">
+                                            <div className="flex items-center justify-end gap-2 text-xs font-bold min-w-0">
+                                                <span className="font-mono tabular-nums text-primary shrink-0">{currency} {Number(editedProduct.price || 0).toFixed(2)}</span>
+                                                <span className="truncate">{editedProduct.name_dv || editedProduct.name_en || 'Product'}</span>
+                                            </div>
+                                            <p className="text-[10px] font-mono tabular-nums text-muted-foreground mt-0.5 truncate">
+                                                Scannable Barcode: {editedProduct.barcode}{extraBarcodes.length > 0 ? ` (+${extraBarcodes.length} extra)` : ''}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        {/* Stock & expiry */}
+                        {section(<Boxes className="h-4 w-4" />, "bg-amber-500/10 text-amber-600 dark:text-amber-400", "Stock & expiry",
+                            <>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center justify-between min-h-[16px]">
+                                            {expiryDate ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setExpiryDate(undefined)}
+                                                    className="text-[10px] font-bold text-red-500 hover:text-red-600 flex items-center gap-0.5"
+                                                    title="Clear expiry date"
+                                                >
+                                                    <X className="h-2.5 w-2.5" /> Clear
+                                                </button>
+                                            ) : <span />}
+                                            <Label className={lbl}>{renderBoth('expiry_date')}</Label>
+                                        </div>
+                                        <div className="flex items-center gap-1.5" dir="ltr">
+                                            <Input
+                                                type="date"
+                                                dir="ltr"
+                                                value={expiryDate ? format(expiryDate, 'yyyy-MM-dd') : ''}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (!val) {
+                                                        setExpiryDate(undefined);
+                                                    } else {
+                                                        const parsed = parseISO(val);
+                                                        if (!isNaN(parsed.getTime())) {
+                                                            setExpiryDate(parsed);
+                                                        }
+                                                    }
+                                                }}
+                                                className={cn(fld, "text-left font-mono tabular-nums font-bold text-xs flex-1 min-w-0 px-2.5")}
+                                            />
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-10 w-10 shrink-0 rounded-xl"
+                                                        title="Open Calendar Picker"
+                                                    >
+                                                        <CalendarIcon className="h-4 w-4 text-primary" />
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-auto p-0 bg-popover border border-border z-[150]" align="center">
+                                                    <Calendar
+                                                        mode="single"
+                                                        selected={expiryDate}
+                                                        onSelect={setExpiryDate}
+                                                        initialFocus
+                                                        className="text-foreground"
+                                                    />
+                                                </PopoverContent>
+                                            </Popover>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className={lbl}>Stock</Label>
+                                        <div className="h-10 rounded-xl border border-border bg-muted/40 px-3 flex items-center justify-between text-xs" dir="ltr">
+                                            <span className="font-mono tabular-nums font-bold">
+                                                Shop {Number(editedProduct.stock_shop || 0)} · Godown {Number(editedProduct.stock_godown || 0)}
+                                            </span>
+                                            <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-md border", stockStatus.cls)}>{stockStatus.label}</span>
+                                        </div>
                                     </div>
                                 </div>
+                            </>
+                        )}
 
-                                <div className="apple-glass-card p-2.5 rounded-xl border border-white/15 dark:border-white/10 flex items-center justify-between h-11">
-                                    <Switch 
-                                        checked={editedProduct.is_zero_tax} 
-                                        onCheckedChange={(val) => updateField('is_zero_tax', val)}
-                                        className="data-[state=checked]:bg-primary scale-90"
-                                    />
-                                    <Label className="font-bold text-xs uppercase tracking-wider text-muted-foreground">
-                                        Zero Tax (0% GST)
-                                    </Label>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Left Panel: Flavours & Packaging Units (5 cols) */}
-                        <div className="lg:col-span-5 apple-glass-card p-4 rounded-3xl border border-white/20 dark:border-white/10 flex flex-col min-h-[340px]">
-                            {/* Tab Switcher & Action Header */}
-                            <div className="flex items-center justify-between pb-3 border-b border-white/15 dark:border-white/10 gap-2">
-                                <div className="flex bg-muted/80 p-0.5 rounded-xl border border-white/10 shrink-0">
+                        {/* Flavours & Packaging */}
+                        {section(<Layers className="h-4 w-4" />, "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400", activeSubTab === 'flavours' ? "Flavours / variants" : "Packaging units",
+                            <>
+                                {/* Tab switch */}
+                                <div className="flex bg-muted p-0.5 rounded-lg border border-border w-fit" dir="ltr">
                                     <button
                                         type="button"
                                         onClick={() => setActiveSubTab('flavours')}
                                         className={cn(
-                                            "px-2.5 py-1 rounded-lg text-[10.5px] font-black transition-all flex items-center gap-1",
-                                            activeSubTab === 'flavours'
-                                                ? "bg-primary text-white shadow-xs"
-                                                : "text-muted-foreground hover:text-foreground"
+                                            "px-3 py-1.5 rounded-md text-xs font-bold transition-colors flex items-center gap-1.5",
+                                            activeSubTab === 'flavours' ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                                         )}
                                     >
                                         <span>Flavours</span>
                                         {flavours.length > 0 && (
-                                            <span className="h-4 min-w-[16px] px-1 rounded-full text-[9px] font-black bg-white/20 text-white flex items-center justify-center">
+                                            <span className="h-4 min-w-[16px] px-1 rounded-full text-[9px] font-bold tabular-nums bg-background/25 flex items-center justify-center">
                                                 {flavours.length}
                                             </span>
                                         )}
@@ -1111,453 +1144,416 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                         type="button"
                                         onClick={() => setActiveSubTab('units')}
                                         className={cn(
-                                            "px-2.5 py-1 rounded-lg text-[10.5px] font-black transition-all flex items-center gap-1",
-                                            activeSubTab === 'units'
-                                                ? "bg-primary text-white shadow-xs"
-                                                : "text-muted-foreground hover:text-foreground"
+                                            "px-3 py-1.5 rounded-md text-xs font-bold transition-colors flex items-center gap-1.5",
+                                            activeSubTab === 'units' ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                                         )}
                                     >
                                         <span>Box / Units</span>
                                         {units.length > 0 && (
-                                            <span className="h-4 min-w-[16px] px-1 rounded-full text-[9px] font-black bg-white/20 text-white flex items-center justify-center">
+                                            <span className="h-4 min-w-[16px] px-1 rounded-full text-[9px] font-bold tabular-nums bg-background/25 flex items-center justify-center">
                                                 {units.length}
                                             </span>
                                         )}
                                     </button>
                                 </div>
 
-                                {activeSubTab === 'flavours' ? (
-                                    <Button 
-                                        type="button"
-                                        size="sm" 
-                                        onClick={handleOpenAddFlavour}
-                                        className="h-8 px-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs gap-1 shadow-sm apple-glass-pill"
-                                    >
-                                        <Plus className="h-3.5 w-3.5" />
-                                        Add Flavour
-                                    </Button>
-                                ) : (
-                                    <Button 
-                                        type="button"
-                                        size="sm" 
-                                        onClick={handleOpenAddUnit}
-                                        className="h-8 px-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs gap-1 shadow-sm apple-glass-pill"
-                                    >
-                                        <Plus className="h-3.5 w-3.5" />
-                                        {renderBoth('add_unit')}
-                                    </Button>
-                                )}
-                            </div>
-
-                            {/* TAB 1: FLAVOURS & ALTERNATE BARCODES */}
-                            {activeSubTab === 'flavours' && (
-                                <div className="flex-1 flex flex-col">
-                                    {/* Inline Flavour Form */}
-                                    {isFlavourFormOpen && (
-                                        <div className="p-3 apple-glass-card border border-primary/40 rounded-2xl space-y-2.5 mt-3 animate-in fade-in-50 duration-150 shadow-sm">
-                                            <div className="flex items-center justify-between border-b border-white/15 dark:border-white/10 pb-1.5">
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => setIsFlavourFormOpen(false)}
-                                                    className="h-6 w-6 rounded-md text-muted-foreground hover:text-foreground"
-                                                >
-                                                    <X className="h-3.5 w-3.5" />
-                                                </Button>
-                                                <span className="text-[11px] font-black uppercase text-primary tracking-wider">
-                                                    {editingFlavourIndex !== null ? 'Edit Flavour' : 'Add Flavour / Alternate Barcode'}
-                                                </span>
-                                            </div>
-
-                                            {/* Quick Preset Chips */}
-                                            <div className="flex flex-wrap gap-1 justify-end">
-                                                {['Chocolate', 'Vanilla', 'Strawberry', 'Lemon', 'Orange', 'Spicy', 'Original', 'Mint'].map((preset) => (
-                                                    <button
-                                                        key={preset}
+                                {/* TAB 1: FLAVOURS */}
+                                {activeSubTab === 'flavours' && (
+                                    <div className="space-y-3">
+                                        {isFlavourFormOpen && (
+                                            <div className="p-3 bg-muted/40 border border-primary/40 rounded-xl space-y-3 animate-in fade-in-50 duration-150">
+                                                <div className="flex items-center justify-between border-b border-border pb-2">
+                                                    <Button
                                                         type="button"
-                                                        onClick={() => setFlavourForm(prev => ({ ...prev, name: preset }))}
-                                                        className={cn(
-                                                            "px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all apple-glass-pill",
-                                                            (flavourForm.name || '').toLowerCase() === preset.toLowerCase()
-                                                                ? "bg-primary text-white border-primary shadow-xs"
-                                                                : "bg-white/40 dark:bg-white/10 text-muted-foreground border-white/20 hover:border-primary/40 hover:text-foreground"
-                                                        )}
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => setIsFlavourFormOpen(false)}
+                                                        className="h-6 w-6 rounded-md text-muted-foreground hover:text-foreground"
                                                     >
-                                                        {preset}
-                                                    </button>
-                                                ))}
-                                            </div>
+                                                        <X className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                    <span className="text-[11px] font-bold uppercase text-primary tracking-wide">
+                                                        {editingFlavourIndex !== null ? 'Edit Flavour' : 'Add Flavour / Alternate Barcode'}
+                                                    </span>
+                                                </div>
 
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <div className="space-y-1">
-                                                    <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
-                                                        Flavour / Scent Name*
-                                                    </Label>
-                                                    <Input
-                                                        dir="ltr"
-                                                        value={flavourForm.name}
-                                                        onChange={(e) => setFlavourForm(prev => ({ ...prev, name: e.target.value }))}
-                                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveFlavour(); } }}
-                                                        placeholder="e.g. Chocolate"
-                                                        className="h-9 apple-glass-input rounded-xl text-left font-bold text-xs"
-                                                        autoFocus
-                                                    />
+                                                <div className="flex flex-wrap gap-1 justify-end">
+                                                    {['Chocolate', 'Vanilla', 'Strawberry', 'Lemon', 'Orange', 'Spicy', 'Original', 'Mint'].map((preset) => (
+                                                        <button
+                                                            key={preset}
+                                                            type="button"
+                                                            onClick={() => setFlavourForm(prev => ({ ...prev, name: preset }))}
+                                                            className={cn(
+                                                                "px-2 py-0.5 rounded-md text-[10px] font-bold border transition-colors",
+                                                                (flavourForm.name || '').toLowerCase() === preset.toLowerCase()
+                                                                    ? "bg-primary text-primary-foreground border-primary"
+                                                                    : "bg-card text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
+                                                            )}
+                                                        >
+                                                            {preset}
+                                                        </button>
+                                                    ))}
+                                                </div>
+
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                    <div className="space-y-1">
+                                                        <Label className={lbl}>Flavour / Scent Name*</Label>
+                                                        <Input
+                                                            dir="ltr"
+                                                            value={flavourForm.name}
+                                                            onChange={(e) => setFlavourForm(prev => ({ ...prev, name: e.target.value }))}
+                                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveFlavour(); } }}
+                                                            placeholder="e.g. Chocolate"
+                                                            className="h-9 rounded-lg bg-background text-left font-bold text-xs"
+                                                            autoFocus
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <Label className={lbl}>Price (Optional)</Label>
+                                                        <Input
+                                                            dir="ltr"
+                                                            type="number"
+                                                            step="0.01"
+                                                            value={flavourForm.price}
+                                                            onChange={(e) => setFlavourForm(prev => ({ ...prev, price: e.target.value }))}
+                                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveFlavour(); } }}
+                                                            placeholder={editedProduct.price ? String(editedProduct.price) : '0.00'}
+                                                            className="h-9 rounded-lg bg-background text-left font-mono tabular-nums font-bold text-xs text-primary"
+                                                        />
+                                                    </div>
                                                 </div>
 
                                                 <div className="space-y-1">
-                                                    <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
-                                                        Price (Optional)
-                                                    </Label>
+                                                    <div className="flex items-center justify-between">
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={generateFlavourBarcode}
+                                                            className="h-6 px-2 text-[10px] font-bold text-primary border-primary/30 hover:bg-primary/10 rounded-md gap-1"
+                                                        >
+                                                            <Sparkles className="h-3 w-3" />
+                                                            <span>Auto Barcode</span>
+                                                        </Button>
+                                                        <Label className={lbl}>Flavour Barcode</Label>
+                                                    </div>
                                                     <Input
                                                         dir="ltr"
-                                                        type="number"
-                                                        step="0.01"
-                                                        value={flavourForm.price}
-                                                        onChange={(e) => setFlavourForm(prev => ({ ...prev, price: e.target.value }))}
+                                                        value={flavourForm.barcode}
+                                                        onChange={(e) => setFlavourForm(prev => ({ ...prev, barcode: e.target.value }))}
                                                         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveFlavour(); } }}
-                                                        placeholder={editedProduct.price ? String(editedProduct.price) : '0.00'}
-                                                        className="h-9 apple-glass-input rounded-xl text-left font-mono font-bold text-xs text-primary"
+                                                        placeholder="Scan flavour barcode or auto-generate"
+                                                        className="h-9 rounded-lg bg-background text-left font-mono tabular-nums text-[11px]"
                                                     />
                                                 </div>
-                                            </div>
 
-                                            <div className="space-y-1">
-                                                <div className="flex items-center justify-between">
+                                                <div className="flex justify-end gap-1.5">
                                                     <Button
                                                         type="button"
                                                         variant="outline"
                                                         size="sm"
-                                                        onClick={generateFlavourBarcode}
-                                                        className="h-5 px-1.5 text-[9px] font-black text-primary border-primary/30 hover:bg-primary/10 rounded-md gap-0.5"
+                                                        onClick={() => setIsFlavourFormOpen(false)}
+                                                        className="h-8 px-3 rounded-lg text-xs font-bold"
                                                     >
-                                                        <Sparkles className="h-2.5 w-2.5" />
-                                                        <span>Auto Barcode</span>
+                                                        Cancel
                                                     </Button>
-                                                    <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
-                                                        Flavour Barcode
-                                                    </Label>
-                                                </div>
-                                                <Input
-                                                    dir="ltr"
-                                                    value={flavourForm.barcode}
-                                                    onChange={(e) => setFlavourForm(prev => ({ ...prev, barcode: e.target.value }))}
-                                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveFlavour(); } }}
-                                                    placeholder="Scan flavour barcode or auto-generate"
-                                                    className="h-9 apple-glass-input rounded-xl text-left font-mono text-[11px]"
-                                                />
-                                            </div>
-
-                                            <div className="flex justify-end gap-1.5 pt-1">
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => setIsFlavourFormOpen(false)}
-                                                    className="h-8 px-3 rounded-lg text-xs font-bold apple-glass-pill"
-                                                >
-                                                    Cancel
-                                                </Button>
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    onClick={handleSaveFlavour}
-                                                    className="h-8 px-4 rounded-xl bg-primary text-white text-xs font-black apple-glass-pill"
-                                                >
-                                                    <Check className="h-3 w-3 mr-1" />
-                                                    {editingFlavourIndex !== null ? 'Update Flavour' : 'Save Flavour'}
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Flavours List */}
-                                    <div className="flex-1 mt-3 space-y-2 overflow-y-auto max-h-[260px] custom-scrollbar">
-                                        {flavours.length > 0 ? (
-                                            flavours.map((f, index) => {
-                                                const price = f.price !== undefined ? Number(f.price) : Number(editedProduct.price || 0);
-                                                return (
-                                                    <div
-                                                        key={index}
-                                                        className="p-2.5 apple-glass-card border border-white/20 dark:border-white/10 hover:border-primary/40 rounded-2xl flex items-center justify-between gap-2 transition-all shadow-xs"
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        onClick={handleSaveFlavour}
+                                                        className="h-8 px-4 rounded-lg bg-primary text-primary-foreground text-xs font-bold"
                                                     >
-                                                        <div className="flex items-center gap-0.5">
-                                                            <Button
-                                                                type="button"
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={() => handleEditFlavour(index)}
-                                                                className="h-7 w-7 rounded-lg text-blue-400 hover:bg-blue-500/10"
-                                                                title="Edit flavour"
-                                                            >
-                                                                <Pencil className="h-3 w-3" />
-                                                            </Button>
-                                                            <Button
-                                                                type="button"
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={() => handleDeleteFlavour(index)}
-                                                                className="h-7 w-7 rounded-lg text-red-400 hover:bg-red-500/10"
-                                                                title="Delete flavour"
-                                                            >
-                                                                <Trash2 className="h-3 w-3" />
-                                                            </Button>
-                                                        </div>
+                                                        <Check className="h-3 w-3 mr-1" />
+                                                        {editingFlavourIndex !== null ? 'Update Flavour' : 'Save Flavour'}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
 
-                                                        <div className="flex items-center gap-2.5 flex-1 justify-end text-right">
-                                                            <div className="text-left font-mono">
-                                                                <span className="text-xs font-black text-primary block">
-                                                                    {settings?.shop?.currency || 'MVR'} {price.toFixed(2)}
-                                                                </span>
-                                                                {f.barcode && (
-                                                                    <span className="text-[9px] text-muted-foreground font-mono block">
-                                                                        {f.barcode}
-                                                                    </span>
-                                                                )}
+                                        <div className="space-y-2">
+                                            {flavours.length > 0 ? (
+                                                flavours.map((f, index) => {
+                                                    const price = f.price !== undefined ? Number(f.price) : Number(editedProduct.price || 0);
+                                                    return (
+                                                        <div
+                                                            key={index}
+                                                            className="p-2.5 bg-background border border-border hover:border-primary/40 rounded-lg flex items-center justify-between gap-2 transition-colors"
+                                                        >
+                                                            <div className="flex items-center gap-0.5 shrink-0">
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => handleEditFlavour(index)}
+                                                                    className="h-7 w-7 rounded-md text-blue-500 hover:bg-blue-500/10"
+                                                                    title="Edit flavour"
+                                                                >
+                                                                    <Pencil className="h-3 w-3" />
+                                                                </Button>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => handleDeleteFlavour(index)}
+                                                                    className="h-7 w-7 rounded-md text-red-500 hover:bg-red-500/10"
+                                                                    title="Delete flavour"
+                                                                >
+                                                                    <Trash2 className="h-3 w-3" />
+                                                                </Button>
                                                             </div>
-                                                            <div className="text-right">
-                                                                <Badge className="bg-primary/20 text-primary border-primary/30 text-[10.5px] font-black uppercase tracking-wider px-2 py-0.5">
+
+                                                            <div className="flex items-center gap-2.5 flex-1 min-w-0 justify-end text-right">
+                                                                <div className="text-left font-mono tabular-nums min-w-0">
+                                                                    <span className="text-xs font-bold text-primary block">
+                                                                        {settings?.shop?.currency || 'MVR'} {price.toFixed(2)}
+                                                                    </span>
+                                                                    {f.barcode && (
+                                                                        <span className="text-[10px] text-muted-foreground font-mono block truncate">
+                                                                            {f.barcode}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <Badge className="bg-primary/10 text-primary border border-primary/30 text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md shadow-none hover:bg-primary/10 max-w-[50%] truncate">
                                                                     {f.name}
                                                                 </Badge>
                                                             </div>
                                                         </div>
+                                                    );
+                                                })
+                                            ) : (
+                                                !isFlavourFormOpen && (
+                                                    <div className="flex flex-col items-center justify-center p-5 border border-dashed border-border rounded-lg bg-muted/30 text-center">
+                                                        <Tag className="h-6 w-6 text-muted-foreground/40 mb-1.5" />
+                                                        <p className="text-xs font-bold text-muted-foreground">No flavours added yet</p>
+                                                        <p className="text-[11px] text-muted-foreground/70 mt-1 max-w-sm">
+                                                            Have multiple flavours (e.g. Chocolate, Vanilla, Strawberry)? Add them here with their barcodes without creating duplicate products!
+                                                        </p>
                                                     </div>
-                                                );
-                                            })
-                                        ) : (
-                                            !isFlavourFormOpen && (
-                                                <div className="h-full min-h-[160px] flex flex-col items-center justify-center p-4 border border-dashed border-white/20 rounded-2xl bg-white/10 dark:bg-white/5 text-center">
-                                                    <Tag className="h-6 w-6 text-muted-foreground/40 mb-1.5" />
-                                                    <p className="text-xs font-bold text-muted-foreground">
-                                                        No flavours added yet
-                                                    </p>
-                                                    <p className="text-[10px] text-muted-foreground/60 mt-1 max-w-[220px]">
-                                                        Have multiple flavours (e.g. Chocolate, Vanilla, Strawberry)? Add them here with their barcodes without creating duplicate products!
-                                                    </p>
-                                                </div>
-                                            )
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* TAB 2: PACKAGING UNITS (BOX / CASE / PACK) */}
-                            {activeSubTab === 'units' && (
-                                <div className="flex-1 flex flex-col">
-                                    {/* Inline Unit Form */}
-                                    {isUnitFormOpen && (
-                                        <div className="p-3 apple-glass-card border border-primary/40 rounded-2xl space-y-3 mt-3 animate-in fade-in-50 duration-150 shadow-sm">
-                                            <div className="flex items-center justify-between border-b border-white/15 dark:border-white/10 pb-1.5">
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => setIsUnitFormOpen(false)}
-                                                    className="h-6 w-6 rounded-md text-muted-foreground hover:text-foreground"
-                                                >
-                                                    <X className="h-3.5 w-3.5" />
-                                                </Button>
-                                                <span className="text-[11px] font-black uppercase text-primary tracking-wider">
-                                                    {editingUnitIndex !== null ? renderBoth('edit_unit') : renderBoth('add_unit')}
-                                                </span>
-                                            </div>
-
-                                            {/* Quick Preset Pills */}
-                                            <div className="flex flex-wrap gap-1 justify-end">
-                                                {['Box', 'Case', 'Pack', 'Carton', 'Dozen'].map((preset) => (
-                                                    <button
-                                                        key={preset}
-                                                        type="button"
-                                                        onClick={() => setUnitForm(prev => ({ ...prev, name: preset }))}
-                                                        className={cn(
-                                                            "px-2.5 py-0.5 rounded-lg text-[10px] font-bold border transition-all apple-glass-pill",
-                                                            (unitForm.name || '').toLowerCase() === preset.toLowerCase()
-                                                                ? "bg-primary text-white border-primary shadow-xs"
-                                                                : "bg-white/40 dark:bg-white/10 text-muted-foreground border-white/20 hover:border-primary/40 hover:text-foreground"
-                                                        )}
-                                                    >
-                                                        {preset}
-                                                    </button>
-                                                ))}
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <div className="space-y-1">
-                                                    <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
-                                                        {renderBoth('unit_name')}*
-                                                    </Label>
-                                                    <Input
-                                                        dir="ltr"
-                                                        value={unitForm.name}
-                                                        onChange={(e) => setUnitForm(prev => ({ ...prev, name: e.target.value }))}
-                                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
-                                                        placeholder="e.g. Box"
-                                                        className="h-9 apple-glass-input rounded-xl text-left font-bold text-xs"
-                                                    />
-                                                </div>
-
-                                                <div className="space-y-1">
-                                                    <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
-                                                        {renderBoth('conversion_factor')}*
-                                                    </Label>
-                                                    <Input
-                                                        dir="ltr"
-                                                        type="number"
-                                                        value={unitForm.conversion_factor}
-                                                        onChange={(e) => setUnitForm(prev => ({ ...prev, conversion_factor: e.target.value }))}
-                                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
-                                                        placeholder="12"
-                                                        className="h-9 apple-glass-input rounded-xl text-left font-mono font-bold text-xs"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <div className="space-y-1">
-                                                    <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
-                                                        {renderBoth('unit_price')} ({settings?.shop?.currency || 'MVR'})*
-                                                    </Label>
-                                                    <Input
-                                                        dir="ltr"
-                                                        type="number"
-                                                        step="0.01"
-                                                        value={unitForm.price}
-                                                        onChange={(e) => setUnitForm(prev => ({ ...prev, price: e.target.value }))}
-                                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
-                                                        placeholder="0.00"
-                                                        className="h-9 apple-glass-input rounded-xl text-left font-mono font-bold text-xs text-primary"
-                                                    />
-                                                </div>
-
-                                                <div className="space-y-1">
-                                                    <Label className="text-right block text-[9px] font-black uppercase text-muted-foreground tracking-widest">
-                                                        {renderBoth('unit_barcode')}
-                                                    </Label>
-                                                    <Input
-                                                        dir="ltr"
-                                                        value={unitForm.barcode}
-                                                        onChange={(e) => setUnitForm(prev => ({ ...prev, barcode: e.target.value }))}
-                                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
-                                                        placeholder="Optional"
-                                                        className="h-9 apple-glass-input rounded-xl text-left font-mono text-[11px]"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            {parseFloat(unitForm.price) > 0 && parseFloat(unitForm.conversion_factor) > 0 && (
-                                                <div className="p-1.5 rounded-xl bg-white/40 dark:bg-white/10 text-[10px] text-muted-foreground text-center font-mono border border-white/10">
-                                                    = {settings?.shop?.currency || 'MVR'} {(parseFloat(unitForm.price) / parseFloat(unitForm.conversion_factor)).toFixed(2)} / pc
-                                                </div>
+                                                )
                                             )}
-
-                                            <div className="flex justify-end gap-1.5 pt-1">
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => setIsUnitFormOpen(false)}
-                                                    className="h-8 px-3 rounded-lg text-xs font-bold apple-glass-pill"
-                                                >
-                                                    {renderBoth('cancel')}
-                                                </Button>
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    onClick={handleSaveUnit}
-                                                    className="h-8 px-4 rounded-xl bg-primary text-white text-xs font-black apple-glass-pill"
-                                                >
-                                                    <Check className="h-3 w-3 mr-1" />
-                                                    {editingUnitIndex !== null ? 'Update' : 'Save Unit'}
-                                                </Button>
-                                            </div>
                                         </div>
-                                    )}
+                                    </div>
+                                )}
 
-                                    {/* Units List */}
-                                    <div className="flex-1 mt-3 space-y-2 overflow-y-auto max-h-[260px] custom-scrollbar">
-                                        {units.length > 0 ? (
-                                            units.map((u, index) => {
-                                                const conv = Number(u.conversion_factor || 0);
-                                                const price = Number(u.price || 0);
-                                                const perPiece = conv > 0 ? (price / conv).toFixed(2) : '0.00';
-                                                return (
-                                                    <div
-                                                        key={index}
-                                                        className="p-2.5 apple-glass-card border border-white/20 dark:border-white/10 hover:border-primary/40 rounded-2xl flex items-center justify-between gap-2 transition-all shadow-xs"
+                                {/* TAB 2: PACKAGING UNITS */}
+                                {activeSubTab === 'units' && (
+                                    <div className="space-y-3">
+                                        {isUnitFormOpen && (
+                                            <div className="p-3 bg-muted/40 border border-primary/40 rounded-xl space-y-3 animate-in fade-in-50 duration-150">
+                                                <div className="flex items-center justify-between border-b border-border pb-2">
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => setIsUnitFormOpen(false)}
+                                                        className="h-6 w-6 rounded-md text-muted-foreground hover:text-foreground"
                                                     >
-                                                        <div className="flex items-center gap-0.5">
-                                                            <Button
-                                                                type="button"
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={() => handleEditUnit(index)}
-                                                                className="h-7 w-7 rounded-lg text-blue-400 hover:bg-blue-500/10"
-                                                            >
-                                                                <Pencil className="h-3 w-3" />
-                                                            </Button>
-                                                            <Button
-                                                                type="button"
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={() => handleDeleteUnit(index)}
-                                                                className="h-7 w-7 rounded-lg text-red-400 hover:bg-red-500/10"
-                                                            >
-                                                                <Trash2 className="h-3 w-3" />
-                                                            </Button>
-                                                        </div>
+                                                        <X className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                    <span className="text-[11px] font-bold uppercase text-primary tracking-wide">
+                                                        {editingUnitIndex !== null ? renderBoth('edit_unit') : renderBoth('add_unit')}
+                                                    </span>
+                                                </div>
 
-                                                        <div className="flex items-center gap-2.5 flex-1 justify-end text-right">
-                                                            <div className="text-left font-mono">
-                                                                <span className="text-xs font-black text-primary block">
-                                                                    {settings?.shop?.currency || 'MVR'} {price.toFixed(2)}
-                                                                </span>
-                                                                <span className="text-[9px] text-muted-foreground block">
-                                                                    ~ {settings?.shop?.currency || 'MVR'} {perPiece} / pc
-                                                                </span>
+                                                <div className="flex flex-wrap gap-1 justify-end">
+                                                    {['Box', 'Case', 'Pack', 'Carton', 'Dozen'].map((preset) => (
+                                                        <button
+                                                            key={preset}
+                                                            type="button"
+                                                            onClick={() => setUnitForm(prev => ({ ...prev, name: preset }))}
+                                                            className={cn(
+                                                                "px-2.5 py-0.5 rounded-md text-[10px] font-bold border transition-colors",
+                                                                (unitForm.name || '').toLowerCase() === preset.toLowerCase()
+                                                                    ? "bg-primary text-primary-foreground border-primary"
+                                                                    : "bg-card text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
+                                                            )}
+                                                        >
+                                                            {preset}
+                                                        </button>
+                                                    ))}
+                                                </div>
+
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                    <div className="space-y-1">
+                                                        <Label className={lbl}>{renderBoth('unit_name')}*</Label>
+                                                        <Input
+                                                            dir="ltr"
+                                                            value={unitForm.name}
+                                                            onChange={(e) => setUnitForm(prev => ({ ...prev, name: e.target.value }))}
+                                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
+                                                            placeholder="e.g. Box"
+                                                            className="h-9 rounded-lg bg-background text-left font-bold text-xs"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <Label className={lbl}>{renderBoth('conversion_factor')}*</Label>
+                                                        <Input
+                                                            dir="ltr"
+                                                            type="number"
+                                                            value={unitForm.conversion_factor}
+                                                            onChange={(e) => setUnitForm(prev => ({ ...prev, conversion_factor: e.target.value }))}
+                                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
+                                                            placeholder="12"
+                                                            className="h-9 rounded-lg bg-background text-left font-mono tabular-nums font-bold text-xs"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <Label className={lbl}>{renderBoth('unit_price')} ({settings?.shop?.currency || 'MVR'})*</Label>
+                                                        <Input
+                                                            dir="ltr"
+                                                            type="number"
+                                                            step="0.01"
+                                                            value={unitForm.price}
+                                                            onChange={(e) => setUnitForm(prev => ({ ...prev, price: e.target.value }))}
+                                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
+                                                            placeholder="0.00"
+                                                            className="h-9 rounded-lg bg-background text-left font-mono tabular-nums font-bold text-xs text-primary"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <Label className={lbl}>{renderBoth('unit_barcode')}</Label>
+                                                        <Input
+                                                            dir="ltr"
+                                                            value={unitForm.barcode}
+                                                            onChange={(e) => setUnitForm(prev => ({ ...prev, barcode: e.target.value }))}
+                                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
+                                                            placeholder="Optional"
+                                                            className="h-9 rounded-lg bg-background text-left font-mono tabular-nums text-[11px]"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {parseFloat(unitForm.price) > 0 && parseFloat(unitForm.conversion_factor) > 0 && (
+                                                    <div className="p-1.5 rounded-lg bg-card text-[11px] text-muted-foreground text-center font-mono tabular-nums border border-border">
+                                                        = {settings?.shop?.currency || 'MVR'} {(parseFloat(unitForm.price) / parseFloat(unitForm.conversion_factor)).toFixed(2)} / pc
+                                                    </div>
+                                                )}
+
+                                                <div className="flex justify-end gap-1.5">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => setIsUnitFormOpen(false)}
+                                                        className="h-8 px-3 rounded-lg text-xs font-bold"
+                                                    >
+                                                        {renderBoth('cancel')}
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        onClick={handleSaveUnit}
+                                                        className="h-8 px-4 rounded-lg bg-primary text-primary-foreground text-xs font-bold"
+                                                    >
+                                                        <Check className="h-3 w-3 mr-1" />
+                                                        {editingUnitIndex !== null ? 'Update' : 'Save Unit'}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-2">
+                                            {units.length > 0 ? (
+                                                units.map((u, index) => {
+                                                    const conv = Number(u.conversion_factor || 0);
+                                                    const price = Number(u.price || 0);
+                                                    const perPiece = conv > 0 ? (price / conv).toFixed(2) : '0.00';
+                                                    return (
+                                                        <div
+                                                            key={index}
+                                                            className="p-2.5 bg-background border border-border hover:border-primary/40 rounded-lg flex items-center justify-between gap-2 transition-colors"
+                                                        >
+                                                            <div className="flex items-center gap-0.5 shrink-0">
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => handleEditUnit(index)}
+                                                                    className="h-7 w-7 rounded-md text-blue-500 hover:bg-blue-500/10"
+                                                                >
+                                                                    <Pencil className="h-3 w-3" />
+                                                                </Button>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => handleDeleteUnit(index)}
+                                                                    className="h-7 w-7 rounded-md text-red-500 hover:bg-red-500/10"
+                                                                >
+                                                                    <Trash2 className="h-3 w-3" />
+                                                                </Button>
                                                             </div>
-                                                            <div className="text-right">
-                                                                <div className="flex items-center gap-1 justify-end">
-                                                                    <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-primary/10 text-primary border-primary/30 px-1.5 py-0">
+
+                                                            <div className="flex items-center gap-2.5 flex-1 min-w-0 justify-end text-right">
+                                                                <div className="text-left font-mono tabular-nums">
+                                                                    <span className="text-xs font-bold text-primary block">
+                                                                        {settings?.shop?.currency || 'MVR'} {price.toFixed(2)}
+                                                                    </span>
+                                                                    <span className="text-[10px] text-muted-foreground block">
+                                                                        ~ {settings?.shop?.currency || 'MVR'} {perPiece} / pc
+                                                                    </span>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <Badge variant="outline" className="text-[11px] font-bold uppercase tracking-wide bg-primary/10 text-primary border-primary/30 px-2 py-0 rounded-md">
                                                                         {u.name}
                                                                     </Badge>
+                                                                    <span className="text-[10px] text-muted-foreground font-bold block mt-0.5 tabular-nums">
+                                                                        {u.conversion_factor} pcs
+                                                                    </span>
                                                                 </div>
-                                                                <span className="text-[10px] text-muted-foreground font-bold block mt-0.5">
-                                                                    {u.conversion_factor} pcs
-                                                                </span>
                                                             </div>
                                                         </div>
+                                                    );
+                                                })
+                                            ) : (
+                                                !isUnitFormOpen && (
+                                                    <div className="flex flex-col items-center justify-center p-5 border border-dashed border-border rounded-lg bg-muted/30 text-center">
+                                                        <Layers className="h-6 w-6 text-muted-foreground/40 mb-1.5" />
+                                                        <p className="text-xs font-bold text-muted-foreground">{renderBoth('no_units_added')}</p>
+                                                        <p className="text-[11px] text-muted-foreground/70 mt-1 max-w-sm">
+                                                            Click "+ Add Unit" to add wholesale/box pricing (Box, Case, Pack).
+                                                        </p>
                                                     </div>
-                                                );
-                                            })
-                                        ) : (
-                                            !isUnitFormOpen && (
-                                                <div className="h-full min-h-[160px] flex flex-col items-center justify-center p-4 border border-dashed border-white/20 rounded-2xl bg-white/10 dark:bg-white/5 text-center">
-                                                    <Layers className="h-6 w-6 text-muted-foreground/40 mb-1.5" />
-                                                    <p className="text-xs font-bold text-muted-foreground">
-                                                        {renderBoth('no_units_added')}
-                                                    </p>
-                                                    <p className="text-[10px] text-muted-foreground/60 mt-1 max-w-[220px]">
-                                                        Click "+ Add Unit" to add wholesale/box pricing (Box, Case, Pack).
-                                                    </p>
-                                                </div>
-                                            )
-                                        )}
+                                                )
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            )}
-                        </div>
+                                )}
+                            </>,
+                            activeSubTab === 'flavours' ? (
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={handleOpenAddFlavour}
+                                    className="h-8 px-2.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs gap-1"
+                                >
+                                    <Plus className="h-3.5 w-3.5" />
+                                    Add Flavour
+                                </Button>
+                            ) : (
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={handleOpenAddUnit}
+                                    className="h-8 px-2.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs gap-1"
+                                >
+                                    <Plus className="h-3.5 w-3.5" />
+                                    {renderBoth('add_unit')}
+                                </Button>
+                            )
+                        )}
                     </div>
                 </div>
 
-                {/* Footer */}
-                <DialogFooter className="gap-3 px-6 py-4 border-t border-white/15 dark:border-white/10 bg-white/20 dark:bg-white/5 backdrop-blur-md">
-                    <Button variant="outline" onClick={onClose} className="flex-1 h-11 text-foreground font-black uppercase tracking-wider text-xs apple-glass-pill">
+                {/* Sticky footer */}
+                <DialogFooter className="gap-3 sm:gap-3 sm:space-x-0 px-5 py-3 border-t border-border bg-card shrink-0 flex-row">
+                    <Button variant="outline" onClick={onClose} className="flex-1 h-11 text-foreground font-bold uppercase tracking-wide text-xs rounded-lg">
                         {renderBoth('cancel')}
                     </Button>
-                    <Button 
-                        onClick={handleSave} 
+                    <Button
+                        onClick={handleSave}
                         disabled={isUploadingImage}
-                        className="flex-1 h-11 bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-wider text-xs shadow-lg shadow-primary/30 apple-glass-pill disabled:opacity-50"
+                        className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-bold uppercase tracking-wide text-xs rounded-lg disabled:opacity-50"
                     >
                         {isUploadingImage ? (
                             <div className="flex items-center justify-center gap-2">

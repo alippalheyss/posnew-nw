@@ -1033,15 +1033,82 @@ const CreditOutstanding = () => {
     return timeB - timeA;
   }).slice(0, 15);
 
+  // --- Presentational derived values (Solid Pro redesign) ---
+  const debtMeta = useMemo(() => {
+    const map = new Map<string, { count: number; oldestDays: number | null }>();
+    const now = Date.now();
+    customers.forEach((c) => {
+      if (Number(c.outstanding_balance || 0) <= 0) return;
+      const cs = getCustomerCreditSales(c);
+      let oldest: number | null = null;
+      cs.forEach((s) => {
+        const tm = new Date(s.date).getTime();
+        if (!isNaN(tm) && (oldest === null || tm < oldest)) oldest = tm;
+      });
+      map.set(c.id, {
+        count: cs.length,
+        oldestDays: oldest === null ? null : Math.max(0, Math.floor((now - oldest) / 86400000)),
+      });
+    });
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customers, sales]);
+
+  const totalOutstandingAmount = customers.reduce((sum, c) => sum + (c.outstanding_balance || 0), 0);
+  const debtorsCount = customers.filter((c) => Number(c.outstanding_balance || 0) > 0).length;
+  const overdueCustomers = customers.filter((c) => {
+    const m = debtMeta.get(c.id);
+    return Number(c.outstanding_balance || 0) > 0 && m && m.oldestDays !== null && m.oldestDays > 30;
+  });
+  const overdueAmount = overdueCustomers.reduce((sum, c) => sum + (c.outstanding_balance || 0), 0);
+  const totalCollected = allSettlements.reduce((sum, s) => sum + (Number(s.amount_paid) || 0), 0);
+  const fmtMoney = (n: number) =>
+    n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const kpiTiles = [
+    {
+      label: 'Total Outstanding',
+      value: `${settings.shop.currency} ${fmtMoney(totalOutstandingAmount)}`,
+      sub: `${filteredCustomers.length} shown`,
+      icon: AlertCircle,
+      chip: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+      sensitive: true,
+    },
+    {
+      label: 'Debtors',
+      value: String(debtorsCount),
+      sub: `of ${customers.length} customers`,
+      icon: User,
+      chip: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+      sensitive: false,
+    },
+    {
+      label: 'Overdue (30d+)',
+      value: String(overdueCustomers.length),
+      sub: `${settings.shop.currency} ${fmtMoney(overdueAmount)}`,
+      icon: Clock,
+      chip: 'bg-red-500/10 text-red-600 dark:text-red-400',
+      sensitive: false,
+      subSensitive: true,
+    },
+    {
+      label: 'Collected',
+      value: `${settings.shop.currency} ${fmtMoney(totalCollected)}`,
+      sub: `${allSettlements.length} payments`,
+      icon: CheckCircle2,
+      chip: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+      sensitive: true,
+    },
+  ];
+
   return (
     <div className="p-4 sm:p-6 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="rtl">
-      {/* Unified Top Header Bar */}
+      {/* Header + KPI strip + toolbar */}
       <div className="shrink-0 mb-4 space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-4 apple-glass-card border border-white/20 dark:border-white/10 rounded-3xl p-4 sm:px-6 shadow-sm">
-          {/* Title & Subtitle (Right side in RTL) */}
-          <div className="flex items-center gap-3.5 text-right">
-            <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary shrink-0 shadow-xs">
-              <DollarSign className="h-6 w-6" />
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3 text-right">
+            <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <DollarSign className="h-5 w-5" />
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-black text-foreground leading-tight">
@@ -1053,113 +1120,115 @@ const CreditOutstanding = () => {
             </div>
           </div>
 
-          {/* Total Outstanding Summary + Action Buttons (Left side in RTL) */}
-          <div className="flex flex-wrap items-center gap-2.5 mr-auto sm:mr-0" dir="ltr">
-            {/* Compact Total Outstanding Summary Card */}
-            <div className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-orange-500/10 border border-orange-500/30">
-              <div className="w-8 h-8 rounded-xl bg-orange-500/20 text-orange-500 flex items-center justify-center shrink-0">
-                <AlertCircle className="h-4 w-4" />
-              </div>
-              <div className="text-left">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">
-                    Total Outstanding
-                  </span>
-                  <span className="text-[10px] font-black text-orange-500 bg-orange-500/15 px-1.5 py-0.2 rounded-md">
-                    {filteredCustomers.length} Acc
-                  </span>
-                </div>
-                <p
-                  className={cn(
-                    "text-base sm:text-lg font-black text-foreground font-mono leading-tight transition-all",
-                    !isOutstandingVisible && "blur-md select-none"
-                  )}
-                >
-                  {settings.shop.currency}{' '}
-                  {customers
-                    .reduce((sum, c) => sum + (c.outstanding_balance || 0), 0)
-                    .toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/10 shrink-0"
-                onClick={() => setIsOutstandingVisible(!isOutstandingVisible)}
-                title={isOutstandingVisible ? "Hide total outstanding" : "Show total outstanding"}
-              >
-                {isOutstandingVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-            </div>
+          <div className="flex flex-wrap items-center gap-2" dir="ltr">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted shrink-0"
+              onClick={() => setIsOutstandingVisible(!isOutstandingVisible)}
+              title={isOutstandingVisible ? "Hide total outstanding" : "Show total outstanding"}
+            >
+              {isOutstandingVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
 
-            {/* Action Toolbar */}
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                onClick={() => setIsTransferSlipsDialogOpen(true)}
-                variant="outline"
-                className="gap-2 h-10 px-3.5 rounded-xl font-black text-xs border-border relative bg-card hover:bg-muted"
-              >
-                <CreditCard className="h-4 w-4 text-primary" />
-                <span>TRANSFER SLIPS</span>
-                {pendingSlipsCount > 0 && (
-                  <Badge className="bg-amber-500 text-black font-black text-[10px] animate-pulse ml-0.5 px-1.5 py-0">
-                    {pendingSlipsCount} NEW
-                  </Badge>
-                )}
-              </Button>
+            <Button
+              onClick={() => setIsTransferSlipsDialogOpen(true)}
+              variant="outline"
+              className="gap-2 h-9 px-3 rounded-xl font-bold text-xs border-border relative bg-card hover:bg-muted"
+            >
+              <CreditCard className="h-4 w-4 text-primary" />
+              <span>TRANSFER SLIPS</span>
+              {pendingSlipsCount > 0 && (
+                <Badge className="bg-amber-500 text-black font-black text-[10px] animate-pulse ml-0.5 px-1.5 py-0">
+                  {pendingSlipsCount} NEW
+                </Badge>
+              )}
+            </Button>
 
-              <Button
-                onClick={handleOpenBatchRemindersDialog}
-                className="h-10 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs gap-1.5 shadow-xs transition-all flex items-center active:scale-[0.98]"
-              >
-                <BellRing className="h-4 w-4" />
-                <span>REMINDERS</span>
-                {linkedCustomersWithDue.length > 0 && (
-                  <Badge className="bg-white/20 text-white border-none text-[10px] px-1.5 py-0 rounded-full font-mono font-bold">
-                    {linkedCustomersWithDue.length}
-                  </Badge>
-                )}
-              </Button>
+            <Button
+              onClick={handleOpenBatchRemindersDialog}
+              className="h-9 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs gap-1.5 transition-all flex items-center active:scale-[0.98]"
+            >
+              <BellRing className="h-4 w-4" />
+              <span>REMINDERS</span>
+              {linkedCustomersWithDue.length > 0 && (
+                <Badge className="bg-white/20 text-white border-none text-[10px] px-1.5 py-0 rounded-full font-mono font-bold">
+                  {linkedCustomersWithDue.length}
+                </Badge>
+              )}
+            </Button>
 
-              <Button
-                onClick={exportAllOutstanding}
-                variant="outline"
-                className="h-10 px-3.5 rounded-xl border-border bg-card hover:bg-muted gap-1.5 font-black text-xs"
-              >
-                <Download className="h-4 w-4" />
-                <span className="hidden xl:inline">EXPORT</span>
-              </Button>
+            <Button
+              onClick={exportAllOutstanding}
+              variant="outline"
+              className="h-9 px-3 rounded-xl border-border bg-card hover:bg-muted gap-1.5 font-bold text-xs"
+            >
+              <Download className="h-4 w-4" />
+              <span className="hidden xl:inline">EXPORT</span>
+            </Button>
 
-              <Button
-                onClick={async () => {
-                  setIsSyncing(true);
-                  try {
-                    await refreshCustomers(true);
-                  } finally {
-                    setIsSyncing(false);
-                  }
-                }}
-                disabled={isSyncing}
-                variant="outline"
-                className="h-10 px-3.5 rounded-xl border-border bg-card hover:bg-muted gap-1.5 font-black text-xs"
-                title="Sync customers and credit balances directly from cloud"
-              >
-                <RotateCw className={cn("h-4 w-4 text-primary", isSyncing && "animate-spin")} />
-                <span className="hidden xl:inline">SYNC</span>
-              </Button>
-            </div>
+            <Button
+              onClick={async () => {
+                setIsSyncing(true);
+                try {
+                  await refreshCustomers(true);
+                } finally {
+                  setIsSyncing(false);
+                }
+              }}
+              disabled={isSyncing}
+              variant="outline"
+              className="h-9 px-3 rounded-xl border-border bg-card hover:bg-muted gap-1.5 font-bold text-xs"
+              title="Sync customers and credit balances directly from cloud"
+            >
+              <RotateCw className={cn("h-4 w-4 text-primary", isSyncing && "animate-spin")} />
+              <span className="hidden xl:inline">SYNC</span>
+            </Button>
           </div>
+        </div>
+
+        {/* KPI summary strip */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" dir="ltr">
+          {kpiTiles.map((k) => {
+            const Icon = k.icon;
+            return (
+              <div key={k.label} className="bg-card border border-border rounded-xl p-4 flex items-center gap-3.5">
+                <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0", k.chip)}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 text-left">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{k.label}</p>
+                  <p
+                    className={cn(
+                      "text-lg sm:text-xl font-black tabular-nums text-foreground leading-tight truncate transition-all",
+                      k.sensitive && !isOutstandingVisible && "blur-md select-none"
+                    )}
+                  >
+                    {k.value}
+                  </p>
+                  <p
+                    className={cn(
+                      "text-[11px] text-muted-foreground tabular-nums truncate",
+                      (k as any).subSensitive && !isOutstandingVisible && "blur-sm select-none"
+                    )}
+                  >
+                    {k.sub}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Pending Transfer Slips Alert Banner */}
         {pendingSlipsCount > 0 && (
           <div
             onClick={() => setIsTransferSlipsDialogOpen(true)}
-            className="p-3 px-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between cursor-pointer hover:bg-amber-500/15 transition-all shadow-xs group"
+            className="p-3 px-4 rounded-xl bg-card border border-amber-500/40 border-l-4 border-l-amber-500 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-all group"
             dir="ltr"
           >
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-black animate-pulse shrink-0">
+              <div className="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-black animate-pulse shrink-0">
                 <CreditCard className="h-4 w-4" />
               </div>
               <div>
@@ -1178,28 +1247,28 @@ const CreditOutstanding = () => {
           </div>
         )}
 
-        {/* Compact Recent Settlements Strip (shown when settlements exist) */}
+        {/* Recent Settlements Strip */}
         {allSettlements.length > 0 && (
-          <ScrollArea className="w-full whitespace-nowrap rounded-2xl" dir="ltr">
+          <ScrollArea className="w-full whitespace-nowrap rounded-xl" dir="ltr">
             <div className="flex items-center gap-2.5 pb-2">
-              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[10px] font-black uppercase tracking-wider shrink-0">
+              <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold uppercase tracking-wider shrink-0">
                 <CheckCircle2 className="h-3.5 w-3.5" />
                 <span>Recent Settlements</span>
               </div>
               {allSettlements.slice(0, 12).map((s) => (
                 <div
                   key={s.id}
-                  className="inline-flex items-center gap-3 px-3.5 py-2 apple-glass-card border border-white/20 dark:border-white/10 hover:border-emerald-500/40 rounded-xl text-left transition-all shrink-0"
+                  className="inline-flex items-center gap-3 px-3.5 py-2 bg-card border border-border hover:border-emerald-500/40 rounded-xl text-left transition-all shrink-0"
                 >
                   <div>
-                    <p className="font-black text-foreground text-xs truncate max-w-[140px]" dir="rtl">
+                    <p className="font-bold text-foreground text-xs truncate max-w-[140px]" dir="rtl">
                       {s.customerName}
                     </p>
-                    <p className="text-[9px] font-bold text-muted-foreground">
+                    <p className="text-[9px] font-medium text-muted-foreground tabular-nums">
                       {formatDate(s.date)} {formatTime(s.date)}
                     </p>
                   </div>
-                  <Badge className="bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 font-mono font-black text-xs px-2 py-0.5">
+                  <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-mono font-bold text-xs px-2 py-0.5 tabular-nums">
                     +{settings.shop.currency} {s.amount_paid.toFixed(0)}
                   </Badge>
                 </div>
@@ -1209,10 +1278,9 @@ const CreditOutstanding = () => {
           </ScrollArea>
         )}
 
-        {/* Unified Search & Filter Bar */}
-        <div className="apple-glass-card border border-white/20 dark:border-white/10 rounded-2xl p-2.5 sm:p-3 flex flex-col gap-2.5" dir="ltr">
+        {/* Toolbar: search, filter, sort */}
+        <div className="bg-card border border-border rounded-xl p-2.5 flex flex-col gap-2.5" dir="ltr">
           <div className="flex flex-wrap items-center gap-2.5">
-            {/* 1. Unified Search */}
             <div className="relative flex-1 min-w-[220px]">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60 pointer-events-none" />
               <Input
@@ -1220,7 +1288,7 @@ const CreditOutstanding = () => {
                 placeholder="Search customer by name or code (e.g. Ali, C01, 01)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full apple-glass-input rounded-xl pl-10 pr-9 h-10 text-left font-bold transition-all text-xs sm:text-sm"
+                className="w-full bg-background border-border rounded-lg pl-10 pr-9 h-10 text-left font-medium transition-all text-xs sm:text-sm"
               />
               {searchQuery && (
                 <button
@@ -1233,16 +1301,15 @@ const CreditOutstanding = () => {
               )}
             </div>
 
-            {/* 2. Filter by Credit Amount */}
             <div className="w-full sm:w-52">
               <Select value={amountFilter} onValueChange={(val: any) => setAmountFilter(val)}>
-                <SelectTrigger className="h-10 rounded-xl apple-glass-input border-border font-bold text-xs">
+                <SelectTrigger className="h-10 rounded-lg bg-background border-border font-bold text-xs">
                   <div className="flex items-center gap-2 truncate">
-                    <DollarSign className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <Filter className="h-3.5 w-3.5 text-primary shrink-0" />
                     <SelectValue placeholder="Credit Amount" />
                   </div>
                 </SelectTrigger>
-                <SelectContent className="apple-glass-dialog border-white/20 dark:border-white/10 z-[120]">
+                <SelectContent className="z-[120]">
                   <SelectItem value="has_due" className="text-xs font-bold">Active Debts (Due &gt; 0)</SelectItem>
                   <SelectItem value="all" className="text-xs font-bold">All Customers (Any Balance)</SelectItem>
                   <SelectItem value="gt_500" className="text-xs font-bold">Due &gt; MVR 500</SelectItem>
@@ -1254,16 +1321,15 @@ const CreditOutstanding = () => {
               </Select>
             </div>
 
-            {/* 3. Sort By */}
             <div className="w-full sm:w-48">
               <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
-                <SelectTrigger className="h-10 rounded-xl apple-glass-input border-border font-bold text-xs">
+                <SelectTrigger className="h-10 rounded-lg bg-background border-border font-bold text-xs">
                   <div className="flex items-center gap-2 truncate">
                     <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     <SelectValue placeholder="Sort By" />
                   </div>
                 </SelectTrigger>
-                <SelectContent className="apple-glass-dialog border-white/20 dark:border-white/10 z-[120]">
+                <SelectContent className="z-[120]">
                   <SelectItem value="due_desc" className="text-xs font-bold">Highest Due First</SelectItem>
                   <SelectItem value="due_asc" className="text-xs font-bold">Lowest Due First</SelectItem>
                   <SelectItem value="name_asc" className="text-xs font-bold">Name (A to Z)</SelectItem>
@@ -1272,7 +1338,6 @@ const CreditOutstanding = () => {
               </Select>
             </div>
 
-            {/* Clear Filters Button */}
             {(searchQuery || amountFilter !== 'has_due' || customMinAmount || customMaxAmount) && (
               <Button
                 variant="ghost"
@@ -1283,30 +1348,28 @@ const CreditOutstanding = () => {
                   setCustomMaxAmount('');
                   setSortBy('due_desc');
                 }}
-                className="h-10 px-3 rounded-xl text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-muted"
+                className="h-10 px-3 rounded-lg text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-muted"
                 title="Reset all filters"
               >
                 <X className="h-3.5 w-3.5 mr-1" /> Reset
               </Button>
             )}
 
-            {/* Showing count badge */}
             <div className="hidden md:flex items-center gap-2 ml-auto pl-2 text-xs text-muted-foreground">
               <span>
-                Showing <strong className="text-foreground font-mono">{filteredCustomers.length}</strong> /{' '}
-                <strong className="text-foreground font-mono">{customers.length}</strong>
+                Showing <strong className="text-foreground tabular-nums">{filteredCustomers.length}</strong> /{' '}
+                <strong className="text-foreground tabular-nums">{customers.length}</strong>
               </span>
               {amountFilter !== 'all' && (
-                <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-md font-black">
+                <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
                   {amountFilter === 'has_due' ? 'Active Due > 0' : amountFilter.toUpperCase()}
                 </span>
               )}
             </div>
           </div>
 
-          {/* Custom Min/Max Amount Row when custom is selected */}
           {amountFilter === 'custom' && (
-            <div className="flex items-center gap-3 bg-muted/40 p-2.5 rounded-xl border border-border text-xs font-bold">
+            <div className="flex items-center gap-3 bg-muted/40 p-2.5 rounded-lg border border-border text-xs font-bold">
               <Filter className="h-3.5 w-3.5 text-primary shrink-0" />
               <span>Custom Credit Amount:</span>
               <Input
@@ -1331,7 +1394,7 @@ const CreditOutstanding = () => {
 
       {/* Customers List */}
       <ScrollArea className="flex-1 custom-scrollbar">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5 pb-8" dir="ltr">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 pb-8" dir="ltr">
           {filteredCustomers.slice(0, visibleCount).map((customer) => {
             const due = Number(customer.outstanding_balance || 0);
             const limit = Number(customer.credit_limit || 0);
@@ -1350,31 +1413,36 @@ const CreditOutstanding = () => {
               .map((w) => w[0])
               .join('')
               .toUpperCase();
+            const meta = debtMeta.get(customer.id);
+            const oldestDays = meta ? meta.oldestDays : null;
+            const invoiceCount = meta ? meta.count : 0;
+            const sev =
+              due <= 0
+                ? { border: 'border-l-emerald-500', chip: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', label: 'Settled' }
+                : oldestDays === null || oldestDays <= 14
+                  ? { border: 'border-l-blue-500', chip: 'bg-blue-500/10 text-blue-600 dark:text-blue-400', label: 'Current' }
+                  : oldestDays <= 30
+                    ? { border: 'border-l-amber-500', chip: 'bg-amber-500/10 text-amber-600 dark:text-amber-400', label: 'Aging' }
+                    : oldestDays <= 60
+                      ? { border: 'border-l-orange-500', chip: 'bg-orange-500/10 text-orange-600 dark:text-orange-400', label: 'Overdue' }
+                      : { border: 'border-l-red-500', chip: 'bg-red-500/10 text-red-600 dark:text-red-400', label: 'Critical' };
 
             return (
               <Card
                 key={customer.id}
                 className={cn(
-                  "bg-card/95 backdrop-blur-md border rounded-3xl overflow-hidden group transition-all duration-200 hover:shadow-xl flex flex-col justify-between",
-                  isOverLimit
-                    ? "border-red-500/35 hover:border-red-500/60 shadow-red-500/5"
-                    : isNearLimit
-                      ? "border-amber-500/35 hover:border-amber-500/60 shadow-amber-500/5"
-                      : "border-border/80 hover:border-primary/50 shadow-sm"
+                  "bg-card border border-border border-l-4 rounded-xl overflow-hidden group transition-colors hover:border-primary/40 flex flex-col shadow-none",
+                  sev.border
                 )}
               >
-                <CardContent className="p-5 flex flex-col gap-3.5">
-                  {/* Top Row: Avatar + Name/Code + Quick Print/PDF Icons */}
+                <CardContent className="p-4 flex flex-col gap-3.5">
+                  {/* Header: avatar, name, phone, utilities */}
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div
                         className={cn(
-                          "w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 border transition-transform group-hover:scale-105 shadow-xs",
-                          isOverLimit
-                            ? "bg-red-500/15 text-red-500 border-red-500/30"
-                            : due > 0
-                              ? "bg-primary/12 text-primary border-primary/25"
-                              : "bg-emerald-500/12 text-emerald-500 border-emerald-500/25"
+                          "w-11 h-11 rounded-lg flex items-center justify-center font-black text-sm shrink-0",
+                          sev.chip
                         )}
                       >
                         {initials || <User className="h-5 w-5" />}
@@ -1382,11 +1450,14 @@ const CreditOutstanding = () => {
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-mono text-[11px] font-black text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-lg uppercase tracking-wider shrink-0">
+                          <span className="font-mono text-[10px] font-bold text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md uppercase tracking-wider shrink-0">
                             #{customer.code}
                           </span>
+                          <span className={cn("text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md", sev.chip)}>
+                            {sev.label}
+                          </span>
                           {isNearLimit && (
-                            <Badge className="bg-red-500/15 text-red-500 border border-red-500/30 text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1">
+                            <Badge className="bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1">
                               <AlertCircle className="h-3 w-3" />
                               {usagePct}% LIMIT
                             </Badge>
@@ -1396,14 +1467,16 @@ const CreditOutstanding = () => {
                           {customer.name_en || customer.name_dv}
                         </h3>
                         {customer.name_dv && (
-                          <p className="text-xs font-bold text-muted-foreground truncate font-faruma" dir="rtl">
+                          <p className="text-xs font-medium text-muted-foreground truncate font-faruma" dir="rtl">
                             {customer.name_dv}
                           </p>
+                        )}
+                        {customer.phone && (
+                          <p className="text-[11px] font-mono text-muted-foreground tabular-nums mt-0.5">📞 {customer.phone}</p>
                         )}
                       </div>
                     </div>
 
-                    {/* Top Utility Buttons: PDF Statement & Thermal Total Slip */}
                     <div className="flex items-center gap-1.5 shrink-0">
                       <Button
                         variant="ghost"
@@ -1412,7 +1485,7 @@ const CreditOutstanding = () => {
                           e.stopPropagation();
                           handleOpenPdfPreview(customer);
                         }}
-                        className="h-8 w-8 rounded-xl bg-amber-500/12 border border-amber-500/25 hover:bg-amber-500 hover:text-white transition-all text-amber-600 dark:text-amber-400"
+                        className="h-8 w-8 rounded-lg bg-amber-500/10 hover:bg-amber-500 hover:text-white transition-all text-amber-600 dark:text-amber-400"
                         title="View & Download Customer Outstanding PDF (ޕީޑީއެފް ސްޓޭޓްމަންޓް)"
                       >
                         <FileText className="h-4 w-4" />
@@ -1424,7 +1497,7 @@ const CreditOutstanding = () => {
                           e.stopPropagation();
                           handlePrintCustomerTotal(customer);
                         }}
-                        className="h-8 w-8 rounded-xl bg-muted/80 border border-border/70 hover:bg-primary hover:text-primary-foreground transition-all text-muted-foreground"
+                        className="h-8 w-8 rounded-lg bg-muted hover:bg-primary hover:text-primary-foreground transition-all text-muted-foreground"
                         title="Print Customer Total Slip (ކަސްޓަމަރުގެ ދަރަނި ސްލިޕް ޕްރިންޓްކުރައްވާ)"
                       >
                         <Printer className="h-4 w-4" />
@@ -1432,19 +1505,14 @@ const CreditOutstanding = () => {
                     </div>
                   </div>
 
-                  {/* Middle Box: Total Due + Credit Limit Progress + Last Settled */}
+                  {/* Huge due amount + limit */}
                   <div
                     onClick={() => toggleTotalReveal(customer.id)}
-                    className={cn(
-                      "p-3.5 rounded-2xl border transition-all cursor-pointer select-none",
-                      isOverLimit
-                        ? "bg-red-500/8 border-red-500/25 hover:bg-red-500/12"
-                        : "bg-muted/40 border-border/70 hover:bg-muted/60"
-                    )}
+                    className="cursor-pointer select-none rounded-lg bg-muted/40 border border-border p-3.5 hover:bg-muted/60 transition-colors"
                     title={isRevealed ? "Click to hide balance" : "Click to reveal balance"}
                   >
-                    <div className="flex items-center justify-between gap-2 mb-1.5">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                         <span>TOTAL DUE</span>
                         {isRevealed ? (
                           <EyeOff className="h-3 w-3 text-muted-foreground/70" />
@@ -1452,55 +1520,63 @@ const CreditOutstanding = () => {
                           <Eye className="h-3 w-3 text-muted-foreground/70" />
                         )}
                       </span>
-                      <span className="text-[11px] font-bold text-muted-foreground flex items-center gap-1">
-                        <Clock className="h-3 w-3 text-primary/70" />
-                        <span>
-                          {lastSettlement ? formatDate(lastSettlement.date) : 'No settlement'}
-                        </span>
-                      </span>
-                    </div>
-
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span
-                        className={cn(
-                          "text-2xl sm:text-[26px] font-black font-mono tracking-tight transition-all duration-200",
-                          isOverLimit ? "text-red-500" : due > 0 ? "text-foreground" : "text-emerald-500",
-                          !isRevealed && "blur-md select-none"
-                        )}
-                      >
-                        {settings.shop.currency} {due.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
                       <span className={cn(
-                        "text-[10px] font-black font-mono px-2 py-0.5 rounded-md",
+                        "text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-md",
                         isOverLimit
-                          ? "bg-red-500/15 text-red-500"
+                          ? "bg-red-500/10 text-red-600 dark:text-red-400"
                           : usagePct >= 75
-                            ? "bg-amber-500/15 text-amber-500"
+                            ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
                             : "bg-muted text-muted-foreground"
                       )}>
                         {usagePct}% Used
                       </span>
                     </div>
-
+                    <span
+                      className={cn(
+                        "block text-3xl font-black tabular-nums tracking-tight transition-all duration-200 leading-tight",
+                        isOverLimit ? "text-red-600 dark:text-red-400" : due > 0 ? "text-foreground" : "text-emerald-600 dark:text-emerald-400",
+                        !isRevealed && "blur-md select-none"
+                      )}
+                    >
+                      <span className="text-sm font-bold text-muted-foreground mr-1.5">{settings.shop.currency}</span>
+                      {due.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
                     <div className="mt-2.5 space-y-1.5">
                       <Progress
                         value={Math.min(100, (due / (limit || 1)) * 100)}
-                        className="h-2 bg-background/80 rounded-full"
+                        className="h-1.5 bg-background rounded-full"
                       />
-                      <div className="flex items-center justify-between text-[11px] font-bold text-muted-foreground">
-                        <span>Credit Limit: <strong className="font-mono text-foreground">{settings.shop.currency} {limit.toFixed(0)}</strong></span>
-                        {customer.phone && (
-                          <span className="font-mono text-muted-foreground">📞 {customer.phone}</span>
-                        )}
+                      <div className="text-[11px] font-medium text-muted-foreground">
+                        Credit Limit: <strong className="font-mono tabular-nums text-foreground">{settings.shop.currency} {limit.toFixed(0)}</strong>
                       </div>
                     </div>
                   </div>
 
-                  {/* Primary Action Row: Settle | History | Details */}
+                  {/* Mini stats row */}
+                  <div className="grid grid-cols-3 divide-x divide-border border border-border rounded-lg overflow-hidden text-center">
+                    <div className="py-2 px-1">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Invoices</p>
+                      <p className="text-sm font-black tabular-nums text-foreground">{invoiceCount}</p>
+                    </div>
+                    <div className="py-2 px-1">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Oldest</p>
+                      <p className="text-sm font-black tabular-nums text-foreground">
+                        {oldestDays === null ? '—' : `${oldestDays}d`}
+                      </p>
+                    </div>
+                    <div className="py-2 px-1">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Last Paid</p>
+                      <p className="text-[11px] font-bold tabular-nums text-foreground leading-[1.9]">
+                        {lastSettlement ? formatDate(lastSettlement.date) : '—'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Action row */}
                   <div className="grid grid-cols-3 gap-2">
                     <Button
                       onClick={() => handleSettlePaymentClick(customer)}
-                      className="bg-primary hover:bg-primary/90 text-white text-xs font-black h-9 rounded-xl transition-all uppercase px-2 shadow-xs gap-1"
+                      className="col-span-3 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black h-10 rounded-lg transition-all uppercase px-2 gap-1.5"
                     >
                       <DollarSign className="h-4 w-4 shrink-0" />
                       <span>Settle</span>
@@ -1508,25 +1584,25 @@ const CreditOutstanding = () => {
                     <Button
                       variant="outline"
                       onClick={() => handleViewSettlementHistory(customer)}
-                      className="bg-card hover:bg-muted text-foreground text-xs font-black h-9 rounded-xl border-border/80 transition-all uppercase px-2"
+                      className="col-span-1 bg-card hover:bg-muted text-foreground text-xs font-bold h-9 rounded-lg border-border transition-all uppercase px-2"
                     >
                       History
                     </Button>
                     <Button
                       variant="outline"
                       onClick={() => handleViewCreditPurchases(customer)}
-                      className="bg-card hover:bg-muted text-foreground text-xs font-black h-9 rounded-xl border-border/80 transition-all uppercase px-2"
+                      className="col-span-2 bg-card hover:bg-muted text-foreground text-xs font-bold h-9 rounded-lg border-border transition-all uppercase px-2 gap-1.5"
                     >
-                      Details
+                      <ShoppingBag className="h-3.5 w-3.5 shrink-0" />
+                      <span>Details</span>
                     </Button>
                   </div>
 
-                  {/* Compact Statement & Share Row: PDF | Telegram | Viber */}
-                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/50">
+                  <div className="grid grid-cols-3 gap-2 pt-3 border-t border-border">
                     <Button
                       type="button"
                       onClick={() => handleOpenPdfPreview(customer)}
-                      className="bg-amber-500/12 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/25 text-[11px] font-black h-8.5 rounded-xl transition-all gap-1.5 flex items-center justify-center px-2 active:scale-95"
+                      className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/25 text-[11px] font-bold h-9 rounded-lg transition-all gap-1.5 flex items-center justify-center px-2 active:scale-95"
                       title="View & Download PDF Statement (ޕީޑީއެފް ސްޓޭޓްމަންޓް)"
                     >
                       <FileText className="h-3.5 w-3.5 shrink-0" />
@@ -1537,7 +1613,7 @@ const CreditOutstanding = () => {
                       type="button"
                       onClick={() => handleSendCustomerTelegram(customer)}
                       disabled={isSendingTelegram === customer.id}
-                      className="bg-[#229ED9]/12 hover:bg-[#229ED9]/25 text-[#229ED9] border border-[#229ED9]/25 text-[11px] font-black h-8.5 rounded-xl transition-all gap-1.5 flex items-center justify-center px-2 active:scale-95"
+                      className="bg-[#229ED9]/10 hover:bg-[#229ED9]/20 text-[#229ED9] border border-[#229ED9]/25 text-[11px] font-bold h-9 rounded-lg transition-all gap-1.5 flex items-center justify-center px-2 active:scale-95"
                       title={customer.telegram_chat_id ? 'Send Statement via Telegram' : 'Link Telegram to Send Statement'}
                     >
                       {isSendingTelegram === customer.id ? (
@@ -1551,7 +1627,7 @@ const CreditOutstanding = () => {
                     <Button
                       type="button"
                       onClick={() => handleShareCustomerViber(customer)}
-                      className="bg-[#7360F2]/12 hover:bg-[#7360F2]/25 text-[#7360F2] border border-[#7360F2]/25 text-[11px] font-black h-8.5 rounded-xl transition-all gap-1.5 flex items-center justify-center px-2 active:scale-95"
+                      className="bg-[#7360F2]/10 hover:bg-[#7360F2]/20 text-[#7360F2] border border-[#7360F2]/25 text-[11px] font-bold h-9 rounded-lg transition-all gap-1.5 flex items-center justify-center px-2 active:scale-95"
                       title="Send Statement via Viber (ވައިބަރ)"
                     >
                       <ViberIcon className="h-3.5 w-3.5 fill-current shrink-0" />
@@ -1568,7 +1644,7 @@ const CreditOutstanding = () => {
             <Button
               variant="outline"
               onClick={() => setVisibleCount(prev => prev + 36)}
-              className="rounded-2xl px-8 h-11 font-black text-xs uppercase tracking-widest border-border hover:bg-muted"
+              className="rounded-xl px-8 h-11 font-bold text-xs uppercase tracking-widest border-border hover:bg-muted"
             >
               Load More Customers ({filteredCustomers.length - visibleCount} remaining)
             </Button>
@@ -1576,9 +1652,9 @@ const CreditOutstanding = () => {
         )}
       </ScrollArea>
 
-      {/* Dialogs updated with Apple Liquid Glass styling (Settle Payment, Settlement History, Credit Purchases) */}
+      {/* Dialogs updated with Solid Pro styling (Settle Payment, Settlement History, Credit Purchases) */}
       <Dialog open={isSettlePaymentDialogOpen} onOpenChange={setIsSettlePaymentDialogOpen}>
-        <DialogContent className="sm:max-w-[32rem] 2xl:max-w-[38rem] w-[calc(100vw-2rem)] font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground p-6 sm:p-7 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+        <DialogContent className="sm:max-w-[32rem] 2xl:max-w-[38rem] w-[calc(100vw-2rem)] font-faruma bg-card border-white/20 dark:border-white/10 text-foreground p-6 sm:p-7 shadow-2xl rounded-xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
           <DialogHeader className="text-right pb-3 border-b border-white/10 dark:border-white/5">
             <div className="flex items-start justify-between gap-3 pl-8">
               <Badge variant="outline" className="bg-primary/15 text-primary border-primary/30 text-[11px] font-mono font-bold mt-1 rounded-xl px-2.5 py-0.5">
@@ -1599,7 +1675,7 @@ const CreditOutstanding = () => {
           <div className="py-3 space-y-4 text-right">
             {/* Balance Overview Cards */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 backdrop-blur-md text-right space-y-1">
+              <div className="p-3.5 rounded-2xl bg-red-500/10 border border-red-500/20 text-right space-y-1">
                 <p className="text-[9px] font-black uppercase tracking-wider text-red-600 dark:text-red-400">
                   {renderBoth('current_outstanding')}
                 </p>
@@ -1609,7 +1685,7 @@ const CreditOutstanding = () => {
               </div>
 
               <div className={cn(
-                "p-3.5 rounded-2xl border text-right space-y-1 transition-all backdrop-blur-md",
+                "p-3.5 rounded-2xl border text-right space-y-1 transition-all",
                 currentOutstandingAfterPayment > 0 
                   ? "bg-orange-500/10 border-orange-500/20 text-orange-600 dark:text-orange-400" 
                   : "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
@@ -1624,7 +1700,7 @@ const CreditOutstanding = () => {
             </div>
 
             {/* Payment Input */}
-            <div className="space-y-2.5 bg-black/10 dark:bg-white/5 p-4 rounded-2xl border border-white/15 dark:border-white/10 backdrop-blur-md">
+            <div className="space-y-2.5 bg-black/10 dark:bg-white/5 p-4 rounded-2xl border border-white/15 dark:border-white/10">
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold text-muted-foreground uppercase font-mono">
                   Enter Amount
@@ -1644,7 +1720,7 @@ const CreditOutstanding = () => {
                   onChange={(e) => setPaymentAmount(e.target.value === '' ? '' : (parseFloat(e.target.value) || 0))}
                   onFocus={(e) => e.target.select()}
                   dir="ltr"
-                  className="text-left h-12 apple-glass-input text-2xl font-black text-foreground font-mono pl-14 pr-4 rounded-2xl w-full"
+                  className="text-left h-12 bg-background text-2xl font-black text-foreground font-mono pl-14 pr-4 rounded-2xl w-full"
                   autoFocus
                   placeholder="0.00"
                 />
@@ -1713,7 +1789,7 @@ const CreditOutstanding = () => {
 
       {/* Settlement History Dialog */}
       <Dialog open={isSettlementHistoryDialogOpen} onOpenChange={setIsSettlementHistoryDialogOpen}>
-        <DialogContent className="sm:max-w-[36rem] 2xl:max-w-[42rem] w-[calc(100vw-2rem)] font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground p-6 sm:p-7 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+        <DialogContent className="sm:max-w-[36rem] 2xl:max-w-[42rem] w-[calc(100vw-2rem)] font-faruma bg-card border-white/20 dark:border-white/10 text-foreground p-6 sm:p-7 shadow-2xl rounded-xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
           <DialogHeader className="text-right pb-3 border-b border-white/10 dark:border-white/5">
             <div className="pl-8">
               <DialogTitle className="text-xl font-black flex items-center justify-end gap-2">
@@ -1731,7 +1807,7 @@ const CreditOutstanding = () => {
                 [...selectedCustomerForAction.settlement_history]
                   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                   .map((settlement, idx) => (
-                  <div key={settlement.id || idx} className="p-4 rounded-2xl apple-glass-card border border-white/20 dark:border-white/10 text-right relative overflow-hidden group">
+                  <div key={settlement.id || idx} className="p-4 rounded-2xl bg-card border border-white/20 dark:border-white/10 text-right relative overflow-hidden group">
                     <div className="flex justify-between items-center mb-2">
                        <span className="text-[10px] font-mono text-muted-foreground/80">{formatDate(settlement.date)} {formatTime(settlement.date)}</span>
                        <span className="text-sm font-black text-green-500 font-mono">+{settings.shop.currency} {settlement.amount_paid.toFixed(2)}</span>
@@ -1760,7 +1836,7 @@ const CreditOutstanding = () => {
 
       {/* Credit Purchases (Details) Dialog */}
       <Dialog open={isCreditPurchasesDialogOpen} onOpenChange={setIsCreditPurchasesDialogOpen}>
-        <DialogContent className="sm:max-w-[42rem] 2xl:max-w-[50rem] w-[calc(100vw-2rem)] font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground p-6 sm:p-7 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+        <DialogContent className="sm:max-w-[42rem] 2xl:max-w-[50rem] w-[calc(100vw-2rem)] font-faruma bg-card border-white/20 dark:border-white/10 text-foreground p-6 sm:p-7 shadow-2xl rounded-xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
           <DialogHeader className="text-right pb-3 border-b border-white/10 dark:border-white/5">
             <div className="pl-8">
               <DialogTitle className="text-xl font-black flex items-center justify-end gap-2">
@@ -1783,9 +1859,9 @@ const CreditOutstanding = () => {
                   const displayAmount = isSplit ? splitEntry.amount : sale.grandTotal;
 
                   return (
-                    <div key={sale.id} className="p-4 rounded-2xl apple-glass-card border border-white/20 dark:border-white/10 text-right relative overflow-hidden group">
+                    <div key={sale.id} className="p-4 rounded-2xl bg-card border border-white/20 dark:border-white/10 text-right relative overflow-hidden group">
                       {isSplit && (
-                        <div className="absolute top-0 left-0 bg-blue-500/20 text-blue-500 text-[8px] font-black px-3 py-1 rounded-br-xl uppercase tracking-widest z-10 backdrop-blur-md">
+                        <div className="absolute top-0 left-0 bg-blue-500/20 text-blue-500 text-[8px] font-black px-3 py-1 rounded-br-xl uppercase tracking-widest z-10">
                           Split Bill
                         </div>
                       )}
@@ -1869,7 +1945,7 @@ const CreditOutstanding = () => {
           }
         }}
       >
-        <DialogContent className="sm:max-w-[56rem] 2xl:max-w-[66rem] w-[calc(100vw-2rem)] max-h-[92vh] flex flex-col font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground p-5 sm:p-6 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
+        <DialogContent className="sm:max-w-[56rem] 2xl:max-w-[66rem] w-[calc(100vw-2rem)] max-h-[92vh] flex flex-col font-faruma bg-card border-white/20 dark:border-white/10 text-foreground p-5 sm:p-6 shadow-2xl rounded-xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto" dir="rtl">
           <DialogHeader className="text-right pb-3 border-b border-white/10 dark:border-white/5">
             <div className="flex flex-wrap items-center justify-between gap-3 pl-8">
               <div className="flex items-center gap-2">
@@ -2148,10 +2224,10 @@ const CreditOutstanding = () => {
 
       {/* Batch Automated Overdue Reminders Dialog */}
       <Dialog open={isBatchRemindersDialogOpen} onOpenChange={setIsBatchRemindersDialogOpen}>
-        <DialogContent className="sm:max-w-[44rem] 2xl:max-w-[52rem] w-[calc(100vw-2rem)] font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground p-6 sm:p-7 shadow-2xl rounded-3xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto max-h-[90vh] flex flex-col" dir="rtl">
+        <DialogContent className="sm:max-w-[44rem] 2xl:max-w-[52rem] w-[calc(100vw-2rem)] font-faruma bg-card border-white/20 dark:border-white/10 text-foreground p-6 sm:p-7 shadow-2xl rounded-xl overflow-hidden box-border [&>button]:left-4 [&>button]:right-auto max-h-[90vh] flex flex-col" dir="rtl">
           <DialogHeader className="text-right pb-4 border-b border-white/10 dark:border-white/5">
             <div className="flex items-center justify-between pl-8">
-              <Badge className="bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 text-xs font-mono font-bold rounded-xl px-2.5 py-1 backdrop-blur-md">
+              <Badge className="bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 text-xs font-mono font-bold rounded-xl px-2.5 py-1">
                 {linkedCustomersWithDue.length} Connected
               </Badge>
               <div className="text-right">
@@ -2168,7 +2244,7 @@ const CreditOutstanding = () => {
 
           <div className="flex-1 overflow-y-auto py-4 space-y-4 text-right custom-scrollbar">
             {/* Summary Banner */}
-            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-md flex items-center justify-between">
+            <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
               <div className="text-left">
                 <p className="text-[10px] uppercase font-black tracking-wider text-muted-foreground">Selected Total Due</p>
                 <p className="text-xl font-black text-emerald-500 font-mono">
@@ -2227,7 +2303,7 @@ const CreditOutstanding = () => {
                         }}
                         className={cn(
                           "p-3 rounded-2xl border transition-all duration-200 cursor-pointer flex items-center justify-between gap-3 active:scale-[0.99]",
-                          isSelected ? "apple-glass-card bg-emerald-500/10 border-emerald-500/30" : "apple-glass-card border-white/15 dark:border-white/10 hover:bg-white/10"
+                          isSelected ? "bg-card bg-emerald-500/10 border-emerald-500/30" : "bg-card border-white/15 dark:border-white/10 hover:bg-white/10"
                         )}
                       >
                         <div className="text-left font-mono">
@@ -2260,7 +2336,7 @@ const CreditOutstanding = () => {
             </div>
 
             {/* Message Preview */}
-            <div className="p-4 rounded-2xl bg-black/10 dark:bg-white/5 border border-white/15 dark:border-white/10 text-right space-y-2 backdrop-blur-md">
+            <div className="p-4 rounded-2xl bg-black/10 dark:bg-white/5 border border-white/15 dark:border-white/10 text-right space-y-2">
               <div className="flex items-center justify-between text-xs font-black text-muted-foreground pb-2 border-b border-white/10 dark:border-white/5">
                 <span className="text-[10px] font-mono text-emerald-500 bg-emerald-500/15 px-2 py-0.5 rounded-lg border border-emerald-500/30">
                   Interactive Telegram Template
@@ -2270,7 +2346,7 @@ const CreditOutstanding = () => {
                   Message Draft Preview
                 </span>
               </div>
-              <div className="text-xs font-mono leading-relaxed text-foreground/80 whitespace-pre-line text-left bg-background/40 backdrop-blur-sm p-3 rounded-xl border border-white/10" dir="ltr">
+              <div className="text-xs font-mono leading-relaxed text-foreground/80 whitespace-pre-line text-left bg-background/40 p-3 rounded-xl border border-white/10" dir="ltr">
                 {`🌙 As-salamu alaykum [Customer Name],
 
 🏪 ${settings.shop.shopName || 'B BACK'} — (Automated Reminder)

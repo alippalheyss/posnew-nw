@@ -19,8 +19,22 @@ import {
   Calendar,
   Eye,
   X,
-  Undo2
+  Undo2,
+  CreditCard,
+  Wallet,
+  Layers,
+  Package,
+  Search,
+  Receipt,
+  ArrowUpDown,
+  Sparkles,
+  RotateCcw,
+  ChevronRight,
+  Hash
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDate, formatTime, formatDateTime, toISODate, extractDateOnly } from '@/utils/formatters';
@@ -134,6 +148,134 @@ const SalesReports = () => {
   const dayProfit = calculateProfitForPeriod('day');
   const monthProfit = calculateProfitForPeriod('month');
   const yearProfit = calculateProfitForPeriod('year');
+
+  // --- Drill-down Detail Modal State ---
+  const [activeDetailModal, setActiveDetailModal] = useState<
+    'today' | 'month' | 'year' | 'cash' | 'card' | 'transfer' | 'credit' | 'profit' | 'top_products' | 'returns' | 'gst' | null
+  >(null);
+  const [detailSearchQuery, setDetailSearchQuery] = useState('');
+  const [detailPeriodFilter, setDetailPeriodFilter] = useState<'today' | 'month' | 'all'>('today');
+
+  // Breakdown of sales by payment method across periods
+  const paymentMethodStats = useMemo(() => {
+    const todayStr = toISODate(new Date());
+    const todaySales = sales.filter(s => s.date && (extractDateOnly(s.date) === todayStr || new Date(s.date).toDateString() === new Date().toDateString()));
+    const now = new Date();
+    const thisMonthSales = sales.filter(s => {
+      if (!s.date) return false;
+      const d = new Date(s.date);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+
+    const compute = (list: Sale[]) => {
+      const cash = list.filter(s => (s.paymentMethod || 'cash').toLowerCase() === 'cash');
+      const card = list.filter(s => (s.paymentMethod || '').toLowerCase() === 'card');
+      const transfer = list.filter(s => (s.paymentMethod || '').toLowerCase() === 'transfer');
+      const credit = list.filter(s => (s.paymentMethod || '').toLowerCase() === 'credit');
+      const returns = list.filter(s => (s.paymentMethod as any) === 'return' || String(s.invoiceNumber || '').startsWith('RET-'));
+
+      const sumTotal = (arr: Sale[]) => arr.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
+
+      // GST calculations
+      const gstRate = Number(settings.shop.taxRate) || 8;
+      let totalGstCollected = 0;
+      let taxableSupplies = 0;
+      let zeroRatedSupplies = 0;
+
+      list.forEach(s => {
+        if (Array.isArray(s.items) && s.items.length > 0) {
+          s.items.forEach(it => {
+            const line = Number(it.price || 0) * Number(it.qty || 0);
+            if (it.is_zero_tax) {
+              zeroRatedSupplies += line;
+            } else {
+              const tax = line - (line / (1 + gstRate / 100));
+              totalGstCollected += tax;
+              taxableSupplies += line - tax;
+            }
+          });
+        } else {
+          const grand = Number(s.grandTotal || 0);
+          const tax = grand - (grand / (1 + gstRate / 100));
+          totalGstCollected += tax;
+          taxableSupplies += grand - tax;
+        }
+      });
+
+      return {
+        cash: { list: cash, count: cash.length, total: sumTotal(cash) },
+        card: { list: card, count: card.length, total: sumTotal(card) },
+        transfer: { list: transfer, count: transfer.length, total: sumTotal(transfer) },
+        credit: { list: credit, count: credit.length, total: sumTotal(credit) },
+        returns: { list: returns, count: returns.length, total: sumTotal(returns) },
+        gst: { totalGst: totalGstCollected, taxable: taxableSupplies, zeroRated: zeroRatedSupplies, count: list.length, list },
+      };
+    };
+
+    return {
+      today: compute(todaySales),
+      month: compute(thisMonthSales),
+      all: compute(sales),
+    };
+  }, [sales, settings.shop.taxRate]);
+
+  // Product sales ranking (Best-selling products)
+  const productRanking = useMemo(() => {
+    const map = new Map<string, {
+      id: string;
+      nameEn: string;
+      nameDv: string;
+      itemCode: string;
+      barcode: string;
+      category: string;
+      price: number;
+      costPrice: number;
+      totalQty: number;
+      totalRevenue: number;
+      totalCost: number;
+      totalProfit: number;
+    }>();
+
+    const targetSales = detailPeriodFilter === 'today'
+      ? dayStats.items
+      : detailPeriodFilter === 'month'
+        ? monthStats.items
+        : sales;
+
+    targetSales.forEach(sale => {
+      (sale.items || []).forEach(item => {
+        const prod = products.find(p => p.id === item.id);
+        const key = item.id || (prod?.id) || item.name_en || item.name_dv || 'unknown';
+        const existing = map.get(key) || {
+          id: key,
+          nameEn: item.name_en || prod?.name_en || 'Product',
+          nameDv: item.name_dv || prod?.name_dv || '',
+          itemCode: prod?.item_code || '',
+          barcode: prod?.barcode || '',
+          category: prod?.category || 'OTHER',
+          price: Number(item.price || prod?.price || 0),
+          costPrice: Number(prod?.cost_price || 0),
+          totalQty: 0,
+          totalRevenue: 0,
+          totalCost: 0,
+          totalProfit: 0,
+        };
+
+        const qty = Number(item.qty || 0);
+        const rev = Number(item.price || 0) * qty;
+        const cst = Number(prod?.cost_price || 0) * qty;
+
+        existing.totalQty += qty;
+        existing.totalRevenue += rev;
+        existing.totalCost += cst;
+        existing.totalProfit += (rev - cst);
+
+        map.set(key, existing);
+      });
+    });
+
+    return Array.from(map.values()).sort((a, b) => b.totalRevenue - a.totalRevenue);
+  }, [sales, dayStats.items, monthStats.items, products, detailPeriodFilter]);
 
   // --- Custom Report State ---
   const [customPeriodType, setCustomPeriodType] = usePersistedState<'date' | 'month' | 'quarter' | 'year'>('sales_reports_period_type', 'date');
@@ -1022,19 +1164,32 @@ const SalesReports = () => {
     return null;
   };
 
-  const StatCard = ({ title, stats, icon: Icon, color, profit, onDownload, downloadLabel }: any) => (
-    <Card className="apple-glass-card border border-white/20 dark:border-white/10 hover:border-primary/50 transition-all duration-300 rounded-[2rem] overflow-hidden group flex flex-col justify-between shadow-md hover:shadow-xl">
+  const StatCard = ({ title, stats, icon: Icon, color, profit, onDownload, downloadLabel, onClick }: any) => (
+    <Card 
+      onClick={onClick}
+      className={cn(
+        "apple-glass-card border border-white/20 dark:border-white/10 hover:border-primary/50 transition-all duration-300 rounded-[2rem] overflow-hidden group flex flex-col justify-between shadow-md hover:shadow-xl",
+        onClick && "cursor-pointer select-none"
+      )}
+    >
       <CardContent className="p-6 text-right flex-1 flex flex-col justify-between">
         <div>
           <div className="flex justify-between items-center mb-6">
             <div className={cn("p-3.5 rounded-2xl bg-white/40 dark:bg-white/10 border border-white/20 dark:border-white/10 group-hover:scale-110 transition-transform shadow-xs", color)}>
               <Icon className="h-6 w-6" />
             </div>
-            <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">{title}</p>
+            <div className="flex items-center gap-2">
+              {onClick && (
+                <span className="text-[9px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
+                  Click for details
+                </span>
+              )}
+              <p className="text-muted-foreground text-[10px] font-black uppercase tracking-widest">{title}</p>
+            </div>
           </div>
           
           <div className="space-y-1 mb-6">
-             <p className="text-3xl font-black text-foreground">
+             <p className="text-3xl font-black text-foreground font-mono">
                {settings.shop.currency} {stats.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
              </p>
              <div className="flex items-center justify-end gap-2">
@@ -1051,7 +1206,7 @@ const SalesReports = () => {
                </div>
                <div className="text-right">
                   <p className="text-[8px] font-black text-muted-foreground/60 uppercase tracking-widest">EST. PROFIT</p>
-                  <p className="text-sm font-black text-foreground">{settings.shop.currency} {profit.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  <p className="text-sm font-black text-foreground font-mono">{settings.shop.currency} {profit.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                </div>
             </div>
           )}
@@ -1061,13 +1216,77 @@ const SalesReports = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={onDownload}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDownload();
+            }}
             className="w-full mt-2 h-9.5 rounded-xl transition-all text-xs font-bold gap-2 flex items-center justify-center group/btn apple-glass-pill"
           >
             <FileSpreadsheet className="h-4 w-4 text-emerald-500 group-hover/btn:text-primary transition-colors" />
             <span>{downloadLabel || "Download Excel (އެކްސެލް ޑައުންލޯޑް)"}</span>
           </Button>
         )}
+      </CardContent>
+    </Card>
+  );
+
+  const InteractiveKpiCard = ({
+    titleEn,
+    titleDv,
+    value,
+    badge,
+    subValue,
+    icon: Icon,
+    iconColor,
+    onClick,
+  }: {
+    titleEn: string;
+    titleDv: string;
+    value: string | number;
+    badge?: string;
+    subValue?: string;
+    icon: any;
+    iconColor: string;
+    onClick?: () => void;
+  }) => (
+    <Card
+      onClick={onClick}
+      className="apple-glass-card border border-white/20 dark:border-white/10 hover:border-primary/50 transition-all duration-300 rounded-3xl overflow-hidden group cursor-pointer hover:shadow-xl hover:-translate-y-0.5 flex flex-col justify-between select-none shadow-sm"
+    >
+      <CardContent className="p-5 text-right flex-1 flex flex-col justify-between">
+        <div>
+          <div className="flex justify-between items-center mb-3">
+            <div className={cn("p-2.5 rounded-2xl bg-white/40 dark:bg-white/10 border border-white/20 dark:border-white/10 group-hover:scale-110 transition-transform shadow-xs shrink-0", iconColor)}>
+              <Icon className="h-5 w-5" />
+            </div>
+            {badge && (
+              <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-white/40 dark:bg-white/10 border-white/20 px-2 py-0.5">
+                {badge}
+              </Badge>
+            )}
+          </div>
+
+          <div className="space-y-0.5 text-right">
+            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">{titleEn}</p>
+            <p className="text-xs font-bold text-foreground/80 font-faruma">{titleDv}</p>
+          </div>
+
+          <div className="mt-3">
+            <p className="text-2xl font-black font-mono text-foreground tracking-tight">
+              {value}
+            </p>
+            {subValue && (
+              <p className="text-[11px] font-bold text-muted-foreground mt-0.5">
+                {subValue}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="pt-3 mt-3 border-t border-white/10 flex items-center justify-between text-[10px] font-black text-primary group-hover:translate-x-[-2px] transition-transform">
+          <ChevronRight className="h-3.5 w-3.5 rotate-180 text-primary" />
+          <span>Click to view details</span>
+        </div>
       </CardContent>
     </Card>
   );
@@ -1400,6 +1619,7 @@ const SalesReports = () => {
               icon={TrendingUp} 
               color="text-primary" 
               profit={dayProfit}
+              onClick={() => { setDetailPeriodFilter('today'); setActiveDetailModal('today'); }}
               onDownload={handleExportDailySales}
               downloadLabel="Download Daily Sales (މިއަދުގެ ސޭލްސް)"
             />
@@ -1409,6 +1629,7 @@ const SalesReports = () => {
               icon={BarChart3} 
               color="text-purple-500" 
               profit={monthProfit}
+              onClick={() => { setDetailPeriodFilter('month'); setActiveDetailModal('month'); }}
               onDownload={handleExportMonthlySales}
               downloadLabel="Download Monthly Sales (މިމަހުގެ ސޭލްސް)"
             />
@@ -1418,9 +1639,113 @@ const SalesReports = () => {
               icon={PieChart} 
               color="text-green-500" 
               profit={yearProfit}
+              onClick={() => { setDetailPeriodFilter('all'); setActiveDetailModal('year'); }}
               onDownload={handleExportYearlySales}
               downloadLabel="Download Yearly Sales (މިއަހަރުގެ ސޭލްސް)"
             />
+          </div>
+
+          {/* Shop Sales Breakdown & Highlights Grid (Clickable interactive cards) */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                Interactive Sales Drilldown &amp; Payment Channels
+              </span>
+              <h3 className="text-sm font-black text-foreground flex items-center gap-1.5 font-faruma">
+                <span>ސޭލްސް އަދި ވިޔަފާރީގެ ތަފްޞީލުތައް</span>
+                <Sparkles className="h-4 w-4 text-primary" />
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <InteractiveKpiCard
+                titleEn="Cash Sales"
+                titleDv="ނަގުދު ފައިސާ"
+                value={`${settings.shop.currency} ${paymentMethodStats.today.cash.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                subValue={`${paymentMethodStats.today.cash.count} transactions today • Month: ${settings.shop.currency} ${paymentMethodStats.month.cash.total.toFixed(0)}`}
+                badge={`${paymentMethodStats.today.cash.count} txns`}
+                icon={Wallet}
+                iconColor="text-emerald-500"
+                onClick={() => { setDetailPeriodFilter('today'); setActiveDetailModal('cash'); }}
+              />
+
+              <InteractiveKpiCard
+                titleEn="Card Payments"
+                titleDv="ކާޑު ޕޭމަންޓް"
+                value={`${settings.shop.currency} ${paymentMethodStats.today.card.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                subValue={`${paymentMethodStats.today.card.count} card swipes today • Month: ${settings.shop.currency} ${paymentMethodStats.month.card.total.toFixed(0)}`}
+                badge={`${paymentMethodStats.today.card.count} txns`}
+                icon={CreditCard}
+                iconColor="text-purple-500"
+                onClick={() => { setDetailPeriodFilter('today'); setActiveDetailModal('card'); }}
+              />
+
+              <InteractiveKpiCard
+                titleEn="Bank Transfer (BML Pay)"
+                titleDv="ބޭންކް ޓްރާންސްފަރ"
+                value={`${settings.shop.currency} ${paymentMethodStats.today.transfer.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                subValue={`${paymentMethodStats.today.transfer.count} transfers verified • Month: ${settings.shop.currency} ${paymentMethodStats.month.transfer.total.toFixed(0)}`}
+                badge={`${paymentMethodStats.today.transfer.count} txns`}
+                icon={Receipt}
+                iconColor="text-blue-500"
+                onClick={() => { setDetailPeriodFilter('today'); setActiveDetailModal('transfer'); }}
+              />
+
+              <InteractiveKpiCard
+                titleEn="Credit (Customer Dharani)"
+                titleDv="ދަރަންޏަށް ދޫކުރި ސޭލްސް"
+                value={`${settings.shop.currency} ${paymentMethodStats.today.credit.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                subValue={`${paymentMethodStats.today.credit.count} credit invoices • Month: ${settings.shop.currency} ${paymentMethodStats.month.credit.total.toFixed(0)}`}
+                badge={`${paymentMethodStats.today.credit.count} txns`}
+                icon={DollarSign}
+                iconColor="text-amber-500"
+                onClick={() => { setDetailPeriodFilter('today'); setActiveDetailModal('credit'); }}
+              />
+
+              <InteractiveKpiCard
+                titleEn="Top Selling Products"
+                titleDv="އެންމެ ގިނައިން ވިކުނު ތަކެތި"
+                value={productRanking.length > 0 ? (productRanking[0].name_en || productRanking[0].name_dv || 'Top Product') : 'No items sold'}
+                subValue={productRanking.length > 0 ? `#1: ${productRanking[0].totalQty} sold (${settings.shop.currency} ${productRanking[0].totalRevenue.toFixed(0)})` : 'Click to view product ranking'}
+                badge={`${productRanking.length} products`}
+                icon={Package}
+                iconColor="text-amber-400"
+                onClick={() => { setDetailPeriodFilter('today'); setActiveDetailModal('top_products'); }}
+              />
+
+              <InteractiveKpiCard
+                titleEn="Gross Profit & Margin"
+                titleDv="ޖުމްލަ ފައިދާ އަދި މާރޖިން"
+                value={`${settings.shop.currency} ${dayProfit.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                subValue={`${dayProfit.margin.toFixed(1)}% margin today • Cost: ${settings.shop.currency} ${dayProfit.cost.toFixed(0)}`}
+                badge={`${dayProfit.margin.toFixed(0)}% Margin`}
+                icon={ArrowUpRight}
+                iconColor="text-emerald-400"
+                onClick={() => { setDetailPeriodFilter('today'); setActiveDetailModal('profit'); }}
+              />
+
+              <InteractiveKpiCard
+                titleEn="Returns & Exchanges"
+                titleDv="ރިޓާން އަދި ރީފަންޑް"
+                value={`${paymentMethodStats.today.returns.count} Returns`}
+                subValue={`Total Refunded: ${settings.shop.currency} ${paymentMethodStats.today.returns.total.toFixed(2)} (${paymentMethodStats.month.returns.count} this month)`}
+                badge={`${paymentMethodStats.today.returns.count} returned`}
+                icon={RotateCcw}
+                iconColor="text-orange-500"
+                onClick={() => { setDetailPeriodFilter('today'); setActiveDetailModal('returns'); }}
+              />
+
+              <InteractiveKpiCard
+                titleEn="MIRA 8% GST Collected"
+                titleDv="ޖީއެސްޓީ ޓެކްސް"
+                value={`${settings.shop.currency} ${paymentMethodStats.today.gst.totalGst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                subValue={`Taxable: ${settings.shop.currency} ${paymentMethodStats.today.gst.taxable.toFixed(0)} • Zero: ${settings.shop.currency} ${paymentMethodStats.today.gst.zeroRated.toFixed(0)}`}
+                badge={`MIRA Output GST`}
+                icon={Layers}
+                iconColor="text-sky-500"
+                onClick={() => { setDetailPeriodFilter('today'); setActiveDetailModal('gst'); }}
+              />
+            </div>
           </div>
 
           {/* Performance Analysis */}
@@ -1505,6 +1830,358 @@ const SalesReports = () => {
           </div>
         </div>
       </ScrollArea>
+
+      {/* ── Drill-down Detail Modal Dialog ── */}
+      {activeDetailModal && (
+        <Dialog open={Boolean(activeDetailModal)} onOpenChange={(open) => { if (!open) { setActiveDetailModal(null); setDetailSearchQuery(''); } }}>
+          <DialogContent className="max-w-5xl max-h-[90vh] apple-glass-dialog border border-white/20 dark:border-white/10 rounded-3xl p-0 flex flex-col overflow-hidden text-foreground z-[180]">
+            <DialogHeader className="p-6 pb-4 border-b border-white/15 dark:border-white/10 space-y-3">
+              <div className="flex items-center justify-between gap-4">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => { setActiveDetailModal(null); setDetailSearchQuery(''); }}
+                  className="h-8 w-8 rounded-xl border border-white/20 dark:border-white/10 hover:bg-white/10"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+                <div className="text-right flex-1">
+                  <DialogTitle className="text-lg font-black text-foreground flex items-center justify-end gap-2">
+                    <span>
+                      {activeDetailModal === 'cash' && 'Cash Sales (ނަގުދު ފައިސާގެ ތަފްޞީލް)'}
+                      {activeDetailModal === 'card' && 'Card Payments (ކާޑު ޕޭމަންޓްގެ ތަފްޞީލް)'}
+                      {activeDetailModal === 'transfer' && 'Bank Transfer Sales (ބޭންކް ޓްރާންސްފަރގެ ތަފްޞީލް)'}
+                      {activeDetailModal === 'credit' && 'Credit Sales (ދަރަންޏަށް ދޫކުރި ސޭލްސް)'}
+                      {activeDetailModal === 'top_products' && 'Top Selling Products (އެންމެ ގިނައިން ވިކުނު ތަކެތި)'}
+                      {activeDetailModal === 'profit' && 'Estimated Profit & Margins (ފައިދާ އަދި މާރޖިން)'}
+                      {activeDetailModal === 'returns' && 'Returns & Refunds History (ރިޓާން އަދި ރީފަންޑް)'}
+                      {activeDetailModal === 'gst' && 'MIRA 8% Output GST Statement (ޖީއެސްޓީ ޓެކްސް)'}
+                      {activeDetailModal === 'today' && "Today's All Invoices (މިއަދުގެ ހުރިހާ ސޭލްސް)"}
+                      {activeDetailModal === 'month' && "This Month's Invoices (މިމަހުގެ ހުރިހާ ސޭލްސް)"}
+                      {activeDetailModal === 'year' && "This Year's Invoices (މިއަހަރުގެ ހުރިހާ ސޭލްސް)"}
+                    </span>
+                    <Sparkles className="h-5 w-5 text-primary" />
+                  </DialogTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5" dir="ltr">
+                    Detailed shop transactions, items breakdown &amp; return management
+                  </p>
+                </div>
+              </div>
+
+              {/* Period Filter Tabs & Search Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2" dir="ltr">
+                <div className="flex bg-muted/80 p-0.5 rounded-xl border border-border">
+                  {(['today', 'month', 'all'] as const).map(p => (
+                    <button
+                      key={p}
+                      onClick={() => setDetailPeriodFilter(p)}
+                      className={cn(
+                        "px-3 py-1 rounded-lg text-xs font-black transition-all",
+                        detailPeriodFilter === p ? "bg-primary text-white shadow-xs" : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {p === 'today' ? "Today" : p === 'month' ? "This Month" : "All Time"}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative flex-1 min-w-[220px] max-w-sm">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search invoice #, customer, or item..."
+                    value={detailSearchQuery}
+                    onChange={(e) => setDetailSearchQuery(e.target.value)}
+                    className="h-9 pl-9 pr-8 rounded-xl apple-glass-input text-xs font-bold"
+                  />
+                  {detailSearchQuery && (
+                    <button
+                      onClick={() => setDetailSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </DialogHeader>
+
+            <ScrollArea className="flex-1 p-6 custom-scrollbar max-h-[60vh]">
+              {activeDetailModal === 'top_products' ? (
+                /* Top Products Ranking Table */
+                <div>
+                  {filteredProductRanking.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Package className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm font-bold">No product sales found for this period</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto rounded-2xl border border-border" dir="ltr">
+                      <table className="w-full text-xs min-w-[700px]">
+                        <thead>
+                          <tr className="bg-muted/70 border-b border-border text-muted-foreground font-black uppercase tracking-wider text-[10px]">
+                            <th className="px-3 py-3 text-center w-12"># Rank</th>
+                            <th className="px-3 py-3 text-left">Product Name</th>
+                            <th className="px-3 py-3 text-left">Category</th>
+                            <th className="px-3 py-3 text-left">Barcode / Code</th>
+                            <th className="px-3 py-3 text-right">Price</th>
+                            <th className="px-3 py-3 text-right">Cost</th>
+                            <th className="px-3 py-3 text-center">Qty Sold</th>
+                            <th className="px-3 py-3 text-right">Total Revenue</th>
+                            <th className="px-3 py-3 text-right">Est. Profit</th>
+                            <th className="px-3 py-3 text-right">Margin</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {filteredProductRanking.map((p, idx) => {
+                            const marginPct = p.totalRevenue > 0 ? ((p.totalProfit / p.totalRevenue) * 100) : 0;
+                            return (
+                              <tr key={p.id + idx} className="hover:bg-muted/40 transition-colors">
+                                <td className="px-3 py-2.5 text-center font-mono font-black text-primary">
+                                  #{idx + 1}
+                                </td>
+                                <td className="px-3 py-2.5">
+                                  <p className="font-black text-foreground truncate max-w-[180px]">{p.name_en || p.nameEn}</p>
+                                  {p.nameDv && <p className="text-[11px] font-bold text-muted-foreground font-faruma" dir="rtl">{p.nameDv}</p>}
+                                </td>
+                                <td className="px-3 py-2.5">
+                                  <Badge variant="outline" className="text-[9px] font-black uppercase tracking-wider bg-primary/10 text-primary border-primary/20">
+                                    {p.category}
+                                  </Badge>
+                                </td>
+                                <td className="px-3 py-2.5 font-mono text-[11px] text-muted-foreground">
+                                  {p.barcode || p.itemCode || '—'}
+                                </td>
+                                <td className="px-3 py-2.5 text-right font-mono font-bold">
+                                  {settings.shop.currency} {p.price.toFixed(2)}
+                                </td>
+                                <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">
+                                  {p.costPrice > 0 ? `${settings.shop.currency} ${p.costPrice.toFixed(2)}` : '—'}
+                                </td>
+                                <td className="px-3 py-2.5 text-center font-mono font-black text-sm text-foreground">
+                                  {p.totalQty}
+                                </td>
+                                <td className="px-3 py-2.5 text-right font-mono font-black text-sm text-primary">
+                                  {settings.shop.currency} {p.totalRevenue.toFixed(2)}
+                                </td>
+                                <td className="px-3 py-2.5 text-right font-mono font-black text-xs text-emerald-500">
+                                  {settings.shop.currency} {p.totalProfit.toFixed(2)}
+                                </td>
+                                <td className="px-3 py-2.5 text-right font-mono font-black text-xs">
+                                  <span className={cn(
+                                    "px-1.5 py-0.5 rounded",
+                                    marginPct >= 30 ? "bg-emerald-500/15 text-emerald-500" : marginPct > 0 ? "bg-amber-500/15 text-amber-500" : "text-muted-foreground"
+                                  )}>
+                                    {marginPct.toFixed(1)}%
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                        <tfoot>
+                          <tr className="bg-muted/80 border-t-2 border-border font-black text-xs">
+                            <td colSpan={6} className="px-3 py-3 text-right uppercase tracking-wider">Total Ranking Summary</td>
+                            <td className="px-3 py-3 text-center font-mono">{filteredProductRanking.reduce((sum, p) => sum + p.totalQty, 0)} pcs</td>
+                            <td className="px-3 py-3 text-right font-mono text-primary">
+                              {settings.shop.currency} {filteredProductRanking.reduce((sum, p) => sum + p.totalRevenue, 0).toFixed(2)}
+                            </td>
+                            <td className="px-3 py-3 text-right font-mono text-emerald-500">
+                              {settings.shop.currency} {filteredProductRanking.reduce((sum, p) => sum + p.totalProfit, 0).toFixed(2)}
+                            </td>
+                            <td></td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Standard Invoices / Transactions Table */
+                <div>
+                  {filteredDrilldownSales.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Receipt className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm font-bold">No transactions found for this period</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto rounded-2xl border border-border" dir="ltr">
+                      <table className="w-full text-xs min-w-[700px]">
+                        <thead>
+                          <tr className="bg-muted/70 border-b border-border text-muted-foreground font-black uppercase tracking-wider text-[10px]">
+                            <th className="px-3 py-3 text-left">Invoice #</th>
+                            <th className="px-3 py-3 text-left">Date / Time</th>
+                            <th className="px-3 py-3 text-left">Customer</th>
+                            <th className="px-3 py-3 text-left">Method</th>
+                            <th className="px-3 py-3 text-left">Items Sold</th>
+                            <th className="px-3 py-3 text-right">Subtotal</th>
+                            <th className="px-3 py-3 text-right">GST (8%)</th>
+                            <th className="px-3 py-3 text-right">Grand Total</th>
+                            <th className="px-3 py-3 text-center">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {filteredDrilldownSales.map((sale) => {
+                            const sub = num(sale.grandTotal) / (1 + (Number(settings.shop.taxRate || 8) / 100));
+                            const gst = num(sale.grandTotal) - sub;
+                            const itemsSummary = (sale.items || []).map(i => `${i.qty}× ${i.name_en || i.name_dv || 'Item'}`).join(', ');
+                            const customerName = sale.customer ? (sale.customer.name_en || sale.customer.name_dv) : 'Walk-in';
+                            const method = (sale.paymentMethod || 'cash').toLowerCase();
+                            const isReturnRecord = (sale.paymentMethod as any) === 'return' || String(sale.invoiceNumber || '').startsWith('RET-');
+
+                            return (
+                              <tr key={sale.id} className={cn("hover:bg-muted/40 transition-colors", isReturnRecord && "bg-orange-500/5")}>
+                                <td className="px-3 py-2.5 font-mono font-bold text-foreground">
+                                  {sale.invoiceNumber || sale.id.slice(-8)}
+                                </td>
+                                <td className="px-3 py-2.5 whitespace-nowrap">
+                                  <p className="font-bold">{formatDate(sale.date)}</p>
+                                  <p className="text-[10px] text-muted-foreground">{formatTime(sale.date)}</p>
+                                </td>
+                                <td className="px-3 py-2.5 font-bold truncate max-w-[130px]">
+                                  {customerName}
+                                </td>
+                                <td className="px-3 py-2.5">
+                                  <Badge variant="outline" className={cn(
+                                    "text-[9px] font-black uppercase tracking-wider px-2 py-0.5",
+                                    method === 'cash' ? "bg-emerald-500/15 text-emerald-500 border-emerald-500/30" :
+                                    method === 'card' ? "bg-purple-500/15 text-purple-500 border-purple-500/30" :
+                                    method === 'transfer' ? "bg-blue-500/15 text-blue-500 border-blue-500/30" :
+                                    method === 'credit' ? "bg-amber-500/15 text-amber-500 border-amber-500/30" :
+                                    isReturnRecord ? "bg-orange-500/15 text-orange-500 border-orange-500/30" : "bg-muted text-muted-foreground"
+                                  )}>
+                                    {(sale.paymentMethod || 'CASH').toUpperCase()}
+                                  </Badge>
+                                </td>
+                                <td className="px-3 py-2.5 text-muted-foreground max-w-[200px] truncate" title={itemsSummary}>
+                                  {itemsSummary || '—'}
+                                </td>
+                                <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">
+                                  {settings.shop.currency} {sub.toFixed(2)}
+                                </td>
+                                <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">
+                                  {settings.shop.currency} {gst.toFixed(2)}
+                                </td>
+                                <td className="px-3 py-2.5 text-right font-mono font-black text-sm text-foreground">
+                                  {settings.shop.currency} {num(sale.grandTotal).toFixed(2)}
+                                </td>
+                                <td className="px-3 py-2.5 text-center">
+                                  {!isReturnRecord && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => openReturnDialog(sale)}
+                                      className="h-7 px-2 rounded-lg text-[10px] font-black text-orange-500 hover:bg-orange-500/15 gap-1"
+                                      title="Process return or exchange for this invoice"
+                                    >
+                                      <Undo2 className="h-3 w-3" />
+                                      <span>Return</span>
+                                    </Button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                        <tfoot>
+                          <tr className="bg-muted/80 border-t-2 border-border font-black text-xs">
+                            <td colSpan={5} className="px-3 py-3 text-right uppercase tracking-wider">
+                              Total ({filteredDrilldownSales.length} transactions)
+                            </td>
+                            <td className="px-3 py-3 text-right font-mono text-muted-foreground">
+                              {settings.shop.currency} {filteredDrilldownSales.reduce((sum, s) => sum + (num(s.grandTotal) / (1 + (Number(settings.shop.taxRate || 8) / 100))), 0).toFixed(2)}
+                            </td>
+                            <td className="px-3 py-3 text-right font-mono text-muted-foreground">
+                              {settings.shop.currency} {filteredDrilldownSales.reduce((sum, s) => {
+                                const sub = num(s.grandTotal) / (1 + (Number(settings.shop.taxRate || 8) / 100));
+                                return sum + (num(s.grandTotal) - sub);
+                              }, 0).toFixed(2)}
+                            </td>
+                            <td className="px-3 py-3 text-right font-mono text-primary text-sm">
+                              {settings.shop.currency} {filteredDrilldownSales.reduce((sum, s) => sum + num(s.grandTotal), 0).toFixed(2)}
+                            </td>
+                            <td></td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </ScrollArea>
+
+            {/* Modal Footer with quick export */}
+            <div className="p-4 px-6 border-t border-white/15 dark:border-white/10 flex items-center justify-between gap-4 bg-muted/40" dir="ltr">
+              <span className="text-xs font-bold text-muted-foreground">
+                Showing {activeDetailModal === 'top_products' ? filteredProductRanking.length : filteredDrilldownSales.length} items
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (activeDetailModal === 'top_products') {
+                      const data = [
+                        ['Rank', 'Product Name', 'Category', 'Barcode / Code', 'Price', 'Cost', 'Qty Sold', 'Total Revenue', 'Est. Profit', 'Margin %'],
+                        ...filteredProductRanking.map((p, idx) => [
+                          idx + 1,
+                          p.name_en || p.nameEn,
+                          p.category,
+                          p.barcode || p.itemCode,
+                          p.price,
+                          p.costPrice,
+                          p.totalQty,
+                          p.totalRevenue,
+                          p.totalProfit,
+                          p.totalRevenue > 0 ? ((p.totalProfit / p.totalRevenue) * 100).toFixed(1) + '%' : '0%'
+                        ])
+                      ];
+                      const ws = XLSX.utils.aoa_to_sheet(data);
+                      const wb = XLSX.utils.book_new();
+                      XLSX.utils.book_append_sheet(wb, ws, 'Top Products');
+                      XLSX.writeFile(wb, `Top_Products_Report_${toISODate(new Date())}.xlsx`);
+                      showSuccess('Top Products Excel report downloaded!');
+                    } else {
+                      const data = [
+                        ['Invoice', 'Date', 'Time', 'Customer', 'Method', 'Items', 'Subtotal', 'GST', 'Grand Total'],
+                        ...filteredDrilldownSales.map(s => {
+                          const sub = num(s.grandTotal) / (1 + (Number(settings.shop.taxRate || 8) / 100));
+                          const gst = num(s.grandTotal) - sub;
+                          return [
+                            s.invoiceNumber || s.id,
+                            formatDate(s.date),
+                            formatTime(s.date),
+                            s.customer ? (s.customer.name_en || s.customer.name_dv) : 'Walk-in',
+                            (s.paymentMethod || 'CASH').toUpperCase(),
+                            (s.items || []).map(i => `${i.qty}x ${i.name_en || i.name_dv}`).join('; '),
+                            Number(sub.toFixed(2)),
+                            Number(gst.toFixed(2)),
+                            Number(num(s.grandTotal).toFixed(2))
+                          ];
+                        })
+                      ];
+                      const ws = XLSX.utils.aoa_to_sheet(data);
+                      const wb = XLSX.utils.book_new();
+                      XLSX.utils.book_append_sheet(wb, ws, 'Sales Invoices');
+                      XLSX.writeFile(wb, `Sales_Drilldown_${activeDetailModal}_${toISODate(new Date())}.xlsx`);
+                      showSuccess('Sales drilldown Excel report downloaded!');
+                    }
+                  }}
+                  className="rounded-xl text-xs font-black gap-1.5 h-9"
+                >
+                  <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+                  <span>Download Excel</span>
+                </Button>
+                <Button
+                  onClick={() => { setActiveDetailModal(null); setDetailSearchQuery(''); }}
+                  className="rounded-xl text-xs font-black h-9 px-4 bg-primary text-white"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Return Sale Dialog */}
       {returnSale && (

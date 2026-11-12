@@ -1331,7 +1331,7 @@ const CreditOutstanding = () => {
 
       {/* Customers List */}
       <ScrollArea className="flex-1 custom-scrollbar">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-6" dir="ltr">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5 pb-8" dir="ltr">
           {filteredCustomers.slice(0, visibleCount).map((customer) => {
             const due = Number(customer.outstanding_balance || 0);
             const limit = Number(customer.credit_limit || 0);
@@ -1355,21 +1355,21 @@ const CreditOutstanding = () => {
               <Card
                 key={customer.id}
                 className={cn(
-                  "bg-card/95 backdrop-blur-md border rounded-2xl overflow-hidden group transition-all duration-200 hover:shadow-lg flex flex-col justify-between",
+                  "bg-card/95 backdrop-blur-md border rounded-3xl overflow-hidden group transition-all duration-200 hover:shadow-xl flex flex-col justify-between",
                   isOverLimit
-                    ? "border-red-500/35 hover:border-red-500/60"
+                    ? "border-red-500/35 hover:border-red-500/60 shadow-red-500/5"
                     : isNearLimit
-                      ? "border-amber-500/35 hover:border-amber-500/60"
-                      : "border-border/80 hover:border-primary/40"
+                      ? "border-amber-500/35 hover:border-amber-500/60 shadow-amber-500/5"
+                      : "border-border/80 hover:border-primary/50 shadow-sm"
                 )}
               >
-                <CardContent className="p-4 flex flex-col gap-3">
+                <CardContent className="p-5 flex flex-col gap-3.5">
                   {/* Top Row: Avatar + Name/Code + Quick Print/PDF Icons */}
-                  <div className="flex items-start justify-between gap-2.5">
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div
                         className={cn(
-                          "w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 border transition-transform group-hover:scale-105",
+                          "w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 border transition-transform group-hover:scale-105 shadow-xs",
                           isOverLimit
                             ? "bg-red-500/15 text-red-500 border-red-500/30"
                             : due > 0
@@ -1377,22 +1377,22 @@ const CreditOutstanding = () => {
                               : "bg-emerald-500/12 text-emerald-500 border-emerald-500/25"
                         )}
                       >
-                        {initials || <User className="h-4 w-4" />}
+                        {initials || <User className="h-5 w-5" />}
                       </div>
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-mono text-[10px] font-black text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded-md uppercase tracking-wider shrink-0">
-                            {customer.code}
+                          <span className="font-mono text-[11px] font-black text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-lg uppercase tracking-wider shrink-0">
+                            #{customer.code}
                           </span>
                           {isNearLimit && (
-                            <Badge className="bg-red-500/15 text-red-500 border border-red-500/30 text-[9px] font-black px-1.5 py-0 h-4 rounded-md uppercase tracking-wider flex items-center gap-0.5">
-                              <AlertCircle className="h-2.5 w-2.5" />
+                            <Badge className="bg-red-500/15 text-red-500 border border-red-500/30 text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3" />
                               {usagePct}% LIMIT
                             </Badge>
                           )}
                         </div>
-                        <h3 className="text-sm font-black text-foreground leading-snug truncate mt-1" title={customer.name_en || customer.name_dv}>
+                        <h3 className="text-base font-black text-foreground leading-snug truncate mt-1" title={customer.name_en || customer.name_dv}>
                           {customer.name_en || customer.name_dv}
                         </h3>
                         {customer.name_dv && (
@@ -1404,7 +1404,7 @@ const CreditOutstanding = () => {
                     </div>
 
                     {/* Top Utility Buttons: PDF Statement & Thermal Total Slip */}
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -1412,10 +1412,10 @@ const CreditOutstanding = () => {
                           e.stopPropagation();
                           handleOpenPdfPreview(customer);
                         }}
-                        className="h-7 w-7 rounded-lg bg-amber-500/12 border border-amber-500/25 hover:bg-amber-500 hover:text-white transition-all text-amber-600 dark:text-amber-400"
+                        className="h-8 w-8 rounded-xl bg-amber-500/12 border border-amber-500/25 hover:bg-amber-500 hover:text-white transition-all text-amber-600 dark:text-amber-400"
                         title="View & Download Customer Outstanding PDF (ޕީޑީއެފް ސްޓޭޓްމަންޓް)"
                       >
-                        <FileText className="h-3.5 w-3.5" />
+                        <FileText className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -1424,10 +1424,10 @@ const CreditOutstanding = () => {
                           e.stopPropagation();
                           handlePrintCustomerTotal(customer);
                         }}
-                        className="h-7 w-7 rounded-lg bg-muted/80 border border-border/70 hover:bg-primary hover:text-primary-foreground transition-all text-muted-foreground"
+                        className="h-8 w-8 rounded-xl bg-muted/80 border border-border/70 hover:bg-primary hover:text-primary-foreground transition-all text-muted-foreground"
                         title="Print Customer Total Slip (ކަސްޓަމަރުގެ ދަރަނި ސްލިޕް ޕްރިންޓްކުރައްވާ)"
                       >
-                        <Printer className="h-3.5 w-3.5" />
+                        <Printer className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
@@ -1436,24 +1436,24 @@ const CreditOutstanding = () => {
                   <div
                     onClick={() => toggleTotalReveal(customer.id)}
                     className={cn(
-                      "p-3 rounded-xl border transition-all cursor-pointer select-none",
+                      "p-3.5 rounded-2xl border transition-all cursor-pointer select-none",
                       isOverLimit
                         ? "bg-red-500/8 border-red-500/25 hover:bg-red-500/12"
                         : "bg-muted/40 border-border/70 hover:bg-muted/60"
                     )}
                     title={isRevealed ? "Click to hide balance" : "Click to reveal balance"}
                   >
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1">
                         <span>TOTAL DUE</span>
                         {isRevealed ? (
-                          <EyeOff className="h-2.5 w-2.5 text-muted-foreground/70" />
+                          <EyeOff className="h-3 w-3 text-muted-foreground/70" />
                         ) : (
-                          <Eye className="h-2.5 w-2.5 text-muted-foreground/70" />
+                          <Eye className="h-3 w-3 text-muted-foreground/70" />
                         )}
                       </span>
-                      <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
-                        <Clock className="h-2.5 w-2.5 text-primary/70" />
+                      <span className="text-[11px] font-bold text-muted-foreground flex items-center gap-1">
+                        <Clock className="h-3 w-3 text-primary/70" />
                         <span>
                           {lastSettlement ? formatDate(lastSettlement.date) : 'No settlement'}
                         </span>
@@ -1463,7 +1463,7 @@ const CreditOutstanding = () => {
                     <div className="flex items-baseline justify-between gap-2">
                       <span
                         className={cn(
-                          "text-xl font-black font-mono tracking-tight transition-all duration-200",
+                          "text-2xl sm:text-[26px] font-black font-mono tracking-tight transition-all duration-200",
                           isOverLimit ? "text-red-500" : due > 0 ? "text-foreground" : "text-emerald-500",
                           !isRevealed && "blur-md select-none"
                         )}
@@ -1471,7 +1471,7 @@ const CreditOutstanding = () => {
                         {settings.shop.currency} {due.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                       <span className={cn(
-                        "text-[10px] font-black font-mono px-1.5 py-0.5 rounded",
+                        "text-[10px] font-black font-mono px-2 py-0.5 rounded-md",
                         isOverLimit
                           ? "bg-red-500/15 text-red-500"
                           : usagePct >= 75
@@ -1482,54 +1482,54 @@ const CreditOutstanding = () => {
                       </span>
                     </div>
 
-                    <div className="mt-2 space-y-1">
+                    <div className="mt-2.5 space-y-1.5">
                       <Progress
                         value={Math.min(100, (due / (limit || 1)) * 100)}
-                        className="h-1.5 bg-background/80"
+                        className="h-2 bg-background/80 rounded-full"
                       />
-                      <div className="flex items-center justify-between text-[10px] font-bold text-muted-foreground">
-                        <span>Credit Limit: <strong className="font-mono text-foreground/80">{settings.shop.currency} {limit.toFixed(0)}</strong></span>
+                      <div className="flex items-center justify-between text-[11px] font-bold text-muted-foreground">
+                        <span>Credit Limit: <strong className="font-mono text-foreground">{settings.shop.currency} {limit.toFixed(0)}</strong></span>
                         {customer.phone && (
-                          <span className="font-mono text-muted-foreground/80">📞 {customer.phone}</span>
+                          <span className="font-mono text-muted-foreground">📞 {customer.phone}</span>
                         )}
                       </div>
                     </div>
                   </div>
 
                   {/* Primary Action Row: Settle | History | Details */}
-                  <div className="grid grid-cols-3 gap-1.5">
+                  <div className="grid grid-cols-3 gap-2">
                     <Button
                       onClick={() => handleSettlePaymentClick(customer)}
-                      className="bg-primary hover:bg-primary/90 text-white text-[11px] font-black h-8.5 rounded-xl transition-all uppercase px-2 shadow-xs gap-1"
+                      className="bg-primary hover:bg-primary/90 text-white text-xs font-black h-9 rounded-xl transition-all uppercase px-2 shadow-xs gap-1"
                     >
-                      <DollarSign className="h-3.5 w-3.5 shrink-0" />
+                      <DollarSign className="h-4 w-4 shrink-0" />
                       <span>Settle</span>
                     </Button>
                     <Button
                       variant="outline"
                       onClick={() => handleViewSettlementHistory(customer)}
-                      className="bg-card hover:bg-muted text-foreground text-[11px] font-black h-8.5 rounded-xl border-border/80 transition-all uppercase px-2"
+                      className="bg-card hover:bg-muted text-foreground text-xs font-black h-9 rounded-xl border-border/80 transition-all uppercase px-2"
                     >
                       History
                     </Button>
                     <Button
                       variant="outline"
                       onClick={() => handleViewCreditPurchases(customer)}
-                      className="bg-card hover:bg-muted text-foreground text-[11px] font-black h-8.5 rounded-xl border-border/80 transition-all uppercase px-2"
+                      className="bg-card hover:bg-muted text-foreground text-xs font-black h-9 rounded-xl border-border/80 transition-all uppercase px-2"
                     >
                       Details
                     </Button>
                   </div>
 
                   {/* Compact Statement & Share Row: PDF | Telegram | Viber */}
-                  <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-border/50">
+                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/50">
                     <Button
                       type="button"
                       onClick={() => handleOpenPdfPreview(customer)}
-                      className="bg-amber-500/12 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/25 text-[10px] font-black h-8 rounded-lg transition-all gap-1 flex items-center justify-center px-1.5 active:scale-95"
+                      className="bg-amber-500/12 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/25 text-[11px] font-black h-8.5 rounded-xl transition-all gap-1.5 flex items-center justify-center px-2 active:scale-95"
                       title="View & Download PDF Statement (ޕީޑީއެފް ސްޓޭޓްމަންޓް)"
                     >
-                      <FileText className="h-3 w-3 shrink-0" />
+                      <FileText className="h-3.5 w-3.5 shrink-0" />
                       <span className="truncate">PDF</span>
                     </Button>
 
@@ -1537,13 +1537,13 @@ const CreditOutstanding = () => {
                       type="button"
                       onClick={() => handleSendCustomerTelegram(customer)}
                       disabled={isSendingTelegram === customer.id}
-                      className="bg-[#229ED9]/12 hover:bg-[#229ED9]/25 text-[#229ED9] border border-[#229ED9]/25 text-[10px] font-black h-8 rounded-lg transition-all gap-1 flex items-center justify-center px-1.5 active:scale-95"
+                      className="bg-[#229ED9]/12 hover:bg-[#229ED9]/25 text-[#229ED9] border border-[#229ED9]/25 text-[11px] font-black h-8.5 rounded-xl transition-all gap-1.5 flex items-center justify-center px-2 active:scale-95"
                       title={customer.telegram_chat_id ? 'Send Statement via Telegram' : 'Link Telegram to Send Statement'}
                     >
                       {isSendingTelegram === customer.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
                       ) : (
-                        <TelegramIcon className="h-3 w-3 fill-current shrink-0" />
+                        <TelegramIcon className="h-3.5 w-3.5 fill-current shrink-0" />
                       )}
                       <span className="truncate">{customer.telegram_chat_id ? 'Telegram' : 'Link TG'}</span>
                     </Button>
@@ -1551,10 +1551,10 @@ const CreditOutstanding = () => {
                     <Button
                       type="button"
                       onClick={() => handleShareCustomerViber(customer)}
-                      className="bg-[#7360F2]/12 hover:bg-[#7360F2]/25 text-[#7360F2] border border-[#7360F2]/25 text-[10px] font-black h-8 rounded-lg transition-all gap-1 flex items-center justify-center px-1.5 active:scale-95"
+                      className="bg-[#7360F2]/12 hover:bg-[#7360F2]/25 text-[#7360F2] border border-[#7360F2]/25 text-[11px] font-black h-8.5 rounded-xl transition-all gap-1.5 flex items-center justify-center px-2 active:scale-95"
                       title="Send Statement via Viber (ވައިބަރ)"
                     >
-                      <ViberIcon className="h-3 w-3 fill-current shrink-0" />
+                      <ViberIcon className="h-3.5 w-3.5 fill-current shrink-0" />
                       <span className="truncate">Viber</span>
                     </Button>
                   </div>

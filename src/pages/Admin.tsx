@@ -479,186 +479,318 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
       </div>
 
       <div className="flex-1 flex overflow-hidden max-w-7xl mx-auto w-full gap-6 pb-6">
-        <div className="w-80 flex-shrink-0 apple-glass-card rounded-3xl border border-white/20 dark:border-white/10 p-4 flex flex-col gap-2 overflow-y-auto custom-scrollbar shadow-md">
-          <Button variant={activeTab === 'shopSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-2xl font-bold h-auto py-3 whitespace-normal text-right transition-all" onClick={() => setActiveTab('shopSettings')}><Building2 className="h-5 w-5 shrink-0" /> {renderBoth('shop_settings')}</Button>
-          <Button variant={activeTab === 'accountingSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-2xl font-bold h-auto py-3 whitespace-normal text-right transition-all" onClick={() => setActiveTab('accountingSettings')}><Landmark className="h-5 w-5 shrink-0" /> {renderBoth('accounting_settings')}</Button>
-          <Button variant={activeTab === 'softwareSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-2xl font-bold h-auto py-3 whitespace-normal text-right transition-all" onClick={() => setActiveTab('softwareSettings')}><Monitor className="h-5 w-5 shrink-0" /> {renderBoth('software_settings')}</Button>
-          <Button variant={activeTab === 'generalSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-2xl font-bold h-auto py-3 whitespace-normal text-right transition-all" onClick={() => setActiveTab('generalSettings')}><Layout className="h-5 w-5 shrink-0" /> {renderBoth('general_settings')}</Button>
-          <Button variant={activeTab === 'reportSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-2xl font-bold h-auto py-3 whitespace-normal text-right transition-all" onClick={() => setActiveTab('reportSettings')}><FileText className="h-5 w-5 shrink-0" /> {renderBoth('report_settings')}</Button>
-          <Button variant={activeTab === 'printingSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-2xl font-bold h-auto py-3 whitespace-normal text-right transition-all" onClick={() => setActiveTab('printingSettings')}><Printer className="h-5 w-5 shrink-0" /> {renderBoth('printing_settings')}</Button>
-          <Button variant={activeTab === 'telegramSettings' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-2xl font-bold h-auto py-3 whitespace-normal text-right text-[#229ED9] transition-all" onClick={() => setActiveTab('telegramSettings')}><TelegramIcon className="h-5 w-5 shrink-0" /> Telegram Bot</Button>
-          <Button variant={activeTab === 'userManagement' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-2xl font-bold h-auto py-3 whitespace-normal text-right transition-all" onClick={() => setActiveTab('userManagement')}><Users className="h-5 w-5 shrink-0" /> {renderBoth('user_management')}</Button>
-          <Button variant={activeTab === 'dataManagement' ? 'default' : 'ghost'} className="justify-start gap-3 rounded-2xl font-bold h-auto py-3 whitespace-normal text-right transition-all" onClick={() => setActiveTab('dataManagement')}><Database className="h-5 w-5 shrink-0" /> {renderBoth('data_management')}</Button>
+        {/* Navigation Sidebar */}
+        <div className="w-80 flex-shrink-0 apple-glass-card rounded-3xl border border-white/20 dark:border-white/10 p-3 flex flex-col gap-1.5 overflow-y-auto custom-scrollbar shadow-lg">
+          {[
+            { id: 'shopSettings', label: renderBoth('shop_settings'), icon: Building2 },
+            { id: 'accountingSettings', label: renderBoth('accounting_settings'), icon: Landmark },
+            { id: 'softwareSettings', label: renderBoth('software_settings'), icon: Monitor },
+            { id: 'generalSettings', label: renderBoth('general_settings'), icon: Layout },
+            { id: 'reportSettings', label: renderBoth('report_settings'), icon: FileText },
+            { id: 'printingSettings', label: renderBoth('printing_settings'), icon: Printer },
+            { id: 'telegramSettings', label: 'Telegram Bot (އޮޓޮމޭޝަން)', icon: TelegramIcon, special: true },
+            { id: 'userManagement', label: renderBoth('user_management'), icon: Users },
+            { id: 'dataManagement', label: renderBoth('data_management'), icon: Database },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id as any)}
+                className={cn(
+                  "flex items-center gap-3 w-full px-3.5 py-3 rounded-2xl text-xs font-black transition-all text-right",
+                  isActive
+                    ? "bg-primary text-white shadow-md shadow-primary/25 border border-primary/40"
+                    : tab.special
+                      ? "text-[#229ED9] hover:bg-[#229ED9]/10 border border-transparent"
+                      : "text-muted-foreground hover:text-foreground hover:bg-white/10 dark:hover:bg-white/5 border border-transparent"
+                )}
+              >
+                <div className={cn(
+                  "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform",
+                  isActive ? "bg-white/20 text-white" : "bg-muted/80 text-muted-foreground"
+                )}>
+                  <Icon className="h-4 w-4" />
+                </div>
+                <span className="flex-1 truncate">{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
+
+        {/* Settings Content Pane */}
         <ScrollArea className="flex-1 custom-scrollbar apple-glass-card rounded-3xl border border-white/20 dark:border-white/10 shadow-xl">
           <div className="p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Shop Settings */}
             {activeTab === 'shopSettings' && (
-              <div className="space-y-8">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between pb-3 border-b border-white/15 dark:border-white/10">
+                  <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-primary/10 text-primary border-primary/25 px-2.5 py-0.5">
+                    Store Profile
+                  </Badge>
+                  <h3 className="text-xl font-black text-foreground flex items-center gap-2">
+                    <span>{renderBoth('shop_settings')}</span>
+                    <Building2 className="h-5 w-5 text-primary" />
+                  </h3>
+                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('shop_name')}</Label>
-                      <Input
-                        value={shopSettings.shopName}
-                        onChange={(e) => handleSettingsChange('shop', 'shopName', e.target.value)}
-                        className="apple-glass-input h-12 rounded-2xl text-right font-bold"
-                      />
+                {/* Identity & Logo Grid */}
+                <div className="apple-glass-card p-6 rounded-3xl border border-white/20 dark:border-white/10 space-y-6 shadow-xs">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                    <div className="space-y-3.5">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right">
+                          {renderBoth('shop_name')}*
+                        </Label>
+                        <Input
+                          value={shopSettings.shopName}
+                          onChange={(e) => handleSettingsChange('shop', 'shopName', e.target.value)}
+                          className="apple-glass-input h-11 rounded-xl text-right font-bold text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right">
+                          {renderBoth('shop_address')}
+                        </Label>
+                        <Input
+                          value={shopSettings.shopAddress}
+                          onChange={(e) => handleSettingsChange('shop', 'shopAddress', e.target.value)}
+                          className="apple-glass-input h-11 rounded-xl text-right font-bold text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right">
+                          {renderBoth('shop_phone')}
+                        </Label>
+                        <Input
+                          value={shopSettings.shopPhone}
+                          onChange={(e) => handleSettingsChange('shop', 'shopPhone', e.target.value)}
+                          className="apple-glass-input h-11 rounded-xl text-right font-mono text-sm"
+                          dir="ltr"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right">
+                          {renderBoth('shop_tin') || 'Shop GST TIN (Tax Number)'}
+                        </Label>
+                        <Input
+                          value={shopSettings.tinNumber ?? '1021550GST501'}
+                          placeholder="1021550GST501"
+                          onChange={(e) => handleSettingsChange('shop', 'tinNumber', e.target.value)}
+                          className="apple-glass-input h-11 rounded-xl text-left font-mono font-bold tracking-wider text-sm"
+                          dir="ltr"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('shop_address')}</Label>
-                      <Input
-                        value={shopSettings.shopAddress}
-                        onChange={(e) => handleSettingsChange('shop', 'shopAddress', e.target.value)}
-                        className="apple-glass-input h-12 rounded-2xl text-right font-bold"
-                      />
+
+                    <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-white/20 dark:border-white/10 rounded-3xl bg-white/5 dark:bg-black/20 min-h-[260px] text-center">
+                      {shopSettings.logo ? (
+                        <div className="relative group">
+                          <img src={shopSettings.logo} className="max-h-36 max-w-full object-contain drop-shadow-lg rounded-xl" alt="Shop Logo" />
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute -top-2 -right-2 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                            onClick={() => handleSettingsChange('shop', 'logo', '')}
+                            title="Remove Logo"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="w-14 h-14 rounded-2xl bg-white/10 dark:bg-white/5 border border-white/20 flex items-center justify-center mx-auto text-muted-foreground">
+                            <ImageIcon className="h-7 w-7 opacity-60" />
+                          </div>
+                          <div>
+                            <Label htmlFor="logo-upload" className="cursor-pointer inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-xl font-black text-xs transition-all shadow-md">
+                              <Upload className="h-3.5 w-3.5" />
+                              <span>UPLOAD LOGO</span>
+                            </Label>
+                            <input id="logo-upload" type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Recommended: PNG / JPG, 500x200px</p>
+                        </div>
+                      )}
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('shop_phone')}</Label>
-                      <Input
-                        value={shopSettings.shopPhone}
-                        onChange={(e) => handleSettingsChange('shop', 'shopPhone', e.target.value)}
-                        className="apple-glass-input h-12 rounded-2xl text-right font-mono"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                        {renderBoth('shop_tin') || 'Shop GST TIN (Tax Number)'}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right">
+                        {renderBoth('currency')}*
                       </Label>
                       <Input
-                        value={shopSettings.tinNumber ?? '1021550GST501'}
-                        placeholder="1021550GST501"
-                        onChange={(e) => handleSettingsChange('shop', 'tinNumber', e.target.value)}
-                        className="apple-glass-input h-12 rounded-2xl text-left font-mono font-bold tracking-wider"
+                        value={shopSettings.currency}
+                        onChange={(e) => handleSettingsChange('shop', 'currency', e.target.value)}
+                        className="apple-glass-input h-11 rounded-xl text-right font-black text-primary text-sm font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right">
+                        {renderBoth('tax_rate')} (%)*
+                      </Label>
+                      <Input
+                        type="number"
+                        value={shopSettings.taxRate}
+                        onChange={(e) => handleSettingsChange('shop', 'taxRate', parseFloat(e.target.value))}
                         dir="ltr"
+                        className="apple-glass-input h-11 rounded-xl text-left font-black font-mono text-sm"
                       />
                     </div>
                   </div>
-
-                  <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-border rounded-3xl bg-white/2">
-                    {shopSettings.logo ? (
-                      <div className="relative group">
-                        <img src={shopSettings.logo} className="h-32 w-auto object-contain drop-shadow-2xl" />
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="absolute -top-2 -right-2 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => handleSettingsChange('shop', 'logo', '')}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="text-center">
-                        <ImageIcon className="h-12 w-12 text-foreground/10 mx-auto mb-4" />
-                        <Label htmlFor="logo-upload" className="cursor-pointer bg-primary text-foreground px-6 py-2 rounded-xl font-bold hover:bg-primary/90 transition-all">
-                          UPLOAD LOGO
-                        </Label>
-                        <input id="logo-upload" type="file" className="hidden" accept="image/*" onChange={handleLogoUpload} />
-                      </div>
-                    )}
-                    <p className="text-[10px] text-muted-foreground/50 mt-4 font-bold uppercase tracking-widest">Recommended size: 500x200px</p>
-                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-8">
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('currency')}</Label>
-                    <Input
-                      value={shopSettings.currency}
-                      onChange={(e) => handleSettingsChange('shop', 'currency', e.target.value)}
-                      className="bg-muted border-border h-12 rounded-xl text-right font-black text-primary"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">{renderBoth('tax_rate')} (%)</Label>
-                    <Input
-                      type="number"
-                      value={shopSettings.taxRate}
-                      onChange={(e) => handleSettingsChange('shop', 'taxRate', parseFloat(e.target.value))}
-                      dir="ltr"
-                      className="bg-muted border-border h-12 rounded-xl text-left font-black font-mono"
-                    />
-                  </div>
+                <div className="apple-glass-card p-6 rounded-3xl border border-white/20 dark:border-white/10 shadow-xs">
+                  <PosShortcutSettings
+                    saved={shopSettings.posShortcuts}
+                    onSave={(shortcuts) => handleSettingsChange('shop', 'posShortcuts', shortcuts)}
+                  />
                 </div>
-
-                <Separator className="bg-border" />
-
-                <PosShortcutSettings
-                  saved={shopSettings.posShortcuts}
-                  onSave={(shortcuts) => handleSettingsChange('shop', 'posShortcuts', shortcuts)}
-                />
-
               </div>
             )}
 
             {/* Accounting Settings */}
             {activeTab === 'accountingSettings' && (
-              <div className="space-y-8">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between pb-3 border-b border-white/15 dark:border-white/10">
+                  <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-500 border-amber-500/25 px-2.5 py-0.5">
+                    Receivables &amp; Credit
+                  </Badge>
+                  <h3 className="text-xl font-black text-foreground flex items-center gap-2">
+                    <span>{renderBoth('accounting_settings')}</span>
+                    <Landmark className="h-5 w-5 text-primary" />
+                  </h3>
+                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="flex items-center justify-between p-4 bg-muted rounded-2xl border border-border">
-                    <CreditCard className="h-5 w-5 text-primary" />
-                    <div className="text-right">
-                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2 block">Enable Credit Sales</Label>
-                      <Switch
-                        checked={accountingSettings.enableCreditSales}
-                        onCheckedChange={(val) => handleSettingsChange('accounting', 'enableCreditSales', val)}
-                        className="data-[state=checked]:bg-primary"
-                      />
+                <div className="apple-glass-card p-6 rounded-3xl border border-white/20 dark:border-white/10 space-y-6 shadow-xs">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="flex items-center justify-between p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                          <CreditCard className="h-5 w-5" />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-xs font-black text-foreground">Credit Sales Status</p>
+                          <p className="text-[10px] text-muted-foreground">{accountingSettings.enableCreditSales ? "Enabled on POS" : "Disabled"}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1.5 block">Enable Credit Sales</Label>
+                        <Switch
+                          checked={accountingSettings.enableCreditSales}
+                          onCheckedChange={(val) => handleSettingsChange('accounting', 'enableCreditSales', val)}
+                          className="data-[state=checked]:bg-primary"
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Default Credit Limit</Label>
-                    <div className="relative">
-                      <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-                      <Input
-                        type="number"
-                        value={accountingSettings.creditLimit}
-                        onChange={(e) => handleSettingsChange('accounting', 'creditLimit', parseFloat(e.target.value))}
-                        dir="ltr"
-                        className="bg-muted border-border h-12 rounded-xl text-left font-bold font-mono pl-10 pr-3"
-                      />
+
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right">
+                        Default Customer Credit Limit ({shopSettings.currency})
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black text-muted-foreground font-mono">
+                          {shopSettings.currency}
+                        </span>
+                        <Input
+                          type="number"
+                          value={accountingSettings.creditLimit}
+                          onChange={(e) => handleSettingsChange('accounting', 'creditLimit', parseFloat(e.target.value))}
+                          dir="ltr"
+                          className="apple-glass-input h-11 rounded-xl text-left font-bold font-mono pl-14 pr-3 text-sm"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
-
               </div>
             )}
 
             {/* Software & PWA App Settings */}
             {activeTab === 'softwareSettings' && (
-              <div className="space-y-8">
-                <div className="p-6 bg-muted/40 border border-border rounded-3xl space-y-6">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between pb-3 border-b border-white/15 dark:border-white/10">
+                  <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-sky-500/10 text-sky-500 border-sky-500/25 px-2.5 py-0.5">
+                    Platform &amp; Cache
+                  </Badge>
+                  <h3 className="text-xl font-black text-foreground flex items-center gap-2">
+                    <span>{renderBoth('software_settings')}</span>
+                    <Monitor className="h-5 w-5 text-primary" />
+                  </h3>
+                </div>
+
+                {/* System Language & Theme */}
+                <div className="apple-glass-card p-6 rounded-3xl border border-white/20 dark:border-white/10 space-y-4 shadow-xs">
+                  <h4 className="text-sm font-black text-foreground flex items-center gap-2">
+                    <Palette className="h-4 w-4 text-purple-400" />
+                    <span>Display Preferences &amp; Languages</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between p-3.5 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10">
+                      <div className="flex items-center gap-2.5">
+                        <Languages className="h-4 w-4 text-primary" />
+                        <span className="text-xs font-bold text-foreground">Language</span>
+                      </div>
+                      <Select value={softwareSettings.language} onValueChange={(val) => handleSettingsChange('software', 'language', val)}>
+                        <SelectTrigger className="w-[120px] apple-glass-input h-9 text-right font-bold text-xs rounded-xl">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="apple-glass-dialog border border-white/20 text-foreground">
+                          <SelectItem value="dv" className="text-right">ދިވެހި</SelectItem>
+                          <SelectItem value="en" className="text-right">English</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3.5 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10">
+                      <div className="flex items-center gap-2.5">
+                        <Palette className="h-4 w-4 text-purple-400" />
+                        <span className="text-xs font-bold text-foreground">Theme</span>
+                      </div>
+                      <Select value={softwareSettings.theme} onValueChange={(val) => handleSettingsChange('software', 'theme', val)}>
+                        <SelectTrigger className="w-[120px] apple-glass-input h-9 text-right font-bold text-xs rounded-xl">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="apple-glass-dialog border border-white/20 text-foreground">
+                          <SelectItem value="dark" className="text-right">Dark Mode</SelectItem>
+                          <SelectItem value="light" className="text-right">Light Mode</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progressive Web App (PWA) Card */}
+                <div className="apple-glass-card p-6 rounded-3xl border border-white/20 dark:border-white/10 space-y-6 shadow-xs">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="w-full md:w-64">
                       <PWAInstallButton />
                     </div>
                     <div className="text-right">
-                      <h3 className="text-lg font-black text-foreground flex items-center justify-end gap-2">
+                      <h3 className="text-base font-black text-foreground flex items-center justify-end gap-2">
                         <span>Progressive Web App (PWA)</span>
                         <Monitor className="h-5 w-5 text-primary" />
                       </h3>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Install MVPOS as a native standalone desktop / mobile application with offline caching and silent kiosk printing.
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Install MVPOS as a standalone desktop / mobile application with offline caching and silent kiosk printing.
                       </p>
                     </div>
                   </div>
 
-                  <Separator className="bg-border" />
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-right">
-                    <div className="p-4 bg-muted rounded-2xl border border-border space-y-2">
-                      <h4 className="text-sm font-black text-orange-400">Silent Kiosk Printing in PWA</h4>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-right pt-2 border-t border-white/10">
+                    <div className="p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10 space-y-1.5">
+                      <h4 className="text-xs font-black text-orange-400">Silent Kiosk Printing in PWA</h4>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
                         To bypass the browser print dialog completely, add <code className="px-1.5 py-0.5 bg-background rounded text-foreground font-mono">--kiosk-printing</code> to the end of the Windows PWA desktop shortcut's <strong>Target</strong> property.
                       </p>
                     </div>
 
-                    <div className="p-4 bg-muted rounded-2xl border border-border space-y-2">
-                      <h4 className="text-sm font-black text-emerald-400">Offline & Fast Caching</h4>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
+                    <div className="p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10 space-y-1.5">
+                      <h4 className="text-xs font-black text-emerald-400">Offline &amp; Fast Caching</h4>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
                         Once installed, MVPOS service worker precaches all core assets, icons, fonts, and UI scripts for lightning-fast loading even with slow connectivity.
                       </p>
                     </div>
@@ -666,7 +798,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                 </div>
 
                 {/* Cloudflare Storage CDN Card */}
-                <div className="p-6 bg-muted/40 border border-border rounded-3xl space-y-6">
+                <div className="apple-glass-card p-6 rounded-3xl border border-white/20 dark:border-white/10 space-y-6 shadow-xs">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
                       <Button
@@ -674,24 +806,24 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         variant="outline"
                         onClick={handleTestCloudflareCdn}
                         disabled={testingCdn}
-                        className="h-10 px-4 rounded-xl gap-2 font-bold"
+                        className="h-10 px-4 rounded-xl gap-2 font-bold text-xs apple-glass-pill"
                       >
                         {testingCdn ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4 text-primary" />}
-                        Test Connection
+                        <span>Test Connection</span>
                       </Button>
                     </div>
                     <div className="text-right">
-                      <h3 className="text-lg font-black text-foreground flex items-center justify-end gap-2">
+                      <h3 className="text-base font-black text-foreground flex items-center justify-end gap-2">
                         <span>Cloudflare CDN for Product Images (Zero-Cost Storage)</span>
                         <Cloud className="h-5 w-5 text-sky-400" />
                       </h3>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         Serve all product catalogue images globally via Cloudflare Edge Cache. Reduces Supabase database egress to 0 MB.
                       </p>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] text-muted-foreground font-mono">Example: https://pos-image-cdn.yourname.workers.dev</span>
                       <Label className="text-xs font-bold text-foreground">Cloudflare Worker URL</Label>
@@ -701,22 +833,22 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                       value={softwareSettings.storageCdnUrl || ''}
                       onChange={(e) => handleSettingsChange('software', 'storageCdnUrl', e.target.value.trim())}
                       placeholder="https://pos-image-cdn.yourname.workers.dev"
-                      className="bg-muted border-border h-12 rounded-xl text-left font-mono text-sm"
+                      className="apple-glass-input h-11 rounded-xl text-left font-mono text-xs"
                       dir="ltr"
                     />
                   </div>
 
                   {cdnTestResult && (
                     <div className={cn(
-                      "p-3 rounded-xl border text-xs font-bold flex items-center gap-2",
+                      "p-3 rounded-2xl border text-xs font-bold flex items-center gap-2",
                       cdnTestResult.success ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-red-500/10 border-red-500/30 text-red-400"
                     )}>
-                      {cdnTestResult.success ? <CheckCircle2 className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                      {cdnTestResult.success ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <X className="h-4 w-4 shrink-0" />}
                       <span>{cdnTestResult.message}</span>
                     </div>
                   )}
 
-                  <div className="p-4 bg-muted rounded-2xl border border-border space-y-3 text-right">
+                  <div className="p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10 space-y-2.5 text-right">
                     <div className="flex items-center justify-between">
                       <Button
                         size="sm"
@@ -725,12 +857,12 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                           navigator.clipboard.writeText(CLOUDFLARE_WORKER_CODE);
                           showSuccess('Cloudflare Worker code copied to clipboard!');
                         }}
-                        className="h-7 text-xs font-bold gap-1 text-primary hover:bg-primary/10"
+                        className="h-7 text-xs font-bold gap-1 text-primary hover:bg-primary/10 rounded-lg"
                       >
                         <Copy className="h-3.5 w-3.5" />
-                        Copy Worker Code
+                        <span>Copy Worker Code</span>
                       </Button>
-                      <h4 className="text-sm font-black text-foreground">How to Deploy in 2 Minutes:</h4>
+                      <h4 className="text-xs font-black text-foreground">How to Deploy in 2 Minutes:</h4>
                     </div>
                     <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside" dir="rtl">
                       <li>ދައްކާފައިވާ ކްލައުޑްފްލެއަރ ޑޭޝްބޯޑަށް ވަޑައިގަންނަވާ (<a href="https://dash.cloudflare.com" target="_blank" rel="noreferrer" className="text-primary underline">dash.cloudflare.com</a>) &rarr; <strong>Workers &amp; Pages</strong> &rarr; <strong>Create Worker</strong> (ނަން: <code className="font-mono text-foreground">pos-image-cdn</code>).</li>
@@ -743,14 +875,33 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
               </div>
             )}
 
-            {/* Loyalty Settings */}
+            {/* General Settings */}
             {activeTab === 'generalSettings' && (
-              <div className="space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="flex items-center justify-between p-4 bg-muted rounded-2xl border border-border">
-                    <Gift className="h-5 w-5 text-primary" />
-                    <div className="text-right">
-                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2 block">Enable Loyalty Program</Label>
+              <div className="space-y-6">
+                <div className="flex items-center justify-between pb-3 border-b border-white/15 dark:border-white/10">
+                  <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-purple-500/10 text-purple-500 border-purple-500/25 px-2.5 py-0.5">
+                    Customer Experience
+                  </Badge>
+                  <h3 className="text-xl font-black text-foreground flex items-center gap-2">
+                    <span>{renderBoth('general_settings')}</span>
+                    <Layout className="h-5 w-5 text-primary" />
+                  </h3>
+                </div>
+
+                {/* Loyalty Program */}
+                <div className="apple-glass-card p-6 rounded-3xl border border-white/20 dark:border-white/10 space-y-6 shadow-xs">
+                  <div className="flex items-center justify-between pb-4 border-b border-white/10">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                        <Gift className="h-5 w-5" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-xs font-black text-foreground">Customer Loyalty Program</p>
+                        <p className="text-[10px] text-muted-foreground">Reward repeat customers with redeemable points</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Enable Loyalty</Label>
                       <Switch
                         checked={generalSettings.enableLoyaltyProgram ?? true}
                         onCheckedChange={(val) => handleSettingsChange('general', 'enableLoyaltyProgram', val)}
@@ -758,48 +909,61 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Amount to earn 1 Point ({shopSettings.currency})</Label>
-                    <div className="relative">
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right">
+                        Spend for 1 Point ({shopSettings.currency})
+                      </Label>
                       <Input
                         type="number"
                         value={generalSettings.loyaltyAmountPerPoint ?? 20}
                         onChange={(e) => handleSettingsChange('general', 'loyaltyAmountPerPoint', parseFloat(e.target.value))}
                         dir="ltr"
-                        className="bg-muted border-border h-12 rounded-xl text-left font-bold font-mono"
+                        className="apple-glass-input h-11 rounded-xl text-left font-mono font-bold text-sm"
                       />
                     </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Points for 1.00 {shopSettings.currency} discount</Label>
-                    <div className="relative">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right">
+                        Points for 1.00 {shopSettings.currency} discount
+                      </Label>
                       <Input
                         type="number"
                         value={generalSettings.loyaltyPointsValue ?? 10}
                         onChange={(e) => handleSettingsChange('general', 'loyaltyPointsValue', parseFloat(e.target.value))}
-                        className="bg-muted border-border h-12 rounded-xl text-right font-bold"
+                        dir="ltr"
+                        className="apple-glass-input h-11 rounded-xl text-left font-mono font-bold text-sm"
                       />
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Minimum Points to Redeem</Label>
-                    <div className="relative">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right">
+                        Minimum Points to Redeem
+                      </Label>
                       <Input
                         type="number"
                         value={generalSettings.loyaltyMinRedeemPoints ?? 10}
                         onChange={(e) => handleSettingsChange('general', 'loyaltyMinRedeemPoints', parseFloat(e.target.value))}
-                        className="bg-muted border-border h-12 rounded-xl text-right font-bold"
+                        dir="ltr"
+                        className="apple-glass-input h-11 rounded-xl text-left font-mono font-bold text-sm"
                       />
                     </div>
                   </div>
                 </div>
-                <div className="pt-6 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="flex items-center justify-between p-4 bg-muted rounded-2xl border border-border">
-                    <Monitor className="h-5 w-5 text-primary" />
-                    <div className="text-right">
-                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2 block">Enable Customer Display</Label>
+
+                {/* Customer Dual Display & Ad Mode */}
+                <div className="apple-glass-card p-6 rounded-3xl border border-white/20 dark:border-white/10 space-y-6 shadow-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                        <Monitor className="h-5 w-5" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-xs font-black text-foreground">Secondary Customer Display</p>
+                        <p className="text-[10px] text-muted-foreground">Dual-monitor customer facing checkout &amp; advertising slideshow</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Enable Display</Label>
                       <Switch
                         checked={generalSettings.enableCustomerDisplay ?? true}
                         onCheckedChange={(val) => handleSettingsChange('general', 'enableCustomerDisplay', val)}
@@ -807,121 +971,143 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Idle Timeout (Minutes)</Label>
-                    <div className="relative">
-                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-                      <Input
-                        type="number"
-                        value={generalSettings.customerDisplayIdleTimeout || 10}
-                        onChange={(e) => handleSettingsChange('general', 'customerDisplayIdleTimeout', parseFloat(e.target.value))}
-                        className="bg-muted border-border h-12 rounded-xl text-right font-bold pr-10"
-                      />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right">
+                        Idle Slideshow Timeout (Minutes)
+                      </Label>
+                      <div className="relative">
+                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+                        <Input
+                          type="number"
+                          value={generalSettings.customerDisplayIdleTimeout || 10}
+                          onChange={(e) => handleSettingsChange('general', 'customerDisplayIdleTimeout', parseFloat(e.target.value))}
+                          className="apple-glass-input h-11 rounded-xl text-left font-mono font-bold text-sm pl-9"
+                          dir="ltr"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-end justify-end">
+                      <Button
+                        type="button"
+                        onClick={() => setIsOfferDialogOpen(true)}
+                        className="bg-primary hover:bg-primary/90 text-white rounded-xl h-11 px-5 font-black text-xs gap-1.5 shadow-sm"
+                      >
+                        <Gift className="h-3.5 w-3.5" />
+                        <span>Add Promotional Offer</span>
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Offers Grid */}
+                  <div className="space-y-3 pt-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right">
+                      Active Customer Display Offers &amp; Slides
+                    </Label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {(generalSettings.customerDisplayOffers || []).map((offer, idx) => (
+                        <div key={offer.id || idx} className="apple-glass-card rounded-2xl border border-white/20 dark:border-white/10 p-3 relative group overflow-hidden shadow-xs">
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 right-2 h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-md"
+                            onClick={() => handleRemoveOffer(offer.id)}
+                            title="Delete offer"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+
+                          {offer.type === 'image' ? (
+                            <div className="aspect-video w-full rounded-xl overflow-hidden bg-black/40">
+                              <img src={offer.image} className="w-full h-full object-cover" alt="Custom offer" />
+                            </div>
+                          ) : (
+                            <div className="aspect-video w-full rounded-xl bg-primary/10 border border-primary/20 flex flex-col items-center justify-center text-center p-3">
+                              <h4 className="font-black text-base text-foreground mb-0.5">{offer.title}</h4>
+                              {offer.subtitle && <p className="text-muted-foreground text-xs line-clamp-1">{offer.subtitle}</p>}
+                              {offer.priceText && <div className="mt-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-md">{offer.priceText}</div>}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {(generalSettings.customerDisplayOffers || []).length === 0 && (
+                        <div className="col-span-full text-center py-8 text-muted-foreground border border-dashed border-white/20 rounded-2xl bg-white/5">
+                          <ImageIcon className="h-7 w-7 mx-auto mb-1.5 opacity-30" />
+                          <p className="text-xs font-bold">No promotional slides added yet</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
-
-                <div className="pt-6 border-t border-border space-y-4">
-                  <div className="flex justify-between items-center">
-                    <Button onClick={() => setIsOfferDialogOpen(true)} className="bg-primary hover:bg-primary/90 text-foreground rounded-xl">
-                      Add Custom Offer
-                    </Button>
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right">
-                      Custom Offers (Ad Mode)
-                    </Label>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {(generalSettings.customerDisplayOffers || []).map((offer, idx) => (
-                      <div key={offer.id || idx} className="bg-muted border border-border rounded-2xl p-4 relative group">
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="absolute -top-2 -right-2 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                          onClick={() => handleRemoveOffer(offer.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-
-                        {offer.type === 'image' ? (
-                          <div className="aspect-video w-full rounded-xl overflow-hidden bg-black/50">
-                            <img src={offer.image} className="w-full h-full object-cover" alt="Custom offer" />
-                          </div>
-                        ) : (
-                          <div className="aspect-video w-full rounded-xl bg-primary/10 border border-primary/20 flex flex-col items-center justify-center text-center p-4">
-                            <h4 className="font-black text-xl text-foreground mb-1">{offer.title}</h4>
-                            {offer.subtitle && <p className="text-muted-foreground/80 text-sm mb-2">{offer.subtitle}</p>}
-                            {offer.priceText && <div className="bg-orange-500 text-foreground text-xs font-black px-2 py-1 rounded-md">{offer.priceText}</div>}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                    {(generalSettings.customerDisplayOffers || []).length === 0 && (
-                      <div className="col-span-full text-center py-8 text-muted-foreground border border-dashed border-border rounded-2xl">
-                        No custom offers added yet. Click "Add Custom Offer" to create one.
-                      </div>
-                    )}
-                  </div>
-                </div>
-
               </div>
             )}
 
             {/* Printing Settings */}
             {activeTab === 'printingSettings' && (
-              <div className="space-y-8">
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-muted rounded-2xl border border-border">
-                      <Receipt className="h-5 w-5 text-primary" />
-                      <div className="text-right">
-                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2 block">Print Mode</Label>
-                        <Select value={printingSettings.printMode} onValueChange={(val) => handleSettingsChange('printing', 'printMode', val)}>
-                          <SelectTrigger className="w-[120px] bg-muted/80 border-none h-9 text-right font-bold">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-card border-border text-foreground">
-                            <SelectItem value="auto" className="text-right">Automatic</SelectItem>
-                            <SelectItem value="ask" className="text-right">Ask Always</SelectItem>
-                            <SelectItem value="off" className="text-right">Disabled</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-muted rounded-2xl border border-border">
-                      <Layout className="h-5 w-5 text-primary" />
-                      <div className="text-right">
-                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2 block">Paper Width</Label>
-                        <Select value={printingSettings.thermalPrinterWidth} onValueChange={(val) => handleSettingsChange('printing', 'thermalPrinterWidth', val)}>
-                          <SelectTrigger className="w-[120px] bg-muted/80 border-none h-9 text-right font-bold">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-card border-border text-foreground">
-                            <SelectItem value="58mm" className="text-right">58mm</SelectItem>
-                            <SelectItem value="80mm" className="text-right">80mm</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
+              <div className="space-y-6">
+                <div className="flex items-center justify-between pb-3 border-b border-white/15 dark:border-white/10">
+                  <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border-emerald-500/25 px-2.5 py-0.5">
+                    Hardware &amp; Receipts
+                  </Badge>
+                  <h3 className="text-xl font-black text-foreground flex items-center gap-2">
+                    <span>{renderBoth('printing_settings')}</span>
+                    <Printer className="h-5 w-5 text-primary" />
+                  </h3>
                 </div>
-                <div className="space-y-4">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-muted rounded-2xl border border-border gap-4">
+
+                <div className="apple-glass-card p-6 rounded-3xl border border-white/20 dark:border-white/10 space-y-6 shadow-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between p-3.5 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10">
+                      <div className="flex items-center gap-2.5">
+                        <Receipt className="h-4 w-4 text-primary" />
+                        <span className="text-xs font-bold text-foreground">Print Trigger</span>
+                      </div>
+                      <Select value={printingSettings.printMode} onValueChange={(val) => handleSettingsChange('printing', 'printMode', val)}>
+                        <SelectTrigger className="w-[130px] apple-glass-input h-9 text-right font-bold text-xs rounded-xl">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="apple-glass-dialog border border-white/20 text-foreground">
+                          <SelectItem value="auto" className="text-right">Automatic</SelectItem>
+                          <SelectItem value="ask" className="text-right">Ask Always</SelectItem>
+                          <SelectItem value="off" className="text-right">Disabled</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3.5 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10">
+                      <div className="flex items-center gap-2.5">
+                        <Layout className="h-4 w-4 text-primary" />
+                        <span className="text-xs font-bold text-foreground">Thermal Paper Width</span>
+                      </div>
+                      <Select value={printingSettings.thermalPrinterWidth} onValueChange={(val) => handleSettingsChange('printing', 'thermalPrinterWidth', val)}>
+                        <SelectTrigger className="w-[110px] apple-glass-input h-9 text-right font-bold text-xs rounded-xl">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="apple-glass-dialog border border-white/20 text-foreground">
+                          <SelectItem value="58mm" className="text-right">58mm</SelectItem>
+                          <SelectItem value="80mm" className="text-right">80mm</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* QZ Tray Direct Printing */}
+                  <div className="p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <Printer className="h-5 w-5 text-primary" />
-                      <div>
-                        <Label className="text-sm font-bold text-foreground mb-1 block">QZ Tray Direct Printing</Label>
-                        <p className="text-xs text-foreground/50">Print silently by bypassing the browser dialog. Requires QZ Tray.</p>
+                      <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                        <Printer className="h-4 w-4" />
+                      </div>
+                      <div className="text-left">
+                        <Label className="text-xs font-black text-foreground block">QZ Tray Direct Thermal Printing</Label>
+                        <p className="text-[11px] text-muted-foreground">Print silently by bypassing the browser dialog. Requires QZ Tray software.</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                       {printingSettings.useQzTray && (
                         <Input
                           placeholder="Exact Printer Name"
-                          className="w-[200px] bg-muted/80 border-border text-foreground placeholder:text-foreground/30"
+                          className="w-[180px] apple-glass-input h-9 text-xs rounded-xl"
                           value={printingSettings.printerName || ''}
                           onChange={(e) => handleSettingsChange('printing', 'printerName', e.target.value)}
                         />
@@ -948,66 +1134,90 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                     </div>
                   </div>
                 </div>
-
               </div>
             )}
 
             {/* Report Settings */}
             {activeTab === 'reportSettings' && (
-              <div className="space-y-8">
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-4 text-right">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Invoice Header</Label>
-                    <Input
-                      value={reportSettings.invoiceHeader}
-                      onChange={(e) => handleSettingsChange('reports', 'invoiceHeader', e.target.value)}
-                      className="bg-muted border-border rounded-xl text-right"
-                    />
-                  </div>
-                  <div className="space-y-4 text-right">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Invoice Footer</Label>
-                    <Input
-                      value={reportSettings.invoiceFooter}
-                      onChange={(e) => handleSettingsChange('reports', 'invoiceFooter', e.target.value)}
-                      className="bg-muted border-border rounded-xl text-right"
-                    />
-                  </div>
+              <div className="space-y-6">
+                <div className="flex items-center justify-between pb-3 border-b border-white/15 dark:border-white/10">
+                  <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-500 border-blue-500/25 px-2.5 py-0.5">
+                    Headers &amp; Footers
+                  </Badge>
+                  <h3 className="text-xl font-black text-foreground flex items-center gap-2">
+                    <span>{renderBoth('report_settings')}</span>
+                    <FileText className="h-5 w-5 text-primary" />
+                  </h3>
                 </div>
 
+                <div className="apple-glass-card p-6 rounded-3xl border border-white/20 dark:border-white/10 space-y-4 shadow-xs">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1 text-right">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block">
+                        Invoice / Receipt Header Text
+                      </Label>
+                      <Input
+                        value={reportSettings.invoiceHeader || ''}
+                        onChange={(e) => handleSettingsChange('reports', 'invoiceHeader', e.target.value)}
+                        placeholder="Welcome to our store"
+                        className="apple-glass-input h-11 rounded-xl text-right text-xs font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1 text-right">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block">
+                        Invoice / Receipt Footer Text
+                      </Label>
+                      <Input
+                        value={reportSettings.invoiceFooter || ''}
+                        onChange={(e) => handleSettingsChange('reports', 'invoiceFooter', e.target.value)}
+                        placeholder="Thank you for shopping with us!"
+                        className="apple-glass-input h-11 rounded-xl text-right text-xs font-bold"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
             {/* User Management */}
             {activeTab === 'userManagement' && (
-              <div className="space-y-8">
-
-                <div className="flex justify-between items-center">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between pb-3 border-b border-white/15 dark:border-white/10">
                   <Button
                     onClick={() => { setSelectedUser(null); setUserDialogOpen(true); }}
-                    className="bg-primary hover:bg-primary/90 h-11 px-6 rounded-xl font-black gap-2"
+                    className="bg-primary hover:bg-primary/90 h-10 px-5 rounded-xl font-black text-xs gap-1.5 shadow-sm"
                   >
                     <UserPlus className="h-4 w-4" /> {renderBoth('add_user')}
                   </Button>
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Manage system access levels</p>
+                  <div className="text-right">
+                    <h3 className="text-xl font-black text-foreground flex items-center justify-end gap-2">
+                      <span>{renderBoth('user_management')}</span>
+                      <Users className="h-5 w-5 text-primary" />
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">Manage system logins, roles and cashiers</p>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {users.map((user) => (
-                    <div key={user.id} className="p-4 bg-muted border border-border rounded-2xl flex items-center justify-between group hover:bg-muted/80 transition-all">
-                      <div className="flex gap-2">
+                    <div
+                      key={user.id}
+                      className="apple-glass-card p-4 rounded-3xl border border-white/20 dark:border-white/10 flex items-center justify-between group hover:border-primary/40 transition-all shadow-xs"
+                    >
+                      <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-9 w-9 rounded-xl hover:bg-blue-500/10 text-blue-400"
+                          className="h-8 w-8 rounded-xl hover:bg-blue-500/10 text-blue-400"
                           onClick={() => { setSelectedUser(user); setUserDialogOpen(true); }}
+                          title="Edit User"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-9 w-9 rounded-xl hover:bg-red-500/10 text-red-400"
+                          className="h-8 w-8 rounded-xl hover:bg-red-500/10 text-red-400"
                           onClick={async () => {
                             const confirmMsg = `Are you sure you want to delete user "${user.username}" (${user.name_en || user.name_dv})?`;
                             if (window.confirm(confirmMsg)) {
@@ -1019,82 +1229,59 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                               }
                             }
                           }}
+                          title="Delete User"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                      <div className="text-right">
-                        <div className="flex items-center justify-end gap-3 mb-1">
-                          <span className="text-lg font-black text-foreground">{user.name_dv}</span>
-                          <span className="bg-primary/20 text-primary text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">{user.role}</span>
+
+                      <div className="text-right flex items-center gap-3">
+                        <div>
+                          <div className="flex items-center justify-end gap-2 mb-0.5">
+                            <span className="text-sm font-black text-foreground">{user.name_dv || user.name_en}</span>
+                            <Badge className={cn(
+                              "text-[9px] font-black uppercase px-2 py-0.5 rounded-md",
+                              user.role === 'admin' ? "bg-primary/20 text-primary border-primary/30" : "bg-muted text-muted-foreground"
+                            )}>
+                              {user.role}
+                            </Badge>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground font-mono font-bold uppercase tracking-wider">@{user.username}</p>
                         </div>
-                        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{user.username}</p>
+                        <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center font-black text-xs shrink-0">
+                          {(user.name_en || user.name_dv || 'U').slice(0, 2).toUpperCase()}
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
-
-              </div>
-            )}
-
-            {/* Software Settings */}
-            {activeTab === 'softwareSettings' && (
-              <div className="space-y-8">
-
-                <div className="grid grid-cols-2 gap-8">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-muted rounded-2xl border border-border">
-                      <Languages className="h-5 w-5 text-primary" />
-                      <div className="text-right">
-                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2 block">System Language</Label>
-                        <Select value={softwareSettings.language} onValueChange={(val) => handleSettingsChange('software', 'language', val)}>
-                          <SelectTrigger className="w-[120px] bg-muted/80 border-none h-9 text-right font-bold">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-card border-border text-foreground">
-                            <SelectItem value="dv" className="text-right">ދިވެހި</SelectItem>
-                            <SelectItem value="en" className="text-right">English</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-muted rounded-2xl border border-border">
-                      <Palette className="h-5 w-5 text-purple-500" />
-                      <div className="text-right">
-                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2 block">System Theme</Label>
-                        <Select value={softwareSettings.theme} onValueChange={(val) => handleSettingsChange('software', 'theme', val)}>
-                          <SelectTrigger className="w-[120px] bg-muted/80 border-none h-9 text-right font-bold">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-card border-border text-foreground">
-                            <SelectItem value="dark" className="text-right">Dark Mode</SelectItem>
-                            <SelectItem value="light" className="text-right">Light Mode</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
               </div>
             )}
 
             {/* Data Management */}
             {activeTab === 'dataManagement' && (
-              <div className="space-y-8">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between pb-3 border-b border-white/15 dark:border-white/10">
+                  <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border-emerald-500/25 px-2.5 py-0.5">
+                    Multi-Terminal Mesh &amp; Storage
+                  </Badge>
+                  <h3 className="text-xl font-black text-foreground flex items-center gap-2">
+                    <span>{renderBoth('data_management')}</span>
+                    <Database className="h-5 w-5 text-primary" />
+                  </h3>
+                </div>
+
                 {/* Realtime Live Multi-Computer Sync */}
-                <div className="p-6 bg-card border border-border rounded-3xl space-y-5">
-                  <div className="flex items-center justify-between pb-4 border-b border-border/60">
-                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 font-bold px-3 py-1 text-xs flex items-center gap-1.5">
+                <div className="apple-glass-card p-6 rounded-3xl border border-white/20 dark:border-white/10 space-y-6 shadow-xs">
+                  <div className="flex items-center justify-between pb-4 border-b border-white/10">
+                    <Badge variant="outline" className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30 font-bold px-3 py-1 text-xs flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block" />
-                      <span>Live Active</span>
+                      <span>Live Mesh Active</span>
                     </Badge>
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <h4 className="text-lg font-black text-foreground">Multi-Computer Live Sync</h4>
-                        <p className="text-xs text-muted-foreground">Peer-to-peer WebSockets & Delta Background Sync</p>
+                        <h4 className="text-base font-black text-foreground">Multi-Computer Live Sync</h4>
+                        <p className="text-xs text-muted-foreground">Peer-to-peer WebSockets &amp; Delta Background Sync across counters</p>
                       </div>
                       <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                         <Cloud className="h-5 w-5" />
@@ -1103,21 +1290,21 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-4 rounded-2xl bg-muted/50 border border-border/50 text-right space-y-1">
+                    <div className="p-4 rounded-2xl bg-white/5 dark:bg-black/20 border border-white/15 dark:border-white/10 text-right space-y-1">
                       <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Sales Sync</p>
                       <p className="text-sm font-bold text-foreground flex items-center justify-end gap-1.5 text-emerald-500">
                         <CheckCircle2 className="h-4 w-4" /> &lt; 50ms Realtime Mesh
                       </p>
-                      <p className="text-[11px] text-muted-foreground">Syncs new sales & credit edits across all active terminals immediately.</p>
+                      <p className="text-[11px] text-muted-foreground">Syncs new sales &amp; credit edits across all active terminals immediately.</p>
                     </div>
-                    <div className="p-4 rounded-2xl bg-muted/50 border border-border/50 text-right space-y-1">
-                      <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Vendors & Purchases</p>
+                    <div className="p-4 rounded-2xl bg-white/5 dark:bg-black/20 border border-white/15 dark:border-white/10 text-right space-y-1">
+                      <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Vendors &amp; Purchases</p>
                       <p className="text-sm font-bold text-foreground flex items-center justify-end gap-1.5 text-emerald-500">
                         <CheckCircle2 className="h-4 w-4" /> Instant Broadcast
                       </p>
                       <p className="text-[11px] text-muted-foreground">New vendors and purchase bills propagate instantly between computers.</p>
                     </div>
-                    <div className="p-4 rounded-2xl bg-muted/50 border border-border/50 text-right space-y-1">
+                    <div className="p-4 rounded-2xl bg-white/5 dark:bg-black/20 border border-white/15 dark:border-white/10 text-right space-y-1">
                       <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Awaiting Transfers</p>
                       <p className="text-sm font-bold text-foreground flex items-center justify-end gap-1.5 text-emerald-500">
                         <CheckCircle2 className="h-4 w-4" /> Live Slips Sync
@@ -1126,7 +1313,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                     </div>
                   </div>
 
-                  <div className="p-4 bg-muted/30 rounded-2xl border border-border flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <Button
                       type="button"
                       variant="outline"
@@ -1146,11 +1333,12 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                   </div>
                 </div>
 
-                <div className="p-6 bg-red-500/5 border border-red-500/20 rounded-3xl">
+                {/* Wipe System Data */}
+                <div className="p-6 bg-red-500/10 border border-red-500/25 rounded-3xl apple-glass-card shadow-xs">
                   <div className="flex items-start gap-4 text-right">
                     <div className="flex-1">
-                      <h4 className="text-lg font-black text-red-500 mb-2">CRITICAL ACTION: CLEAR ALL DATA</h4>
-                      <p className="text-xs text-muted-foreground leading-relaxed mb-6">
+                      <h4 className="text-base font-black text-red-500 mb-1">CRITICAL ACTION: CLEAR ALL DATA</h4>
+                      <p className="text-xs text-muted-foreground leading-relaxed mb-5">
                         This action will permanently delete all sales, products, customers, vendors and settings from the local database.
                         This process cannot be undone. Please ensure you have a backup before proceeding.
                       </p>
@@ -1169,56 +1357,60 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                             showError("INVALID SECRET CODE");
                           }
                         }}
-                        className="bg-red-600 hover:bg-red-700 h-12 px-8 rounded-xl font-black gap-2 uppercase tracking-widest shadow-lg shadow-red-500/20"
+                        className="bg-red-600 hover:bg-red-700 h-11 px-7 rounded-xl font-black gap-2 uppercase tracking-widest shadow-lg shadow-red-500/20 text-xs"
                         disabled={isClearingData}
                       >
-                        <Trash2 className="h-5 w-5" /> {isClearingData ? "CLEARING..." : "WIPE SYSTEM DATA"}
+                        <Trash2 className="h-4 w-4" /> {isClearingData ? "CLEARING..." : "WIPE SYSTEM DATA"}
                       </Button>
                     </div>
-                    <div className="w-12 h-12 rounded-2xl bg-red-500/20 flex items-center justify-center text-red-500">
+                    <div className="w-12 h-12 rounded-2xl bg-red-500/20 flex items-center justify-center text-red-500 shrink-0">
                       <Shield className="h-6 w-6" />
                     </div>
                   </div>
                 </div>
-
               </div>
             )}
 
             {/* Telegram Integration Settings */}
             {activeTab === 'telegramSettings' && (
-              <div className="space-y-8 text-right" dir="rtl">
-                <div>
-                  <h3 className="text-2xl font-black text-foreground flex items-center justify-end gap-3">
-                    <span>Telegram Bot Integration</span>
-                    <TelegramIcon className="h-7 w-7 text-[#229ED9]" />
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Configure automated payment receipts, QR code customer linking, and Telegram webhook
-                  </p>
+              <div className="space-y-6 text-right" dir="rtl">
+                <div className="flex items-center justify-between pb-3 border-b border-white/15 dark:border-white/10">
+                  <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider bg-[#229ED9]/10 text-[#229ED9] border-[#229ED9]/25 px-2.5 py-0.5">
+                    Telegram Automation
+                  </Badge>
+                  <div className="text-right">
+                    <h3 className="text-xl font-black text-foreground flex items-center justify-end gap-2">
+                      <span>Telegram Bot Integration</span>
+                      <TelegramIcon className="h-6 w-6 text-[#229ED9]" />
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Configure automated payment receipts, QR code customer linking, and Telegram webhook
+                    </p>
+                  </div>
                 </div>
 
                 {/* Bot Credentials & Connection Test */}
-                <div className="bg-card border border-border p-6 rounded-3xl space-y-6">
-                  <div className="flex items-center justify-between pb-4 border-b border-border/60">
+                <div className="apple-glass-card border border-white/20 dark:border-white/10 p-6 rounded-3xl space-y-6 shadow-xs">
+                  <div className="flex items-center justify-between pb-4 border-b border-white/10">
                     <Button
                       type="button"
                       onClick={handleTestBot}
                       disabled={isTestingBot}
-                      className="bg-[#229ED9] hover:bg-[#229ED9]/90 text-white font-bold h-10 px-5 rounded-xl gap-2 text-xs"
+                      className="bg-[#229ED9] hover:bg-[#229ED9]/90 text-white font-black h-10 px-5 rounded-xl gap-2 text-xs shadow-sm"
                     >
                       {isTestingBot ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                       <span>Test Bot Connection</span>
                     </Button>
-                    <h4 className="text-lg font-black text-foreground flex items-center gap-2">
+                    <h4 className="text-base font-black text-foreground flex items-center gap-2">
                       <span>Bot Credentials</span>
-                      <TelegramIcon className="h-5 w-5 text-[#229ED9]" />
+                      <TelegramIcon className="h-4 w-4 text-[#229ED9]" />
                     </h4>
                   </div>
 
                   {botInfo && (
                     <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-right space-y-1">
                       <p className="text-xs font-black text-emerald-500 flex items-center justify-end gap-1.5">
-                        <span>Bot Verified & Connected Successfully!</span>
+                        <span>Bot Verified &amp; Connected Successfully!</span>
                         <CheckCircle2 className="h-4 w-4" />
                       </p>
                       <p className="text-xs font-mono text-muted-foreground">
@@ -1227,22 +1419,22 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2 text-right">
-                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5 text-right">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block">
                         Bot Username (without @)
                       </Label>
                       <Input
                         value={telegramSettings.botUsername || ''}
                         onChange={(e) => handleSettingsChange('telegram', 'botUsername', e.target.value.replace('@', '').trim())}
                         placeholder="e.g. Bbacksh0p_bot"
-                        className="h-12 bg-muted border-border rounded-xl font-mono text-left"
+                        className="h-11 apple-glass-input rounded-xl font-mono text-left text-xs font-bold"
                         dir="ltr"
                       />
                     </div>
 
-                    <div className="space-y-2 text-right">
-                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                    <div className="space-y-1.5 text-right">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block">
                         Telegram Bot Token (HTTP API)
                       </Label>
                       <Input
@@ -1250,7 +1442,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         value={telegramSettings.botToken || ''}
                         onChange={(e) => handleSettingsChange('telegram', 'botToken', e.target.value.trim())}
                         placeholder="e.g. 8815725998:AAHVMSujW5JM-ND4CJAzPr_Qsj_enXm2cYQ"
-                        className="h-12 bg-muted border-border rounded-xl font-mono text-left text-xs"
+                        className="h-11 apple-glass-input rounded-xl font-mono text-left text-xs font-bold"
                         dir="ltr"
                       />
                     </div>
@@ -1258,33 +1450,33 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                 </div>
 
                 {/* Automated Receipt Settings */}
-                <div className="bg-card border border-border p-6 rounded-3xl space-y-6">
-                  <h4 className="text-lg font-black text-foreground pb-3 border-b border-border/60">
+                <div className="apple-glass-card border border-white/20 dark:border-white/10 p-6 rounded-3xl space-y-4 shadow-xs">
+                  <h4 className="text-base font-black text-foreground pb-3 border-b border-white/10">
                     Automated Receipt Delivery
                   </h4>
 
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-muted/40 rounded-2xl border border-border">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10">
                       <Switch
                         checked={telegramSettings.autoSendPaymentReceipts !== false}
                         onCheckedChange={(val) => handleSettingsChange('telegram', 'autoSendPaymentReceipts', val)}
                       />
                       <div className="text-right">
-                        <p className="text-sm font-black text-foreground">Auto-Send Debt Payment Settlement Receipts</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs font-black text-foreground">Auto-Send Debt Payment Settlement Receipts</p>
+                        <p className="text-[11px] text-muted-foreground">
                           Automatically send a formal receipt to the customer's Telegram whenever a credit balance is settled
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between p-4 bg-muted/40 rounded-2xl border border-border">
+                    <div className="flex items-center justify-between p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10">
                       <Switch
                         checked={Boolean(telegramSettings.autoSendSaleReceipts)}
                         onCheckedChange={(val) => handleSettingsChange('telegram', 'autoSendSaleReceipts', val)}
                       />
                       <div className="text-right">
-                        <p className="text-sm font-black text-foreground">Auto-Send Sales Receipts (Every Transaction)</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs font-black text-foreground">Auto-Send Sales Receipts (Every Transaction)</p>
+                        <p className="text-[11px] text-muted-foreground">
                           Automatically send an itemized receipt to linked customers on standard cash/card/split sales
                         </p>
                       </div>
@@ -1293,8 +1485,8 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                 </div>
 
                 {/* Nightly Store Close Daily Briefing (B BACK Group) */}
-                <div className="bg-card border border-border p-6 rounded-3xl space-y-6">
-                  <div className="flex items-center justify-between pb-3 border-b border-border/60">
+                <div className="apple-glass-card border border-white/20 dark:border-white/10 p-6 rounded-3xl space-y-4 shadow-xs">
+                  <div className="flex items-center justify-between pb-3 border-b border-white/10">
                     <Button
                       type="button"
                       onClick={handleTestBriefing}
@@ -1311,7 +1503,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                       <span>Send Test Briefing to Group</span>
                     </Button>
                     <div className="text-right">
-                      <h4 className="text-lg font-black text-foreground">
+                      <h4 className="text-base font-black text-foreground">
                         Nightly "Store Close" Daily Briefing (B BACK Group)
                       </h4>
                       <p className="text-xs text-muted-foreground">
@@ -1320,27 +1512,27 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-muted/40 rounded-2xl border border-border">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10">
                       <span className="font-mono text-xs font-bold text-foreground bg-background/80 px-3 py-1.5 rounded-lg border border-border">
                         {groupChatIdInput || shopSettings?.telegramGroupChatId ? `Chat ID: ${groupChatIdInput || shopSettings?.telegramGroupChatId}` : '⚠️ Not configured'}
                       </span>
                       <div className="text-right">
-                        <p className="text-sm font-black text-foreground">Destination Group</p>
-                        <p className="text-xs text-muted-foreground">
-                          Delivers directly to the store Telegram group configured above
+                        <p className="text-xs font-black text-foreground">Destination Group</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          Delivers directly to the store Telegram group configured below
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between p-4 bg-muted/40 rounded-2xl border border-border">
+                    <div className="flex items-center justify-between p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10">
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
                         Always Active
                       </span>
                       <div className="text-right">
-                        <p className="text-sm font-black text-foreground">Auto-Send Midnight Store Close Summary</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs font-black text-foreground">Auto-Send Midnight Store Close Summary</p>
+                        <p className="text-[11px] text-muted-foreground">
                           Sends daily total sales breakdown (Cash | Transfer | Credit), credit collections settled today, and top selling items. Always active — cannot be disabled.
                         </p>
                       </div>
@@ -1349,44 +1541,44 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                 </div>
 
                 {/* Automated Customer Tab Overdue & 90% Threshold Reminders */}
-                <div className="bg-card border border-border p-6 rounded-3xl space-y-6">
-                  <h4 className="text-lg font-black text-foreground pb-3 border-b border-border/60">
+                <div className="apple-glass-card border border-white/20 dark:border-white/10 p-6 rounded-3xl space-y-4 shadow-xs">
+                  <h4 className="text-base font-black text-foreground pb-3 border-b border-white/10">
                     Automated Customer Tab Overdue Reminders
                   </h4>
 
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-muted/40 rounded-2xl border border-border">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10">
                       <Switch
                         checked={telegramSettings.autoMonthlyCreditReminder !== false}
                         onCheckedChange={(val) => handleSettingsChange('telegram', 'autoMonthlyCreditReminder', val)}
                       />
                       <div className="text-right">
-                        <p className="text-sm font-black text-foreground">1st of Every Month Tab Reminders</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs font-black text-foreground">1st of Every Month Tab Reminders</p>
+                        <p className="text-[11px] text-muted-foreground">
                           Politely sends friendly private balance reminders with direct [ 📤 Send Transfer Slip ] button on the 1st of each month
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between p-4 bg-muted/40 rounded-2xl border border-border">
+                    <div className="flex items-center justify-between p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10">
                       <Switch
                         checked={telegramSettings.autoCreditReminderThreshold !== false}
                         onCheckedChange={(val) => handleSettingsChange('telegram', 'autoCreditReminderThreshold', val)}
                       />
                       <div className="text-right">
-                        <p className="text-sm font-black text-foreground">Credit Threshold Alert (When Tab Crosses Limit)</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs font-black text-foreground">Credit Threshold Alert (When Tab Crosses Limit)</p>
+                        <p className="text-[11px] text-muted-foreground">
                           Automatically notifies linked customers when their outstanding tab reaches or exceeds threshold percentage
                         </p>
                       </div>
                     </div>
 
-                    <div className="p-4 bg-muted/40 rounded-2xl border border-border space-y-2 text-right">
+                    <div className="p-4 bg-white/5 dark:bg-black/20 rounded-2xl border border-white/15 dark:border-white/10 space-y-1.5 text-right">
                       <div className="flex items-center justify-between">
                         <span className="font-mono text-xs font-bold text-primary">
                           {telegramSettings.creditReminderThresholdPct || 90}%
                         </span>
-                        <Label className="text-xs font-black text-foreground">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block">
                           Credit Limit Threshold Percentage
                         </Label>
                       </div>
@@ -1396,7 +1588,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         max="100"
                         value={telegramSettings.creditReminderThresholdPct || 90}
                         onChange={(e) => handleSettingsChange('telegram', 'creditReminderThresholdPct', Number(e.target.value))}
-                        className="h-10 bg-background border-border rounded-xl font-mono text-left w-32"
+                        className="h-10 apple-glass-input rounded-xl font-mono text-left w-32 text-xs"
                         dir="ltr"
                       />
                     </div>
@@ -1404,8 +1596,8 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                 </div>
 
                 {/* 24/7 Cloud Webhook & Hosting Configuration */}
-                <div className="bg-card border border-border p-6 rounded-3xl space-y-6">
-                  <div className="flex items-center justify-between pb-3 border-b border-border/60">
+                <div className="apple-glass-card border border-white/20 dark:border-white/10 p-6 rounded-3xl space-y-4 shadow-xs">
+                  <div className="flex items-center justify-between pb-3 border-b border-white/10">
                     <div className="flex items-center gap-2">
                       <Button
                         type="button"
@@ -1432,7 +1624,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                       ) : null}
                     </div>
                     <div className="text-right">
-                      <h4 className="text-lg font-black text-foreground">
+                      <h4 className="text-base font-black text-foreground">
                         24/7 Cloud Bot Hosting (Always Active)
                       </h4>
                       <p className="text-xs text-muted-foreground">
@@ -1442,7 +1634,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                   </div>
 
                   {/* Current Mode Badge */}
-                  <div className="p-4 rounded-2xl border bg-muted/30 flex items-center justify-between">
+                  <div className="p-4 rounded-2xl border bg-white/5 dark:bg-black/20 border-white/15 dark:border-white/10 flex items-center justify-between">
                     <div className="text-left">
                       {webhookLiveUrl ? (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
@@ -1479,16 +1671,16 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                       <span>🚀 Activate 24/7 Cloud Mode</span>
                     </Button>
                     <div className="text-right">
-                      <p className="text-sm font-black text-foreground">One-Click Vercel Cloud Webhook</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs font-black text-foreground">One-Click Vercel Cloud Webhook</p>
+                      <p className="text-[11px] text-muted-foreground">
                         Connects <code className="text-primary font-mono text-[10px]">/api/telegram-webhook</code> on your live website for 24/7 instant replies
                       </p>
                     </div>
                   </div>
 
                   {/* Custom URL Option */}
-                  <div className="space-y-2 text-right">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                  <div className="space-y-1.5 text-right">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block">
                       Custom Webhook URL (Optional)
                     </Label>
                     <div className="flex gap-2">
@@ -1508,7 +1700,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                           handleSettingsChange('telegram', 'webhookUrl', e.target.value);
                         }}
                         placeholder="https://YOUR_DOMAIN/api/telegram-webhook"
-                        className="h-11 bg-muted border-border rounded-xl font-mono text-left text-xs"
+                        className="h-11 apple-glass-input rounded-xl font-mono text-left text-xs"
                         dir="ltr"
                       />
                     </div>
@@ -1516,8 +1708,8 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                 </div>
 
                 {/* B BACK Group Forwarding Card */}
-                <div className="bg-card border border-border p-6 rounded-3xl space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-border/60">
+                <div className="apple-glass-card border border-white/20 dark:border-white/10 p-6 rounded-3xl space-y-4 shadow-xs">
+                  <div className="flex items-center justify-between pb-3 border-b border-white/10">
                     <div className="flex items-center gap-2">
                       <Button
                         type="button"
@@ -1525,7 +1717,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                         size="sm"
                         onClick={handleTestGroupNotification}
                         disabled={isSendingGroupTest}
-                        className="h-10 text-xs font-bold gap-1.5 rounded-xl border-border"
+                        className="h-9 text-xs font-bold gap-1.5 rounded-xl border-border"
                       >
                         {isSendingGroupTest ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                         <span>Test Group Message</span>
@@ -1533,7 +1725,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                     </div>
                     <div className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <h4 className="text-lg font-black text-foreground">
+                        <h4 className="text-base font-black text-foreground">
                           B BACK Telegram Group Forwarding
                         </h4>
                         {shopSettings?.telegramGroupChatId ? (
@@ -1554,7 +1746,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
 
                   <div className="space-y-3">
                     <div>
-                      <Label className="text-xs font-bold text-foreground block text-right mb-1.5">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block text-right mb-1">
                         Group Chat ID (Auto-detected or Manual)
                       </Label>
                       <div className="flex gap-2" dir="ltr">
@@ -1570,13 +1762,13 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                           value={groupChatIdInput}
                           onChange={(e) => setGroupChatIdInput(e.target.value)}
                           placeholder="e.g. -1001234567890"
-                          className="h-11 bg-muted border-border rounded-xl font-mono text-left text-xs"
+                          className="h-11 apple-glass-input rounded-xl font-mono text-left text-xs"
                           dir="ltr"
                         />
                       </div>
                     </div>
 
-                    <div className="p-3 bg-muted/60 border border-border/60 rounded-2xl text-xs space-y-1 text-right" dir="rtl">
+                    <div className="p-3.5 bg-white/5 dark:bg-black/20 border border-white/15 dark:border-white/10 rounded-2xl text-xs space-y-1 text-right" dir="rtl">
                       <p className="font-bold text-foreground">އޮޓޮމެޓިކުން ގްރޫޕް ގުޅައިދޭނެ ގޮތް:</p>
                       <p className="text-muted-foreground text-[11px]">
                         1. ޓެލެގްރާމްގައި ހަދާފައިވާ "B BACK" ގްރޫޕަށް <span className="font-mono text-primary font-bold">@Bbacksh0p_bot</span> އެޑްކޮށްލައްވާ.
@@ -1592,30 +1784,30 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                 </div>
 
                 {/* Bot Commands Management Card */}
-                <div className="bg-card border border-border p-6 rounded-3xl space-y-6">
-                  <div className="flex items-center justify-between pb-3 border-b border-border/60">
+                <div className="apple-glass-card border border-white/20 dark:border-white/10 p-6 rounded-3xl space-y-4 shadow-xs">
+                  <div className="flex items-center justify-between pb-3 border-b border-white/10">
                     <Button
                       type="button"
                       onClick={handleSyncCommands}
                       disabled={isSyncingCommands}
-                      className="bg-[#229ED9] hover:bg-[#229ED9]/90 text-white font-bold h-10 px-5 rounded-xl gap-2 text-xs"
+                      className="bg-[#229ED9] hover:bg-[#229ED9]/90 text-white font-bold h-9 px-4 rounded-xl gap-2 text-xs"
                     >
                       {isSyncingCommands ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                       <span>Sync Bot Menu</span>
                     </Button>
                     <div className="text-right">
-                      <h4 className="text-lg font-black text-foreground">
+                      <h4 className="text-base font-black text-foreground">
                         Bot Menu Commands
                       </h4>
                       <p className="text-xs text-muted-foreground">
-                        Official Telegram [/] popup menu buttons & automated responses
+                        Official Telegram [/] popup menu buttons &amp; automated responses
                       </p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3" dir="ltr">
                     {BOT_COMMANDS.map((cmd) => (
-                      <div key={cmd.command} className="p-3 bg-muted/60 border border-border/60 rounded-2xl flex items-start gap-3">
+                      <div key={cmd.command} className="p-3 bg-white/5 dark:bg-black/20 border border-white/15 dark:border-white/10 rounded-2xl flex items-start gap-3">
                         <code className="px-2 py-1 bg-primary/10 text-primary font-mono font-bold text-xs rounded-lg shrink-0">
                           /{cmd.command}
                         </code>
@@ -1633,7 +1825,7 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                 </div>
 
                 {/* Database Migration Instructions */}
-                <div className="bg-card border border-border p-6 rounded-3xl space-y-4">
+                <div className="apple-glass-card border border-white/20 dark:border-white/10 p-6 rounded-3xl space-y-4 shadow-xs">
                   <div className="flex items-center justify-between">
                     <Button
                       variant="outline"
@@ -1676,7 +1868,7 @@ GRANT ALL ON TABLE public.vendors TO anon, authenticated;`);
                     </h4>
                   </div>
 
-                  <div className="p-3 bg-muted rounded-xl font-mono text-xs text-foreground/80 overflow-x-auto text-left" dir="ltr">
+                  <div className="p-3 bg-white/5 dark:bg-black/20 border border-white/10 rounded-xl font-mono text-xs text-foreground/80 overflow-x-auto text-left" dir="ltr">
                     <code>
                       -- Customers &amp; Telegram<br />
                       ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS telegram_chat_id BIGINT UNIQUE;<br />

@@ -614,154 +614,175 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
     return (
         <>
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[65rem] 2xl:max-w-[78rem] w-[95vw] max-h-[92vh] overflow-hidden flex flex-col font-faruma apple-glass-dialog glass3d text-foreground border border-white/20 dark:border-white/10 p-0 shadow-2xl rounded-3xl" dir="rtl">
+            <DialogContent className="sm:max-w-[66rem] 2xl:max-w-[74rem] w-[96vw] max-h-[92vh] overflow-hidden flex flex-col font-faruma apple-glass-dialog text-foreground border border-white/25 dark:border-white/10 p-0 shadow-2xl rounded-3xl" dir="rtl">
                 {/* Header */}
-                <DialogHeader className="text-right px-6 pt-5 pb-3 border-b border-white/15 dark:border-white/10 bg-white/20 dark:bg-white/5 backdrop-blur-md">
-                    <DialogTitle className="text-xl font-black flex items-center justify-end gap-2.5 text-foreground">
-                        {product ? renderBoth('edit_product') : renderBoth('add_new_product')}
-                        <Package className="h-5 w-5 text-primary" />
-                    </DialogTitle>
-                    <DialogDescription className="text-muted-foreground text-xs">
-                        {renderBoth('product_details_description')}
-                    </DialogDescription>
+                <DialogHeader className="text-right px-6 py-4 border-b border-border/60 bg-muted/30 backdrop-blur-md shrink-0">
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2" dir="ltr">
+                            <Badge className="bg-primary/15 text-primary border border-primary/25 font-mono text-xs font-black px-2.5 py-0.5 rounded-lg">
+                                {editedProduct.item_code ? `#${editedProduct.item_code}` : 'NEW'}
+                            </Badge>
+                            {editedProduct.is_zero_tax ? (
+                                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 text-[10px] font-black px-2 py-0.5 rounded-lg">
+                                    0% GST
+                                </Badge>
+                            ) : (
+                                <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-[10px] font-black px-2 py-0.5 rounded-lg">
+                                    {settings.shop?.taxRate || 8}% GST
+                                </Badge>
+                            )}
+                        </div>
+
+                        <div className="text-right">
+                            <DialogTitle className="text-lg sm:text-xl font-black flex items-center justify-end gap-2 text-foreground">
+                                <span>{product ? renderBoth('edit_product') : renderBoth('add_new_product')}</span>
+                                <Package className="h-5 w-5 text-primary shrink-0" />
+                            </DialogTitle>
+                            <DialogDescription className="text-muted-foreground text-xs mt-0.5">
+                                {product ? 'Update product details, pricing, barcodes and packaging units' : 'Create a new product in your catalog with barcodes and pricing'}
+                            </DialogDescription>
+                        </div>
+                    </div>
                 </DialogHeader>
 
                 {/* Content: Side-by-side Grid */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-5 sm:p-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
                         {/* Right Panel: Basic Product Info (7 cols) */}
                         <div className="lg:col-span-7 space-y-4">
-                            {/* Row 1: Image + Names */}
-                            <div className="flex gap-4 items-start">
-                                {/* Compact Image Upload */}
-                                <div className="space-y-1.5 shrink-0 flex flex-col items-center">
-                                    <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest self-start">
-                                        {renderBoth('product_image')}
-                                    </Label>
-                                    <div className="w-24 h-24 rounded-2xl bg-white/5 dark:bg-black/20 border-2 border-dashed border-white/20 flex flex-col items-center justify-center relative overflow-hidden group backdrop-blur-md">
-                                        {isUploadingImage ? (
-                                            <div className="flex flex-col items-center justify-center gap-2 text-primary p-2 text-center">
-                                                <PulsatingDots dotClassName="h-2.5 w-2.5 rounded-full bg-primary" />
-                                                <span className="text-[8px] font-black uppercase tracking-wider text-primary">Uploading...</span>
-                                            </div>
-                                        ) : imagePreviewUrl ? (
-                                            <img 
-                                                src={getAdaptedImageUrl(imagePreviewUrl, editedProduct.name_en || editedProduct.name_dv, editedProduct.item_code)} 
-                                                alt="Preview" 
-                                                className="w-full h-full object-cover" 
-                                                onError={(e) => {
-                                                    if (localDataUrlRef.current && (e.target as HTMLImageElement).src !== localDataUrlRef.current) {
-                                                        (e.target as HTMLImageElement).src = localDataUrlRef.current;
-                                                    } else {
-                                                        (e.target as HTMLImageElement).src = generatePlaceholderImage(editedProduct.name_en || editedProduct.name_dv, editedProduct.item_code);
-                                                    }
-                                                }}
-                                            />
-                                        ) : (
-                                            <ImageIcon className="h-8 w-8 text-foreground/20" />
-                                        )}
-                                        {!isUploadingImage && (
-                                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
-                                                <Label htmlFor="image-upload" className="cursor-pointer bg-primary p-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white hover:bg-primary/90 transition-all flex items-center gap-1" title="Upload local file">
-                                                    <Upload className="h-3 w-3" />
-                                                </Label>
-                                                <input id="image-upload" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setIsOnlineSearchOpen(true)}
-                                                    className="bg-amber-500 p-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white hover:bg-amber-600 transition-all flex items-center gap-1"
-                                                    title="Find Image Online by Name"
-                                                >
-                                                    <Sparkles className="h-3 w-3" />
-                                                </button>
-                                                {imagePreviewUrl && (
+                            {/* Card 1: Identity & Photo */}
+                            <div className="p-4 rounded-2xl bg-card border border-border/70 shadow-xs space-y-3.5">
+                                <div className="flex gap-4 items-start">
+                                    {/* Compact Image Upload */}
+                                    <div className="space-y-1.5 shrink-0 flex flex-col items-center">
+                                        <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest self-start">
+                                            {renderBoth('product_image')}
+                                        </Label>
+                                        <div className="w-24 h-24 rounded-2xl bg-muted/60 border-2 border-dashed border-border flex flex-col items-center justify-center relative overflow-hidden group shadow-inner">
+                                            {isUploadingImage ? (
+                                                <div className="flex flex-col items-center justify-center gap-2 text-primary p-2 text-center">
+                                                    <PulsatingDots dotClassName="h-2.5 w-2.5 rounded-full bg-primary" />
+                                                    <span className="text-[8px] font-black uppercase tracking-wider text-primary">Uploading...</span>
+                                                </div>
+                                            ) : imagePreviewUrl ? (
+                                                <img 
+                                                    src={getAdaptedImageUrl(imagePreviewUrl, editedProduct.name_en || editedProduct.name_dv, editedProduct.item_code)} 
+                                                    alt="Preview" 
+                                                    className="w-full h-full object-cover transition-transform group-hover:scale-105" 
+                                                    onError={(e) => {
+                                                        if (localDataUrlRef.current && (e.target as HTMLImageElement).src !== localDataUrlRef.current) {
+                                                            (e.target as HTMLImageElement).src = localDataUrlRef.current;
+                                                        } else {
+                                                            (e.target as HTMLImageElement).src = generatePlaceholderImage(editedProduct.name_en || editedProduct.name_dv, editedProduct.item_code);
+                                                        }
+                                                    }}
+                                                />
+                                            ) : (
+                                                <ImageIcon className="h-8 w-8 text-muted-foreground/30" />
+                                            )}
+                                            {!isUploadingImage && (
+                                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 backdrop-blur-xs">
+                                                    <Label htmlFor="image-upload" className="cursor-pointer bg-primary p-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white hover:bg-primary/90 transition-all flex items-center gap-1 shadow-sm" title="Upload local file">
+                                                        <Upload className="h-3 w-3" />
+                                                    </Label>
+                                                    <input id="image-upload" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
                                                     <button
                                                         type="button"
-                                                        onClick={() => setIsImageTextStampOpen(true)}
-                                                        className="bg-indigo-600 p-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white hover:bg-indigo-700 transition-all flex items-center gap-1"
-                                                        title="Put text or flavour label on image"
+                                                        onClick={() => setIsOnlineSearchOpen(true)}
+                                                        className="bg-amber-500 p-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white hover:bg-amber-600 transition-all flex items-center gap-1 shadow-sm"
+                                                        title="Find Image Online by Name"
                                                     >
-                                                        <Type className="h-3 w-3" />
+                                                        <Sparkles className="h-3 w-3" />
                                                     </button>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
+                                                    {imagePreviewUrl && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setIsImageTextStampOpen(true)}
+                                                            className="bg-indigo-600 p-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white hover:bg-indigo-700 transition-all flex items-center gap-1 shadow-sm"
+                                                            title="Put text or flavour label on image"
+                                                        >
+                                                            <Type className="h-3 w-3" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
 
-                                    {/* Action Buttons: Online Search + Stamp Text */}
-                                    <div className="flex gap-1 w-24">
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => setIsOnlineSearchOpen(true)}
-                                            className="h-6 flex-1 px-1 text-[8px] font-black border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 rounded-lg gap-0.5 shadow-xs"
-                                            title="Find product image on Google"
-                                        >
-                                            <Sparkles className="h-2 w-2 text-amber-500" />
-                                            <span>Google</span>
-                                        </Button>
-                                        {imagePreviewUrl && (
+                                        {/* Action Buttons: Online Search + Stamp Text */}
+                                        <div className="flex gap-1 w-24">
                                             <Button
                                                 type="button"
                                                 size="sm"
                                                 variant="outline"
-                                                onClick={() => setIsImageTextStampOpen(true)}
-                                                className="h-6 flex-1 px-1 text-[8px] font-black border-indigo-500/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10 rounded-lg gap-0.5 shadow-xs"
-                                                title="Put text/flavour label on photo"
+                                                onClick={() => setIsOnlineSearchOpen(true)}
+                                                className="h-6 flex-1 px-1 text-[8px] font-black border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 rounded-lg gap-0.5 shadow-xs"
+                                                title="Find product image on Google"
                                             >
-                                                <Type className="h-2 w-2 text-indigo-500" />
-                                                <span>Text</span>
+                                                <Sparkles className="h-2 w-2 text-amber-500" />
+                                                <span>Google</span>
                                             </Button>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Names */}
-                                <div className="flex-1 space-y-2.5 min-w-0">
-                                    <div className="space-y-1">
-                                        <div className="flex items-center justify-between">
-                                            <Button
-                                                type="button"
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={handleAutoTranslateName}
-                                                disabled={!editedProduct.name_en?.trim()}
-                                                className="h-6 px-2 text-[10px] font-black text-primary hover:bg-primary/10 rounded-lg gap-1"
-                                                title="Auto-translate English name to Dhivehi"
-                                            >
-                                                <Sparkles className="h-3 w-3 text-primary animate-pulse" />
-                                                <span>Auto Translate (ދިވެހިކުރޭ)</span>
-                                            </Button>
-                                            <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                                                {renderBoth('product_name')} (ދިވެހި)*
-                                            </Label>
+                                            {imagePreviewUrl && (
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => setIsImageTextStampOpen(true)}
+                                                    className="h-6 flex-1 px-1 text-[8px] font-black border-indigo-500/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10 rounded-lg gap-0.5 shadow-xs"
+                                                    title="Put text/flavour label on photo"
+                                                >
+                                                    <Type className="h-2 w-2 text-indigo-500" />
+                                                    <span>Text</span>
+                                                </Button>
+                                            )}
                                         </div>
-                                        <Input 
-                                            dir="rtl"
-                                            value={editedProduct.name_dv} 
-                                            onChange={(e) => updateField('name_dv', e.target.value)} 
-                                            className="apple-glass-input h-10 rounded-xl text-right font-faruma font-bold text-sm"
-                                            placeholder="ތަކެތީގެ ނަން"
-                                        />
                                     </div>
-                                    <div className="space-y-1">
-                                        <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                                            {renderBoth('product_name')} (English)*
-                                        </Label>
-                                        <Input 
-                                            dir="ltr"
-                                            value={editedProduct.name_en} 
-                                            onChange={(e) => updateField('name_en', e.target.value)} 
-                                            onBlur={() => {
-                                                if (!editedProduct.name_dv?.trim() && editedProduct.name_en?.trim()) {
-                                                    const translated = translateEnglishToDhivehi(editedProduct.name_en);
-                                                    if (translated) updateField('name_dv', translated);
-                                                }
-                                            }}
-                                            className="apple-glass-input h-10 rounded-xl text-left font-bold text-sm"
-                                            placeholder="Product Name"
-                                        />
+
+                                    {/* Names */}
+                                    <div className="flex-1 space-y-2.5 min-w-0">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center justify-between">
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={handleAutoTranslateName}
+                                                    disabled={!editedProduct.name_en?.trim()}
+                                                    className="h-6 px-2 text-[10px] font-black text-primary hover:bg-primary/10 rounded-lg gap-1"
+                                                    title="Auto-translate English name to Dhivehi"
+                                                >
+                                                    <Sparkles className="h-3 w-3 text-primary animate-pulse" />
+                                                    <span>Auto Translate (ދިވެހިކުރޭ)</span>
+                                                </Button>
+                                                <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                                                    {renderBoth('product_name')} (ދިވެހި)*
+                                                </Label>
+                                            </div>
+                                            <Input 
+                                                dir="rtl"
+                                                value={editedProduct.name_dv} 
+                                                onChange={(e) => updateField('name_dv', e.target.value)} 
+                                                className="h-10 rounded-xl text-right font-faruma font-bold text-sm bg-muted/40 border-border focus:border-primary"
+                                                placeholder="ތަކެތީގެ ނަން"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label className="text-right block text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                                                {renderBoth('product_name')} (English)*
+                                            </Label>
+                                            <Input 
+                                                dir="ltr"
+                                                value={editedProduct.name_en} 
+                                                onChange={(e) => updateField('name_en', e.target.value)} 
+                                                onBlur={() => {
+                                                    if (!editedProduct.name_dv?.trim() && editedProduct.name_en?.trim()) {
+                                                        const translated = translateEnglishToDhivehi(editedProduct.name_en);
+                                                        if (translated) updateField('name_dv', translated);
+                                                    }
+                                                }}
+                                                className="h-10 rounded-xl text-left font-bold text-sm bg-muted/40 border-border focus:border-primary"
+                                                placeholder="Product Name"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>

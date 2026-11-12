@@ -494,19 +494,93 @@ const LocalPurchaseWindow = () => {
       }}
     >
       <div 
-        className="w-[98vw] max-w-[1520px] h-[96vh] sm:h-[94vh] apple-glass-dialog border border-white/20 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col font-faruma relative cursor-default" 
-        dir="rtl"
+        className="w-[98vw] max-w-[1480px] h-[95vh] sm:h-[92vh] bg-white/95 dark:bg-slate-950/95 backdrop-blur-2xl border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col font-faruma relative cursor-default" 
+        dir="ltr"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Header */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-white/15 dark:border-white/10 bg-white/20 dark:bg-white/5 backdrop-blur-md gap-4 shrink-0">
-          <div className="flex items-center gap-2 shrink-0" dir="ltr">
+        {/* Sleek Top Header Bar */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200/80 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-900/60 shrink-0 gap-4">
+          {/* Left: Title & Mode Badge */}
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className={cn(
+              "h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border shadow-xs",
+              editingPurchase
+                ? "bg-amber-500/15 border-amber-500/30 text-amber-600 dark:text-amber-400"
+                : "bg-primary/15 border-primary/30 text-primary"
+            )}>
+              <ShoppingBag className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight truncate">
+                  {editingPurchase
+                    ? `Edit Purchase Bill #${editingPurchase.billNumber}`
+                    : (t('record_local_purchase') || 'Local Purchase Bill')}
+                </h2>
+                <span className="text-xs font-bold text-slate-400 dark:text-slate-500 hidden sm:inline">
+                  ({editingPurchase ? 'ބިލް ބަދަލުކުރުން' : 'ލޯކަލް ޕަރޗޭސް ބިލް'})
+                </span>
+                {editingPurchase ? (
+                  <div className="flex items-center gap-1.5">
+                    <Badge className="bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[10px] font-black px-2 py-0.5 rounded-md">
+                      Editing #{editingPurchase.billNumber}
+                    </Badge>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditingPurchase(null);
+                        setVendorId('');
+                        setBillNumber('');
+                        setDate(new Date().toISOString().split('T')[0]);
+                        setDescription('');
+                        setItems([{ id: crypto.randomUUID(), productId: '', quantity: 1, unitPrice: '', subtotal: '', isZeroTax: false }]);
+                      }}
+                      className="h-6 px-2 rounded-md border-slate-300 dark:border-slate-700 text-[10px] font-black text-slate-600 dark:text-slate-300 hover:text-foreground"
+                    >
+                      + New Bill
+                    </Button>
+                  </div>
+                ) : (
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hidden md:inline-block">
+                    Input GST & Stock Sync
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                Record supplier invoices, auto-detect 0% zero-tax items, calculate Input GST, and update inventory.
+              </p>
+            </div>
+          </div>
+
+          {/* Right: Quick Actions & Window Controls */}
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsHistoryOpen(true)}
+              className="h-9 px-3 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold gap-1.5 shadow-2xs"
+              title="View Recent Local Purchase Bills"
+            >
+              <History className="h-3.5 w-3.5 text-primary" />
+              <span className="hidden sm:inline">Recent Bills</span>
+              {purchases.length > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-primary/15 text-primary text-[10px] font-black font-mono">
+                  {purchases.length}
+                </span>
+              )}
+            </Button>
+
+            <div className="h-5 w-px bg-slate-200 dark:bg-slate-800 mx-0.5" />
+
             <Button 
               type="button" 
               variant="outline" 
               size="icon" 
               onClick={() => setIsPurchaseWindowMinimized(true)} 
-              className="h-9 w-9 rounded-xl border border-white/20 bg-white/10 hover:bg-amber-500/15 hover:border-amber-500/50 hover:text-amber-500 text-foreground shadow-sm transition-all active:scale-90"
+              className="h-9 w-9 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-amber-500/15 hover:border-amber-500/40 hover:text-amber-500 text-slate-600 dark:text-slate-300 transition-all"
               title="Minimize (ކުޑަކޮށްލާ)"
             >
               <Minus className="h-4 w-4 stroke-[2.5]" />
@@ -516,89 +590,49 @@ const LocalPurchaseWindow = () => {
               variant="outline" 
               size="icon" 
               onClick={handleClose} 
-              className="h-9 w-9 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/25 text-red-500 shadow-sm transition-all active:scale-90"
+              className="h-9 w-9 rounded-xl border-red-500/25 bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 transition-all"
               title="Close (ބަންދުކޮށްލާ)"
             >
               <X className="h-4 w-4 stroke-[2.5]" />
             </Button>
           </div>
-          <div className="text-right flex-1 min-w-0">
-            <div className="flex items-center justify-end gap-3 flex-wrap">
-              {editingPurchase ? (
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-amber-500/20 text-amber-500 border border-amber-500/40 text-[11px] font-black px-2.5 py-1 rounded-lg">
-                    ބަދަލުކުރަނީ: #{editingPurchase.billNumber} (Editing)
-                  </Badge>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setEditingPurchase(null);
-                      setVendorId('');
-                      setBillNumber('');
-                      setDate(new Date().toISOString().split('T')[0]);
-                      setDescription('');
-                      setItems([{ id: crypto.randomUUID(), productId: '', quantity: 1, unitPrice: '', subtotal: '', isZeroTax: false }]);
-                    }}
-                    className="h-7 px-2.5 rounded-lg border-border text-[11px] font-black text-muted-foreground hover:text-foreground"
-                  >
-                    + New Bill (އައު ބިލެއް)
-                  </Button>
-                </div>
-              ) : (
-                <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg bg-primary/15 text-primary border border-primary/30">
-                  GST Input Tax & Inventory Management
-                </span>
-              )}
-              <h2 className="text-xl sm:text-2xl font-black text-foreground flex items-center justify-end gap-2.5 truncate">
-                <span>{editingPurchase ? `Edit Bill #${editingPurchase.billNumber}` : (t('record_local_purchase') || 'Local Purchase Bill')} ({editingPurchase ? 'ބިލް ބަދަލުކުރުން' : 'ލޯކަލް ޕަރޗޭސް ބިލް'})</span> 
-                <ShoppingBag className="h-6 w-6 text-primary shrink-0" />
-              </h2>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">
-              {editingPurchase ? 'Edit purchase bill details, update items, adjust unit costs, and automatically sync stock differences.' : 'Select vendor, add invoice items, auto-detect 0% zero-tax products, auto-calculate Input GST, and update stock.'}
-            </p>
-          </div>
         </div>
 
-        {/* Fixed Top Section: Bill Master Information & Items Toolbar */}
-        <div className="p-3.5 sm:p-4 pb-2.5 border-b border-border/70 space-y-3 shrink-0 bg-background/50 backdrop-blur-xs">
-          {/* Bill Master Information Header */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 apple-glass-card border border-white/20 dark:border-white/10 rounded-2xl shadow-xs">
-            {/* Vendor Selector */}
-            <div className="space-y-1.5 text-right">
+        {/* Sleek 4-Column Master Info Strip */}
+        <div className="px-5 py-3 border-b border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-950 shrink-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
+            {/* 1. Vendor Selector (4 cols) */}
+            <div className="lg:col-span-4 space-y-1">
               <div className="flex items-center justify-between">
-                <Button
+                <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <Building2 className="h-3 w-3 text-primary" />
+                  <span>{t('select_vendor') || 'Supplier / Vendor'}*</span>
+                </Label>
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
                   onClick={() => setIsQuickAddVendorOpen(true)}
-                  className="h-6 px-2 text-[11px] font-black text-primary hover:bg-primary/10 gap-1 rounded-md"
+                  className="text-[11px] font-black text-primary hover:underline flex items-center gap-0.5"
                 >
                   <Plus className="h-3 w-3" />
-                  <span>+ New Vendor (އައު ވެންޑަރ)</span>
-                </Button>
-                <Label className="text-xs font-black uppercase text-muted-foreground">
-                  {t('select_vendor') || 'Vendor'}*
-                </Label>
+                  <span>New Vendor (އައު ވެންޑަރ)</span>
+                </button>
               </div>
               <Select value={vendorId} onValueChange={setVendorId}>
-                <SelectTrigger className="w-full apple-glass-input text-right h-11 rounded-xl font-bold">
+                <SelectTrigger className="w-full h-9 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 font-bold text-xs">
                   <SelectValue placeholder="Choose Vendor (ވެންޑަރ އިޚްތިޔާރުކުރޭ)" />
                 </SelectTrigger>
-                <SelectContent className="apple-glass-dialog border border-white/20 text-foreground !z-[110]">
-                  <div className="p-2 sticky top-0 apple-glass-dialog border-b border-white/10 z-10">
+                <SelectContent className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-foreground !z-[110]">
+                  <div className="p-2 sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 z-10">
                     <Input 
                       placeholder="Search vendors / ހޯއްދަވާ..." 
                       value={vendorSearchQuery}
                       onChange={(e) => setVendorSearchQuery(e.target.value)}
-                      className="h-8 apple-glass-input text-right text-xs"
+                      className="h-8 text-xs rounded-lg"
                     />
                   </div>
                   <ScrollArea className="h-48">
                     {filteredVendors.map(v => (
-                      <SelectItem key={v.id} value={v.id} className="text-right hover:bg-white/10 font-bold text-xs">
+                      <SelectItem key={v.id} value={v.id} className="font-bold text-xs">
                         {v.name_en || v.name_dv} {v.tin_number ? `(TIN: ${v.tin_number})` : ''}
                       </SelectItem>
                     ))}
@@ -607,50 +641,67 @@ const LocalPurchaseWindow = () => {
               </Select>
             </div>
 
-            {/* Invoice / Bill Number */}
-            <div className="space-y-1.5 text-right">
-              <Label className="text-xs font-black uppercase text-muted-foreground">
-                Invoice / Bill Number (ބިލް ނަންބަރު)*
+            {/* 2. Invoice / Bill Number (3 cols) */}
+            <div className="lg:col-span-3 space-y-1">
+              <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                Invoice / Bill No (ބިލް ނަންބަރު)*
               </Label>
               <Input
                 value={billNumber}
                 onChange={(e) => setBillNumber(e.target.value)}
                 placeholder="e.g. INV-2026-001"
-                className="apple-glass-input font-bold h-11 rounded-xl text-right font-mono text-sm"
+                className="h-9 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 font-bold font-mono text-xs"
               />
             </div>
 
-            {/* Bill Date */}
-            <div className="space-y-1.5 text-right">
-              <Label className="text-xs font-black uppercase text-muted-foreground">
+            {/* 3. Bill Date (2 cols) */}
+            <div className="lg:col-span-2 space-y-1">
+              <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
                 Bill Date (ތާރީޚް)*
               </Label>
               <Input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="apple-glass-input font-bold h-11 rounded-xl text-right font-mono text-sm"
+                className="h-9 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 font-bold font-mono text-xs"
+              />
+            </div>
+
+            {/* 4. Bill Notes / Description (3 cols) */}
+            <div className="lg:col-span-3 space-y-1">
+              <Label className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                Notes / Remarks (އިތުރު ތަފްޞީލް)
+              </Label>
+              <Input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Optional remarks or reference..."
+                className="h-9 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 font-medium text-xs"
               />
             </div>
           </div>
+        </div>
 
-          {/* Product Items Table Toolbar */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Main Line Items Workspace */}
+        <div className="flex-1 min-h-0 px-5 py-3 flex flex-col bg-slate-50/50 dark:bg-slate-950/50 overflow-hidden">
+          {/* Items Toolbar */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <Package className="h-4 w-4 text-primary" />
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
+                  Invoice Line Items (ބިލުގައިވާ ތަކެތި)
+                </h3>
+              </div>
+              <Badge variant="secondary" className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md">
+                {items.length} {items.length === 1 ? 'Row' : 'Rows'} • {totalQuantity} Units
+              </Badge>
+            </div>
+
             <div className="flex items-center gap-2">
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
-                onClick={handleAddItemRow}
-                className="h-9 px-3.5 text-xs font-black text-primary border-primary/30 hover:bg-primary/10 gap-1.5 rounded-xl transition-all shadow-xs"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Add Line Row (އައިޓަމެއް އިތުރުކުރޭ)</span>
-              </Button>
-
-              <Button
-                type="button"
-                variant="secondary"
                 size="sm"
                 onClick={() => {
                   setCatalogSearchQuery('');
@@ -658,391 +709,386 @@ const LocalPurchaseWindow = () => {
                   setCatalogVisibleCount(36);
                   setIsCatalogPickerOpen(true);
                 }}
-                className="h-9 px-3.5 text-xs font-black bg-muted/80 hover:bg-muted text-foreground border border-border gap-1.5 rounded-xl transition-all shadow-xs"
+                className="h-8 px-3 text-xs font-bold bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-800 gap-1.5 rounded-lg shadow-2xs"
               >
-                <Layers className="h-4 w-4 text-purple-500" />
-                <span>Browse Products Catalog (ޕްރޮޑަކްޓް ލިސްޓް)</span>
+                <Layers className="h-3.5 w-3.5 text-indigo-500" />
+                <span>Browse Catalog (ޕްރޮޑަކްޓް ލިސްޓް)</span>
+              </Button>
+
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleAddItemRow}
+                className="h-8 px-3.5 text-xs font-black bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 gap-1.5 rounded-lg shadow-2xs"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add Row (އައިޓަމެއް އިތުރުކުރޭ)</span>
               </Button>
             </div>
-
-            <div className="flex items-center gap-2 text-right">
-              <span className="text-xs text-muted-foreground font-bold font-mono">
-                {items.length} Rows • {totalQuantity} Units
-              </span>
-              <h3 className="text-sm font-black text-foreground flex items-center gap-2">
-                <span>Invoice Items (ބިލުގައިވާ ތަކެތި)</span>
-                <Package className="h-4 w-4 text-primary" />
-              </h3>
-            </div>
           </div>
-        </div>
 
-        {/* Scrollable Products Table Area - ONLY products scroll! */}
-        <div className="flex-1 min-h-0 px-3.5 sm:px-4 py-2.5 flex flex-col overflow-hidden">
-          <div className="border border-border rounded-2xl bg-card shadow-sm flex-1 min-h-0 overflow-y-auto custom-scrollbar relative">
-            <table className="w-full text-right text-xs border-collapse">
-              <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur-md border-b border-border text-muted-foreground font-black uppercase tracking-wider shadow-xs">
+          {/* Scrollable Products Table Container */}
+          <div className="border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-2xs flex-1 min-h-0 overflow-y-auto custom-scrollbar relative">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="sticky top-0 z-20 bg-slate-100/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-wider">
                 <tr>
-                  <th className="p-3 text-center w-12 bg-muted/90 backdrop-blur-md">#</th>
-                  <th className="p-3 text-right min-w-[280px] bg-muted/90 backdrop-blur-md">Product Item (ޕްރޮޑަކްޓް)</th>
-                  <th className="p-3 text-center w-28 bg-muted/90 backdrop-blur-md">Current Stock</th>
-                  <th className="p-3 text-center w-28 bg-muted/90 backdrop-blur-md">Invoice Qty*</th>
-                  <th className="p-3 text-center w-36 bg-muted/90 backdrop-blur-md">Unit Cost ({currency})*</th>
-                  <th className="p-3 text-center w-36 bg-muted/90 backdrop-blur-md">Subtotal ({currency})*</th>
-                  <th className="p-3 text-center w-28 bg-muted/90 backdrop-blur-md">0% Tax (Zero GST)</th>
-                  <th className="p-3 text-center w-14 bg-muted/90 backdrop-blur-md"></th>
+                  <th className="py-2.5 px-3 text-center w-10">#</th>
+                  <th className="py-2.5 px-3 text-left min-w-[280px]">Product / Item (ޕްރޮޑަކްޓް)</th>
+                  <th className="py-2.5 px-3 text-center w-24">Shop Stock</th>
+                  <th className="py-2.5 px-3 text-center w-28">Qty (ތަދާދު)*</th>
+                  <th className="py-2.5 px-3 text-center w-36">Unit Cost ({currency})*</th>
+                  <th className="py-2.5 px-3 text-center w-36">Subtotal ({currency})*</th>
+                  <th className="py-2.5 px-3 text-center w-24">GST Status</th>
+                  <th className="py-2.5 px-2 text-center w-12"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/60">
-                    {items.map((item, index) => {
-                      const selectedProd = products.find(p => p.id === item.productId);
-                      const currentStock = selectedProd ? (Number(selectedProd.stock_shop) || 0) : null;
-                      const isNegativeStock = currentStock !== null && currentStock < 0;
-                      const calculated = calculatedItems.find(c => c.id === item.id);
-                      const isSearching = activeSearchRowId === item.id;
-                      const query = productSearchQueries[item.id] || '';
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
+                {items.map((item, index) => {
+                  const selectedProd = products.find(p => p.id === item.productId);
+                  const currentStock = selectedProd ? (Number(selectedProd.stock_shop) || 0) : null;
+                  const isNegativeStock = currentStock !== null && currentStock < 0;
+                  const isSearching = activeSearchRowId === item.id;
+                  const query = productSearchQueries[item.id] || '';
 
-                      const matchingProducts = query
-                        ? products.filter(p =>
-                            p.name_en.toLowerCase().includes(query.toLowerCase()) ||
-                            p.name_dv.toLowerCase().includes(query.toLowerCase()) ||
-                            p.barcode.includes(query) ||
-                            p.item_code.toLowerCase().includes(query.toLowerCase())
-                          ).slice(0, 20)
-                        : products.slice(0, 20);
+                  const matchingProducts = query
+                    ? products.filter(p =>
+                        p.name_en.toLowerCase().includes(query.toLowerCase()) ||
+                        p.name_dv.toLowerCase().includes(query.toLowerCase()) ||
+                        p.barcode.includes(query) ||
+                        p.item_code.toLowerCase().includes(query.toLowerCase())
+                      ).slice(0, 20)
+                    : products.slice(0, 20);
 
-                      return (
-                        <tr key={item.id} className="hover:bg-muted/30 transition-colors">
-                          {/* Row Number */}
-                          <td className="p-3 text-center font-mono font-bold text-muted-foreground">
-                            {index + 1}
-                          </td>
+                  return (
+                    <tr key={item.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-colors">
+                      {/* Row Number */}
+                      <td className="py-2 px-3 text-center font-mono text-[11px] font-bold text-slate-400">
+                        {index + 1}
+                      </td>
 
-                          {/* Product Selection */}
-                          <td className="p-3 relative">
-                            {selectedProd && !isSearching ? (
-                              <div 
-                                onClick={() => setActiveSearchRowId(item.id)}
-                                className="flex items-center justify-between p-2.5 rounded-xl bg-muted/60 hover:bg-muted border border-border/80 cursor-pointer group transition-all"
-                              >
-                                <div className="text-right min-w-0 flex-1">
-                                  <div className="flex items-center justify-start gap-2 flex-wrap mb-0.5">
-                                    <p className="font-black text-foreground text-xs truncate">{selectedProd.name_dv || selectedProd.name_en}</p>
-                                    {item.isZeroTax && (
-                                      <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30 text-[9px] px-1.5 py-0">
-                                        0% Zero Tax
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  <p className="text-[10px] text-muted-foreground font-mono truncate">
-                                    {selectedProd.name_en} {selectedProd.barcode ? `• Barcode: ${selectedProd.barcode}` : ''} {selectedProd.category ? `• [${selectedProd.category}]` : ''}
-                                  </p>
-                                </div>
-                                <span className="text-[10px] text-primary group-hover:underline font-bold mr-2 shrink-0">
-                                  Change (ބަދަލުކުރޭ)
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="relative">
-                                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                  placeholder="Search product name, barcode, item code..."
-                                  value={query}
-                                  onChange={(e) => {
-                                    setProductSearchQueries(prev => ({ ...prev, [item.id]: e.target.value }));
-                                    setActiveSearchRowId(item.id);
-                                  }}
-                                  onFocus={() => setActiveSearchRowId(item.id)}
-                                  className="h-11 bg-background border-border text-right text-xs pr-9 rounded-xl font-bold font-faruma"
-                                />
-                                {isSearching && (
-                                  <div className="absolute top-12 right-0 w-full z-[120] bg-card border border-border rounded-2xl shadow-2xl p-1.5 max-h-60 overflow-y-auto custom-scrollbar">
-                                    <div className="p-1.5 border-b border-border/40 text-[10px] font-bold text-muted-foreground flex justify-between items-center">
-                                      <button 
-                                        type="button" 
-                                        onClick={() => setActiveSearchRowId(null)}
-                                        className="text-red-500 hover:underline"
-                                      >
-                                        Close (ލައްޕާ)
-                                      </button>
-                                      <span>Select a product ({matchingProducts.length} results):</span>
-                                    </div>
-                                    {matchingProducts.map(p => {
-                                      const pStock = p.stock_shop || 0;
-                                      const isZero = isProductZeroTax(p);
-                                      return (
-                                        <div
-                                          key={p.id}
-                                          onClick={() => handleProductSelect(item.id, p)}
-                                          className="p-2 hover:bg-muted rounded-xl cursor-pointer text-right flex items-center justify-between gap-2 border-b border-border/30 last:border-none transition-colors"
-                                        >
-                                          <div className="flex items-center gap-1.5 flex-wrap">
-                                            <span className={cn(
-                                              "text-[9px] font-black px-1.5 py-0.5 rounded font-mono",
-                                              pStock < 0 ? "bg-red-500/20 text-red-500" : "bg-muted text-muted-foreground"
-                                            )}>
-                                              Stock: {pStock}
-                                            </span>
-                                            {p.cost_price && (
-                                              <span className="text-[9px] text-muted-foreground font-mono bg-muted/70 px-1 rounded">
-                                                Cost: {p.cost_price}
-                                              </span>
-                                            )}
-                                            {isZero && (
-                                              <span className="text-[9px] font-black text-amber-500 bg-amber-500/15 px-1.5 py-0.5 rounded">
-                                                0% Tax
-                                              </span>
-                                            )}
-                                          </div>
-                                          <div className="min-w-0 text-right">
-                                            <p className="font-black text-xs text-foreground truncate">{p.name_dv || p.name_en}</p>
-                                            <p className="text-[10px] text-muted-foreground font-mono truncate">{p.name_en} {p.barcode ? `• ${p.barcode}` : ''}</p>
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                    {matchingProducts.length === 0 && (
-                                      <div className="text-center py-4 text-xs text-muted-foreground">
-                                        <p>No matching products found.</p>
-                                        <Button
-                                          type="button"
-                                          variant="link"
-                                          size="sm"
-                                          onClick={() => setIsCatalogPickerOpen(true)}
-                                          className="text-xs text-primary font-bold mt-1"
-                                        >
-                                          Open Full Catalog Browser
-                                        </Button>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </td>
-
-                          {/* Current Stock Indicator */}
-                          <td className="p-3 text-center">
-                            {currentStock !== null ? (
-                              <div className="flex flex-col items-center">
-                                <span className={cn(
-                                  "font-mono font-black text-xs px-2.5 py-1 rounded-lg",
-                                  isNegativeStock ? "bg-red-500/20 text-red-500 border border-red-500/30 animate-pulse" : "bg-muted text-foreground"
-                                )}>
-                                  {currentStock}
-                                </span>
-                                {isNegativeStock && (
-                                  <span className="text-[8px] font-black text-red-500 mt-0.5 uppercase tracking-wide">
-                                    Minus Stock
+                      {/* Product Selection */}
+                      <td className="py-2 px-3 relative">
+                        {selectedProd && !isSearching ? (
+                          <div 
+                            onClick={() => setActiveSearchRowId(item.id)}
+                            className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 cursor-pointer group transition-all"
+                          >
+                            <div className="min-w-0 flex-1 pr-2">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-black text-slate-900 dark:text-slate-100 text-xs truncate">
+                                  {selectedProd.name_en || selectedProd.name_dv}
+                                </p>
+                                {selectedProd.name_dv && selectedProd.name_en && (
+                                  <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                                    ({selectedProd.name_dv})
                                   </span>
                                 )}
+                                {item.isZeroTax && (
+                                  <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 text-[9px] px-1.5 py-0 h-4">
+                                    0% Zero Tax
+                                  </Badge>
+                                )}
                               </div>
-                            ) : (
-                              <span className="text-muted-foreground text-[10px]">-</span>
-                            )}
-                          </td>
-
-                          {/* Invoice Quantity */}
-                          <td className="p-3 text-center">
+                              <p className="text-[10px] text-slate-400 font-mono truncate">
+                                {selectedProd.barcode ? `Barcode: ${selectedProd.barcode}` : ''} {selectedProd.category ? `• ${selectedProd.category}` : ''}
+                              </p>
+                            </div>
+                            <span className="text-[10px] text-primary group-hover:underline font-bold shrink-0">
+                              Change
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                             <Input
-                              type="number"
-                              min="0.01"
-                              step="any"
-                              value={item.quantity}
-                              onChange={(e) => handleUpdateItemField(item.id, 'quantity', e.target.value)}
-                              onFocus={handleFocus}
-                              className="h-10 bg-background border-border text-center font-black text-sm font-mono rounded-xl w-24 mx-auto"
-                              placeholder="1"
+                              placeholder="Search product by name, barcode, or code..."
+                              value={query}
+                              onChange={(e) => {
+                                setProductSearchQueries(prev => ({ ...prev, [item.id]: e.target.value }));
+                                setActiveSearchRowId(item.id);
+                              }}
+                              onFocus={() => setActiveSearchRowId(item.id)}
+                              className="h-9 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-left text-xs pl-8 rounded-lg font-semibold"
                             />
-                          </td>
+                            {isSearching && (
+                              <div className="absolute top-10 left-0 w-full z-[120] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl p-1.5 max-h-60 overflow-y-auto custom-scrollbar">
+                                <div className="px-2 py-1 border-b border-slate-100 dark:border-slate-800 text-[10px] font-bold text-slate-400 flex justify-between items-center">
+                                  <span>Select a product ({matchingProducts.length} results)</span>
+                                  <button 
+                                    type="button" 
+                                    onClick={() => setActiveSearchRowId(null)}
+                                    className="text-red-500 hover:underline"
+                                  >
+                                    Close
+                                  </button>
+                                </div>
+                                {matchingProducts.map(p => {
+                                  const pStock = p.stock_shop || 0;
+                                  const isZero = isProductZeroTax(p);
+                                  return (
+                                    <div
+                                      key={p.id}
+                                      onClick={() => handleProductSelect(item.id, p)}
+                                      className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer flex items-center justify-between gap-2 border-b border-slate-100/60 dark:border-slate-800/50 last:border-none transition-colors"
+                                    >
+                                      <div className="min-w-0">
+                                        <p className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
+                                          {p.name_en || p.name_dv} {p.name_dv ? `(${p.name_dv})` : ''}
+                                        </p>
+                                        <p className="text-[10px] text-slate-400 font-mono truncate">
+                                          {p.barcode ? `${p.barcode}` : ''} {p.category ? `• ${p.category}` : ''}
+                                        </p>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 shrink-0">
+                                        {isZero && (
+                                          <span className="text-[9px] font-black text-amber-600 dark:text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded">
+                                            0% Tax
+                                          </span>
+                                        )}
+                                        {p.cost_price && (
+                                          <span className="text-[9px] text-slate-500 font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                                            Cost: {p.cost_price}
+                                          </span>
+                                        )}
+                                        <span className={cn(
+                                          "text-[9px] font-black px-1.5 py-0.5 rounded font-mono",
+                                          pStock < 0 ? "bg-red-500/20 text-red-500" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                                        )}>
+                                          Stock: {pStock}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                                {matchingProducts.length === 0 && (
+                                  <div className="text-center py-4 text-xs text-slate-400">
+                                    <p>No matching products found.</p>
+                                    <Button
+                                      type="button"
+                                      variant="link"
+                                      size="sm"
+                                      onClick={() => setIsCatalogPickerOpen(true)}
+                                      className="text-xs text-primary font-bold mt-1"
+                                    >
+                                      Open Full Catalog Browser
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </td>
 
-                          {/* Unit Purchase Price (Editable) */}
-                          <td className="p-3 text-center">
-                            <div className="relative w-28 mx-auto">
-                              <Input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={item.unitPrice}
-                                onChange={(e) => handleUpdateItemField(item.id, 'unitPrice', e.target.value)}
-                                onFocus={handleFocus}
-                                className="h-10 bg-background border-border text-center font-black text-sm font-mono rounded-xl w-full"
-                                placeholder="0.00"
-                              />
-                            </div>
-                          </td>
+                      {/* Current Stock Indicator */}
+                      <td className="py-2 px-3 text-center">
+                        {currentStock !== null ? (
+                          <div className="inline-flex flex-col items-center">
+                            <span className={cn(
+                              "font-mono font-black text-xs px-2 py-0.5 rounded-md",
+                              isNegativeStock
+                                ? "bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30"
+                                : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+                            )}>
+                              {currentStock}
+                            </span>
+                            {isNegativeStock && (
+                              <span className="text-[8px] font-black text-red-500 mt-0.5 uppercase">
+                                Minus
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-300 dark:text-slate-600 text-xs">—</span>
+                        )}
+                      </td>
 
-                          {/* Subtotal (Editable & Auto-Syncing with Unit Cost) */}
-                          <td className="p-3 text-center">
-                            <div className="relative w-32 mx-auto">
-                              <Input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={item.subtotal}
-                                onChange={(e) => handleUpdateItemField(item.id, 'subtotal', e.target.value)}
-                                onFocus={handleFocus}
-                                className="h-10 bg-background border-primary/40 focus:border-primary text-center font-black text-sm font-mono rounded-xl w-full text-foreground"
-                                placeholder="0.00"
-                              />
-                            </div>
-                          </td>
+                      {/* Invoice Quantity */}
+                      <td className="py-2 px-3 text-center">
+                        <Input
+                          type="number"
+                          min="0.01"
+                          step="any"
+                          value={item.quantity}
+                          onChange={(e) => handleUpdateItemField(item.id, 'quantity', e.target.value)}
+                          onFocus={handleFocus}
+                          className="h-9 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-center font-black text-xs font-mono rounded-lg w-24 mx-auto"
+                          placeholder="1"
+                        />
+                      </td>
 
-                          {/* Zero Tax Auto-Detect (Read-Only Display) */}
-                          <td className="p-3 text-center">
-                            <div className="flex flex-col items-center justify-center gap-1">
-                              {item.productId ? (
-                                <span className={cn(
-                                  "px-2 py-0.5 rounded-full text-[9px] font-black border",
-                                  item.isZeroTax
-                                    ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                                    : "bg-blue-500/10 text-blue-500 border-blue-500/20"
-                                )}>
-                                  {item.isZeroTax ? "0% GST" : `${taxRate}% GST`}
-                                </span>
-                              ) : (
-                                <span className="text-[9px] text-muted-foreground/40 font-bold">—</span>
-                              )}
-                            </div>
-                          </td>
+                      {/* Unit Purchase Price (Editable) */}
+                      <td className="py-2 px-3 text-center">
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={item.unitPrice}
+                          onChange={(e) => handleUpdateItemField(item.id, 'unitPrice', e.target.value)}
+                          onFocus={handleFocus}
+                          className="h-9 bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-center font-black text-xs font-mono rounded-lg w-28 mx-auto"
+                          placeholder="0.00"
+                        />
+                      </td>
 
-                          {/* Delete Row Button */}
-                          <td className="p-3 text-center">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleRemoveItemRow(item.id)}
-                              className="h-8 w-8 text-red-500 hover:bg-red-500/10 hover:text-red-600 rounded-lg"
-                              title="Remove line item"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
+                      {/* Subtotal (Editable & Auto-Syncing with Unit Cost) */}
+                      <td className="py-2 px-3 text-center">
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={item.subtotal}
+                          onChange={(e) => handleUpdateItemField(item.id, 'subtotal', e.target.value)}
+                          onFocus={handleFocus}
+                          className="h-9 bg-primary/5 border-primary/30 focus:border-primary text-center font-black text-xs font-mono rounded-lg w-32 mx-auto text-slate-900 dark:text-white"
+                          placeholder="0.00"
+                        />
+                      </td>
+
+                      {/* Zero Tax Auto-Detect */}
+                      <td className="py-2 px-3 text-center">
+                        {item.productId ? (
+                          <span className={cn(
+                            "px-2 py-0.5 rounded-full text-[9px] font-black border inline-block",
+                            item.isZeroTax
+                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25"
+                              : "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/25"
+                          )}>
+                            {item.isZeroTax ? "0% GST" : `${taxRate}% GST`}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-300 dark:text-slate-600 font-bold">—</span>
+                        )}
+                      </td>
+
+                      {/* Delete Row Button */}
+                      <td className="py-2 px-2 text-center">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveItemRow(item.id)}
+                          className="h-7 w-7 text-slate-400 hover:bg-red-500/10 hover:text-red-500 rounded-lg"
+                          title="Remove line item"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
             </table>
           </div>
         </div>
 
-        {/* Fixed Bottom Section: Description & Calculation Summary */}
-        <div className="px-3.5 sm:px-4 py-2.5 border-t border-border/70 bg-card/60 backdrop-blur-md shrink-0">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-center">
-            {/* Description & Automation info */}
-            <div className="space-y-1 text-right">
-              <Label className="text-[11px] font-black uppercase text-muted-foreground">
-                Bill Notes / Description (އިތުރު ތަފްޞީލް)
-              </Label>
-              <Input
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Optional purchase details, supplier bill remarks, or payment reference..."
-                className="bg-background border-border text-right h-9 rounded-xl font-bold text-xs"
-              />
-              <div className="flex items-center justify-end gap-1.5 text-[10px] text-muted-foreground pt-0.5">
-                <span>Saving bill updates inventory stock, cost price & input GST statements</span>
-                <ShieldCheck className="h-3 w-3 text-emerald-500 shrink-0" />
-              </div>
-            </div>
-
-            {/* Calculations Breakdown */}
-            <div className="bg-muted/70 border border-border rounded-xl p-2.5 text-right font-faruma shadow-xs">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-bold text-muted-foreground pb-2 border-b border-border/60">
-                <div>
-                  <span className="block text-[9px] uppercase text-muted-foreground/80">Subtotal</span>
-                  <span className="font-mono font-black text-foreground text-xs">{currency} {totalSubtotal.toFixed(2)}</span>
-                </div>
-                <div>
-                  <span className="block text-[9px] uppercase text-amber-500">Zero-Tax (0%)</span>
-                  <span className="font-mono font-black text-amber-500 text-xs">{currency} {zeroTaxSubtotal.toFixed(2)}</span>
-                </div>
-                <div>
-                  <span className="block text-[9px] uppercase text-muted-foreground/80">Taxable Basis</span>
-                  <span className="font-mono font-black text-foreground text-xs">{currency} {taxableSubtotal.toFixed(2)}</span>
-                </div>
-                <div>
-                  <span className="block text-[9px] uppercase text-orange-500">Input GST ({taxRate}%)</span>
-                  <span className="font-mono font-black text-orange-500 text-xs">{currency} {totalInputGst.toFixed(2)}</span>
-                </div>
+        {/* Unified Sleek Bottom Summary & Action Dock */}
+        <div className="px-5 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+          <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4">
+            {/* Financial Breakdown Pills */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 flex-1">
+              <div className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800">
+                <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">Subtotal</span>
+                <span className="font-mono font-black text-slate-800 dark:text-slate-200 text-xs sm:text-sm">
+                  {currency} {totalSubtotal.toFixed(2)}
+                </span>
               </div>
 
-              <div className="pt-2 flex justify-between items-center">
-                <span className="text-xl sm:text-2xl font-black text-primary font-mono">
+              <div className="px-3 py-2 rounded-xl bg-amber-500/5 border border-amber-500/20">
+                <span className="block text-[9px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">Zero-Tax (0%)</span>
+                <span className="font-mono font-black text-amber-600 dark:text-amber-400 text-xs sm:text-sm">
+                  {currency} {zeroTaxSubtotal.toFixed(2)}
+                </span>
+              </div>
+
+              <div className="px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800">
+                <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400">Taxable Basis</span>
+                <span className="font-mono font-black text-slate-800 dark:text-slate-200 text-xs sm:text-sm">
+                  {currency} {taxableSubtotal.toFixed(2)}
+                </span>
+              </div>
+
+              <div className="px-3 py-2 rounded-xl bg-orange-500/5 border border-orange-500/20">
+                <span className="block text-[9px] font-bold uppercase tracking-wider text-orange-600 dark:text-orange-400">
+                  Input GST ({taxRate}%)
+                </span>
+                <span className="font-mono font-black text-orange-600 dark:text-orange-400 text-xs sm:text-sm">
+                  {currency} {totalInputGst.toFixed(2)}
+                </span>
+              </div>
+
+              <div className="col-span-2 sm:col-span-1 px-3.5 py-2 rounded-xl bg-primary/10 border border-primary/30 flex flex-col justify-center">
+                <span className="block text-[9px] font-black uppercase tracking-wider text-primary">
+                  Grand Total (ޖުމްލަ)
+                </span>
+                <span className="font-mono font-black text-primary text-base sm:text-lg leading-tight">
                   {currency} {grandTotal.toFixed(2)}
                 </span>
-                <span className="text-sm font-black text-foreground">
-                  Grand Total (ޖުމްލަ އަގު):
-                </span>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Sticky Footer Actions */}
-        <div className="p-4 sm:p-5 border-t border-border bg-muted/80 flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center justify-between shrink-0">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleClose}
-            className="h-12 px-6 rounded-2xl border-border hover:bg-muted text-foreground font-bold text-xs order-2 sm:order-1"
-          >
-            {t('cancel') || 'Cancel'}
-          </Button>
-
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 max-w-2xl justify-end order-1 sm:order-2">
-            {/* Stock Update Toggle Button */}
-            <div 
-              onClick={() => setShouldUpdateStock(!shouldUpdateStock)}
-              className={cn(
-                "flex items-center justify-between sm:justify-start gap-3 px-3.5 py-2 rounded-2xl border transition-all cursor-pointer select-none",
-                shouldUpdateStock 
-                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400" 
-                  : "bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400"
-              )}
-              title={shouldUpdateStock ? "Stock quantities will be increased by bill item quantities" : "Only product cost price and bill will be saved. Stock remains unchanged."}
-            >
-              <div className="text-right">
-                <span className="text-xs font-black block">
-                  {shouldUpdateStock ? 'ސްޓޮކް އިތުރުކުރޭ (Update Stock)' : 'ހަމައެކަނި ބިލް ސޭވްކުރޭ (Save Bill Only)'}
-                </span>
-                <span className="text-[10px] opacity-80 block">
-                  {shouldUpdateStock ? 'Updates cost price & adds quantities to stock' : 'Saves cost price & bill (Stock unchanged)'}
-                </span>
+            {/* Right Controls: Stock Toggle + Cancel + Save */}
+            <div className="flex flex-wrap sm:flex-nowrap items-center justify-end gap-2.5 shrink-0">
+              {/* Stock Update Switch Pill */}
+              <div 
+                onClick={() => setShouldUpdateStock(!shouldUpdateStock)}
+                className={cn(
+                  "flex items-center gap-3 px-3.5 py-2 rounded-xl border transition-all cursor-pointer select-none",
+                  shouldUpdateStock 
+                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300" 
+                    : "bg-blue-500/10 border-blue-500/30 text-blue-700 dark:text-blue-300"
+                )}
+                title={shouldUpdateStock ? "Stock quantities will be increased by bill item quantities" : "Only product cost price and bill will be saved. Stock remains unchanged."}
+              >
+                <Switch
+                  checked={shouldUpdateStock}
+                  onCheckedChange={setShouldUpdateStock}
+                  className="shrink-0"
+                />
+                <div className="text-left">
+                  <span className="text-xs font-black block leading-tight">
+                    {shouldUpdateStock ? 'Update Stock (ސްޓޮކް އިތުރުކުރޭ)' : 'Save Bill Only (ހަމައެކަނި ބިލް)'}
+                  </span>
+                  <span className="text-[10px] opacity-80 block">
+                    {shouldUpdateStock ? 'Adds qty to shop stock & updates cost' : 'Saves bill & cost (Stock unchanged)'}
+                  </span>
+                </div>
               </div>
-              <Switch
-                checked={shouldUpdateStock}
-                onCheckedChange={setShouldUpdateStock}
-                className="shrink-0"
-              />
-            </div>
 
-            {/* Save Button */}
-            <Button
-              type="button"
-              onClick={handleSavePurchase}
-              disabled={isSavingPurchase || !vendorId || !billNumber.trim() || grandTotal <= 0}
-              className={cn(
-                "h-12 px-5 rounded-2xl font-black text-xs sm:text-sm shadow-xl uppercase gap-2 transition-all shrink-0",
-                editingPurchase 
-                  ? "bg-amber-500 hover:bg-amber-600 text-black shadow-amber-500/20" 
-                  : shouldUpdateStock 
-                    ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/20"
-                    : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/25"
-              )}
-            >
-              <Save className="h-4 w-4" />
-              <span>
-                {isSavingPurchase 
-                  ? (editingPurchase ? 'Updating Purchase...' : shouldUpdateStock ? 'Saving & Updating Stock...' : 'Saving Bill Only...') 
-                  : (editingPurchase 
-                      ? (shouldUpdateStock ? 'Update Bill & Stock (ބިލް އަޕްޑޭޓް ކުރޭ)' : 'Update Bill Only (ހަމައެކަނި ބިލް)')
-                      : (shouldUpdateStock ? 'Save Bill & Update Stock (ބިލް އަދި ސްޓޮކް)' : 'Save The Bill (ހަމައެކަނި ބިލް ސޭވްކުރޭ)')
-                    )
-                }
-              </span>
-            </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClose}
+                className="h-11 px-4 rounded-xl border-slate-200 dark:border-slate-800 font-bold text-xs"
+              >
+                {t('cancel') || 'Cancel'}
+              </Button>
+
+              <Button
+                type="button"
+                onClick={handleSavePurchase}
+                disabled={isSavingPurchase || !vendorId || !billNumber.trim() || grandTotal <= 0}
+                className={cn(
+                  "h-11 px-5 rounded-xl font-black text-xs sm:text-sm shadow-lg gap-2 transition-all shrink-0",
+                  editingPurchase 
+                    ? "bg-amber-500 hover:bg-amber-600 text-black shadow-amber-500/20" 
+                    : shouldUpdateStock 
+                      ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/20"
+                      : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/25"
+                )}
+              >
+                <Save className="h-4 w-4" />
+                <span>
+                  {isSavingPurchase 
+                    ? (editingPurchase ? 'Updating...' : shouldUpdateStock ? 'Saving & Updating Stock...' : 'Saving Bill...') 
+                    : (editingPurchase 
+                        ? (shouldUpdateStock ? 'Update Bill & Stock' : 'Update Bill Only')
+                        : (shouldUpdateStock ? 'Save Bill & Update Stock' : 'Save Bill Only')
+                      )
+                  }
+                </span>
+              </Button>
+            </div>
           </div>
         </div>
       </div>

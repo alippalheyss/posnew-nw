@@ -1153,8 +1153,6 @@ const POS = () => {
       return;
     }
 
-    const calculatedBalance = Math.max(0, finalPaidAmount - grandTotal);
-
     const newSale = {
       id: crypto.randomUUID(),
       date: toISODatetime(),
@@ -1163,7 +1161,7 @@ const POS = () => {
       grandTotal: grandTotal,
       paymentMethod: 'cash' as const,
       paidAmount: finalPaidAmount,
-      balance: calculatedBalance,
+      balance: 0,
     };
 
     setIsProcessing(true);

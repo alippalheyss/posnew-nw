@@ -16,7 +16,8 @@
     "electron:start": "electron electron/main.cjs",
     "electron:build": "vite build && electron-builder --win --dir",
     "electron:build:arm64": "vite build && electron-builder --win --arm64 --dir",
-    "electron:build:x64": "vite build && electron-builder --win --x64 --dir"
+    "electron:build:x64": "vite build && electron-builder --win --x64 --dir",
+    "electron:build:portable:x64": "vite build && electron-builder --win portable --x64"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

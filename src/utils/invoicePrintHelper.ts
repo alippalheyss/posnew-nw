@@ -17,8 +17,11 @@ export const printSale80mmSlip = (sale: Sale, settings: AppSettings) => {
   const shopTin = shop.tinNumber || shop.tin || shop.taxNumber || settings?.accounting?.tinNumber || '1021550GST501';
   const shopLogo = shop.logo || '';
 
-  const isCredit = sale.paymentMethod === 'credit' || (sale.balance !== undefined && sale.balance > 0);
-  const invoiceTitle = isCredit ? 'CREDIT INVOICE' : 'TAX INVOICE';
+  const pMethod = String(sale.paymentMethod || (sale as any).payment_method || 'cash').toLowerCase();
+  const isExchange = String(sale.invoiceNumber || '').startsWith('EXG-');
+  const isReturn = !isExchange && (pMethod === 'return' || sale.grandTotal < 0 || String(sale.invoiceNumber || '').startsWith('RET-'));
+  const isCredit = !isReturn && (pMethod === 'credit' || (pMethod === 'split' && Number(sale.balance || 0) > 0));
+  const invoiceTitle = isExchange ? 'EXCHANGE SLIP' : isReturn ? 'RETURN / REFUND SLIP' : isCredit ? 'CREDIT INVOICE' : 'TAX INVOICE';
   const invoiceNumber = sale.invoiceNumber || sale.id;
 
   const customerName = sale.customer?.name_en || sale.customer?.name_dv || 'General Customer';
@@ -29,9 +32,15 @@ export const printSale80mmSlip = (sale: Sale, settings: AppSettings) => {
   const subtotal = gstRate > 0 ? sale.grandTotal / (1 + gstRate / 100) : sale.grandTotal;
   const gstAmount = sale.grandTotal - subtotal;
 
-  const paidAmount = Number(sale.paidAmount) || (isCredit ? 0 : sale.grandTotal);
+  const rawPaid = Number(sale.paidAmount ?? (sale as any).paid_amount ?? 0);
+  const legacyChangeInBalance = !isCredit && !isReturn && Number(sale.balance || 0) > 0 && rawPaid <= sale.grandTotal
+    ? sale.grandTotal + Number(sale.balance || 0)
+    : 0;
+  const paidAmount = isCredit
+    ? rawPaid
+    : (rawPaid > 0 ? rawPaid : (legacyChangeInBalance > 0 ? legacyChangeInBalance : sale.grandTotal));
   const balanceDue = isCredit ? Math.max(0, sale.grandTotal - paidAmount) : 0;
-  const changeGiven = !isCredit && paidAmount > sale.grandTotal ? paidAmount - sale.grandTotal : 0;
+  const changeGiven = !isCredit && !isReturn && paidAmount > sale.grandTotal ? paidAmount - sale.grandTotal : 0;
 
   const itemsHtml = sale.items.map((item, idx) => {
     const name = item.name_en || item.name_dv || 'Item';
@@ -242,8 +251,11 @@ export const downloadSaleA4Pdf = (sale: Sale, settings: AppSettings) => {
   const shopTin = shop.tinNumber || shop.tin || shop.taxNumber || settings?.accounting?.tinNumber || '1021550GST501';
   const shopLogo = shop.logo || '';
 
-  const isCredit = sale.paymentMethod === 'credit' || (sale.balance !== undefined && sale.balance > 0);
-  const invoiceTitle = isCredit ? 'CREDIT INVOICE' : 'TAX INVOICE';
+  const pMethod = String(sale.paymentMethod || (sale as any).payment_method || 'cash').toLowerCase();
+  const isExchange = String(sale.invoiceNumber || '').startsWith('EXG-');
+  const isReturn = !isExchange && (pMethod === 'return' || sale.grandTotal < 0 || String(sale.invoiceNumber || '').startsWith('RET-'));
+  const isCredit = !isReturn && (pMethod === 'credit' || (pMethod === 'split' && Number(sale.balance || 0) > 0));
+  const invoiceTitle = isExchange ? 'EXCHANGE SLIP' : isReturn ? 'RETURN / REFUND SLIP' : isCredit ? 'CREDIT INVOICE' : 'TAX INVOICE';
   const invoiceNumber = sale.invoiceNumber || sale.id;
 
   const customerName = sale.customer?.name_en || sale.customer?.name_dv || 'General Customer';
@@ -254,9 +266,15 @@ export const downloadSaleA4Pdf = (sale: Sale, settings: AppSettings) => {
   const subtotal = gstRate > 0 ? sale.grandTotal / (1 + gstRate / 100) : sale.grandTotal;
   const gstAmount = sale.grandTotal - subtotal;
 
-  const paidAmount = Number(sale.paidAmount) || (isCredit ? 0 : sale.grandTotal);
+  const rawPaid = Number(sale.paidAmount ?? (sale as any).paid_amount ?? 0);
+  const legacyChangeInBalance = !isCredit && !isReturn && Number(sale.balance || 0) > 0 && rawPaid <= sale.grandTotal
+    ? sale.grandTotal + Number(sale.balance || 0)
+    : 0;
+  const paidAmount = isCredit
+    ? rawPaid
+    : (rawPaid > 0 ? rawPaid : (legacyChangeInBalance > 0 ? legacyChangeInBalance : sale.grandTotal));
   const balanceDue = isCredit ? Math.max(0, sale.grandTotal - paidAmount) : 0;
-  const changeGiven = !isCredit && paidAmount > sale.grandTotal ? paidAmount - sale.grandTotal : 0;
+  const changeGiven = !isCredit && !isReturn && paidAmount > sale.grandTotal ? paidAmount - sale.grandTotal : 0;
 
   // ==========================================
   // 1. TOP ACCENT LINE & CLEAN WHITE HEADER
@@ -547,8 +565,11 @@ export const printSaleA4Html = (sale: Sale, settings: AppSettings) => {
   const shopTin = shop.tinNumber || shop.tin || shop.taxNumber || settings?.accounting?.tinNumber || '1021550GST501';
   const shopLogo = shop.logo || '';
 
-  const isCredit = sale.paymentMethod === 'credit' || (sale.balance !== undefined && sale.balance > 0);
-  const invoiceTitle = isCredit ? 'CREDIT INVOICE' : 'TAX INVOICE';
+  const pMethod = String(sale.paymentMethod || (sale as any).payment_method || 'cash').toLowerCase();
+  const isExchange = String(sale.invoiceNumber || '').startsWith('EXG-');
+  const isReturn = !isExchange && (pMethod === 'return' || sale.grandTotal < 0 || String(sale.invoiceNumber || '').startsWith('RET-'));
+  const isCredit = !isReturn && (pMethod === 'credit' || (pMethod === 'split' && Number(sale.balance || 0) > 0));
+  const invoiceTitle = isExchange ? 'EXCHANGE SLIP' : isReturn ? 'RETURN / REFUND SLIP' : isCredit ? 'CREDIT INVOICE' : 'TAX INVOICE';
   const invoiceNumber = sale.invoiceNumber || sale.id;
 
   const customerName = sale.customer?.name_en || sale.customer?.name_dv || 'General Customer';
@@ -559,9 +580,15 @@ export const printSaleA4Html = (sale: Sale, settings: AppSettings) => {
   const subtotal = gstRate > 0 ? sale.grandTotal / (1 + gstRate / 100) : sale.grandTotal;
   const gstAmount = sale.grandTotal - subtotal;
 
-  const paidAmount = Number(sale.paidAmount) || (isCredit ? 0 : sale.grandTotal);
+  const rawPaid = Number(sale.paidAmount ?? (sale as any).paid_amount ?? 0);
+  const legacyChangeInBalance = !isCredit && !isReturn && Number(sale.balance || 0) > 0 && rawPaid <= sale.grandTotal
+    ? sale.grandTotal + Number(sale.balance || 0)
+    : 0;
+  const paidAmount = isCredit
+    ? rawPaid
+    : (rawPaid > 0 ? rawPaid : (legacyChangeInBalance > 0 ? legacyChangeInBalance : sale.grandTotal));
   const balanceDue = isCredit ? Math.max(0, sale.grandTotal - paidAmount) : 0;
-  const changeGiven = !isCredit && paidAmount > sale.grandTotal ? paidAmount - sale.grandTotal : 0;
+  const changeGiven = !isCredit && !isReturn && paidAmount > sale.grandTotal ? paidAmount - sale.grandTotal : 0;
 
   const rowsHtml = sale.items.map((item, idx) => {
     const unitTag = item.selected_unit && item.selected_unit !== 'Piece' ? ` (${item.selected_unit})` : '';

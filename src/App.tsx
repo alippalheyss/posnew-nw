@@ -27,6 +27,7 @@ import ShrinkageReport from "./pages/ShrinkageReport";
 import Expenses from "./pages/Expenses";
 import CustomerDisplay from "./pages/CustomerDisplay";
 import LocalPurchaseWindow from "./components/LocalPurchaseWindow";
+import AppCloseConfirmDialog from "./components/AppCloseConfirmDialog";
 import MobilePurchase from "./pages/MobilePurchase";
 import StockAudit from "./pages/StockAudit";
 import Quotations from "./pages/Quotations";
@@ -43,6 +44,7 @@ const App = () => (
         <AuthProvider>
           <LocalPurchaseWindow />
           <Router>
+            <AppCloseConfirmDialog />
             <Routes>
               {/* Public Route */}
               <Route path="/login" element={<Login />} />

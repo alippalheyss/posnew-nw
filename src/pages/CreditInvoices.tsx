@@ -108,6 +108,9 @@ const CreditInvoices = () => {
 
   const creditSales = sales.filter(s => {
     const pMethod = String(s.paymentMethod || (s as any).payment_method || '').toLowerCase();
+    if (pMethod === 'cash' || pMethod === 'transfer' || pMethod === 'card' || pMethod === 'mobile' || pMethod === 'return') {
+      return false;
+    }
     const balance = Number(s.balance ?? (s as any).balance ?? 0);
     const paidAmount = Number(s.paidAmount ?? (s as any).paid_amount ?? 0);
     const grandTotal = Number(s.grandTotal ?? (s as any).grand_total ?? 0);
@@ -115,8 +118,8 @@ const CreditInvoices = () => {
     return (
       pMethod === 'credit' ||
       (pMethod === 'split' && balance > 0) ||
-      (balance > 0 && hasCustomer) ||
-      (grandTotal > paidAmount && hasCustomer)
+      (!pMethod && balance > 0 && hasCustomer) ||
+      (!pMethod && grandTotal > paidAmount && hasCustomer)
     );
   });
   

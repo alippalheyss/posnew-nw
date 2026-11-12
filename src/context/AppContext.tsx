@@ -116,6 +116,18 @@ export interface ReturnItem {
   name: string;
   returnQty: number;
   unitPrice: number;
+  unitConversion?: number;
+  selectedUnit?: string;
+  selectedFlavour?: string;
+}
+
+export interface ProcessReturnOptions {
+  mode?: 'refund' | 'exchange';
+  refundMethod?: 'cash' | 'credit' | 'transfer';
+  exchangeItems?: CartItem[];
+  paymentMethodForDiff?: 'cash' | 'credit' | 'transfer';
+  tenderedAmount?: number;
+  notes?: string;
 }
 
 export interface Sale {
@@ -126,7 +138,7 @@ export interface Sale {
   customer_id?: string;
   items: CartItem[];
   grandTotal: number;
-  paymentMethod: 'cash' | 'credit' | 'card' | 'mobile';
+  paymentMethod: 'cash' | 'credit' | 'card' | 'mobile' | 'transfer' | 'split' | 'return';
   paidAmount?: number;
   balance?: number;
   invoiceNumber?: string;
@@ -394,7 +406,7 @@ interface AppContextType {
   updateSale: (sale: Sale) => Promise<void>;
   deleteSale: (saleId: string) => Promise<void>;
   broadcastLiveSync: (event: string, payload: any) => void;
-  processReturn: (originalSale: Sale, returnItems: ReturnItem[]) => Promise<void>;
+  processReturn: (originalSale: Sale, returnItems: ReturnItem[], options?: ProcessReturnOptions) => Promise<Sale | undefined>;
   addCustomer: (customer: Customer) => Promise<Customer | void>;
   updateCustomer: (customer: Customer) => Promise<void>;
   pendingTransfers: any[];
@@ -2923,76 +2935,158 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     return saleWithInvoice;
   };
 
-  // --- Sale Return ---
-  const processReturn = async (originalSale: Sale, returnItems: ReturnItem[]) => {
-    if (!returnItems || returnItems.length === 0) return;
+  // --- Sale Return & Item Exchange ---
+  const processReturn = async (
+    originalSale: Sale,
+    returnItems: ReturnItem[],
+    options?: ProcessReturnOptions
+  ): Promise<Sale | undefined> => {
+    if (!returnItems || returnItems.length === 0) return undefined;
+
+    const mode = options?.mode || 'refund';
+    const exchangeItems = mode === 'exchange' ? (options?.exchangeItems || []) : [];
 
     const returnTotal = returnItems.reduce((sum, ri) => sum + (ri.returnQty * ri.unitPrice), 0);
-    const isCredit = String(originalSale.paymentMethod).toLowerCase() === 'credit';
+    const exchangeTotal = exchangeItems.reduce((sum, ei) => sum + (Number(ei.price || 0) * Number(ei.qty || 0)), 0);
+    const netTotal = mode === 'exchange' ? (exchangeTotal - returnTotal) : -Math.abs(returnTotal);
 
-    // 1. Restore stock for each returned item
-    await Promise.all(returnItems.map(async (ri) => {
-      const product = products.find(p => p.id === ri.itemId);
-      if (product) {
-        await updateStock(product.id, (product.stock_shop || 0) + ri.returnQty);
+    const origMethod = String(originalSale.paymentMethod || (originalSale as any).payment_method || 'cash').toLowerCase();
+    const isOrigCredit = origMethod === 'credit';
+
+    // Determine effective payment method for the return/exchange record
+    let effectivePaymentMethod: Sale['paymentMethod'] = 'cash';
+    if (mode === 'refund') {
+      effectivePaymentMethod = options?.refundMethod || (isOrigCredit ? 'credit' : 'cash');
+    } else {
+      if (netTotal > 0) {
+        effectivePaymentMethod = options?.paymentMethodForDiff || 'cash';
+      } else if (netTotal < 0) {
+        effectivePaymentMethod = options?.refundMethod || (isOrigCredit ? 'credit' : 'cash');
+      } else {
+        effectivePaymentMethod = 'cash';
       }
+    }
+
+    // 1. Restore stock for each returned item, and deduct stock for any exchange replacement items
+    const stockAdjustments = new Map<string, number>();
+    for (const ri of returnItems) {
+      const conv = Number(ri.unitConversion || 1);
+      const restoreUnits = ri.returnQty * conv;
+      stockAdjustments.set(ri.itemId, (stockAdjustments.get(ri.itemId) || 0) + restoreUnits);
+    }
+    for (const ei of exchangeItems) {
+      const conv = Number(ei.unit_conversion || 1);
+      const deductUnits = Number(ei.qty || 0) * conv;
+      stockAdjustments.set(ei.id, (stockAdjustments.get(ei.id) || 0) - deductUnits);
+    }
+
+    for (const [productId, delta] of stockAdjustments.entries()) {
+      if (delta === 0) continue;
+      const product = products.find(p => p.id === productId);
+      if (product) {
+        await updateStock(product.id, Math.max(0, (product.stock_shop || 0) + delta));
+      }
+    }
+
+    // 2. Build items list for the Return / Exchange audit invoice
+    const returnedCartItems: CartItem[] = returnItems.map(ri => ({
+      id: ri.itemId,
+      name: `[RETURN] ${ri.name}`,
+      name_dv: `[RETURN] ${ri.name}`,
+      name_en: `[RETURN] ${ri.name}`,
+      barcode: '',
+      price: -Math.abs(ri.unitPrice),
+      qty: ri.returnQty,
+      selected_unit: ri.selectedUnit,
+      selected_flavour: ri.selectedFlavour,
+      unit_conversion: ri.unitConversion || 1,
+      stock_shop: 0,
+      category: 'RETURN',
+    } as any));
+
+    const replacementCartItems: CartItem[] = exchangeItems.map(ei => ({
+      ...ei,
+      name_en: `[EXCHANGE] ${ei.name_en || ei.name_dv || 'Item'}`,
+      name_dv: ei.name_dv || ei.name_en || 'Item',
+      category: ei.category || 'EXCHANGE',
     }));
 
-    // 2. Record the return as a negative-value sale (audit trail)
+    const prefix = mode === 'exchange' ? 'EXG' : 'RET';
+    const baseInv = originalSale.invoiceNumber || (originalSale as any).invoice_number || originalSale.id.slice(-6).toUpperCase();
+    const shortSuffix = Math.floor(100 + Math.random() * 900);
+    const returnInvoiceNumber = `${prefix}-${baseInv}-${shortSuffix}`;
+
+    const resolvedPaidAmount =
+      effectivePaymentMethod === 'credit'
+        ? 0
+        : netTotal > 0 && options?.tenderedAmount && options.tenderedAmount >= netTotal
+          ? options.tenderedAmount
+          : netTotal;
+
+    const resolvedBalance =
+      effectivePaymentMethod === 'credit' && netTotal > 0
+        ? netTotal
+        : 0;
+
     const returnSale: Sale = {
       id: crypto.randomUUID(),
       date: toISODatetime(),
       customer: originalSale.customer || null,
-      items: returnItems.map(ri => ({
-        id: ri.itemId,
-        name: ri.name,
-        name_dv: ri.name,
-        name_en: ri.name,
-        barcode: '',
-        price: -Math.abs(ri.unitPrice),
-        qty: ri.returnQty,
-        unit_conversion: 1,
-        stock_shop: 0,
-        category: 'RETURN',
-      } as any)),
-      grandTotal: -Math.abs(returnTotal),
-      paymentMethod: 'cash',
-      invoiceNumber: `RET-${originalSale.invoiceNumber || originalSale.id.slice(-6)}`,
-      paidAmount: -Math.abs(returnTotal),
-      balance: 0,
+      customerId: originalSale.customer?.id || originalSale.customerId || originalSale.customer_id,
+      customer_id: originalSale.customer?.id || originalSale.customer_id || originalSale.customerId,
+      items: [...returnedCartItems, ...replacementCartItems],
+      grandTotal: Number(netTotal.toFixed(2)),
+      paymentMethod: effectivePaymentMethod,
+      invoiceNumber: returnInvoiceNumber,
+      paidAmount: Number(resolvedPaidAmount.toFixed(2)),
+      balance: Number(resolvedBalance.toFixed(2)),
     };
 
-    // Insert return record directly (bypassing normal addSale stock-deduction logic)
+    // Insert return/exchange record directly
     try {
       await supabase.from('sales').insert([{
         id: returnSale.id,
         date: returnSale.date,
-        customer_id: returnSale.customer?.id || null,
+        customer_id: returnSale.customer?.id || returnSale.customer_id || null,
         items: returnSale.items,
         grand_total: returnSale.grandTotal,
-        payment_method: 'return',
+        payment_method: effectivePaymentMethod,
         paid_amount: returnSale.paidAmount,
-        balance: 0,
+        balance: returnSale.balance,
         invoice_number: returnSale.invoiceNumber,
         split_details: null,
       }]);
       setSales(prev => [returnSale, ...prev]);
       broadcastLiveSync('sale_created', { sale: returnSale });
     } catch (err) {
-      console.error('Error recording return sale:', err);
+      console.error('Error recording return/exchange sale:', err);
       throw err;
     }
 
-    // 3. For credit sales: reduce customer outstanding balance
-    if (isCredit && originalSale.customer?.id) {
+    // 3. Adjust customer outstanding balance if applicable
+    const custId = originalSale.customer?.id || originalSale.customerId || originalSale.customer_id;
+    if (custId && effectivePaymentMethod === 'credit' && netTotal !== 0) {
       try {
-        await updateCustomerBalance(originalSale.customer.id, -Math.abs(returnTotal));
+        await updateCustomerBalance(custId, netTotal);
       } catch (err) {
-        console.warn('Could not adjust credit balance for return:', err);
+        console.warn('Could not adjust credit balance for return/exchange:', err);
       }
     }
 
-    showSuccess(`Return processed: ${settings.shop?.currency || 'MVR'} ${returnTotal.toFixed(2)} refunded. Stock restored.`);
+    const currency = settings.shop?.currency || 'MVR';
+    if (mode === 'exchange') {
+      if (netTotal > 0) {
+        showSuccess(`Exchange processed! Collected ${currency} ${netTotal.toFixed(2)} difference. Stock updated.`);
+      } else if (netTotal < 0) {
+        showSuccess(`Exchange processed! Refunded ${currency} ${Math.abs(netTotal).toFixed(2)} difference. Stock updated.`);
+      } else {
+        showSuccess(`Even exchange processed! Stock updated.`);
+      }
+    } else {
+      showSuccess(`Return processed: ${currency} ${returnTotal.toFixed(2)} ${effectivePaymentMethod === 'credit' ? 'credited to customer account' : 'refunded'}. Stock restored.`);
+    }
+
+    return returnSale;
   };
 
   const loadSalesForDateRange = async (startDate: string, endDate: string) => {
@@ -4738,7 +4832,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         .filter((e: any) => String(e.method || '').toLowerCase() === 'credit')
         .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
     } else {
-      computedBalance = Math.max(0, paidAmount - grandTotal);
+      computedBalance = 0;
     }
 
     const resolvedCustomer = updatedSale.customer || null;
@@ -4949,7 +5043,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         }
       } else {
         const method = String(targetSale.paymentMethod || (targetSale as any).payment_method || '').toLowerCase();
-        const isCredit = method === 'credit' || Number(targetSale.balance || 0) > 0;
+        const isCredit = method === 'credit' || (method === 'split' && Number(targetSale.balance || 0) > 0);
         const custId = targetSale.customer?.id || (targetSale as any).customer_id || (targetSale as any).customerId;
         if (isCredit && custId) {
           const creditAmount = method === 'credit' ? Number(targetSale.grandTotal || 0) : Number(targetSale.balance || 0);

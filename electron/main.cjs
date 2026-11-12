@@ -8,6 +8,11 @@ app.commandLine.appendSwitch('kiosk-printing');
 app.commandLine.appendSwitch('disable-print-preview');
 
 let mainWindow = null;
+let forceQuit = false;
+
+app.on('before-quit', () => {
+  // Allow app.quit() when forceQuit has been explicitly set
+});
 
 // Ensure single instance lock so multiple copies aren't opened accidentally
 const gotTheLock = app.requestSingleInstanceLock();
@@ -68,6 +73,19 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow.maximize();
     mainWindow.show();
+  });
+
+  // Intercept native window close (X button / Alt+F4) to show custom confirmation popup in renderer
+  mainWindow.on('close', (e) => {
+    if (!forceQuit && mainWindow && !mainWindow.webContents.isDestroyed()) {
+      e.preventDefault();
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+      }
+      mainWindow.show();
+      mainWindow.focus();
+      mainWindow.webContents.send('app-close-requested');
+    }
   });
 
   mainWindow.on('closed', () => {
@@ -236,6 +254,14 @@ ipcMain.on('window-maximize', () => {
 
 ipcMain.on('window-close', () => {
   if (mainWindow) mainWindow.close();
+});
+
+ipcMain.on('window-force-close', () => {
+  forceQuit = true;
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.destroy();
+  }
+  app.quit();
 });
 
 ipcMain.on('window-toggle-fullscreen', () => {

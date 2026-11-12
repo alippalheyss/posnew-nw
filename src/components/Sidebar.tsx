@@ -5,7 +5,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Home, Package, Boxes, Users, DollarSign, Settings, BarChart, 
   Receipt, CalendarDays, AlertTriangle, Building2, LogOut, FileText, ChevronRight, ChevronLeft, ChevronDown, Activity, Pin, PinOff, Wallet, Menu, X,
-  ShieldCheck, Check, Lock, Edit3, Save, User as UserIcon
+  ShieldCheck, Check, Lock, Edit3, Save, User as UserIcon, Power
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
@@ -572,19 +572,35 @@ const Sidebar = () => {
             : "w-0 opacity-0 pointer-events-none translate-x-12 border-none shadow-none"
         )}
       >
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={(e) => {
-            e.stopPropagation();
-            setSidebarCollapsed(!sidebarCollapsed);
-            if (sidebarCollapsed) setIsHovered(false);
-          }}
-          className="absolute top-5 left-5 z-[120] transition-all h-8 w-8 bg-background/80 hover:bg-background text-muted-foreground hover:text-foreground rounded-2xl border border-white/20 dark:border-white/10 shadow-xs backdrop-blur-md apple-glass-pill cursor-pointer"
-          title={sidebarCollapsed ? "Pin Sidebar Open" : "Unpin (Auto-hide)"}
-        >
-          {sidebarCollapsed ? <Pin className="h-4 w-4" /> : <PinOff className="h-4 w-4" />}
-        </Button>
+        <div className="absolute top-5 left-5 z-[120] flex items-center gap-1.5">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSidebarCollapsed(!sidebarCollapsed);
+              if (sidebarCollapsed) setIsHovered(false);
+            }}
+            className="transition-all h-8 w-8 bg-background/80 hover:bg-background text-muted-foreground hover:text-foreground rounded-2xl border border-white/20 dark:border-white/10 shadow-xs backdrop-blur-md apple-glass-pill cursor-pointer"
+            title={sidebarCollapsed ? "Pin Sidebar Open" : "Unpin (Auto-hide)"}
+          >
+            {sidebarCollapsed ? <Pin className="h-4 w-4" /> : <PinOff className="h-4 w-4" />}
+          </Button>
+          {typeof window !== 'undefined' && (window as any).electronAPI?.isElectron && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.dispatchEvent(new CustomEvent('mvpos-request-close'));
+              }}
+              className="transition-all h-8 w-8 bg-red-500/15 hover:bg-red-500 text-red-500 hover:text-white rounded-2xl border border-red-500/30 shadow-xs backdrop-blur-md cursor-pointer"
+              title="Close / Minimize / Logout (ޕްރޮގްރާމް ބަންދުކުރޭ)"
+            >
+              <Power className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
 
         <div className={cn("flex-1 flex flex-col h-full transition-opacity duration-300", isExpanded ? "opacity-100" : "opacity-0")}>
           {renderNavContent(false)}

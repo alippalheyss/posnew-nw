@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { PencilLine, CalendarDays, Printer, Trash2, Filter, ChevronRight, Receipt, DollarSign, CreditCard, ArrowRightLeft, TrendingUp, Download, Calendar as CalendarIcon, FileSpreadsheet, Moon, Send, Loader2, RefreshCw, Eye, Search, X, ArrowUpDown, Banknote } from 'lucide-react';
+import { PencilLine, CalendarDays, Printer, Trash2, Filter, ChevronRight, Receipt, DollarSign, CreditCard, ArrowRightLeft, TrendingUp, Download, Calendar as CalendarIcon, FileSpreadsheet, Moon, Send, Loader2, RefreshCw, Eye, Search, X, ArrowUpDown, Banknote, RotateCcw } from 'lucide-react';
 import { useAppContext, Product, Customer, CartItem, Sale } from '@/context/AppContext';
 import { usePersistedState, usePersistedDateRange } from '@/hooks/usePersistedState';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import { supabase } from '@/lib/supabase';
 import { formatDate, formatTime, formatDateTime, toISODate, extractDateOnly } from '@/utils/formatters';
 import SaleEditDialog from '@/components/SaleEditDialog'; 
 import InvoiceViewDialog from '@/components/InvoiceViewDialog'; 
+import SaleReturnDialog from '@/components/SaleReturnDialog'; 
 import { showSuccess, showError } from '@/utils/toast';
 import { printContent } from '@/utils/printHelper';
 import { printSale80mmSlip, printSaleA4Html, downloadSaleA4Pdf } from '@/utils/invoicePrintHelper';
@@ -38,6 +39,8 @@ const DailySales = () => {
   const [visibleCount, setVisibleCount] = useState(30);
   const [viewingSale, setViewingSale] = useState<Sale | null>(null);
   const [isViewInvoiceDialogOpen, setIsViewInvoiceDialogOpen] = useState(false);
+  const [returningSale, setReturningSale] = useState<Sale | null>(null);
+  const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
   const [isBriefingDialogOpen, setIsBriefingDialogOpen] = useState(false);
   const [briefingDateMode, setBriefingDateMode] = useState<'today' | 'yesterday'>('today');
   const [isSendingBriefing, setIsSendingBriefing] = useState(false);
@@ -56,6 +59,11 @@ const DailySales = () => {
   const handleViewInvoice = (sale: Sale) => {
     setViewingSale(sale);
     setIsViewInvoiceDialogOpen(true);
+  };
+
+  const handleOpenReturnDialog = (sale: Sale) => {
+    setReturningSale(sale);
+    setIsReturnDialogOpen(true);
   };
 
   const handleSyncCloudSales = async () => {
@@ -867,6 +875,16 @@ const DailySales = () => {
                                 </span>
                               )}
                               <span className="text-lg font-black text-foreground font-mono">{displayInvoiceNumber}</span>
+                              {String(displayInvoiceNumber).startsWith('RET-') && (
+                                <Badge className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/40">
+                                  RETURN SLIP
+                                </Badge>
+                              )}
+                              {String(displayInvoiceNumber).startsWith('EXG-') && (
+                                <Badge className="text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/40">
+                                  EXCHANGE SLIP
+                                </Badge>
+                              )}
                               <Badge className={cn("text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5", badgeClass)}>
                                  {isCredit ? 'CREDIT' : isCash ? 'CASH' : (sale.paymentMethod || (sale as any).payment_method || 'OTHER').toUpperCase()}
                               </Badge>
@@ -900,6 +918,17 @@ const DailySales = () => {
                            </p>
                         </div>
                         <div className="flex gap-2">
+                           {!String(displayInvoiceNumber).startsWith('RET-') && (
+                             <Button
+                               variant="ghost"
+                               title="Return / Exchange Items"
+                               onClick={() => handleOpenReturnDialog(sale)}
+                               className="h-11 px-3 rounded-xl bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500 hover:text-white transition-all text-amber-600 dark:text-amber-400 font-black text-xs gap-1.5 shadow-xs"
+                             >
+                               <RotateCcw className="h-4 w-4" />
+                               <span className="hidden sm:inline">Return</span>
+                             </Button>
+                           )}
                            <Button 
                              variant="ghost" 
                              size="icon" 
@@ -1252,6 +1281,16 @@ const DailySales = () => {
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* Return & Exchange Dialog */}
+      <SaleReturnDialog
+        sale={returningSale}
+        isOpen={isReturnDialogOpen}
+        onClose={() => {
+          setIsReturnDialogOpen(false);
+          setReturningSale(null);
+        }}
+      />
 
       {/* Delete Sale Confirmation Dialog */}
       <Dialog open={!!saleToDelete} onOpenChange={(open) => !open && setSaleToDelete(null)}>

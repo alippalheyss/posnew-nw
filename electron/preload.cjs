@@ -12,7 +12,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   minimize: () => ipcRenderer.send('window-minimize'),
   maximize: () => ipcRenderer.send('window-maximize'),
   close: () => ipcRenderer.send('window-close'),
+  forceClose: () => ipcRenderer.send('window-force-close'),
   toggleFullscreen: () => ipcRenderer.send('window-toggle-fullscreen'),
+  onCloseRequested: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on('app-close-requested', listener);
+    return () => ipcRenderer.removeListener('app-close-requested', listener);
+  },
   
   // Cash drawer
   kickCashDrawer: (printerName) => ipcRenderer.invoke('kick-cash-drawer', printerName),

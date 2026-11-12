@@ -19,16 +19,16 @@
     "semantic_hash": "237367fea9ecc053a2edc802502d67ae"
   },
   "electron/main.cjs": {
-    "mtime": 1793552516.3911445,
-    "seen": 1794238973.973789,
-    "ast_hash": "05bd5706d1239ad829b2dbbac4e603d2",
-    "semantic_hash": "05bd5706d1239ad829b2dbbac4e603d2"
+    "mtime": 1794384776.1712418,
+    "seen": 1794385446.9500694,
+    "ast_hash": "c75ce207620cbee078241f6de7677c74",
+    "semantic_hash": ""
   },
   "electron/preload.cjs": {
-    "mtime": 1792739534.2159555,
-    "seen": 1794238973.973961,
-    "ast_hash": "3272efe3c50b76c2b5592592703b6ea5",
-    "semantic_hash": "3272efe3c50b76c2b5592592703b6ea5"
+    "mtime": 1794384778.5164385,
+    "seen": 1794385446.9500794,
+    "ast_hash": "e74eee02aec70f3c6450b586d0994256",
+    "semantic_hash": ""
   },
   "eslint.config.js": {
     "mtime": 1769364465.7036476,
@@ -43,10 +43,10 @@
     "semantic_hash": "c1f960c6346969c0abe27626d5809d98"
   },
   "package.json": {
-    "mtime": 1792763729.9148462,
-    "seen": 1794238973.9743962,
-    "ast_hash": "9ba22ceecf32d6855cda2901bd3926f5",
-    "semantic_hash": "9ba22ceecf32d6855cda2901bd3926f5"
+    "mtime": 1794384920.6579428,
+    "seen": 1794385446.9512634,
+    "ast_hash": "2c76627ff5f473f67d9dbe153cd04baa",
+    "semantic_hash": ""
   },
   "postcss.config.js": {
     "mtime": 1769364465.7192173,
@@ -109,10 +109,10 @@
     "semantic_hash": "ac99eae15f40c02a5931041030f1ef2e"
   },
   "src/App.tsx": {
-    "mtime": 1793971392.8922777,
-    "seen": 1794238973.9759817,
-    "ast_hash": "4fee091f508ef19ccf71178055ee6c18",
-    "semantic_hash": "4fee091f508ef19ccf71178055ee6c18"
+    "mtime": 1794384833.689773,
+    "seen": 1794385446.9554513,
+    "ast_hash": "6459041162a7cde0a0d29d61c775d6ab",
+    "semantic_hash": ""
   },
   "src/components/AddCreditSaleDialog.tsx": {
     "mtime": 1793552516.4613497,
@@ -193,10 +193,10 @@
     "semantic_hash": "c8c0575404a90cc4414f32422f4df595"
   },
   "src/components/LocalPurchaseWindow.tsx": {
-    "mtime": 1792902613.8107834,
-    "seen": 1794238973.9779034,
-    "ast_hash": "9898ed0959dde3803b9eb8e120807a55",
-    "semantic_hash": "9898ed0959dde3803b9eb8e120807a55"
+    "mtime": 1794465664.8526528,
+    "seen": 1794465741.612291,
+    "ast_hash": "a41c13a9d9217b80ed2ff65edfbdc07a",
+    "semantic_hash": ""
   },
   "src/components/LoyaltyRedemptionDialog.tsx": {
     "mtime": 1790401030.4797146,
@@ -277,9 +277,9 @@
     "semantic_hash": "cecd17903db0f90caa1ac6b45b6d2675"
   },
   "src/components/Sidebar.tsx": {
-    "mtime": 1794302598.0958486,
-    "seen": 1794302639.3749764,
-    "ast_hash": "4d25eba3f67801ca676ae9e8302196b3",
+    "mtime": 1794384920.8175657,
+    "seen": 1794385446.960508,
+    "ast_hash": "f6088cfeb1187fe70a3d9f9d0b4a6bfd",
     "semantic_hash": ""
   },
   "src/components/StockTransferDialog.tsx": {
@@ -625,9 +625,9 @@
     "semantic_hash": "5bff9ea3904b15a9e1908b128c88e75f"
   },
   "src/context/AppContext.tsx": {
-    "mtime": 1794286330.8525205,
-    "seen": 1794302639.3933837,
-    "ast_hash": "a2fdd74fc57a762a9a9bd86b9fea957a",
+    "mtime": 1794465302.820837,
+    "seen": 1794465741.6219492,
+    "ast_hash": "198ffd3ef89d9201d228a3bb266576cc",
     "semantic_hash": ""
   },
   "src/context/AppProviderWithPriceDialog.tsx": {
@@ -703,10 +703,10 @@
     "semantic_hash": "a0a3c408dd9b4dd43f25e988b4e9081f"
   },
   "src/pages/CreditInvoices.tsx": {
-    "mtime": 1794037190.4531522,
-    "seen": 1794238973.9897563,
-    "ast_hash": "bea48dc780668525458fe16bb835b2d8",
-    "semantic_hash": "bea48dc780668525458fe16bb835b2d8"
+    "mtime": 1794465209.4920309,
+    "seen": 1794465741.6235402,
+    "ast_hash": "e533c4fef8f237ad53ddf50fa251df6a",
+    "semantic_hash": ""
   },
   "src/pages/CreditOutstanding.tsx": {
     "mtime": 1793889711.5077765,
@@ -727,10 +727,10 @@
     "semantic_hash": "c11af3fa7448b580937ccc72a7ba0a8b"
   },
   "src/pages/DailySales.tsx": {
-    "mtime": 1794037009.5637722,
-    "seen": 1794238973.9903007,
-    "ast_hash": "5d156ce7d599ebb9690ba9860863c5b4",
-    "semantic_hash": "5d156ce7d599ebb9690ba9860863c5b4"
+    "mtime": 1794465487.8303523,
+    "seen": 1794465741.6239297,
+    "ast_hash": "87a388e517671bedd80994f17981fd2f",
+    "semantic_hash": ""
   },
   "src/pages/Expenses.tsx": {
     "mtime": 1793766112.1058686,
@@ -775,9 +775,9 @@
     "semantic_hash": "a976bc2bdae4b91634d95b411e846b94"
   },
   "src/pages/POS.tsx": {
-    "mtime": 1794284600.5748205,
-    "seen": 1794284637.278187,
-    "ast_hash": "dab749027da64b3b022f77ece781eba5",
+    "mtime": 1794465205.1999843,
+    "seen": 1794465741.6248403,
+    "ast_hash": "5c4167ff82bf37fef22e61f39771334f",
     "semantic_hash": ""
   },
   "src/pages/Products.tsx": {
@@ -883,10 +883,10 @@
     "semantic_hash": "b929fe21c5181a8c60da56bd1042aeaa"
   },
   "src/utils/invoicePrintHelper.ts": {
-    "mtime": 1794037190.6298482,
-    "seen": 1794238973.9943128,
-    "ast_hash": "374f264b7d69305351366f516d505f1b",
-    "semantic_hash": "374f264b7d69305351366f516d505f1b"
+    "mtime": 1794465315.7061532,
+    "seen": 1794465741.6271095,
+    "ast_hash": "bb4bd0e99f8c4599ace7e7766eefd7ca",
+    "semantic_hash": ""
   },
   "src/utils/posShortcuts.ts": {
     "mtime": 1793553903.91913,
@@ -1102,6 +1102,18 @@
     "mtime": 1792902439.653562,
     "seen": 1794243223.2476597,
     "ast_hash": "b090e1afe28602aa8cc0f3d3b929ca6e",
+    "semantic_hash": ""
+  },
+  "src/components/AppCloseConfirmDialog.tsx": {
+    "mtime": 1794384909.6690142,
+    "seen": 1794385446.9562159,
+    "ast_hash": "7dcbeac84635f1dafdff287453cbd79f",
+    "semantic_hash": ""
+  },
+  "src/components/SaleReturnDialog.tsx": {
+    "mtime": 1794465429.5762396,
+    "seen": 1794465741.6141553,
+    "ast_hash": "6c771ae6816ce215550e3353ed48a103",
     "semantic_hash": ""
   },
   "package-lock.json": {

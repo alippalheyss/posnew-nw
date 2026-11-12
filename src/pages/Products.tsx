@@ -741,7 +741,7 @@ const Products = () => {
             <p className="text-xs text-muted-foreground">Try changing the search query or inventory filter tabs.</p>
           </div>
         ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 pb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 pb-6">
             {displayProducts.map((product) => {
                const margin = calculateProfitMargin(product);
                const isSelected = selectedProductIds.includes(product.id);
@@ -757,12 +757,12 @@ const Products = () => {
                  <Card 
                    key={product.id} 
                    className={cn(
-                     "bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/50 transition-all group flex flex-col justify-between shadow-xs",
+                     "bg-card border border-border/80 rounded-xl overflow-hidden hover:border-primary/50 hover:shadow-md transition-all group flex flex-col justify-between shadow-xs",
                      isSelected && "ring-2 ring-primary border-primary bg-primary/5"
                    )}
                  >
                    <CardContent className="p-0">
-                      <div className="relative aspect-square bg-muted flex items-center justify-center overflow-hidden">
+                      <div className="relative aspect-[4/3] bg-muted flex items-center justify-center overflow-hidden">
                         {product.image ? (
                           <img 
                             src={getAdaptedImageUrl(product.image, product.name_en || product.name_dv, product.item_code)} 
@@ -774,30 +774,30 @@ const Products = () => {
                             }}
                           />
                         ) : (
-                          <Package className="h-12 w-12 text-muted-foreground/40" />
+                          <Package className="h-10 w-10 text-muted-foreground/40" />
                         )}
                         
-                        <div className="absolute top-2 right-2 flex items-center gap-1.5 z-10">
+                        <div className="absolute top-1.5 right-1.5 flex items-center gap-1 z-10">
                            <input 
                              type="checkbox" 
                              checked={isSelected} 
                              onChange={() => handleSelectProduct(product.id)}
-                             className="h-4 w-4 rounded accent-primary cursor-pointer shadow-sm"
+                             className="h-3.5 w-3.5 rounded accent-primary cursor-pointer shadow-sm"
                            />
                            <button 
                              type="button" 
                              onClick={(e) => handleToggleFavorite(product.id, e)}
-                             className={cn("p-1.5 rounded-lg bg-black/40 backdrop-blur-md border border-white/20 text-white hover:text-yellow-400 transition-colors", favoriteProductIds.includes(product.id) && "text-yellow-400 fill-yellow-400")}
+                             className={cn("p-1 rounded-md bg-black/40 backdrop-blur-md border border-white/20 text-white hover:text-yellow-400 transition-colors", favoriteProductIds.includes(product.id) && "text-yellow-400 fill-yellow-400")}
                            >
-                             <Star className={cn("h-3.5 w-3.5", favoriteProductIds.includes(product.id) && "fill-current")} />
+                             <Star className={cn("h-3 w-3", favoriteProductIds.includes(product.id) && "fill-current")} />
                            </button>
                         </div>
 
-                        <div className="absolute top-2 left-2 flex items-center gap-1 z-10">
+                        <div className="absolute top-1.5 left-1.5 flex items-center gap-1 z-10">
                            <DropdownMenu>
                              <DropdownMenuTrigger asChild>
-                               <Button variant="ghost" size="icon" className="h-7 w-7 bg-black/30 text-white hover:bg-black/50 backdrop-blur-md border border-white/20 rounded-lg">
-                                 <MoreVertical className="h-4 w-4" />
+                               <Button variant="ghost" size="icon" className="h-6 w-6 bg-black/30 text-white hover:bg-black/50 backdrop-blur-md border border-white/20 rounded-md">
+                                 <MoreVertical className="h-3.5 w-3.5" />
                                </Button>
                              </DropdownMenuTrigger>
                              <DropdownMenuContent className="bg-card border-border text-foreground !z-[110]" dir="rtl">
@@ -818,65 +818,65 @@ const Products = () => {
                              size="icon" 
                              title="Find Image Online (ފޮޓޯ ހޯދާ)" 
                              onClick={(e) => { e.stopPropagation(); setOnlineImageProduct(product); }}
-                             className="h-7 w-7 bg-black/30 text-white hover:bg-amber-500 hover:text-white backdrop-blur-md border border-white/20 rounded-lg transition-colors"
+                             className="h-6 w-6 bg-black/30 text-white hover:bg-amber-500 hover:text-white backdrop-blur-md border border-white/20 rounded-md transition-colors"
                            >
-                             <Sparkles className="h-3.5 w-3.5 text-amber-400 hover:text-white" />
+                             <Sparkles className="h-3 w-3 text-amber-400 hover:text-white" />
                            </Button>
                         </div>
 
                         {/* Status Badges Overlay */}
-                        <div className="absolute bottom-2 right-2 flex flex-wrap gap-1 z-10 pointer-events-none">
+                        <div className="absolute bottom-1.5 right-1.5 flex flex-wrap gap-1 z-10 pointer-events-none">
                           {product.is_zero_tax ? (
-                            <span className="bg-emerald-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm">
+                            <span className="bg-emerald-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-sm">
                               0% GST
                             </span>
                           ) : (
-                            <span className="bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm">
+                            <span className="bg-blue-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-sm">
                               {settings.shop?.taxRate || 8}% GST
                             </span>
                           )}
                           {neverSold ? (
-                            <span className="bg-purple-600/90 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm">
+                            <span className="bg-purple-600/90 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-sm">
                               Never Sold
                             </span>
                           ) : unsold30d ? (
-                            <span className="bg-amber-600/90 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm">
+                            <span className="bg-amber-600/90 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-sm">
                               Unsold &gt;30d
                             </span>
                           ) : null}
                           {isMinusStock ? (
-                            <span className="bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm animate-pulse">
+                            <span className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded shadow-sm animate-pulse">
                               Minus Stock
                             </span>
                           ) : null}
                         </div>
                       </div>
 
-                      <div className="p-3 text-right cursor-pointer" onClick={() => handleEditClick(product)}>
-                         <div className="flex items-center justify-between gap-1.5 mb-1.5">
-                            <span className="font-mono text-[10px] font-black text-primary bg-primary/10 border border-primary/25 px-1.5 py-0.5 rounded-md tracking-wider shrink-0 select-all" title={t('item_code') || "Item Code"}>
+                      <div className="p-2.5 text-right cursor-pointer" onClick={() => handleEditClick(product)}>
+                         <div className="flex items-center justify-between gap-1 mb-1">
+                            <span className="font-mono text-[9px] font-black text-primary bg-primary/10 border border-primary/25 px-1.5 py-0.5 rounded tracking-wider shrink-0 select-all" title={t('item_code') || "Item Code"}>
                               #{product.item_code || '---'}
                             </span>
                             {product.barcode && product.barcode !== product.item_code && (
-                              <span className="text-[9px] font-mono text-muted-foreground/80 truncate max-w-[100px]" title={`Barcode: ${product.barcode}`}>
+                              <span className="text-[9px] font-mono text-muted-foreground/80 truncate max-w-[90px]" title={`Barcode: ${product.barcode}`}>
                                 {product.barcode}
                               </span>
                             )}
                          </div>
-                         <h3 className="text-xs sm:text-sm font-black text-foreground leading-tight mb-0.5 truncate">{product.name_dv}</h3>
-                         <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider truncate font-mono">{product.name_en}</p>
+                         <h3 className="text-xs font-black text-foreground leading-snug mb-0.5 truncate">{product.name_dv}</h3>
+                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider truncate font-mono">{product.name_en}</p>
                          
-                         <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-border/50">
+                         <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-border/50">
                             <div className="text-right">
-                              <div className="flex items-center gap-1.5 justify-end">
-                                <span className="text-xs sm:text-sm font-black text-primary font-mono">{settings.shop.currency} {product.price.toFixed(2)}</span>
+                              <div className="flex items-center gap-1 justify-end">
+                                <span className="text-xs font-black text-primary font-mono">{settings.shop.currency} {product.price.toFixed(2)}</span>
                                 {product.is_zero_tax ? (
-                                  <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[9px] font-black px-1 py-0 h-4">
-                                    0% GST
+                                  <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[8px] font-black px-1 py-0 h-3.5">
+                                    0%
                                   </Badge>
                                 ) : (
-                                  <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[9px] font-black px-1 py-0 h-4">
-                                    {settings.shop?.taxRate || 8}% GST
+                                  <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 text-[8px] font-black px-1 py-0 h-3.5">
+                                    {settings.shop?.taxRate || 8}%
                                   </Badge>
                                 )}
                               </div>
@@ -890,7 +890,7 @@ const Products = () => {
                             </div>
                             <div className="flex flex-col items-end">
                               <span className={cn(
-                                "text-[10px] font-black px-1.5 py-0.5 rounded-md font-mono",
+                                "text-[9px] font-black px-1.5 py-0.5 rounded font-mono",
                                 isMinusStock 
                                   ? "bg-red-500/20 text-red-500 border border-red-500/30" 
                                   : currentStock < 10 

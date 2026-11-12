@@ -1052,33 +1052,25 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
     bankNotificationsRef.current = bankNotifications;
   }, [bankNotifications]);
 
-  const lastProcessedWebhookSigRef = useRef<string>(
-    typeof window !== 'undefined' ? localStorage.getItem('pos_last_bank_webhook_sig') || '' : ''
-  );
-  const seenWebhookSigsRef = useRef<Set<string>>(
-    new Set(
-      typeof window !== 'undefined'
-        ? (() => {
-            try {
-              const saved = localStorage.getItem('pos_seen_bank_webhook_sigs');
-              return saved ? JSON.parse(saved) : [];
-            } catch {
-              return [];
-            }
-          })()
-        : []
-    )
-  );
+  const recentWebhookTimeByContentRef = useRef<Map<string, number>>(new Map());
 
-  const markWebhookSigSeen = useCallback((sig: string) => {
-    lastProcessedWebhookSigRef.current = sig;
-    seenWebhookSigsRef.current.add(sig);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('pos_last_bank_webhook_sig', sig);
-        const arr = Array.from(seenWebhookSigsRef.current).slice(-100);
-        localStorage.setItem('pos_seen_bank_webhook_sigs', JSON.stringify(arr));
-      } catch {}
+  const consumeBankWebhookInCloud = useCallback(async (rowId?: string, consumedSettings?: any) => {
+    if (!supabase) return;
+    try {
+      const targetId = rowId || BANK_WEBHOOK_ROW_ID;
+      await supabase
+        .from('settings')
+        .update({
+          settings: {
+            ...(consumedSettings || {}),
+            _consumed: true,
+            _consumedAt: new Date().toISOString(),
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', targetId);
+    } catch {
+      // Ignore background consume errors
     }
   }, []);
 
@@ -1131,54 +1123,81 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
   }, []);
 
   const handleIncomingBankWebhook = useCallback(
-    (rawPayload: any, options?: { silent?: boolean }) => {
-      if (!rawPayload || (!rawPayload.body && !rawPayload.text && !rawPayload.title && !rawPayload.message && !rawPayload.big_text)) return;
+    (rawPayload: any, options?: { silent?: boolean; rowId?: string }) => {
+      if (!rawPayload || rawPayload._consumed === true) return;
+      if (!rawPayload.body && !rawPayload.text && !rawPayload.title && !rawPayload.message && !rawPayload.big_text) return;
+
       const parsed = parseBankNotificationPayload(rawPayload);
       if (!parsed.body && (!parsed.title || parsed.title === 'Bank Alert')) return;
 
-      const hasExplicitTimestamp = !isNaN(Number(rawPayload.timestamp)) && Number(rawPayload.timestamp) > 1000000000;
       const contentSig = `${parsed.title.trim().toLowerCase()}|${parsed.body.trim().toLowerCase()}`;
-      const sig = `${contentSig}|${hasExplicitTimestamp ? rawPayload.timestamp : rawPayload._rowUpdatedAt || ''}`;
+      const nowMs = Date.now();
+      const currentList = bankNotificationsRef.current || [];
 
-      if (lastProcessedWebhookSigRef.current === sig || seenWebhookSigsRef.current.has(sig) || seenWebhookSigsRef.current.has(contentSig)) {
-        markWebhookSigSeen(sig);
-        markWebhookSigSeen(contentSig);
+      // On initial silent startup load, if this unconsumed webhook's text already exists in our log,
+      // simply mark the webhook row as consumed in cloud so future transfers aren't confused with it.
+      if (options?.silent) {
+        const alreadyInLog = currentList.some(
+          (existing) =>
+            existing.body.trim().toLowerCase() === parsed.body.trim().toLowerCase() &&
+            existing.title.trim().toLowerCase() === parsed.title.trim().toLowerCase()
+        );
+        if (alreadyInLog) {
+          consumeBankWebhookInCloud(options.rowId, rawPayload);
+          return;
+        }
+      }
+
+      // Guard against the exact same push arriving twice within 15 seconds (e.g. Realtime + 6s poll)
+      const lastSeenMs = recentWebhookTimeByContentRef.current.get(contentSig) || 0;
+      if (nowMs - lastSeenMs < 15000) {
+        consumeBankWebhookInCloud(options?.rowId, rawPayload);
         return;
       }
 
-      const currentList = bankNotificationsRef.current || [];
-      const isDuplicate = currentList.some(
-        (existing) =>
-          existing.id === parsed.id ||
-          (existing.body.trim().toLowerCase() === parsed.body.trim().toLowerCase() &&
-            existing.title.trim().toLowerCase() === parsed.title.trim().toLowerCase())
-      );
+      const isRecentDuplicate = currentList.some((existing) => {
+        if (existing.id === parsed.id) return true;
+        const sameText =
+          existing.body.trim().toLowerCase() === parsed.body.trim().toLowerCase() &&
+          existing.title.trim().toLowerCase() === parsed.title.trim().toLowerCase();
+        if (!sameText) return false;
+        const tEx = new Date(existing.receivedAt).getTime();
+        return !isNaN(tEx) && Math.abs(nowMs - tEx) < 15000;
+      });
 
-      markWebhookSigSeen(sig);
-      markWebhookSigSeen(contentSig);
-      if (isDuplicate) return;
+      recentWebhookTimeByContentRef.current.set(contentSig, nowMs);
+      consumeBankWebhookInCloud(options?.rowId, rawPayload);
+      if (isRecentDuplicate) return;
 
-      const next = deduplicateBankNotifications([parsed, ...currentList]);
+      const freshNotification: BankNotification = {
+        ...parsed,
+        receivedAt: new Date(nowMs).toISOString(),
+        status: 'unclaimed',
+      };
+
+      const next = deduplicateBankNotifications([freshNotification, ...currentList]);
       bankNotificationsRef.current = next;
       setBankNotifications(next);
       syncBankNotificationsToCloud(next);
 
-      // Only show live popup & chime if not a silent initial sync and notification is recent (< 90s)
-      const rowAgeMs = rawPayload._rowUpdatedAt ? Date.now() - new Date(rawPayload._rowUpdatedAt).getTime() : 0;
-      const isStaleWebhook = !isNaN(rowAgeMs) && rowAgeMs > 90000;
-      if (!options?.silent && !isStaleWebhook) {
-        setActiveTopBankAlert(parsed);
+      if (!options?.silent) {
+        setActiveTopBankAlert(freshNotification);
         if (topBankAlertTimerRef.current) clearTimeout(topBankAlertTimerRef.current);
         topBankAlertTimerRef.current = setTimeout(() => {
           setActiveTopBankAlert(null);
-        }, 4500);
+        }, 5000);
 
         playBankAlertChime();
-        const amtText = parsed.amount !== null ? `${parsed.currency} ${parsed.amount.toFixed(2)}` : parsed.title;
-        showSuccess(`🏦 Bank Transfer Received: ${amtText}${parsed.senderOrRef ? ` (${parsed.senderOrRef})` : ''}`);
+        const amtText =
+          freshNotification.amount !== null
+            ? `${freshNotification.currency} ${freshNotification.amount.toFixed(2)}`
+            : freshNotification.title;
+        showSuccess(
+          `🏦 Bank Transfer Received: ${amtText}${freshNotification.senderOrRef ? ` (${freshNotification.senderOrRef})` : ''}`
+        );
       }
     },
-    [markWebhookSigSeen, playBankAlertChime, syncBankNotificationsToCloud]
+    [consumeBankWebhookInCloud, playBankAlertChime, syncBankNotificationsToCloud]
   );
 
   const isSyncingBankWebhooksRef = useRef(false);
@@ -1231,17 +1250,23 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
       // 2. Process bank_webhook_incoming and any queued bank_webhook_* rows
       const webhookRows = data
-        .filter((r: any) => r.category === 'bank_webhook_incoming' || (typeof r.category === 'string' && r.category.startsWith('bank_webhook_') && r.category !== 'bank_notifications_log'))
+        .filter(
+          (r: any) =>
+            r.category === 'bank_webhook_incoming' ||
+            (typeof r.category === 'string' &&
+              r.category.startsWith('bank_webhook_') &&
+              r.category !== 'bank_notifications_log')
+        )
         .sort((a: any, b: any) => new Date(a.updated_at || 0).getTime() - new Date(b.updated_at || 0).getTime());
 
       for (const row of webhookRows) {
-        if (row.settings) {
+        if (row.settings && row.settings._consumed !== true) {
           if (Array.isArray(row.settings.queue)) {
             row.settings.queue.forEach((item: any) =>
-              handleIncomingBankWebhook({ ...item, _rowUpdatedAt: row.updated_at })
+              handleIncomingBankWebhook({ ...item, _rowUpdatedAt: row.updated_at }, { rowId: row.id })
             );
           } else {
-            handleIncomingBankWebhook({ ...row.settings, _rowUpdatedAt: row.updated_at });
+            handleIncomingBankWebhook({ ...row.settings, _rowUpdatedAt: row.updated_at }, { rowId: row.id });
           }
           // Clean up one-off queued webhook rows (keep primary bank_webhook_incoming row)
           if (row.category !== 'bank_webhook_incoming' && row.id) {
@@ -2010,8 +2035,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
             (typeof r.category === 'string' && r.category.startsWith('bank_webhook_') && r.category !== 'bank_notifications_log')
         );
         webhookRows.forEach((row: any) => {
-          if (row.settings) {
-            handleIncomingBankWebhook({ ...row.settings, _rowUpdatedAt: row.updated_at }, { silent: true });
+          if (row.settings && row.settings._consumed !== true) {
+            handleIncomingBankWebhook({ ...row.settings, _rowUpdatedAt: row.updated_at }, { silent: true, rowId: row.id });
           }
         });
 
@@ -2161,7 +2186,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
         const row = payload.new as any;
         if (row && row.category && row.settings) {
           if (row.category === 'bank_webhook_incoming') {
-            handleIncomingBankWebhook({ ...row.settings, _rowUpdatedAt: row.updated_at });
+            if (row.settings._consumed !== true) {
+              handleIncomingBankWebhook({ ...row.settings, _rowUpdatedAt: row.updated_at }, { rowId: row.id });
+            }
             return;
           }
           if (row.category === 'bank_notifications_log') {

@@ -1331,139 +1331,237 @@ const CreditOutstanding = () => {
 
       {/* Customers List */}
       <ScrollArea className="flex-1 custom-scrollbar">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 pb-6">
-          {filteredCustomers.slice(0, visibleCount).map((customer) => (
-            <Card key={customer.id} className="apple-glass-card border border-white/20 dark:border-white/10 hover:border-primary/40 transition-all rounded-[2rem] overflow-hidden group shadow-sm hover:shadow-lg">
-               <CardContent className="p-0">
-                  <div className="p-6">
-                     <div className="flex justify-between items-start mb-6">
-                        <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-110 transition-all">
-                           <User className="h-6 w-6" />
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          {customer.credit_limit > 0 && (customer.outstanding_balance >= customer.credit_limit * 0.9) && (
-                            <Badge className="bg-red-500/15 text-red-500 border border-red-500/30 text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-6" dir="ltr">
+          {filteredCustomers.slice(0, visibleCount).map((customer) => {
+            const due = Number(customer.outstanding_balance || 0);
+            const limit = Number(customer.credit_limit || 0);
+            const usagePct = limit > 0 ? Math.round((due / limit) * 100) : 0;
+            const isOverLimit = limit > 0 && due > limit;
+            const isNearLimit = limit > 0 && due >= limit * 0.9;
+            const isRevealed = revealedTotals.has(customer.id);
+            const lastSettlement =
+              customer.settlement_history && customer.settlement_history.length > 0
+                ? customer.settlement_history[customer.settlement_history.length - 1]
+                : null;
+            const initials = (customer.name_en || customer.name_dv || 'C')
+              .trim()
+              .split(/\s+/)
+              .slice(0, 2)
+              .map((w) => w[0])
+              .join('')
+              .toUpperCase();
+
+            return (
+              <Card
+                key={customer.id}
+                className={cn(
+                  "bg-card/95 backdrop-blur-md border rounded-2xl overflow-hidden group transition-all duration-200 hover:shadow-lg flex flex-col justify-between",
+                  isOverLimit
+                    ? "border-red-500/35 hover:border-red-500/60"
+                    : isNearLimit
+                      ? "border-amber-500/35 hover:border-amber-500/60"
+                      : "border-border/80 hover:border-primary/40"
+                )}
+              >
+                <CardContent className="p-4 flex flex-col gap-3">
+                  {/* Top Row: Avatar + Name/Code + Quick Print/PDF Icons */}
+                  <div className="flex items-start justify-between gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div
+                        className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 border transition-transform group-hover:scale-105",
+                          isOverLimit
+                            ? "bg-red-500/15 text-red-500 border-red-500/30"
+                            : due > 0
+                              ? "bg-primary/12 text-primary border-primary/25"
+                              : "bg-emerald-500/12 text-emerald-500 border-emerald-500/25"
+                        )}
+                      >
+                        {initials || <User className="h-4 w-4" />}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-mono text-[10px] font-black text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded-md uppercase tracking-wider shrink-0">
+                            {customer.code}
+                          </span>
+                          {isNearLimit && (
+                            <Badge className="bg-red-500/15 text-red-500 border border-red-500/30 text-[9px] font-black px-1.5 py-0 h-4 rounded-md uppercase tracking-wider flex items-center gap-0.5">
                               <AlertCircle className="h-2.5 w-2.5" />
-                              {Math.round((customer.outstanding_balance / customer.credit_limit) * 100)}% LIMIT
+                              {usagePct}% LIMIT
                             </Badge>
                           )}
-                          <Badge className="bg-primary/20 text-primary border-none text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">{customer.code}</Badge>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenPdfPreview(customer);
-                            }}
-                            className="h-8 w-8 rounded-xl bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500 hover:text-white transition-all text-amber-600 dark:text-amber-400 shadow-xs"
-                            title="View & Download Customer Outstanding PDF (ޕީޑީއެފް ސްޓޭޓްމަންޓް ބައްލަވާ / ޑައުންލޯޑް)"
-                          >
-                            <FileText className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handlePrintCustomerTotal(customer);
-                            }}
-                            className="h-8 w-8 rounded-xl bg-muted/80 border border-border/70 hover:bg-primary hover:text-primary-foreground transition-all text-muted-foreground shadow-xs"
-                            title="Print Customer Total Slip (ކަސްޓަމަރުގެ ދަރަނި ސްލިޕް ޕްރިންޓްކުރައްވާ)"
-                          >
-                            <Printer className="h-3.5 w-3.5" />
-                          </Button>
                         </div>
-                     </div>
-
-                     <div className="text-right mb-6">
-                        <h3 className="text-xl font-black text-foreground leading-tight mb-1">{customer.name_dv}</h3>
-                        <p className="text-xs sm:text-[13px] font-bold text-muted-foreground uppercase tracking-wider">{customer.name_en}</p>
-                     </div>
-
-                     <div className="bg-red-500/5 p-4 rounded-2xl border border-red-500/10 mb-6 text-right group-hover:bg-red-500/10 transition-all">
-                        <p className="text-[9px] font-black text-red-500/60 uppercase tracking-widest mb-1">Total Due</p>
-                        <div className="flex justify-between items-end mb-1">
-                          <span className={cn(
-                            "text-2xl font-black cursor-pointer transition-all duration-300",
-                            customer.outstanding_balance > (customer.credit_limit || 0) ? "text-red-500" : "text-foreground",
-                            !revealedTotals.has(customer.id) && "blur-md select-none"
-                          )} onClick={() => toggleTotalReveal(customer.id)}>
-                            {settings.shop.currency} {(customer.outstanding_balance || 0).toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="space-y-1.5 mt-3">
-                          <Progress value={Math.min(100, (customer.outstanding_balance / (customer.credit_limit || 1)) * 100)} className="h-1.5 bg-muted" />
-                          <div className="flex justify-between text-xs font-bold text-muted-foreground uppercase tracking-tight">
-                             <span>Limit: {settings.shop.currency} {customer.credit_limit.toFixed(2)}</span>
-                             <span>{Math.round((customer.outstanding_balance / (customer.credit_limit || 1)) * 100)}% Used</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground/80 mt-2 font-bold">
-                           <Clock className="h-3.5 w-3.5" />
-                           <span>LAST SETTLED: {customer.settlement_history.length > 0 ? formatDate(customer.settlement_history[customer.settlement_history.length - 1].date) : 'NONE'}</span>
-                        </div>
-                     </div>
-
-                     <div className="grid grid-cols-3 gap-2">
-                        <Button 
-                          onClick={() => handleSettlePaymentClick(customer)}
-                          className="bg-primary hover:bg-primary/90 text-white text-xs font-black h-10 rounded-xl transition-all uppercase px-1 shadow-md shadow-primary/20"
-                        >
-                          SETTLE
-                        </Button>
-                        <Button 
-                          variant="ghost"
-                          onClick={() => handleViewSettlementHistory(customer)}
-                          className="bg-muted hover:bg-muted/80 text-foreground text-xs font-black h-10 rounded-xl border border-border transition-all uppercase px-1"
-                        >
-                          HISTORY
-                        </Button>
-                        <Button 
-                          variant="ghost"
-                          onClick={() => handleViewCreditPurchases(customer)}
-                          className="bg-muted hover:bg-muted/80 text-foreground text-xs font-black h-10 rounded-xl border border-border transition-all uppercase px-1"
-                        >
-                          DETAILS
-                        </Button>
-                     </div>
-
-                      <div className="space-y-1.5 mt-2">
-                        <Button
-                           type="button"
-                           onClick={() => handleOpenPdfPreview(customer)}
-                           className="w-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[10px] font-black h-9 rounded-xl transition-all gap-2 flex items-center justify-center active:scale-95"
-                        >
-                           <FileText className="h-3.5 w-3.5" />
-                           <span>View & Download PDF Statement (ޕީޑީއެފް ސްޓޭޓްމަންޓް)</span>
-                        </Button>
-
-                        <Button
-                           type="button"
-                           onClick={() => handleSendCustomerTelegram(customer)}
-                           disabled={isSendingTelegram === customer.id}
-                           className="w-full bg-[#229ED9]/15 hover:bg-[#229ED9]/25 text-[#229ED9] border border-[#229ED9]/30 text-[10px] font-black h-9 rounded-xl transition-all gap-2 flex items-center justify-center active:scale-95"
-                        >
-                           {isSendingTelegram === customer.id ? (
-                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                           ) : (
-                             <TelegramIcon className="h-3.5 w-3.5 fill-current" />
-                           )}
-                           <span>{customer.telegram_chat_id ? 'Send via Telegram (ޓެލެގްރާމް)' : 'Link Telegram to Send Statement'}</span>
-                        </Button>
-
-                        <Button
-                           type="button"
-                           onClick={() => handleShareCustomerViber(customer)}
-                           className="w-full bg-[#7360F2]/15 hover:bg-[#7360F2]/25 text-[#7360F2] border border-[#7360F2]/30 text-[10px] font-black h-9 rounded-xl transition-all gap-2 flex items-center justify-center active:scale-95"
-                        >
-                           <ViberIcon className="h-3.5 w-3.5 fill-current" />
-                           <span>Send Statement via Viber (ވައިބަރ)</span>
-                        </Button>
+                        <h3 className="text-sm font-black text-foreground leading-snug truncate mt-1" title={customer.name_en || customer.name_dv}>
+                          {customer.name_en || customer.name_dv}
+                        </h3>
+                        {customer.name_dv && (
+                          <p className="text-xs font-bold text-muted-foreground truncate font-faruma" dir="rtl">
+                            {customer.name_dv}
+                          </p>
+                        )}
                       </div>
+                    </div>
+
+                    {/* Top Utility Buttons: PDF Statement & Thermal Total Slip */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenPdfPreview(customer);
+                        }}
+                        className="h-7 w-7 rounded-lg bg-amber-500/12 border border-amber-500/25 hover:bg-amber-500 hover:text-white transition-all text-amber-600 dark:text-amber-400"
+                        title="View & Download Customer Outstanding PDF (ޕީޑީއެފް ސްޓޭޓްމަންޓް)"
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePrintCustomerTotal(customer);
+                        }}
+                        className="h-7 w-7 rounded-lg bg-muted/80 border border-border/70 hover:bg-primary hover:text-primary-foreground transition-all text-muted-foreground"
+                        title="Print Customer Total Slip (ކަސްޓަމަރުގެ ދަރަނި ސްލިޕް ޕްރިންޓްކުރައްވާ)"
+                      >
+                        <Printer className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
-               </CardContent>
-            </Card>
-          ))}
+
+                  {/* Middle Box: Total Due + Credit Limit Progress + Last Settled */}
+                  <div
+                    onClick={() => toggleTotalReveal(customer.id)}
+                    className={cn(
+                      "p-3 rounded-xl border transition-all cursor-pointer select-none",
+                      isOverLimit
+                        ? "bg-red-500/8 border-red-500/25 hover:bg-red-500/12"
+                        : "bg-muted/40 border-border/70 hover:bg-muted/60"
+                    )}
+                    title={isRevealed ? "Click to hide balance" : "Click to reveal balance"}
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                        <span>TOTAL DUE</span>
+                        {isRevealed ? (
+                          <EyeOff className="h-2.5 w-2.5 text-muted-foreground/70" />
+                        ) : (
+                          <Eye className="h-2.5 w-2.5 text-muted-foreground/70" />
+                        )}
+                      </span>
+                      <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1">
+                        <Clock className="h-2.5 w-2.5 text-primary/70" />
+                        <span>
+                          {lastSettlement ? formatDate(lastSettlement.date) : 'No settlement'}
+                        </span>
+                      </span>
+                    </div>
+
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span
+                        className={cn(
+                          "text-xl font-black font-mono tracking-tight transition-all duration-200",
+                          isOverLimit ? "text-red-500" : due > 0 ? "text-foreground" : "text-emerald-500",
+                          !isRevealed && "blur-md select-none"
+                        )}
+                      >
+                        {settings.shop.currency} {due.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                      <span className={cn(
+                        "text-[10px] font-black font-mono px-1.5 py-0.5 rounded",
+                        isOverLimit
+                          ? "bg-red-500/15 text-red-500"
+                          : usagePct >= 75
+                            ? "bg-amber-500/15 text-amber-500"
+                            : "bg-muted text-muted-foreground"
+                      )}>
+                        {usagePct}% Used
+                      </span>
+                    </div>
+
+                    <div className="mt-2 space-y-1">
+                      <Progress
+                        value={Math.min(100, (due / (limit || 1)) * 100)}
+                        className="h-1.5 bg-background/80"
+                      />
+                      <div className="flex items-center justify-between text-[10px] font-bold text-muted-foreground">
+                        <span>Credit Limit: <strong className="font-mono text-foreground/80">{settings.shop.currency} {limit.toFixed(0)}</strong></span>
+                        {customer.phone && (
+                          <span className="font-mono text-muted-foreground/80">📞 {customer.phone}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Primary Action Row: Settle | History | Details */}
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <Button
+                      onClick={() => handleSettlePaymentClick(customer)}
+                      className="bg-primary hover:bg-primary/90 text-white text-[11px] font-black h-8.5 rounded-xl transition-all uppercase px-2 shadow-xs gap-1"
+                    >
+                      <DollarSign className="h-3.5 w-3.5 shrink-0" />
+                      <span>Settle</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleViewSettlementHistory(customer)}
+                      className="bg-card hover:bg-muted text-foreground text-[11px] font-black h-8.5 rounded-xl border-border/80 transition-all uppercase px-2"
+                    >
+                      History
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleViewCreditPurchases(customer)}
+                      className="bg-card hover:bg-muted text-foreground text-[11px] font-black h-8.5 rounded-xl border-border/80 transition-all uppercase px-2"
+                    >
+                      Details
+                    </Button>
+                  </div>
+
+                  {/* Compact Statement & Share Row: PDF | Telegram | Viber */}
+                  <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-border/50">
+                    <Button
+                      type="button"
+                      onClick={() => handleOpenPdfPreview(customer)}
+                      className="bg-amber-500/12 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/25 text-[10px] font-black h-8 rounded-lg transition-all gap-1 flex items-center justify-center px-1.5 active:scale-95"
+                      title="View & Download PDF Statement (ޕީޑީއެފް ސްޓޭޓްމަންޓް)"
+                    >
+                      <FileText className="h-3 w-3 shrink-0" />
+                      <span className="truncate">PDF</span>
+                    </Button>
+
+                    <Button
+                      type="button"
+                      onClick={() => handleSendCustomerTelegram(customer)}
+                      disabled={isSendingTelegram === customer.id}
+                      className="bg-[#229ED9]/12 hover:bg-[#229ED9]/25 text-[#229ED9] border border-[#229ED9]/25 text-[10px] font-black h-8 rounded-lg transition-all gap-1 flex items-center justify-center px-1.5 active:scale-95"
+                      title={customer.telegram_chat_id ? 'Send Statement via Telegram' : 'Link Telegram to Send Statement'}
+                    >
+                      {isSendingTelegram === customer.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                      ) : (
+                        <TelegramIcon className="h-3 w-3 fill-current shrink-0" />
+                      )}
+                      <span className="truncate">{customer.telegram_chat_id ? 'Telegram' : 'Link TG'}</span>
+                    </Button>
+
+                    <Button
+                      type="button"
+                      onClick={() => handleShareCustomerViber(customer)}
+                      className="bg-[#7360F2]/12 hover:bg-[#7360F2]/25 text-[#7360F2] border border-[#7360F2]/25 text-[10px] font-black h-8 rounded-lg transition-all gap-1 flex items-center justify-center px-1.5 active:scale-95"
+                      title="Send Statement via Viber (ވައިބަރ)"
+                    >
+                      <ViberIcon className="h-3 w-3 fill-current shrink-0" />
+                      <span className="truncate">Viber</span>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
         {filteredCustomers.length > visibleCount && (
           <div className="flex justify-center pb-8">

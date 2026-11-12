@@ -116,41 +116,51 @@ export function parseBankNotificationPayload(payload: {
     senderOrRef = `Ref: ${refMatch[1].trim()}`;
   }
 
-  // Parse timestamp or fallback to row updated_at / current time
+  // Parse explicit payload timestamp if valid and reasonable; otherwise use current arrival time.
+  // Note: MacroDroid POSTs to Supabase REST without top-level `updated_at` do not advance `row.updated_at`,
+  // and `{time_ms}` may arrive as a literal placeholder string, so we must not use stale `_rowUpdatedAt`.
   let receivedAt = '';
+  const nowMs = Date.now();
   if (payload.timestamp) {
     const tsNum = Number(payload.timestamp);
     if (!isNaN(tsNum) && tsNum > 1000000000) {
       const ms = tsNum < 10000000000 ? tsNum * 1000 : tsNum;
-      const d = new Date(ms);
-      if (!isNaN(d.getTime())) {
-        receivedAt = d.toISOString();
+      // Only trust explicit timestamp if it's within the last 24 hours and not in the far future
+      if (Math.abs(nowMs - ms) < 24 * 60 * 60 * 1000) {
+        receivedAt = new Date(ms).toISOString();
       }
-    } else if (typeof payload.timestamp === 'string' && !payload.timestamp.includes('{') && !payload.timestamp.includes('%')) {
+    } else if (
+      typeof payload.timestamp === 'string' &&
+      !payload.timestamp.includes('{') &&
+      !payload.timestamp.includes('%')
+    ) {
       const d = new Date(payload.timestamp);
-      if (!isNaN(d.getTime())) {
+      if (!isNaN(d.getTime()) && Math.abs(nowMs - d.getTime()) < 24 * 60 * 60 * 1000) {
         receivedAt = d.toISOString();
       }
     }
   }
   if (!receivedAt && payload._rowUpdatedAt) {
     const d = new Date(payload._rowUpdatedAt);
-    if (!isNaN(d.getTime())) {
+    // Only use _rowUpdatedAt if it was updated within the last 2 minutes
+    if (!isNaN(d.getTime()) && Math.abs(nowMs - d.getTime()) <= 2 * 60 * 1000) {
       receivedAt = d.toISOString();
     }
   }
   if (!receivedAt) {
-    receivedAt = new Date().toISOString();
+    receivedAt = new Date(nowMs).toISOString();
   }
 
-  // Deterministic ID based on title + body so the same webhook never creates different random IDs across refreshes/devices
-  const deterministicKey = `${rawTitle.trim().toLowerCase()}|${rawBody.trim().toLowerCase()}`;
+  // Deterministic ID scoped to a 15-second time bucket + title + body so the same push notification
+  // arriving via Realtime + poll within 15s shares one ID, while a new transfer later gets a fresh ID.
+  const bucket15s = Math.floor(new Date(receivedAt).getTime() / 15000);
+  const deterministicKey = `${rawTitle.trim().toLowerCase()}|${rawBody.trim().toLowerCase()}|${bucket15s}`;
   let hash = 2166136261;
   for (let i = 0; i < deterministicKey.length; i++) {
     hash ^= deterministicKey.charCodeAt(i);
     hash = Math.imul(hash, 16777619);
   }
-  const deterministicId = `bnotif-${(hash >>> 0).toString(36)}`;
+  const deterministicId = `bnotif-${bucket15s.toString(36)}-${(hash >>> 0).toString(36)}`;
 
   return {
     id: payload.id || deterministicId,
@@ -166,53 +176,64 @@ export function parseBankNotificationPayload(payload: {
 }
 
 /**
- * Deduplicates a list of bank notifications by ID and normalized title+body content.
- * Preserves 'verified' or 'dismissed' status over 'unclaimed' and keeps the earliest receivedAt timestamp.
+ * Deduplicates a list of bank notifications by ID or identical title+body within a 15-second window.
+ * Never merges separate transfers that arrived more than 15 seconds apart.
  */
 export function deduplicateBankNotifications(list: BankNotification[]): BankNotification[] {
   if (!Array.isArray(list) || list.length === 0) return [];
 
-  const byContentKey = new Map<string, BankNotification>();
+  const result: BankNotification[] = [];
+  const statusPriority = { verified: 3, dismissed: 2, unclaimed: 1 };
 
   for (const item of list) {
     if (!item || (!item.body && !item.title)) continue;
-    const key = `${String(item.title || '').trim().toLowerCase()}|${String(item.body || '').trim().toLowerCase()}`;
-    const existing = byContentKey.get(key);
+    const itemTitle = String(item.title || '').trim().toLowerCase();
+    const itemBody = String(item.body || '').trim().toLowerCase();
+    const tItem = new Date(item.receivedAt).getTime();
 
-    if (!existing) {
-      byContentKey.set(key, item);
+    const existingIdx = result.findIndex((existing) => {
+      if (existing.id && item.id && existing.id === item.id) return true;
+      const exTitle = String(existing.title || '').trim().toLowerCase();
+      const exBody = String(existing.body || '').trim().toLowerCase();
+      if (exTitle !== itemTitle || exBody !== itemBody) return false;
+      const tEx = new Date(existing.receivedAt).getTime();
+      if (!isNaN(tItem) && !isNaN(tEx)) {
+        return Math.abs(tItem - tEx) <= 15000;
+      }
+      return false;
+    });
+
+    if (existingIdx === -1) {
+      result.push(item);
     } else {
-      // Merge: prefer verified > dismissed > unclaimed
-      const statusPriority = { verified: 3, dismissed: 2, unclaimed: 1 };
+      const existing = result[existingIdx];
       const bestStatus =
         (statusPriority[item.status] || 1) > (statusPriority[existing.status] || 1)
           ? item.status
           : existing.status;
 
-      // Keep earliest valid receivedAt so refreshes don't bump old alerts to "Just now"
       const tExisting = new Date(existing.receivedAt).getTime();
-      const tItem = new Date(item.receivedAt).getTime();
-      const earliestReceivedAt =
+      const keptReceivedAt =
         !isNaN(tExisting) && !isNaN(tItem)
           ? tItem < tExisting
             ? item.receivedAt
             : existing.receivedAt
           : existing.receivedAt || item.receivedAt;
 
-      byContentKey.set(key, {
+      result[existingIdx] = {
         ...existing,
         ...item,
         id: existing.id || item.id,
         status: bestStatus,
-        receivedAt: earliestReceivedAt,
+        receivedAt: keptReceivedAt,
         matchedCustomerName: existing.matchedCustomerName || item.matchedCustomerName || null,
         matchedSaleId: existing.matchedSaleId || item.matchedSaleId || null,
         verifiedAt: existing.verifiedAt || item.verifiedAt || null,
-      });
+      };
     }
   }
 
-  return Array.from(byContentKey.values())
+  return result
     .sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime())
     .slice(0, 50);
 }

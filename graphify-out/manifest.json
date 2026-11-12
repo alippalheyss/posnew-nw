@@ -193,8 +193,8 @@
     "semantic_hash": "c8c0575404a90cc4414f32422f4df595"
   },
   "src/components/LocalPurchaseWindow.tsx": {
-    "mtime": 1794466931.6556103,
-    "seen": 1794467143.4866498,
+    "mtime": 1794467209.2040548,
+    "seen": 1794484691.489247,
     "ast_hash": "b7e5da6d0353bc5bba93a9a8242fb1d2",
     "semantic_hash": ""
   },
@@ -625,9 +625,9 @@
     "semantic_hash": "5bff9ea3904b15a9e1908b128c88e75f"
   },
   "src/context/AppContext.tsx": {
-    "mtime": 1794465802.236081,
-    "seen": 1794467143.5071135,
-    "ast_hash": "198ffd3ef89d9201d228a3bb266576cc",
+    "mtime": 1794484663.05964,
+    "seen": 1794484691.5050066,
+    "ast_hash": "14486ac3978e20ca796e73d01d2b9f48",
     "semantic_hash": ""
   },
   "src/context/AppProviderWithPriceDialog.tsx": {
@@ -709,10 +709,10 @@
     "semantic_hash": ""
   },
   "src/pages/CreditOutstanding.tsx": {
-    "mtime": 1793889711.5077765,
-    "seen": 1794238973.989891,
-    "ast_hash": "0b6426e7c12174249584a36c3dd11ae2",
-    "semantic_hash": "0b6426e7c12174249584a36c3dd11ae2"
+    "mtime": 1794484474.5676827,
+    "seen": 1794484691.5079682,
+    "ast_hash": "15d1ef2fd0618d5a17ca281b26cf35de",
+    "semantic_hash": ""
   },
   "src/pages/CustomerDisplay.tsx": {
     "mtime": 1788691377.6513133,
@@ -721,8 +721,8 @@
     "semantic_hash": "b78261c0a5091e6acfed03e0549bb4fc"
   },
   "src/pages/Customers.tsx": {
-    "mtime": 1794467037.9845195,
-    "seen": 1794467143.511342,
+    "mtime": 1794467209.318565,
+    "seen": 1794484691.5081518,
     "ast_hash": "16cd747a37717b5ad044f0efde198ced",
     "semantic_hash": ""
   },
@@ -781,10 +781,10 @@
     "semantic_hash": ""
   },
   "src/pages/Products.tsx": {
-    "mtime": 1793942239.215036,
-    "seen": 1794238973.9920337,
-    "ast_hash": "c70d7d3e433fb0644c503c50cc8c1b73",
-    "semantic_hash": "c70d7d3e433fb0644c503c50cc8c1b73"
+    "mtime": 1794484409.3566961,
+    "seen": 1794484691.5101745,
+    "ast_hash": "a3dcbae97edc2eefa17437cf6bb04012",
+    "semantic_hash": ""
   },
   "src/pages/Quotations.tsx": {
     "mtime": 1794037190.5823212,
@@ -805,8 +805,8 @@
     "semantic_hash": "782563fbcd9573b65baa3d8cfecdbfd0"
   },
   "src/pages/Stock.tsx": {
-    "mtime": 1794467114.2678816,
-    "seen": 1794467143.5152414,
+    "mtime": 1794467209.3955536,
+    "seen": 1794484691.5109677,
     "ast_hash": "cee6c7e7e1754057f1503729bee3549d",
     "semantic_hash": ""
   },
@@ -859,9 +859,9 @@
     "semantic_hash": "68ad72d3629cdccf7f3196325523e415"
   },
   "src/utils/bankNotificationParser.ts": {
-    "mtime": 1794286330.9332852,
-    "seen": 1794302639.4011917,
-    "ast_hash": "a5f10c48fbbdbff4cd30a6d5c99a8f36",
+    "mtime": 1794484532.4029813,
+    "seen": 1794484691.5130656,
+    "ast_hash": "ab1cce840f689297c7c358755d5a6e67",
     "semantic_hash": ""
   },
   "src/utils/dhivehiTranslator.ts": {

@@ -612,7 +612,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
     };
 
     const lbl = "text-right block text-[10px] font-bold uppercase text-muted-foreground tracking-wide";
-    const fld = "h-10 rounded-xl bg-background border-border text-sm";
+    const fld = "h-8.5 rounded-lg bg-background border-border text-xs";
     const costNum = Number(editedProduct.cost_price);
     const hasCost = editedProduct.cost_price !== undefined && editedProduct.cost_price !== null && (editedProduct.cost_price as any) !== '' && costNum > 0;
     const marginPct = hasCost && editedProduct.price > 0 ? ((editedProduct.price - costNum) / costNum) * 100 : null;
@@ -624,28 +624,28 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
             : { label: 'In stock', cls: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' };
     const currency = settings.shop.currency;
 
-    const section = (icon: React.ReactNode, chip: string, title: string, children: React.ReactNode, action?: React.ReactNode) => (
-        <section className="rounded-xl bg-card border border-border overflow-hidden">
-            <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-border bg-muted/50">
-                <div className="flex items-center gap-2" dir="ltr">
-                    <span className={cn("h-7 w-7 rounded-lg flex items-center justify-center shrink-0", chip)}>{icon}</span>
-                    <h3 className="text-[11px] font-bold uppercase tracking-wide text-foreground">{title}</h3>
+    const section = (icon: React.ReactNode, chip: string, title: string, children: React.ReactNode, action?: React.ReactNode, className?: string) => (
+        <section className={cn("rounded-xl bg-card border border-border overflow-hidden flex flex-col", className)}>
+            <div className="flex items-center justify-between gap-2 px-3 py-1.5 border-b border-border bg-muted/50 shrink-0">
+                <div className="flex items-center gap-1.5" dir="ltr">
+                    <span className={cn("h-5 w-5 rounded-md flex items-center justify-center shrink-0", chip)}>{icon}</span>
+                    <h3 className="text-[10px] font-black uppercase tracking-wider text-foreground">{title}</h3>
                 </div>
                 {action}
             </div>
-            <div className="p-4 space-y-4">{children}</div>
+            <div className="p-2.5 space-y-2.5 flex-1 min-h-0">{children}</div>
         </section>
     );
 
     return (
         <>
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-5xl w-[96vw] h-[92vh] max-h-[92vh] overflow-hidden flex flex-col gap-0 font-faruma bg-background text-foreground border border-border p-0 shadow-xl rounded-xl" dir="rtl">
-                {/* Header */}
-                <DialogHeader className="text-right px-5 py-3.5 border-b border-border bg-card shrink-0 space-y-0 pr-12">
+            <DialogContent className="sm:max-w-6xl w-[96vw] max-h-[95vh] overflow-hidden flex flex-col gap-0 font-faruma bg-background text-foreground border border-border p-0 shadow-2xl rounded-2xl" dir="rtl">
+                {/* Compact Header */}
+                <DialogHeader className="text-right px-4 py-2.5 border-b border-border bg-card shrink-0 space-y-0 pr-11">
                     <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2" dir="ltr">
-                            <Badge className="bg-muted text-foreground border border-border font-mono tabular-nums text-xs font-bold px-2.5 py-0.5 rounded-md shadow-none hover:bg-muted">
+                        <div className="flex items-center gap-1.5" dir="ltr">
+                            <Badge className="bg-muted text-foreground border border-border font-mono tabular-nums text-[11px] font-bold px-2 py-0.5 rounded-md shadow-none hover:bg-muted">
                                 {editedProduct.item_code ? `#${editedProduct.item_code}` : 'NEW'}
                             </Badge>
                             {editedProduct.is_zero_tax ? (
@@ -657,41 +657,48 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                     {settings.shop?.taxRate || 8}% GST
                                 </Badge>
                             )}
+                            <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-md border", stockStatus.cls)}>
+                                {stockStatus.label} ({totalStock})
+                            </span>
                         </div>
 
-                        <div className="flex items-center gap-3 text-right min-w-0">
+                        <div className="flex items-center gap-2.5 text-right min-w-0">
                             <div className="min-w-0">
-                                <DialogTitle className="text-base sm:text-lg font-bold text-foreground">
+                                <DialogTitle className="text-sm sm:text-base font-black text-foreground leading-tight">
                                     <span>{product ? renderBoth('edit_product') : renderBoth('add_new_product')}</span>
                                 </DialogTitle>
-                                <DialogDescription className="text-muted-foreground text-xs mt-0.5">
-                                    {product ? 'Update product details, pricing, barcodes and packaging units' : 'Create a new product in your catalog with barcodes and pricing'}
+                                <DialogDescription className="text-muted-foreground text-[11px] truncate">
+                                    {product ? 'Update product details, pricing, barcodes, and units' : 'Create a new product in your catalog'}
                                 </DialogDescription>
                             </div>
-                            <span className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                                <Package className="h-5 w-5" />
+                            <span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                                <Package className="h-4 w-4" />
                             </span>
                         </div>
                     </div>
                 </DialogHeader>
 
-                {/* Body: two columns */}
-                <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden" dir="ltr">
-                    {/* LEFT: sticky summary panel */}
-                    <aside className="lg:w-72 xl:w-80 shrink-0 border-b lg:border-b-0 lg:border-r border-border bg-muted/30 p-4 space-y-4 lg:overflow-y-auto custom-scrollbar" dir="rtl">
-                        <div className="space-y-2">
-                            <Label className={lbl}>{renderBoth('product_image')}</Label>
-                            <div className="aspect-square w-full max-w-[220px] mx-auto rounded-xl bg-card border border-dashed border-border flex items-center justify-center relative overflow-hidden group">
+                {/* Single-Screen 3-Column Body */}
+                <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-3 p-3 bg-muted/20 overflow-y-auto lg:overflow-hidden" dir="ltr">
+                    {/* COLUMN 1 (3 cols): Photo + Live Summary + Stock & Expiry */}
+                    <div className="lg:col-span-3 flex flex-col gap-2.5 min-h-0" dir="rtl">
+                        {/* Photo Card */}
+                        <div className="rounded-xl bg-card border border-border p-2.5 space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-mono text-muted-foreground">#{editedProduct.item_code || '—'}</span>
+                                <Label className={lbl}>{renderBoth('product_image')}</Label>
+                            </div>
+                            <div className="h-36 w-full rounded-lg bg-muted/40 border border-dashed border-border flex items-center justify-center relative overflow-hidden group">
                                 {isUploadingImage ? (
-                                    <div className="flex flex-col items-center justify-center gap-2 text-primary p-2 text-center">
-                                        <PulsatingDots dotClassName="h-2.5 w-2.5 rounded-full bg-primary" />
+                                    <div className="flex flex-col items-center justify-center gap-1.5 text-primary p-2 text-center">
+                                        <PulsatingDots dotClassName="h-2 w-2 rounded-full bg-primary" />
                                         <span className="text-[10px] font-bold uppercase tracking-wide text-primary">Uploading...</span>
                                     </div>
                                 ) : imagePreviewUrl ? (
                                     <img
                                         src={getAdaptedImageUrl(imagePreviewUrl, editedProduct.name_en || editedProduct.name_dv, editedProduct.item_code)}
                                         alt="Preview"
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-contain"
                                         onError={(e) => {
                                             if (localDataUrlRef.current && (e.target as HTMLImageElement).src !== localDataUrlRef.current) {
                                                 (e.target as HTMLImageElement).src = localDataUrlRef.current;
@@ -701,144 +708,217 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                         }}
                                     />
                                 ) : (
-                                    <ImageIcon className="h-10 w-10 text-muted-foreground/40" />
+                                    <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
                                 )}
                             </div>
                             <input id="image-upload" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
-                            <div className="grid grid-cols-1 gap-1.5" dir="ltr">
-                                <Label htmlFor="image-upload" className="cursor-pointer h-9 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold flex items-center justify-center gap-1.5" title="Upload local file">
-                                    <Upload className="h-3.5 w-3.5" /> Upload photo
+                            <div className="flex items-center gap-1.5" dir="ltr">
+                                <Label
+                                    htmlFor="image-upload"
+                                    className="cursor-pointer h-8 flex-1 px-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-[11px] font-bold flex items-center justify-center gap-1"
+                                    title="Upload local file"
+                                >
+                                    <Upload className="h-3 w-3" />
+                                    <span>Upload</span>
                                 </Label>
-                                <div className="flex gap-1.5">
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setIsOnlineSearchOpen(true)}
+                                    className="h-8 px-2.5 text-[11px] font-bold rounded-lg gap-1 border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                                    title="Find product image on Google"
+                                >
+                                    <Sparkles className="h-3 w-3" />
+                                    <span>Google</span>
+                                </Button>
+                                {imagePreviewUrl && (
                                     <Button
                                         type="button"
                                         size="sm"
                                         variant="outline"
-                                        onClick={() => setIsOnlineSearchOpen(true)}
-                                        className="h-9 flex-1 px-2 text-xs font-bold rounded-lg gap-1.5 border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
-                                        title="Find product image on Google"
+                                        onClick={() => setIsImageTextStampOpen(true)}
+                                        className="h-8 px-2.5 text-[11px] font-bold rounded-lg gap-1 border-indigo-500/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10"
+                                        title="Put text/flavour label on photo"
                                     >
-                                        <Sparkles className="h-3.5 w-3.5" />
-                                        <span>Google</span>
+                                        <Type className="h-3 w-3" />
+                                        <span>Text</span>
                                     </Button>
-                                    {imagePreviewUrl && (
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => setIsImageTextStampOpen(true)}
-                                            className="h-9 flex-1 px-2 text-xs font-bold rounded-lg gap-1.5 border-indigo-500/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10"
-                                            title="Put text/flavour label on photo"
-                                        >
-                                            <Type className="h-3.5 w-3.5" />
-                                            <span>Text</span>
-                                        </Button>
-                                    )}
-                                </div>
+                                )}
                             </div>
                         </div>
 
-                        {/* Live summary */}
+                        {/* Compact Live Summary */}
                         <div className="rounded-xl bg-card border border-border divide-y divide-border">
-                            <div className="p-3 space-y-0.5">
-                                <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Summary</p>
-                                <p className="font-faruma font-bold text-sm text-right truncate" dir="rtl">{editedProduct.name_dv || '—'}</p>
-                                <p className="text-xs text-muted-foreground text-left truncate" dir="ltr">{editedProduct.name_en || '—'}</p>
+                            <div className="px-3 py-2 flex items-center justify-between gap-2" dir="ltr">
+                                <div className="min-w-0">
+                                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Live Preview</p>
+                                    <p className="text-xs font-bold text-foreground truncate">{editedProduct.name_en || '—'}</p>
+                                </div>
+                                <p className="font-faruma font-bold text-xs text-muted-foreground truncate max-w-[45%]" dir="rtl">
+                                    {editedProduct.name_dv || '—'}
+                                </p>
                             </div>
-                            <dl className="p-3 grid grid-cols-2 gap-x-3 gap-y-2.5 text-xs" dir="ltr">
-                                <div>
-                                    <dt className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Code</dt>
-                                    <dd className="font-mono tabular-nums font-bold truncate">{editedProduct.item_code || '—'}</dd>
-                                </div>
-                                <div>
-                                    <dt className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Price</dt>
-                                    <dd className="font-mono tabular-nums font-bold text-primary">{currency} {Number(editedProduct.price || 0).toFixed(2)}</dd>
-                                </div>
-                                <div>
-                                    <dt className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Cost</dt>
-                                    <dd className="font-mono tabular-nums font-bold">{hasCost ? `${currency} ${costNum.toFixed(2)}` : '—'}</dd>
-                                </div>
-                                <div>
-                                    <dt className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Margin</dt>
-                                    <dd>
-                                        {marginPct !== null ? (
-                                            <span className={cn("inline-block text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-md border", marginPct >= 0 ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30" : "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30")}>
-                                                {marginPct.toFixed(0)}%
-                                            </span>
-                                        ) : <span className="text-muted-foreground">—</span>}
+                            <dl className="p-2.5 grid grid-cols-3 gap-2 text-xs text-center" dir="ltr">
+                                <div className="p-1.5 rounded-lg bg-muted/40">
+                                    <dt className="text-[9px] font-bold uppercase text-muted-foreground">Price</dt>
+                                    <dd className="font-mono tabular-nums font-black text-primary text-[11px]">
+                                        {currency} {Number(editedProduct.price || 0).toFixed(2)}
                                     </dd>
                                 </div>
-                                <div className="col-span-2 flex items-center justify-between">
-                                    <dt className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Stock</dt>
-                                    <dd className="flex items-center gap-2">
-                                        <span className="font-mono tabular-nums font-bold">{totalStock}</span>
-                                        <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-md border", stockStatus.cls)}>{stockStatus.label}</span>
+                                <div className="p-1.5 rounded-lg bg-muted/40">
+                                    <dt className="text-[9px] font-bold uppercase text-muted-foreground">Cost</dt>
+                                    <dd className="font-mono tabular-nums font-bold text-[11px]">
+                                        {hasCost ? `${currency} ${costNum.toFixed(2)}` : '—'}
+                                    </dd>
+                                </div>
+                                <div className="p-1.5 rounded-lg bg-muted/40">
+                                    <dt className="text-[9px] font-bold uppercase text-muted-foreground">Margin</dt>
+                                    <dd className="font-mono tabular-nums font-black text-[11px]">
+                                        {marginPct !== null ? (
+                                            <span className={marginPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}>
+                                                {marginPct.toFixed(0)}%
+                                            </span>
+                                        ) : '—'}
                                     </dd>
                                 </div>
                             </dl>
                         </div>
-                    </aside>
 
-                    {/* RIGHT: scrollable sections */}
-                    <div className="flex-1 min-w-0 lg:overflow-y-auto custom-scrollbar p-4 sm:p-5 space-y-4" dir="rtl">
-                        {/* Basic info */}
-                        {section(<Tag className="h-4 w-4" />, "bg-primary/10 text-primary", "Basic info",
-                            <>
-                                <div className="space-y-1.5">
-                                    <div className="flex items-center justify-between gap-2">
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={handleAutoTranslateName}
-                                            disabled={!editedProduct.name_en?.trim()}
-                                            className="h-6 px-2 text-[10px] font-bold text-primary hover:bg-primary/10 rounded-md gap-1"
-                                            title="Auto-translate English name to Dhivehi"
-                                        >
-                                            <Sparkles className="h-3 w-3" />
-                                            <span>Auto Translate (ދިވެހިކުރޭ)</span>
-                                        </Button>
-                                        <Label className={lbl}>{renderBoth('product_name')} (ދިވެހި)*</Label>
+                        {/* Stock & Expiry Card */}
+                        {section(<Boxes className="h-3.5 w-3.5" />, "bg-amber-500/10 text-amber-600 dark:text-amber-400", "Stock & Expiry",
+                            <div className="space-y-2">
+                                <div className="space-y-1">
+                                    <div className="flex items-center justify-between">
+                                        {expiryDate ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => setExpiryDate(undefined)}
+                                                className="text-[10px] font-bold text-red-500 hover:text-red-600 flex items-center gap-0.5"
+                                                title="Clear expiry date"
+                                            >
+                                                <X className="h-2.5 w-2.5" /> Clear
+                                            </button>
+                                        ) : <span />}
+                                        <Label className={lbl}>{renderBoth('expiry_date')}</Label>
                                     </div>
-                                    <Input
-                                        dir="rtl"
-                                        value={editedProduct.name_dv}
-                                        onChange={(e) => updateField('name_dv', e.target.value)}
-                                        className={cn(fld, "text-right font-faruma font-bold")}
-                                        placeholder="ތަކެތީގެ ނަން"
-                                    />
+                                    <div className="flex items-center gap-1" dir="ltr">
+                                        <Input
+                                            type="date"
+                                            dir="ltr"
+                                            value={expiryDate ? format(expiryDate, 'yyyy-MM-dd') : ''}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (!val) {
+                                                    setExpiryDate(undefined);
+                                                } else {
+                                                    const parsed = parseISO(val);
+                                                    if (!isNaN(parsed.getTime())) {
+                                                        setExpiryDate(parsed);
+                                                    }
+                                                }
+                                            }}
+                                            className={cn(fld, "text-left font-mono tabular-nums font-bold text-xs flex-1 min-w-0 px-2")}
+                                        />
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="icon"
+                                                    className="h-8.5 w-8.5 shrink-0 rounded-lg"
+                                                    title="Open Calendar Picker"
+                                                >
+                                                    <CalendarIcon className="h-3.5 w-3.5 text-primary" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0 bg-popover border border-border z-[150]" align="center">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={expiryDate}
+                                                    onSelect={setExpiryDate}
+                                                    initialFocus
+                                                    className="text-foreground"
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
                                 </div>
-                                <div className="space-y-1.5">
-                                    <Label className={lbl}>{renderBoth('product_name')} (English)*</Label>
-                                    <Input
-                                        dir="ltr"
-                                        value={editedProduct.name_en}
-                                        onChange={(e) => updateField('name_en', e.target.value)}
-                                        onBlur={() => {
-                                            if (!editedProduct.name_dv?.trim() && editedProduct.name_en?.trim()) {
-                                                const translated = translateEnglishToDhivehi(editedProduct.name_en);
-                                                if (translated) updateField('name_dv', translated);
-                                            }
-                                        }}
-                                        className={cn(fld, "text-left font-bold")}
-                                        placeholder="Product Name"
-                                    />
+
+                                <div className="rounded-lg border border-border bg-muted/40 px-2.5 py-2 flex items-center justify-between text-xs" dir="ltr">
+                                    <span className="text-[10px] font-bold uppercase text-muted-foreground">Inventory</span>
+                                    <span className="font-mono tabular-nums font-bold text-[11px]">
+                                        Shop: {Number(editedProduct.stock_shop || 0)} · Godown: {Number(editedProduct.stock_godown || 0)}
+                                    </span>
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div className="space-y-1.5">
+                            </div>
+                        )}
+                    </div>
+
+                    {/* COLUMN 2 (5 cols): Basic Info + Pricing & Tax + Barcodes */}
+                    <div className="lg:col-span-5 flex flex-col gap-2.5 min-h-0" dir="rtl">
+                        {/* Basic Info */}
+                        {section(<Tag className="h-3.5 w-3.5" />, "bg-primary/10 text-primary", "Basic Info",
+                            <div className="space-y-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                    <div className="space-y-1">
+                                        <div className="flex items-center justify-between gap-1">
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={handleAutoTranslateName}
+                                                disabled={!editedProduct.name_en?.trim()}
+                                                className="h-5 px-1.5 text-[9px] font-bold text-primary hover:bg-primary/10 rounded gap-0.5"
+                                                title="Auto-translate English name to Dhivehi"
+                                            >
+                                                <Sparkles className="h-2.5 w-2.5" />
+                                                <span>Translate</span>
+                                            </Button>
+                                            <Label className={lbl}>Name (ދިވެހި)*</Label>
+                                        </div>
+                                        <Input
+                                            dir="rtl"
+                                            value={editedProduct.name_dv}
+                                            onChange={(e) => updateField('name_dv', e.target.value)}
+                                            className={cn(fld, "text-right font-faruma font-bold")}
+                                            placeholder="ތަކެތީގެ ނަން"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <Label className={lbl}>Name (English)*</Label>
+                                        <Input
+                                            dir="ltr"
+                                            value={editedProduct.name_en}
+                                            onChange={(e) => updateField('name_en', e.target.value)}
+                                            onBlur={() => {
+                                                if (!editedProduct.name_dv?.trim() && editedProduct.name_en?.trim()) {
+                                                    const translated = translateEnglishToDhivehi(editedProduct.name_en);
+                                                    if (translated) updateField('name_dv', translated);
+                                                }
+                                            }}
+                                            className={cn(fld, "text-left font-bold")}
+                                            placeholder="Product Name"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    <div className="space-y-1">
                                         <Label className={lbl}>{renderBoth('item_code')}*</Label>
                                         <div className="relative">
-                                            <Hash className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60" />
+                                            <Hash className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/60" />
                                             <Input
                                                 dir="ltr"
                                                 value={editedProduct.item_code}
                                                 onChange={(e) => updateField('item_code', e.target.value.replace(/\D/g, ''))}
                                                 placeholder="1001"
-                                                className={cn(fld, "text-left pl-8 font-mono tabular-nums text-xs")}
+                                                className={cn(fld, "text-left pl-7 font-mono tabular-nums text-xs")}
                                             />
                                         </div>
                                     </div>
-                                    <div className="space-y-1.5">
+                                    <div className="space-y-1">
                                         <Label className={lbl}>{renderBoth('category')}</Label>
                                         <Select value={editedProduct.category} onValueChange={(val) => updateField('category', val)}>
                                             <SelectTrigger className={cn(fld, "text-right text-xs font-bold")}>
@@ -854,17 +934,17 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                         </Select>
                                     </div>
                                 </div>
-                            </>
+                            </div>
                         )}
 
-                        {/* Pricing & tax */}
-                        {section(<DollarSign className="h-4 w-4" />, "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", "Pricing & tax",
-                            <>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div className="space-y-1.5">
-                                        <Label className={lbl}>{renderBoth('selling_price')} (Piece)*</Label>
+                        {/* Pricing & Tax */}
+                        {section(<DollarSign className="h-3.5 w-3.5" />, "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", "Pricing & Tax",
+                            <div className="space-y-2">
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    <div className="space-y-1">
+                                        <Label className={lbl}>{renderBoth('selling_price')}*</Label>
                                         <div className="relative">
-                                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-primary">{currency}</span>
+                                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-primary">{currency}</span>
                                             <Input
                                                 dir="ltr"
                                                 type="number"
@@ -872,14 +952,14 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                 value={editedProduct.price}
                                                 onChange={(e) => updateField('price', parseFloat(e.target.value) || 0)}
                                                 onFocus={handleFocus}
-                                                className={cn(fld, "h-11 text-left pl-14 pr-3 text-lg font-bold text-primary font-mono tabular-nums")}
+                                                className={cn(fld, "h-9 text-left pl-12 pr-2.5 text-sm font-black text-primary font-mono tabular-nums")}
                                             />
                                         </div>
                                     </div>
-                                    <div className="space-y-1.5">
-                                        <Label className={lbl}>{renderBoth('cost_price')} (Piece)</Label>
+                                    <div className="space-y-1">
+                                        <Label className={lbl}>{renderBoth('cost_price')}</Label>
                                         <div className="relative">
-                                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-500">{currency}</span>
+                                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-emerald-500">{currency}</span>
                                             <Input
                                                 dir="ltr"
                                                 type="number"
@@ -888,47 +968,52 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                 onChange={(e) => updateField('cost_price', e.target.value === '' ? undefined : (parseFloat(e.target.value) || 0))}
                                                 onFocus={handleFocus}
                                                 placeholder="0.00"
-                                                className={cn(fld, "h-11 text-left pl-14 pr-3 text-lg font-bold text-foreground font-mono tabular-nums")}
+                                                className={cn(fld, "h-9 text-left pl-12 pr-2.5 text-sm font-black text-foreground font-mono tabular-nums")}
                                             />
                                         </div>
                                     </div>
                                 </div>
-                                {marginPct !== null && (
-                                    <div className="flex items-center justify-between rounded-lg bg-muted/50 border border-border px-3 py-2 text-xs" dir="ltr">
-                                        <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Margin</span>
-                                        <span className={cn("font-bold tabular-nums", marginPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
-                                            {marginPct.toFixed(0)}% margin
-                                        </span>
+
+                                <div className="rounded-lg border border-border bg-muted/40 px-3 py-1.5 flex items-center justify-between">
+                                    <div className="flex items-center gap-2" dir="ltr">
+                                        <Switch
+                                            checked={editedProduct.is_zero_tax}
+                                            onCheckedChange={(val) => updateField('is_zero_tax', val)}
+                                            className="data-[state=checked]:bg-primary scale-90"
+                                        />
+                                        {marginPct !== null && (
+                                            <span className={cn(
+                                                "text-[10px] font-bold px-1.5 py-0.5 rounded border font-mono",
+                                                marginPct >= 0
+                                                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                                                    : "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30"
+                                            )}>
+                                                Margin: {marginPct.toFixed(0)}%
+                                            </span>
+                                        )}
                                     </div>
-                                )}
-                                <div className="rounded-lg border border-border bg-muted/40 px-3 py-2.5 flex items-center justify-between">
-                                    <Switch
-                                        checked={editedProduct.is_zero_tax}
-                                        onCheckedChange={(val) => updateField('is_zero_tax', val)}
-                                        className="data-[state=checked]:bg-primary"
-                                    />
-                                    <Label className="font-bold text-xs uppercase tracking-wide text-muted-foreground">
+                                    <Label className="font-bold text-[11px] uppercase tracking-wide text-muted-foreground">
                                         Zero Tax (0% GST)
                                     </Label>
                                 </div>
-                            </>
+                            </div>
                         )}
 
                         {/* Barcodes */}
-                        {section(<Barcode className="h-4 w-4" />, "bg-blue-500/10 text-blue-600 dark:text-blue-400", "Barcodes",
-                            <>
-                                <div className="space-y-1.5">
-                                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                                        <div className="flex items-center gap-1.5">
+                        {section(<Barcode className="h-3.5 w-3.5" />, "bg-blue-500/10 text-blue-600 dark:text-blue-400", "Barcodes & Label Printing",
+                            <div className="space-y-2">
+                                <div className="space-y-1">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-1" dir="ltr">
                                             <Button
                                                 type="button"
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={generateUniqueBarcode}
-                                                className="h-7 px-2 text-[10px] font-bold text-primary border-primary/30 hover:bg-primary/10 rounded-md gap-1"
-                                                title="Generate in-store barcode for non-barcode item"
+                                                className="h-6 px-2 text-[10px] font-bold text-primary border-primary/30 hover:bg-primary/10 rounded gap-1"
+                                                title="Generate in-store barcode"
                                             >
-                                                <Sparkles className="h-3 w-3" />
+                                                <Sparkles className="h-2.5 w-2.5" />
                                                 <span>Generate</span>
                                             </Button>
                                             {editedProduct.barcode && (
@@ -937,11 +1022,11 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={handlePrintBarcodeLabel}
-                                                    className="h-7 px-2 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 rounded-md gap-1"
-                                                    title="Print Barcode Label with Name & Price"
+                                                    className="h-6 px-2 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 rounded gap-1"
+                                                    title="Print 50x30mm Barcode Sticker"
                                                 >
-                                                    <Printer className="h-3 w-3" />
-                                                    <span>Print Label</span>
+                                                    <Printer className="h-2.5 w-2.5" />
+                                                    <span>Print Sticker</span>
                                                 </Button>
                                             )}
                                         </div>
@@ -959,20 +1044,18 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                     </div>
                                 </div>
 
-                                <Separator />
-
-                                <div className="space-y-2">
+                                <div className="space-y-1.5 pt-1 border-t border-border/60">
                                     <div className="flex items-center justify-between">
                                         <span className="text-[10px] font-bold text-muted-foreground font-mono tabular-nums">
-                                            {extraBarcodes.length} extra barcode{extraBarcodes.length === 1 ? '' : 's'}
+                                            {extraBarcodes.length} extra
                                         </span>
-                                        <Label className="text-[10px] font-bold uppercase tracking-wide text-foreground">
+                                        <Label className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                                             Extra Barcodes (އިތުރު ބާކޯޑުތައް)
                                         </Label>
                                     </div>
-                                    <div className="flex gap-2" dir="ltr">
+                                    <div className="flex gap-1.5" dir="ltr">
                                         <div className="relative flex-1 min-w-0">
-                                            <Barcode className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60" />
+                                            <Barcode className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/60" />
                                             <Input
                                                 dir="ltr"
                                                 value={extraBarcodeInput}
@@ -983,8 +1066,8 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                         handleAddExtraBarcode();
                                                     }
                                                 }}
-                                                placeholder="Scan or type another barcode & press Enter..."
-                                                className={cn(fld, "text-left pl-8 font-mono tabular-nums text-xs")}
+                                                placeholder="Scan/type extra barcode + Enter..."
+                                                className={cn(fld, "text-left pl-7 font-mono tabular-nums text-xs")}
                                             />
                                         </div>
                                         <Button
@@ -992,144 +1075,52 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                             size="sm"
                                             onClick={handleAddExtraBarcode}
                                             disabled={!extraBarcodeInput.trim()}
-                                            className="h-10 px-3 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs gap-1 shrink-0"
+                                            className="h-8.5 px-2.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs gap-1 shrink-0"
                                         >
-                                            <Plus className="h-3.5 w-3.5" />
-                                            <span>Add Barcode</span>
+                                            <Plus className="h-3 w-3" />
+                                            <span>Add</span>
                                         </Button>
                                     </div>
                                     {extraBarcodes.length > 0 && (
-                                        <div className="flex flex-wrap gap-1.5" dir="ltr">
+                                        <div className="flex flex-wrap gap-1 max-h-14 overflow-y-auto custom-scrollbar" dir="ltr">
                                             {extraBarcodes.map((code) => (
                                                 <Badge
                                                     key={code}
                                                     variant="secondary"
-                                                    className="bg-muted text-foreground border border-border px-2 py-1 rounded-md font-mono tabular-nums text-xs font-semibold flex items-center gap-1.5 shadow-none"
+                                                    className="bg-muted text-foreground border border-border px-1.5 py-0.5 rounded font-mono tabular-nums text-[10px] font-semibold flex items-center gap-1 shadow-none"
                                                 >
-                                                    <Barcode className="h-3 w-3 opacity-60" />
                                                     <span>{code}</span>
                                                     <button
                                                         type="button"
                                                         onClick={() => handleRemoveExtraBarcode(code)}
-                                                        className="ml-0.5 hover:bg-red-500/15 hover:text-red-500 rounded-full p-0.5 transition-colors"
+                                                        className="hover:bg-red-500/15 hover:text-red-500 rounded-full p-0.5 transition-colors"
                                                         title="Remove barcode"
                                                     >
-                                                        <X className="h-3 w-3" />
+                                                        <X className="h-2.5 w-2.5" />
                                                     </button>
                                                 </Badge>
                                             ))}
                                         </div>
                                     )}
                                 </div>
-
-                                {editedProduct.barcode && (
-                                    <div className="p-3 bg-muted/40 rounded-lg border border-border flex items-center justify-between gap-3 text-right">
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            onClick={handlePrintBarcodeLabel}
-                                            className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5 shrink-0"
-                                        >
-                                            <Printer className="h-3.5 w-3.5" />
-                                            <span>Print Sticker (50x30mm)</span>
-                                        </Button>
-                                        <div className="flex-1 text-right min-w-0">
-                                            <div className="flex items-center justify-end gap-2 text-xs font-bold min-w-0">
-                                                <span className="font-mono tabular-nums text-primary shrink-0">{currency} {Number(editedProduct.price || 0).toFixed(2)}</span>
-                                                <span className="truncate">{editedProduct.name_dv || editedProduct.name_en || 'Product'}</span>
-                                            </div>
-                                            <p className="text-[10px] font-mono tabular-nums text-muted-foreground mt-0.5 truncate">
-                                                Scannable Barcode: {editedProduct.barcode}{extraBarcodes.length > 0 ? ` (+${extraBarcodes.length} extra)` : ''}
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
-                            </>
+                            </div>
                         )}
+                    </div>
 
-                        {/* Stock & expiry */}
-                        {section(<Boxes className="h-4 w-4" />, "bg-amber-500/10 text-amber-600 dark:text-amber-400", "Stock & expiry",
-                            <>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div className="space-y-1.5">
-                                        <div className="flex items-center justify-between min-h-[16px]">
-                                            {expiryDate ? (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setExpiryDate(undefined)}
-                                                    className="text-[10px] font-bold text-red-500 hover:text-red-600 flex items-center gap-0.5"
-                                                    title="Clear expiry date"
-                                                >
-                                                    <X className="h-2.5 w-2.5" /> Clear
-                                                </button>
-                                            ) : <span />}
-                                            <Label className={lbl}>{renderBoth('expiry_date')}</Label>
-                                        </div>
-                                        <div className="flex items-center gap-1.5" dir="ltr">
-                                            <Input
-                                                type="date"
-                                                dir="ltr"
-                                                value={expiryDate ? format(expiryDate, 'yyyy-MM-dd') : ''}
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    if (!val) {
-                                                        setExpiryDate(undefined);
-                                                    } else {
-                                                        const parsed = parseISO(val);
-                                                        if (!isNaN(parsed.getTime())) {
-                                                            setExpiryDate(parsed);
-                                                        }
-                                                    }
-                                                }}
-                                                className={cn(fld, "text-left font-mono tabular-nums font-bold text-xs flex-1 min-w-0 px-2.5")}
-                                            />
-                                            <Popover>
-                                                <PopoverTrigger asChild>
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="icon"
-                                                        className="h-10 w-10 shrink-0 rounded-xl"
-                                                        title="Open Calendar Picker"
-                                                    >
-                                                        <CalendarIcon className="h-4 w-4 text-primary" />
-                                                    </Button>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-auto p-0 bg-popover border border-border z-[150]" align="center">
-                                                    <Calendar
-                                                        mode="single"
-                                                        selected={expiryDate}
-                                                        onSelect={setExpiryDate}
-                                                        initialFocus
-                                                        className="text-foreground"
-                                                    />
-                                                </PopoverContent>
-                                            </Popover>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <Label className={lbl}>Stock</Label>
-                                        <div className="h-10 rounded-xl border border-border bg-muted/40 px-3 flex items-center justify-between text-xs" dir="ltr">
-                                            <span className="font-mono tabular-nums font-bold">
-                                                Shop {Number(editedProduct.stock_shop || 0)} · Godown {Number(editedProduct.stock_godown || 0)}
-                                            </span>
-                                            <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-md border", stockStatus.cls)}>{stockStatus.label}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </>
-                        )}
-
-                        {/* Flavours & Packaging */}
-                        {section(<Layers className="h-4 w-4" />, "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400", activeSubTab === 'flavours' ? "Flavours / variants" : "Packaging units",
-                            <>
-                                {/* Tab switch */}
-                                <div className="flex bg-muted p-0.5 rounded-lg border border-border w-fit" dir="ltr">
+                    {/* COLUMN 3 (4 cols): Flavours / Variants & Packaging Units */}
+                    <div className="lg:col-span-4 flex flex-col min-h-0" dir="rtl">
+                        {section(
+                            <Layers className="h-3.5 w-3.5" />,
+                            "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
+                            activeSubTab === 'flavours' ? "Flavours / Variants" : "Packaging Units",
+                            <div className="flex flex-col h-full min-h-0 space-y-2.5">
+                                {/* Sub-tab Switcher */}
+                                <div className="flex bg-muted p-0.5 rounded-lg border border-border w-full shrink-0" dir="ltr">
                                     <button
                                         type="button"
                                         onClick={() => setActiveSubTab('flavours')}
                                         className={cn(
-                                            "px-3 py-1.5 rounded-md text-xs font-bold transition-colors flex items-center gap-1.5",
+                                            "flex-1 py-1 rounded-md text-xs font-bold transition-colors flex items-center justify-center gap-1.5",
                                             activeSubTab === 'flavours' ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                                         )}
                                     >
@@ -1144,7 +1135,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                         type="button"
                                         onClick={() => setActiveSubTab('units')}
                                         className={cn(
-                                            "px-3 py-1.5 rounded-md text-xs font-bold transition-colors flex items-center gap-1.5",
+                                            "flex-1 py-1 rounded-md text-xs font-bold transition-colors flex items-center justify-center gap-1.5",
                                             activeSubTab === 'units' ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                                         )}
                                     >
@@ -1159,21 +1150,21 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
 
                                 {/* TAB 1: FLAVOURS */}
                                 {activeSubTab === 'flavours' && (
-                                    <div className="space-y-3">
+                                    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar space-y-2 pr-0.5">
                                         {isFlavourFormOpen && (
-                                            <div className="p-3 bg-muted/40 border border-primary/40 rounded-xl space-y-3 animate-in fade-in-50 duration-150">
-                                                <div className="flex items-center justify-between border-b border-border pb-2">
+                                            <div className="p-2.5 bg-muted/40 border border-primary/40 rounded-xl space-y-2 animate-in fade-in-50 duration-150">
+                                                <div className="flex items-center justify-between border-b border-border pb-1.5">
                                                     <Button
                                                         type="button"
                                                         variant="ghost"
                                                         size="icon"
                                                         onClick={() => setIsFlavourFormOpen(false)}
-                                                        className="h-6 w-6 rounded-md text-muted-foreground hover:text-foreground"
+                                                        className="h-5 w-5 rounded text-muted-foreground hover:text-foreground"
                                                     >
-                                                        <X className="h-3.5 w-3.5" />
+                                                        <X className="h-3 w-3" />
                                                     </Button>
-                                                    <span className="text-[11px] font-bold uppercase text-primary tracking-wide">
-                                                        {editingFlavourIndex !== null ? 'Edit Flavour' : 'Add Flavour / Alternate Barcode'}
+                                                    <span className="text-[10px] font-bold uppercase text-primary tracking-wide">
+                                                        {editingFlavourIndex !== null ? 'Edit Flavour' : 'Add Flavour'}
                                                     </span>
                                                 </div>
 
@@ -1184,7 +1175,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                             type="button"
                                                             onClick={() => setFlavourForm(prev => ({ ...prev, name: preset }))}
                                                             className={cn(
-                                                                "px-2 py-0.5 rounded-md text-[10px] font-bold border transition-colors",
+                                                                "px-1.5 py-0.5 rounded text-[9px] font-bold border transition-colors",
                                                                 (flavourForm.name || '').toLowerCase() === preset.toLowerCase()
                                                                     ? "bg-primary text-primary-foreground border-primary"
                                                                     : "bg-card text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
@@ -1195,20 +1186,20 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                     ))}
                                                 </div>
 
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                    <div className="space-y-1">
-                                                        <Label className={lbl}>Flavour / Scent Name*</Label>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <div className="space-y-0.5">
+                                                        <Label className={lbl}>Flavour Name*</Label>
                                                         <Input
                                                             dir="ltr"
                                                             value={flavourForm.name}
                                                             onChange={(e) => setFlavourForm(prev => ({ ...prev, name: e.target.value }))}
                                                             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveFlavour(); } }}
                                                             placeholder="e.g. Chocolate"
-                                                            className="h-9 rounded-lg bg-background text-left font-bold text-xs"
+                                                            className="h-8 rounded-lg bg-background text-left font-bold text-xs"
                                                             autoFocus
                                                         />
                                                     </div>
-                                                    <div className="space-y-1">
+                                                    <div className="space-y-0.5">
                                                         <Label className={lbl}>Price (Optional)</Label>
                                                         <Input
                                                             dir="ltr"
@@ -1218,21 +1209,21 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                             onChange={(e) => setFlavourForm(prev => ({ ...prev, price: e.target.value }))}
                                                             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveFlavour(); } }}
                                                             placeholder={editedProduct.price ? String(editedProduct.price) : '0.00'}
-                                                            className="h-9 rounded-lg bg-background text-left font-mono tabular-nums font-bold text-xs text-primary"
+                                                            className="h-8 rounded-lg bg-background text-left font-mono tabular-nums font-bold text-xs text-primary"
                                                         />
                                                     </div>
                                                 </div>
 
-                                                <div className="space-y-1">
+                                                <div className="space-y-0.5">
                                                     <div className="flex items-center justify-between">
                                                         <Button
                                                             type="button"
                                                             variant="outline"
                                                             size="sm"
                                                             onClick={generateFlavourBarcode}
-                                                            className="h-6 px-2 text-[10px] font-bold text-primary border-primary/30 hover:bg-primary/10 rounded-md gap-1"
+                                                            className="h-5 px-1.5 text-[9px] font-bold text-primary border-primary/30 hover:bg-primary/10 rounded gap-1"
                                                         >
-                                                            <Sparkles className="h-3 w-3" />
+                                                            <Sparkles className="h-2.5 w-2.5" />
                                                             <span>Auto Barcode</span>
                                                         </Button>
                                                         <Label className={lbl}>Flavour Barcode</Label>
@@ -1242,18 +1233,18 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                         value={flavourForm.barcode}
                                                         onChange={(e) => setFlavourForm(prev => ({ ...prev, barcode: e.target.value }))}
                                                         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveFlavour(); } }}
-                                                        placeholder="Scan flavour barcode or auto-generate"
-                                                        className="h-9 rounded-lg bg-background text-left font-mono tabular-nums text-[11px]"
+                                                        placeholder="Scan or auto-generate"
+                                                        className="h-8 rounded-lg bg-background text-left font-mono tabular-nums text-[11px]"
                                                     />
                                                 </div>
 
-                                                <div className="flex justify-end gap-1.5">
+                                                <div className="flex justify-end gap-1.5 pt-1">
                                                     <Button
                                                         type="button"
                                                         variant="outline"
                                                         size="sm"
                                                         onClick={() => setIsFlavourFormOpen(false)}
-                                                        className="h-8 px-3 rounded-lg text-xs font-bold"
+                                                        className="h-7 px-2.5 rounded-lg text-[11px] font-bold"
                                                     >
                                                         Cancel
                                                     </Button>
@@ -1261,23 +1252,23 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                         type="button"
                                                         size="sm"
                                                         onClick={handleSaveFlavour}
-                                                        className="h-8 px-4 rounded-lg bg-primary text-primary-foreground text-xs font-bold"
+                                                        className="h-7 px-3 rounded-lg bg-primary text-primary-foreground text-[11px] font-bold"
                                                     >
                                                         <Check className="h-3 w-3 mr-1" />
-                                                        {editingFlavourIndex !== null ? 'Update Flavour' : 'Save Flavour'}
+                                                        {editingFlavourIndex !== null ? 'Update' : 'Save'}
                                                     </Button>
                                                 </div>
                                             </div>
                                         )}
 
-                                        <div className="space-y-2">
+                                        <div className="space-y-1.5">
                                             {flavours.length > 0 ? (
                                                 flavours.map((f, index) => {
                                                     const price = f.price !== undefined ? Number(f.price) : Number(editedProduct.price || 0);
                                                     return (
                                                         <div
                                                             key={index}
-                                                            className="p-2.5 bg-background border border-border hover:border-primary/40 rounded-lg flex items-center justify-between gap-2 transition-colors"
+                                                            className="p-2 bg-background border border-border hover:border-primary/40 rounded-lg flex items-center justify-between gap-2 transition-colors"
                                                         >
                                                             <div className="flex items-center gap-0.5 shrink-0">
                                                                 <Button
@@ -1285,7 +1276,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                                     variant="ghost"
                                                                     size="icon"
                                                                     onClick={() => handleEditFlavour(index)}
-                                                                    className="h-7 w-7 rounded-md text-blue-500 hover:bg-blue-500/10"
+                                                                    className="h-6 w-6 rounded text-blue-500 hover:bg-blue-500/10"
                                                                     title="Edit flavour"
                                                                 >
                                                                     <Pencil className="h-3 w-3" />
@@ -1295,25 +1286,25 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                                     variant="ghost"
                                                                     size="icon"
                                                                     onClick={() => handleDeleteFlavour(index)}
-                                                                    className="h-7 w-7 rounded-md text-red-500 hover:bg-red-500/10"
+                                                                    className="h-6 w-6 rounded text-red-500 hover:bg-red-500/10"
                                                                     title="Delete flavour"
                                                                 >
                                                                     <Trash2 className="h-3 w-3" />
                                                                 </Button>
                                                             </div>
 
-                                                            <div className="flex items-center gap-2.5 flex-1 min-w-0 justify-end text-right">
+                                                            <div className="flex items-center gap-2 flex-1 min-w-0 justify-end text-right">
                                                                 <div className="text-left font-mono tabular-nums min-w-0">
-                                                                    <span className="text-xs font-bold text-primary block">
+                                                                    <span className="text-[11px] font-bold text-primary block">
                                                                         {settings?.shop?.currency || 'MVR'} {price.toFixed(2)}
                                                                     </span>
                                                                     {f.barcode && (
-                                                                        <span className="text-[10px] text-muted-foreground font-mono block truncate">
+                                                                        <span className="text-[9px] text-muted-foreground font-mono block truncate">
                                                                             {f.barcode}
                                                                         </span>
                                                                     )}
                                                                 </div>
-                                                                <Badge className="bg-primary/10 text-primary border border-primary/30 text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md shadow-none hover:bg-primary/10 max-w-[50%] truncate">
+                                                                <Badge className="bg-primary/10 text-primary border border-primary/30 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded shadow-none hover:bg-primary/10 max-w-[50%] truncate">
                                                                     {f.name}
                                                                 </Badge>
                                                             </div>
@@ -1322,11 +1313,11 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                 })
                                             ) : (
                                                 !isFlavourFormOpen && (
-                                                    <div className="flex flex-col items-center justify-center p-5 border border-dashed border-border rounded-lg bg-muted/30 text-center">
-                                                        <Tag className="h-6 w-6 text-muted-foreground/40 mb-1.5" />
+                                                    <div className="flex flex-col items-center justify-center p-4 border border-dashed border-border rounded-lg bg-muted/30 text-center">
+                                                        <Tag className="h-5 w-5 text-muted-foreground/40 mb-1" />
                                                         <p className="text-xs font-bold text-muted-foreground">No flavours added yet</p>
-                                                        <p className="text-[11px] text-muted-foreground/70 mt-1 max-w-sm">
-                                                            Have multiple flavours (e.g. Chocolate, Vanilla, Strawberry)? Add them here with their barcodes without creating duplicate products!
+                                                        <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+                                                            Add flavours (e.g. Chocolate, Vanilla) with separate barcodes without duplicating products.
                                                         </p>
                                                     </div>
                                                 )
@@ -1337,20 +1328,20 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
 
                                 {/* TAB 2: PACKAGING UNITS */}
                                 {activeSubTab === 'units' && (
-                                    <div className="space-y-3">
+                                    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar space-y-2 pr-0.5">
                                         {isUnitFormOpen && (
-                                            <div className="p-3 bg-muted/40 border border-primary/40 rounded-xl space-y-3 animate-in fade-in-50 duration-150">
-                                                <div className="flex items-center justify-between border-b border-border pb-2">
+                                            <div className="p-2.5 bg-muted/40 border border-primary/40 rounded-xl space-y-2 animate-in fade-in-50 duration-150">
+                                                <div className="flex items-center justify-between border-b border-border pb-1.5">
                                                     <Button
                                                         type="button"
                                                         variant="ghost"
                                                         size="icon"
                                                         onClick={() => setIsUnitFormOpen(false)}
-                                                        className="h-6 w-6 rounded-md text-muted-foreground hover:text-foreground"
+                                                        className="h-5 w-5 rounded text-muted-foreground hover:text-foreground"
                                                     >
-                                                        <X className="h-3.5 w-3.5" />
+                                                        <X className="h-3 w-3" />
                                                     </Button>
-                                                    <span className="text-[11px] font-bold uppercase text-primary tracking-wide">
+                                                    <span className="text-[10px] font-bold uppercase text-primary tracking-wide">
                                                         {editingUnitIndex !== null ? renderBoth('edit_unit') : renderBoth('add_unit')}
                                                     </span>
                                                 </div>
@@ -1362,7 +1353,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                             type="button"
                                                             onClick={() => setUnitForm(prev => ({ ...prev, name: preset }))}
                                                             className={cn(
-                                                                "px-2.5 py-0.5 rounded-md text-[10px] font-bold border transition-colors",
+                                                                "px-2 py-0.5 rounded text-[9px] font-bold border transition-colors",
                                                                 (unitForm.name || '').toLowerCase() === preset.toLowerCase()
                                                                     ? "bg-primary text-primary-foreground border-primary"
                                                                     : "bg-card text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
@@ -1373,8 +1364,8 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                     ))}
                                                 </div>
 
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                    <div className="space-y-1">
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <div className="space-y-0.5">
                                                         <Label className={lbl}>{renderBoth('unit_name')}*</Label>
                                                         <Input
                                                             dir="ltr"
@@ -1382,10 +1373,10 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                             onChange={(e) => setUnitForm(prev => ({ ...prev, name: e.target.value }))}
                                                             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
                                                             placeholder="e.g. Box"
-                                                            className="h-9 rounded-lg bg-background text-left font-bold text-xs"
+                                                            className="h-8 rounded-lg bg-background text-left font-bold text-xs"
                                                         />
                                                     </div>
-                                                    <div className="space-y-1">
+                                                    <div className="space-y-0.5">
                                                         <Label className={lbl}>{renderBoth('conversion_factor')}*</Label>
                                                         <Input
                                                             dir="ltr"
@@ -1394,11 +1385,11 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                             onChange={(e) => setUnitForm(prev => ({ ...prev, conversion_factor: e.target.value }))}
                                                             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
                                                             placeholder="12"
-                                                            className="h-9 rounded-lg bg-background text-left font-mono tabular-nums font-bold text-xs"
+                                                            className="h-8 rounded-lg bg-background text-left font-mono tabular-nums font-bold text-xs"
                                                         />
                                                     </div>
-                                                    <div className="space-y-1">
-                                                        <Label className={lbl}>{renderBoth('unit_price')} ({settings?.shop?.currency || 'MVR'})*</Label>
+                                                    <div className="space-y-0.5">
+                                                        <Label className={lbl}>{renderBoth('unit_price')}*</Label>
                                                         <Input
                                                             dir="ltr"
                                                             type="number"
@@ -1407,10 +1398,10 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                             onChange={(e) => setUnitForm(prev => ({ ...prev, price: e.target.value }))}
                                                             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
                                                             placeholder="0.00"
-                                                            className="h-9 rounded-lg bg-background text-left font-mono tabular-nums font-bold text-xs text-primary"
+                                                            className="h-8 rounded-lg bg-background text-left font-mono tabular-nums font-bold text-xs text-primary"
                                                         />
                                                     </div>
-                                                    <div className="space-y-1">
+                                                    <div className="space-y-0.5">
                                                         <Label className={lbl}>{renderBoth('unit_barcode')}</Label>
                                                         <Input
                                                             dir="ltr"
@@ -1418,24 +1409,24 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                             onChange={(e) => setUnitForm(prev => ({ ...prev, barcode: e.target.value }))}
                                                             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveUnit(); } }}
                                                             placeholder="Optional"
-                                                            className="h-9 rounded-lg bg-background text-left font-mono tabular-nums text-[11px]"
+                                                            className="h-8 rounded-lg bg-background text-left font-mono tabular-nums text-[11px]"
                                                         />
                                                     </div>
                                                 </div>
 
                                                 {parseFloat(unitForm.price) > 0 && parseFloat(unitForm.conversion_factor) > 0 && (
-                                                    <div className="p-1.5 rounded-lg bg-card text-[11px] text-muted-foreground text-center font-mono tabular-nums border border-border">
+                                                    <div className="p-1 rounded bg-card text-[10px] text-muted-foreground text-center font-mono tabular-nums border border-border">
                                                         = {settings?.shop?.currency || 'MVR'} {(parseFloat(unitForm.price) / parseFloat(unitForm.conversion_factor)).toFixed(2)} / pc
                                                     </div>
                                                 )}
 
-                                                <div className="flex justify-end gap-1.5">
+                                                <div className="flex justify-end gap-1.5 pt-1">
                                                     <Button
                                                         type="button"
                                                         variant="outline"
                                                         size="sm"
                                                         onClick={() => setIsUnitFormOpen(false)}
-                                                        className="h-8 px-3 rounded-lg text-xs font-bold"
+                                                        className="h-7 px-2.5 rounded-lg text-[11px] font-bold"
                                                     >
                                                         {renderBoth('cancel')}
                                                     </Button>
@@ -1443,16 +1434,16 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                         type="button"
                                                         size="sm"
                                                         onClick={handleSaveUnit}
-                                                        className="h-8 px-4 rounded-lg bg-primary text-primary-foreground text-xs font-bold"
+                                                        className="h-7 px-3 rounded-lg bg-primary text-primary-foreground text-[11px] font-bold"
                                                     >
                                                         <Check className="h-3 w-3 mr-1" />
-                                                        {editingUnitIndex !== null ? 'Update' : 'Save Unit'}
+                                                        {editingUnitIndex !== null ? 'Update' : 'Save'}
                                                     </Button>
                                                 </div>
                                             </div>
                                         )}
 
-                                        <div className="space-y-2">
+                                        <div className="space-y-1.5">
                                             {units.length > 0 ? (
                                                 units.map((u, index) => {
                                                     const conv = Number(u.conversion_factor || 0);
@@ -1461,7 +1452,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                     return (
                                                         <div
                                                             key={index}
-                                                            className="p-2.5 bg-background border border-border hover:border-primary/40 rounded-lg flex items-center justify-between gap-2 transition-colors"
+                                                            className="p-2 bg-background border border-border hover:border-primary/40 rounded-lg flex items-center justify-between gap-2 transition-colors"
                                                         >
                                                             <div className="flex items-center gap-0.5 shrink-0">
                                                                 <Button
@@ -1469,7 +1460,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                                     variant="ghost"
                                                                     size="icon"
                                                                     onClick={() => handleEditUnit(index)}
-                                                                    className="h-7 w-7 rounded-md text-blue-500 hover:bg-blue-500/10"
+                                                                    className="h-6 w-6 rounded text-blue-500 hover:bg-blue-500/10"
                                                                 >
                                                                     <Pencil className="h-3 w-3" />
                                                                 </Button>
@@ -1478,26 +1469,26 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                                     variant="ghost"
                                                                     size="icon"
                                                                     onClick={() => handleDeleteUnit(index)}
-                                                                    className="h-7 w-7 rounded-md text-red-500 hover:bg-red-500/10"
+                                                                    className="h-6 w-6 rounded text-red-500 hover:bg-red-500/10"
                                                                 >
                                                                     <Trash2 className="h-3 w-3" />
                                                                 </Button>
                                                             </div>
 
-                                                            <div className="flex items-center gap-2.5 flex-1 min-w-0 justify-end text-right">
+                                                            <div className="flex items-center gap-2 flex-1 min-w-0 justify-end text-right">
                                                                 <div className="text-left font-mono tabular-nums">
-                                                                    <span className="text-xs font-bold text-primary block">
+                                                                    <span className="text-[11px] font-bold text-primary block">
                                                                         {settings?.shop?.currency || 'MVR'} {price.toFixed(2)}
                                                                     </span>
-                                                                    <span className="text-[10px] text-muted-foreground block">
+                                                                    <span className="text-[9px] text-muted-foreground block">
                                                                         ~ {settings?.shop?.currency || 'MVR'} {perPiece} / pc
                                                                     </span>
                                                                 </div>
                                                                 <div className="text-right">
-                                                                    <Badge variant="outline" className="text-[11px] font-bold uppercase tracking-wide bg-primary/10 text-primary border-primary/30 px-2 py-0 rounded-md">
+                                                                    <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary border-primary/30 px-1.5 py-0 rounded">
                                                                         {u.name}
                                                                     </Badge>
-                                                                    <span className="text-[10px] text-muted-foreground font-bold block mt-0.5 tabular-nums">
+                                                                    <span className="text-[9px] text-muted-foreground font-bold block mt-0.5 tabular-nums">
                                                                         {u.conversion_factor} pcs
                                                                     </span>
                                                                 </div>
@@ -1507,10 +1498,10 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                                 })
                                             ) : (
                                                 !isUnitFormOpen && (
-                                                    <div className="flex flex-col items-center justify-center p-5 border border-dashed border-border rounded-lg bg-muted/30 text-center">
-                                                        <Layers className="h-6 w-6 text-muted-foreground/40 mb-1.5" />
+                                                    <div className="flex flex-col items-center justify-center p-4 border border-dashed border-border rounded-lg bg-muted/30 text-center">
+                                                        <Layers className="h-5 w-5 text-muted-foreground/40 mb-1" />
                                                         <p className="text-xs font-bold text-muted-foreground">{renderBoth('no_units_added')}</p>
-                                                        <p className="text-[11px] text-muted-foreground/70 mt-1 max-w-sm">
+                                                        <p className="text-[10px] text-muted-foreground/70 mt-0.5">
                                                             Click "+ Add Unit" to add wholesale/box pricing (Box, Case, Pack).
                                                         </p>
                                                     </div>
@@ -1519,15 +1510,15 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                         </div>
                                     </div>
                                 )}
-                            </>,
+                            </div>,
                             activeSubTab === 'flavours' ? (
                                 <Button
                                     type="button"
                                     size="sm"
                                     onClick={handleOpenAddFlavour}
-                                    className="h-8 px-2.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs gap-1"
+                                    className="h-6 px-2 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-[10px] gap-1"
                                 >
-                                    <Plus className="h-3.5 w-3.5" />
+                                    <Plus className="h-3 w-3" />
                                     Add Flavour
                                 </Button>
                             ) : (
@@ -1535,25 +1526,26 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                                     type="button"
                                     size="sm"
                                     onClick={handleOpenAddUnit}
-                                    className="h-8 px-2.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs gap-1"
+                                    className="h-6 px-2 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-[10px] gap-1"
                                 >
-                                    <Plus className="h-3.5 w-3.5" />
+                                    <Plus className="h-3 w-3" />
                                     {renderBoth('add_unit')}
                                 </Button>
-                            )
+                            ),
+                            "flex-1 h-full"
                         )}
                     </div>
                 </div>
 
-                {/* Sticky footer */}
-                <DialogFooter className="gap-3 sm:gap-3 sm:space-x-0 px-5 py-3 border-t border-border bg-card shrink-0 flex-row">
-                    <Button variant="outline" onClick={onClose} className="flex-1 h-11 text-foreground font-bold uppercase tracking-wide text-xs rounded-lg">
+                {/* Compact Sticky Footer */}
+                <DialogFooter className="gap-2.5 sm:gap-2.5 sm:space-x-0 px-4 py-2.5 border-t border-border bg-card shrink-0 flex-row">
+                    <Button variant="outline" onClick={onClose} className="flex-1 h-9 text-foreground font-bold uppercase tracking-wide text-xs rounded-xl">
                         {renderBoth('cancel')}
                     </Button>
                     <Button
                         onClick={handleSave}
                         disabled={isUploadingImage}
-                        className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-bold uppercase tracking-wide text-xs rounded-lg disabled:opacity-50"
+                        className="flex-1 h-9 bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-wide text-xs rounded-xl disabled:opacity-50"
                     >
                         {isUploadingImage ? (
                             <div className="flex items-center justify-center gap-2">
@@ -1562,7 +1554,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({ isOpen, onClose, product,
                             </div>
                         ) : (
                             <>
-                                <Save className="ml-2 h-4 w-4" /> {renderBoth('save_product')}
+                                <Save className="ml-2 h-3.5 w-3.5" /> {renderBoth('save_product')}
                             </>
                         )}
                     </Button>

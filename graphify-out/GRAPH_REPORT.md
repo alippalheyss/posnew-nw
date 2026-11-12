@@ -1,17 +1,17 @@
 # Graph Report - sleepymeerkatglow-main  (2026-11-12)
 
 ## Corpus Check
-- 175 files · ~207,145 words
+- 175 files · ~207,058 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 10 file(s) not represented in the graph (top: (none) 3, .ico 3, .css 2)
 
 ## Summary
-- 1093 nodes · 4481 edges · 70 communities (47 shown, 23 thin omitted)
+- 1093 nodes · 4480 edges · 70 communities (47 shown, 23 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `36e3a8b8`
+- Built from commit: `050bc1b7`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -96,6 +96,8 @@
 10. `showError()` - 73 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `CommandShortcut()` --calls--> `cn()`  [EXTRACTED]
+  src/components/ui/command.tsx → src/lib/utils.ts
 - `AlertDialogFooter()` --calls--> `cn()`  [EXTRACTED]
   src/components/ui/alert-dialog.tsx → src/lib/utils.ts
 - `AlertDialogHeader()` --calls--> `cn()`  [EXTRACTED]
@@ -104,8 +106,6 @@
   src/components/ui/pagination.tsx → src/lib/utils.ts
 - `PaginationEllipsis()` --calls--> `cn()`  [EXTRACTED]
   src/components/ui/pagination.tsx → src/lib/utils.ts
-- `DrawerFooter()` --calls--> `cn()`  [EXTRACTED]
-  src/components/ui/drawer.tsx → src/lib/utils.ts
 
 ## Import Cycles
 - 2-file cycle: `src/context/AppContext.tsx -> src/services/telegramService.ts -> src/context/AppContext.tsx`
@@ -308,15 +308,15 @@ Nodes (8): @supabase/supabase-js@^2.93.2, @supabase/supabase-js, backupDir, main
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `cn()` connect `cn` to `AddCreditSaleDialog.tsx`, `react`, `DailySales.tsx`, `AppContext.tsx`, `PosShortcutSettings.tsx`, `sidebar.tsx`, `hooks/use-toast.ts`, `App.tsx`, `Admin.tsx`, `pagination.tsx`, `drawer.tsx`, `carousel.tsx`, `form.tsx`, `chart.tsx`, `sheet.tsx`, `navigation-menu.tsx`, `class-variance-authority`, `POS.tsx`, `input-otp.tsx`?**
-  _High betweenness centrality (0.206) - this node is a cross-community bridge._
+  _High betweenness centrality (0.200) - this node is a cross-community bridge._
 - **Should `AddCreditSaleDialog.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.06462585034013606 - nodes in this community are weakly interconnected._
 - **Why does `react` connect `react` to `AddCreditSaleDialog.tsx`, `DailySales.tsx`, `cn`, `dependencies`, `AppContext.tsx`, `PosShortcutSettings.tsx`, `sidebar.tsx`, `package.json`, `hooks/use-toast.ts`, `App.tsx`, `Admin.tsx`, `pagination.tsx`, `drawer.tsx`, `carousel.tsx`, `main.tsx`, `form.tsx`, `chart.tsx`, `sheet.tsx`, `AppContextProvider`, `ErrorBoundary.tsx`, `navigation-menu.tsx`, `class-variance-authority`, `POS.tsx`, `input-otp.tsx`?**
-  _High betweenness centrality (0.143) - this node is a cross-community bridge._
+  _High betweenness centrality (0.133) - this node is a cross-community bridge._
 - **Should `react` be split into smaller, more focused modules?**
   _Cohesion score 0.08677098150782361 - nodes in this community are weakly interconnected._
-- **Why does `lucide-react` connect `react` to `AddCreditSaleDialog.tsx`, `DailySales.tsx`, `cn`, `dependencies`, `ErrorBoundary.tsx`, `AppContext.tsx`, `PosShortcutSettings.tsx`, `navigation-menu.tsx`, `package.json`, `sidebar.tsx`, `App.tsx`, `hooks/use-toast.ts`, `Admin.tsx`, `pagination.tsx`, `POS.tsx`, `input-otp.tsx`, `carousel.tsx`, `sheet.tsx`?**
-  _High betweenness centrality (0.055) - this node is a cross-community bridge._
+- **Why does `@supabase/supabase-js` connect `restore-to-new-supabase.mjs` to `package.json`, `telegram-webhook.ts`, `App.tsx`, `AppContext.tsx`?**
+  _High betweenness centrality (0.046) - this node is a cross-community bridge._
 - **Should `DailySales.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.11845584346906399 - nodes in this community are weakly interconnected._
 - **Should `cn` be split into smaller, more focused modules?**

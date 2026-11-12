@@ -235,9 +235,9 @@
     "semantic_hash": "42e192c481307d91af8345617c3d3442"
   },
   "src/components/ProductDialog.tsx": {
-    "mtime": 1794488045.8401527,
-    "seen": 1794490290.4899232,
-    "ast_hash": "3a5f898ee85fb2f01df4766cf3024c6d",
+    "mtime": 1794491755.5000703,
+    "seen": 1794491902.612715,
+    "ast_hash": "463c6217db6b86173d0cfdc82d890282",
     "semantic_hash": ""
   },
   "src/components/ProductImportDialog.tsx": {

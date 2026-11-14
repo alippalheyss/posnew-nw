@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ShoppingCart, PlusCircle, Minus, Trash2, MonitorPlay, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, Star, ArrowLeft, Plus, ChevronDown, Boxes, X, CheckCircle2, Package, Loader2, Check, Printer, Gift, Flame, TrendingDown, Clock, LogOut, BellRing, ShieldCheck } from 'lucide-react';
+import { ShoppingCart, ShoppingBag, PlusCircle, Minus, Trash2, MonitorPlay, Search, UserPlus, ArrowRightLeft, CreditCard, Receipt, Users, AlertTriangle, User, DollarSign, XCircle, Heart, Star, ArrowLeft, Plus, ChevronDown, Boxes, X, CheckCircle2, Package, Loader2, Check, Printer, Gift, Flame, TrendingDown, Clock, LogOut, BellRing, ShieldCheck } from 'lucide-react';
 import { formatDate, toISODate, toISODatetime, formatTime, formatDateTime } from '@/utils/formatters';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
@@ -41,6 +41,16 @@ import { sendTelegramSaleReceipt } from '@/services/telegramService';
 import PulsatingDots from '@/components/PulsatingDots';
 import { playScanSuccessSound, playScanErrorSound } from '@/utils/soundEffects';
 import { resolvePosShortcuts, matchPosShortcut } from '@/utils/posShortcuts';
+import { supabase } from '@/lib/supabase';
+import { OnlineOrdersDialog } from '@/components/OnlineOrdersDialog';
+import { PendingRegistrationsDialog } from '@/components/PendingRegistrationsDialog';
+import {
+  OnlineOrder,
+  CustomerRegistration,
+  fetchAllOnlineOrders,
+  fetchPendingRegistrations,
+  updateOnlineOrderStatus,
+} from '@/services/onlineShopService';
 
 interface Cart {
   id: string;
@@ -188,6 +198,7 @@ const POS = () => {
     updateCustomerBalance,
     addSale,
     addCustomer,
+    getNextCustomerCode,
     addPendingTransfer,
     pendingTransfers,
     resolvePendingTransfer,
@@ -227,12 +238,143 @@ const POS = () => {
   const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false);
   const [isTransferSlipsDialogOpen, setIsTransferSlipsDialogOpen] = useState(false);
   const [isBankNotificationsDialogOpen, setIsBankNotificationsDialogOpen] = useState(false);
+  const [onlineOrders, setOnlineOrders] = useState<OnlineOrder[]>([]);
+  const [pendingRegistrations, setPendingRegistrations] = useState<CustomerRegistration[]>([]);
+  const [isOnlineOrdersDialogOpen, setIsOnlineOrdersDialogOpen] = useState(false);
+  const [isPendingRegistrationsDialogOpen, setIsPendingRegistrationsDialogOpen] = useState(false);
   const [longPressedCartId, setLongPressedCartId] = useState<string | null>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [shouldPrintCashReceipt, setShouldPrintCashReceipt] = useState<boolean>(false);
   const cashDialogOpenedAt = useRef<number>(0);
 
   const triggerInstantReceiptPrintRef = useRef<() => void>(() => {});
+
+  const refreshOnlineShopQueues = async () => {
+    const [ordersList, regsList] = await Promise.all([
+      fetchAllOnlineOrders(),
+      fetchPendingRegistrations(),
+    ]);
+    setOnlineOrders(ordersList);
+    setPendingRegistrations(regsList);
+  };
+
+  useEffect(() => {
+    refreshOnlineShopQueues();
+
+    if (!supabase) return;
+    const channel = supabase
+      .channel('pos_online_shop_alerts')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'online_orders' },
+        (payload: any) => {
+          const newOrder = payload.new as OnlineOrder;
+          playScanSuccessSound();
+          showSuccess(
+            `New Online Order ${newOrder.order_number} from ${newOrder.customer_name} (${settings.shop.currency} ${Number(newOrder.total || 0).toFixed(2)})`
+          );
+          refreshOnlineShopQueues();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'online_orders' },
+        () => {
+          refreshOnlineShopQueues();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'customer_registrations' },
+        (payload: any) => {
+          const newReg = payload.new as CustomerRegistration;
+          playScanSuccessSound();
+          showInfo(`New Customer Registration from ${newReg.name_en} (${newReg.phone}) waiting for approval!`);
+          refreshOnlineShopQueues();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'customer_registrations' },
+        () => {
+          refreshOnlineShopQueues();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const newOnlineOrdersCount = useMemo(
+    () => onlineOrders.filter((o) => o.status === 'NEW').length,
+    [onlineOrders]
+  );
+  const pendingRegistrationsCount = useMemo(
+    () => pendingRegistrations.filter((r) => r.status === 'PENDING').length,
+    [pendingRegistrations]
+  );
+
+  const handleLoadOnlineOrderToPOSCart = async (order: OnlineOrder) => {
+    const matchedCustomer =
+      customers.find((c) => c.id === order.customer_id) ||
+      customers.find((c) => c.code === order.customer_code) ||
+      null;
+
+    const cartItems: CartItem[] = (order.items || []).map((item) => {
+      const prod = products.find((p) => p.id === item.product_id);
+      if (prod) {
+        return {
+          ...prod,
+          price: Number(item.unit_price || prod.price),
+          quantity: item.quantity,
+        };
+      }
+      return {
+        id: item.product_id,
+        name_en: item.name_en,
+        name_dv: item.name_dv || item.name_en,
+        price: Number(item.unit_price || 0),
+        image: item.image || '',
+        barcode: '',
+        item_code: '',
+        expiry_date: null,
+        stock_shop: item.quantity,
+        stock_godown: 0,
+        category: '',
+        is_zero_tax: false,
+        quantity: item.quantity,
+      };
+    });
+
+    const newCartId = `cart_online_${order.order_number}_${Date.now()}`;
+    setOpenCarts((prev) => {
+      const next = new Map(prev);
+      next.set(newCartId, {
+        id: newCartId,
+        displayNumber: next.size + 1,
+        customer: matchedCustomer,
+        items: cartItems,
+        createdAt: new Date().toISOString(),
+      });
+      return next;
+    });
+    setActiveCartId(newCartId);
+
+    if (order.status === 'NEW') {
+      await updateOnlineOrderStatus({
+        order,
+        status: 'ACCEPTED',
+        customerChatId: matchedCustomer?.telegram_chat_id || null,
+        shopSettings: settings.shop,
+        botToken: settings.telegram?.botToken,
+      });
+      refreshOnlineShopQueues();
+    }
+
+    showSuccess(`Loaded order ${order.order_number} into POS Cart!`);
+  };
 
   const TelegramIcon = ({ className }: { className?: string }) => (
     <svg viewBox="0 0 24 24" className={className} fill="currentColor">
@@ -1563,6 +1705,42 @@ const POS = () => {
               {pendingTransfers.length > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-500 text-[#050510] rounded-full text-[10px] font-black flex items-center justify-center border-2 border-[#050510]">
                   {pendingTransfers.length}
+                </span>
+              )}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsOnlineOrdersDialogOpen(true)}
+              title="Online Shop Orders (shop.bback.store)"
+              className={cn(
+                "relative h-10 w-10 rounded-xl bg-muted border border-border hover:bg-primary/20 hover:text-primary text-muted-foreground transition-all",
+                newOnlineOrdersCount > 0 && "border-primary/60 bg-primary/10 text-primary"
+              )}
+            >
+              <ShoppingBag className="h-4 w-4" />
+              {newOnlineOrdersCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground rounded-full text-[10px] font-black flex items-center justify-center border-2 border-background animate-pulse">
+                  {newOnlineOrdersCount}
+                </span>
+              )}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsPendingRegistrationsDialogOpen(true)}
+              title="Pending Customer Registrations (shop.bback.store)"
+              className={cn(
+                "relative h-10 w-10 rounded-xl bg-muted border border-border hover:bg-blue-500/20 hover:text-blue-500 text-muted-foreground transition-all",
+                pendingRegistrationsCount > 0 && "border-blue-500/60 bg-blue-500/10 text-blue-500"
+              )}
+            >
+              <UserPlus className="h-4 w-4" />
+              {pendingRegistrationsCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 text-white rounded-full text-[10px] font-black flex items-center justify-center border-2 border-background animate-pulse">
+                  {pendingRegistrationsCount}
                 </span>
               )}
             </Button>
@@ -3819,6 +3997,29 @@ const POS = () => {
           );
           await resolvePendingTransfer(transferId, 'cash');
         }}
+      />
+
+      {/* Online Shop Orders Dialog (shop.bback.store) */}
+      <OnlineOrdersDialog
+        open={isOnlineOrdersDialogOpen}
+        onOpenChange={setIsOnlineOrdersDialogOpen}
+        orders={onlineOrders}
+        customers={customers}
+        shopSettings={settings.shop}
+        botToken={settings.telegram?.botToken}
+        onRefresh={refreshOnlineShopQueues}
+        onLoadToPOSCart={handleLoadOnlineOrderToPOSCart}
+      />
+
+      {/* Pending Customer Registrations Dialog (shop.bback.store) */}
+      <PendingRegistrationsDialog
+        open={isPendingRegistrationsDialogOpen}
+        onOpenChange={setIsPendingRegistrationsDialogOpen}
+        registrations={pendingRegistrations}
+        defaultCreditLimit={settings.accounting?.creditLimit || 0}
+        getNextCustomerCode={getNextCustomerCode}
+        addCustomer={addCustomer}
+        onRefresh={refreshOnlineShopQueues}
       />
     </div>
   );

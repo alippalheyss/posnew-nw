@@ -1761,3 +1761,175 @@ export const sendNearExpiryClearanceBroadcast = async ({
   };
 };
 
+/**
+ * Send new online shop order notification to the bback Telegram group
+ */
+export const sendTelegramOnlineOrderNotification = async ({
+  order,
+  groupChatId,
+  currency = 'MVR',
+  botToken,
+}: {
+  order: {
+    order_number: string;
+    customer_code: string;
+    customer_name: string;
+    customer_phone: string;
+    fulfillment_type: 'DELIVERY' | 'PICKUP';
+    delivery_address?: string;
+    delivery_notes?: string;
+    payment_method: 'CREDIT' | 'CASH_TRANSFER';
+    payment_slip_url?: string;
+    items: Array<{ name_en: string; quantity: number; unit_price: number; line_total: number }>;
+    total: number;
+  };
+  groupChatId?: string | number;
+  currency?: string;
+  botToken?: string;
+}): Promise<{ ok: boolean; description?: string }> => {
+  const activeToken = botToken || DEFAULT_TELEGRAM_BOT_TOKEN;
+  if (!activeToken || !groupChatId) {
+    return { ok: false, description: 'No Telegram group Chat ID configured.' };
+  }
+
+  const itemLines = order.items
+    .map((it, idx) => `${idx + 1}. ${it.name_en} x${it.quantity} — ${currency} ${Number(it.line_total).toFixed(2)}`)
+    .join('\n');
+
+  const fulfillmentLine =
+    order.fulfillment_type === 'DELIVERY'
+      ? `🚚 *Delivery*\n📍 *Address:* ${order.delivery_address || 'Not provided'}`
+      : `🏪 *Store Pickup*`;
+
+  const paymentLine =
+    order.payment_method === 'CREDIT'
+      ? `💳 *Payment:* Credit (ދަރަނި)`
+      : `💵 *Payment:* Cash / Bank Transfer${order.payment_slip_url ? ' (Slip Attached)' : ''}`;
+
+  const notesLine = order.delivery_notes ? `\n📝 *Notes:* ${order.delivery_notes}` : '';
+
+  const message =
+    `🛒 *NEW ONLINE ORDER (${order.order_number})*\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `👤 *Customer:* ${order.customer_name} (#${order.customer_code})\n` +
+    `📞 *Phone:* ${order.customer_phone}\n` +
+    `${fulfillmentLine}\n` +
+    `${paymentLine}${notesLine}\n\n` +
+    `📦 *Items:*\n${itemLines}\n\n` +
+    `💰 *Total:* *${currency} ${Number(order.total).toFixed(2)}*\n` +
+    `⏰ *Source:* shop.bback.store`;
+
+  const slipUrl = order.payment_slip_url || '';
+  const isHttpImage =
+    slipUrl.startsWith('http') &&
+    !/\.pdf(\?|$)/i.test(slipUrl);
+
+  if (isHttpImage) {
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${activeToken}/sendPhoto`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: groupChatId,
+          photo: slipUrl,
+          caption: message.slice(0, 1020),
+          parse_mode: 'Markdown',
+        }),
+      });
+      const json = await res.json();
+      if (json.ok) return { ok: true };
+    } catch (err) {
+      console.warn('sendPhoto failed for online order slip, falling back to sendMessage:', err);
+    }
+  }
+
+  const slipFallback = slipUrl && slipUrl.startsWith('http') ? `\n🧾 *Slip:* ${slipUrl}` : '';
+  const fullMessage = `${message}${slipFallback}`;
+  const res = await sendTelegramMessage(groupChatId, fullMessage, activeToken, 'Markdown');
+  if (!res.ok && res.description?.toLowerCase().includes('parse')) {
+    return sendTelegramMessage(groupChatId, fullMessage.replace(/[*_`]/g, ''), activeToken);
+  }
+  return res;
+};
+
+/**
+ * Send new customer registration alert to the bback Telegram group
+ */
+export const sendTelegramOnlineRegistrationAlert = async ({
+  registration,
+  groupChatId,
+  botToken,
+}: {
+  registration: {
+    name_en: string;
+    name_dv?: string;
+    phone: string;
+    address?: string;
+  };
+  groupChatId?: string | number;
+  botToken?: string;
+}): Promise<{ ok: boolean; description?: string }> => {
+  const activeToken = botToken || DEFAULT_TELEGRAM_BOT_TOKEN;
+  if (!activeToken || !groupChatId) {
+    return { ok: false, description: 'No Telegram group Chat ID configured.' };
+  }
+
+  const msg =
+    `🆕 *NEW CUSTOMER REGISTRATION*\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `👤 *Name:* ${registration.name_en}${registration.name_dv ? ` (${registration.name_dv})` : ''}\n` +
+    `📞 *Phone:* ${registration.phone}\n` +
+    `📍 *Address:* ${registration.address || 'N/A'}\n\n` +
+    `Please open POS -> *Pending Registrations* to approve & assign a Customer Code.`;
+
+  const res = await sendTelegramMessage(groupChatId, msg, activeToken, 'Markdown');
+  if (!res.ok && res.description?.toLowerCase().includes('parse')) {
+    return sendTelegramMessage(groupChatId, msg.replace(/[*_`]/g, ''), activeToken);
+  }
+  return res;
+};
+
+/**
+ * Send order status update directly to a Telegram-linked customer
+ */
+export const sendTelegramOnlineOrderStatusToCustomer = async ({
+  customerChatId,
+  orderNumber,
+  status,
+  total,
+  currency = 'MVR',
+  shopName = 'B BACK',
+  botToken,
+}: {
+  customerChatId?: string | number | null;
+  orderNumber: string;
+  status: string;
+  total: number;
+  currency?: string;
+  shopName?: string;
+  botToken?: string;
+}): Promise<{ ok: boolean }> => {
+  const activeToken = botToken || DEFAULT_TELEGRAM_BOT_TOKEN;
+  if (!activeToken || !customerChatId) return { ok: false };
+
+  const statusLabels: Record<string, string> = {
+    ACCEPTED: '✅ Accepted by store',
+    PREPARING: '📦 Being packed / prepared',
+    READY: '🎉 Ready for Pickup / Out for Delivery',
+    COMPLETED: '✔️ Completed',
+    CANCELLED: '❌ Cancelled',
+  };
+
+  const label = statusLabels[status] || status;
+  const msg =
+    `🛍️ *${shopName} — Order Update*\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `🧾 *Order:* ${orderNumber}\n` +
+    `📌 *Status:* ${label}\n` +
+    `💰 *Total:* ${currency} ${Number(total).toFixed(2)}\n\n` +
+    `Track anytime at https://shop.bback.store`;
+
+  const res = await sendTelegramMessage(customerChatId, msg, activeToken, 'Markdown');
+  return { ok: !!res.ok };
+};
+

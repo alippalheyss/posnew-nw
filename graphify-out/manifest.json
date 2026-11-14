@@ -109,9 +109,9 @@
     "semantic_hash": "ac99eae15f40c02a5931041030f1ef2e"
   },
   "src/App.tsx": {
-    "mtime": 1794384833.689773,
-    "seen": 1794385446.9554513,
-    "ast_hash": "6459041162a7cde0a0d29d61c775d6ab",
+    "mtime": 1794642299.7688074,
+    "seen": 1794642352.8998363,
+    "ast_hash": "a05a60c1141c4e8999d6c32ae91485d3",
     "semantic_hash": ""
   },
   "src/components/AddCreditSaleDialog.tsx": {
@@ -625,9 +625,9 @@
     "semantic_hash": "5bff9ea3904b15a9e1908b128c88e75f"
   },
   "src/context/AppContext.tsx": {
-    "mtime": 1794484663.05964,
-    "seen": 1794484691.5050066,
-    "ast_hash": "14486ac3978e20ca796e73d01d2b9f48",
+    "mtime": 1794642057.8255346,
+    "seen": 1794642352.912897,
+    "ast_hash": "7295a548aed2bf91e0b517250d4d66e7",
     "semantic_hash": ""
   },
   "src/context/AppProviderWithPriceDialog.tsx": {
@@ -697,9 +697,9 @@
     "semantic_hash": "b19bf63f2210616b3157188ac3940bb1"
   },
   "src/pages/Admin.tsx": {
-    "mtime": 1794488985.9548354,
-    "seen": 1794490290.518841,
-    "ast_hash": "9febb730b022fc7c5b009d283f6175d4",
+    "mtime": 1794642277.727566,
+    "seen": 1794642352.9144847,
+    "ast_hash": "7c55a02ae108e2023ae88f6b5b640851",
     "semantic_hash": ""
   },
   "src/pages/CreditInvoices.tsx": {
@@ -775,9 +775,9 @@
     "semantic_hash": "a976bc2bdae4b91634d95b411e846b94"
   },
   "src/pages/POS.tsx": {
-    "mtime": 1794465802.6094284,
-    "seen": 1794467143.5134428,
-    "ast_hash": "5c4167ff82bf37fef22e61f39771334f",
+    "mtime": 1794642300.2946968,
+    "seen": 1794642352.9161417,
+    "ast_hash": "b09dced7a5aa6d5ba6d5634a8b02f3f4",
     "semantic_hash": ""
   },
   "src/pages/Products.tsx": {
@@ -841,10 +841,10 @@
     "semantic_hash": "0d2681440097910f32c63946f6c4f54d"
   },
   "src/services/telegramService.ts": {
-    "mtime": 1792926011.279682,
-    "seen": 1794238973.9933562,
-    "ast_hash": "7763338b135d6dabafc13849efdd4d7d",
-    "semantic_hash": "7763338b135d6dabafc13849efdd4d7d"
+    "mtime": 1794642075.2817159,
+    "seen": 1794642352.9174678,
+    "ast_hash": "199a5bcc8926de90b403636a7665db0c",
+    "semantic_hash": ""
   },
   "src/types/jspdf-autotable.d.ts": {
     "mtime": 1769543236.8977065,
@@ -2380,6 +2380,30 @@
     "mtime": 1794633524.3893394,
     "seen": 1794633954.4381654,
     "ast_hash": "abe809c8f9d7a8b1d8984627b35cbfc2",
+    "semantic_hash": ""
+  },
+  "src/components/OnlineOrdersDialog.tsx": {
+    "mtime": 1794642297.352062,
+    "seen": 1794642352.9023643,
+    "ast_hash": "2a3bfbb6e5d1abbdd20295dce13f998a",
+    "semantic_hash": ""
+  },
+  "src/components/PendingRegistrationsDialog.tsx": {
+    "mtime": 1794642297.4203744,
+    "seen": 1794642352.902498,
+    "ast_hash": "085bd3b1715f2a543bfddcd555918269",
+    "semantic_hash": ""
+  },
+  "src/pages/Shop.tsx": {
+    "mtime": 1794642297.8144236,
+    "seen": 1794642352.9165325,
+    "ast_hash": "a281cbea9264e785183c492fdb41723b",
+    "semantic_hash": ""
+  },
+  "src/services/onlineShopService.ts": {
+    "mtime": 1794642298.0739212,
+    "seen": 1794642352.9171965,
+    "ast_hash": "efe0b1f408f371ad0fae1f95a643dd82",
     "semantic_hash": ""
   },
   "package-lock.json": {

@@ -31,9 +31,14 @@ import AppCloseConfirmDialog from "./components/AppCloseConfirmDialog";
 import MobilePurchase from "./pages/MobilePurchase";
 import StockAudit from "./pages/StockAudit";
 import Quotations from "./pages/Quotations";
+import Shop from "./pages/Shop";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
+
+const isShopSubdomain =
+  typeof window !== 'undefined' &&
+  window.location.hostname.toLowerCase().startsWith('shop.');
 
 const App = () => (
   <ErrorBoundary>
@@ -41,14 +46,22 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        {isShopSubdomain ? (
+          <Router>
+            <Routes>
+              <Route path="*" element={<Shop />} />
+            </Routes>
+          </Router>
+        ) : (
         <AuthProvider>
           <LocalPurchaseWindow />
           <Router>
             <AppCloseConfirmDialog />
             <Routes>
-              {/* Public Route */}
+              {/* Public Routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/customer-display" element={<CustomerDisplay />} />
+              <Route path="/shop" element={<Shop />} />
 
               {/* Standalone Mobile Routes (Direct full-screen on phones without desktop layout) */}
               <Route
@@ -110,6 +123,7 @@ const App = () => (
             </Routes>
           </Router>
         </AuthProvider>
+        )}
       </TooltipProvider>
     </QueryClientProvider>
   </ErrorBoundary>

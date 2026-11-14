@@ -645,6 +645,26 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                           dir="ltr"
                         />
                       </div>
+                      <div className="p-3.5 rounded-xl bg-muted/50 border border-border space-y-2.5" dir="ltr">
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <p className="text-xs font-black text-foreground">Online Storefront (shop.bback.store)</p>
+                            <p className="text-[11px] text-muted-foreground">Allow customers to place online orders</p>
+                          </div>
+                          <Switch
+                            checked={shopSettings.onlineShopEnabled !== false}
+                            onCheckedChange={(checked) => handleSettingsChange('shop', 'onlineShopEnabled', checked)}
+                          />
+                        </div>
+                        {shopSettings.onlineShopEnabled === false && (
+                          <Input
+                            placeholder="Optional closed message for customers..."
+                            value={shopSettings.onlineShopClosedMessage || ''}
+                            onChange={(e) => handleSettingsChange('shop', 'onlineShopClosedMessage', e.target.value)}
+                            className="bg-background border-border h-9 rounded-lg text-xs"
+                          />
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex flex-col items-center justify-center p-5 border-2 border-dashed border-border rounded-xl bg-muted/40 min-h-[260px] text-center">

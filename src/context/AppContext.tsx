@@ -244,6 +244,8 @@ export interface ShopSettings {
   telegramGroupChatId?: string | number;
   telegramGroupTitle?: string;
   posShortcuts?: Partial<Record<string, string>>; // Custom POS keyboard shortcuts (synced to cloud)
+  onlineShopEnabled?: boolean;
+  onlineShopClosedMessage?: string;
 }
 
 interface AccountingSettings {

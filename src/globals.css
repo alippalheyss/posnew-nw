@@ -531,3 +531,53 @@ input:not([dir="rtl"]):not(.font-faruma):not([name*="_dv"]):not([id*="_dv"]),
 textarea:not([dir="rtl"]):not(.font-faruma):not([name*="_dv"]):not([id*="_dv"]) {
   direction: ltr;
 }
+
+/* Visually hidden live region for screen-reader announcements */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Customers tab: container queries, view-transition reordering, and off-screen rendering deferral */
+.customer-card {
+  container-type: inline-size;
+  view-transition-name: match-element;
+}
+
+.customer-card-deferred {
+  content-visibility: auto;
+  contain-intrinsic-size: auto none auto 225px;
+}
+
+@supports not (content-visibility: auto) {
+  .customer-card-deferred {
+    contain: layout style paint;
+  }
+}
+
+@container (max-width: 250px) {
+  .customer-card-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .customer-card-footer-actions {
+    justify-content: space-between;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0ms !important;
+  }
+}

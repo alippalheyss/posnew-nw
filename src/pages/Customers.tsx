@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
+import { flushSync } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,7 @@ const Customers = () => {
   const [telegramCustomer, setTelegramCustomer] = useState<Customer | null>(null);
   const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false);
   const [isSendingTelegram, setIsSendingTelegram] = useState<string | null>(null);
+  const [statusAnnouncement, setStatusAnnouncement] = useState('');
 
   const filteredCustomers = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -233,12 +235,28 @@ const Customers = () => {
     [customers]
   );
 
+  const runListTransition = (updateFn: () => void, announcement: string) => {
+    const visibleItems = Math.min(filteredCustomers.length, visibleCount);
+    const docWithVT = document as Document & {
+      startViewTransition?: (cb: () => void) => { finished: Promise<void> };
+    };
+    if (typeof docWithVT.startViewTransition === 'function' && visibleItems <= 120) {
+      docWithVT.startViewTransition(() => {
+        flushSync(updateFn);
+      });
+    } else {
+      updateFn();
+    }
+    setStatusAnnouncement(announcement);
+  };
+
   return (
     <div className="p-4 sm:p-5 font-faruma flex flex-col h-full bg-background text-foreground overflow-hidden" dir="ltr">
+      <p role="status" className="visually-hidden">{statusAnnouncement}</p>
       {/* Sleek Header & KPI Strip */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-primary/15 border border-primary/25 flex items-center justify-center text-primary shrink-0 shadow-xs">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/25 flex items-center justify-center text-primary shrink-0">
             <Users className="h-5 w-5" />
           </div>
           <div>
@@ -261,17 +279,17 @@ const Customers = () => {
           <div className="hidden sm:flex items-center gap-2 mr-1">
             <div className="px-3 py-1.5 rounded-xl bg-card border border-border flex items-center gap-2 text-xs">
               <span className="text-muted-foreground font-bold">Total:</span>
-              <span className="font-mono font-black text-foreground">{customers.length}</span>
+              <span className="font-mono font-black tabular-nums text-foreground">{customers.length}</span>
             </div>
-            <div className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center gap-2 text-xs">
+            <div className="px-3 py-1.5 rounded-xl bg-card border border-amber-500/30 flex items-center gap-2 text-xs">
               <span className="text-amber-600 dark:text-amber-400 font-bold">Active Credit:</span>
-              <span className="font-mono font-black text-amber-600 dark:text-amber-400">
+              <span className="font-mono font-black tabular-nums text-amber-600 dark:text-amber-400">
                 {customersWithBalanceCount} ({settings.shop.currency} {totalOutstanding.toFixed(0)})
               </span>
             </div>
-            <div className="px-3 py-1.5 rounded-xl bg-[#229ED9]/10 border border-[#229ED9]/25 flex items-center gap-1.5 text-xs">
+            <div className="px-3 py-1.5 rounded-xl bg-card border border-[#229ED9]/30 flex items-center gap-1.5 text-xs">
               <TelegramIcon className="h-3.5 w-3.5 text-[#229ED9]" />
-              <span className="font-mono font-black text-[#229ED9]">{telegramLinkedCount}</span>
+              <span className="font-mono font-black tabular-nums text-[#229ED9]">{telegramLinkedCount}</span>
             </div>
           </div>
 
@@ -287,7 +305,7 @@ const Customers = () => {
           <Button 
             size="sm"
             onClick={() => setIsAddCustomerDialogOpen(true)}
-            className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground h-9 px-4 rounded-xl font-black text-xs shadow-md shadow-primary/20"
+            className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground h-9 px-4 rounded-xl font-black text-xs shadow-sm"
           >
             <PlusCircle className="h-3.5 w-3.5" />
             <span>{renderBoth('add_new_customer')}</span>
@@ -296,7 +314,7 @@ const Customers = () => {
       </div>
 
       {/* Unified Compact Search, Filter & Sort Toolbar */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2.5 mb-4 p-2 rounded-2xl bg-card/80 border border-border shadow-2xs shrink-0">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2.5 mb-4 p-2 rounded-xl bg-card border border-border shrink-0">
         {/* Search Input */}
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -314,7 +332,7 @@ const Customers = () => {
               setSearchTerm(e.target.value);
               setVisibleCount(36);
             }}
-            className="w-full bg-background border-border/80 rounded-xl pl-9 pr-9 h-9 text-left font-semibold text-xs"
+            className="w-full bg-background border-border rounded-lg pl-9 pr-9 h-9 text-left font-semibold text-xs"
           />
           {searchTerm && (
             <button
@@ -329,12 +347,13 @@ const Customers = () => {
         </div>
 
         {/* Filter Mode Pills */}
-        <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border/60 shrink-0">
+        <div className="flex items-center gap-1 bg-muted p-1 rounded-lg border border-border shrink-0">
           <button
             type="button"
-            onClick={() => setFilterType('ALL')}
+            aria-pressed={filterType === 'ALL'}
+            onClick={() => runListTransition(() => setFilterType('ALL'), 'Showing all customers')}
             className={cn(
-              "h-7 px-2.5 rounded-lg text-[11px] font-black transition-all flex items-center gap-1",
+              "h-7 px-2.5 rounded-md text-[11px] font-black transition-colors flex items-center gap-1",
               filterType === 'ALL'
                 ? "bg-primary text-primary-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
@@ -342,13 +361,14 @@ const Customers = () => {
           >
             <Users className="h-3 w-3" />
             <span>All</span>
-            <span className="text-[10px] opacity-80 font-mono">({customers.length})</span>
+            <span className="text-[10px] opacity-80 font-mono tabular-nums">({customers.length})</span>
           </button>
           <button
             type="button"
-            onClick={() => setFilterType('BY_NAME')}
+            aria-pressed={filterType === 'BY_NAME'}
+            onClick={() => runListTransition(() => setFilterType('BY_NAME'), 'Filter mode: search by customer name')}
             className={cn(
-              "h-7 px-2.5 rounded-lg text-[11px] font-black transition-all flex items-center gap-1",
+              "h-7 px-2.5 rounded-md text-[11px] font-black transition-colors flex items-center gap-1",
               filterType === 'BY_NAME'
                 ? "bg-blue-600 text-white shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
@@ -359,9 +379,10 @@ const Customers = () => {
           </button>
           <button
             type="button"
-            onClick={() => setFilterType('BY_CODE')}
+            aria-pressed={filterType === 'BY_CODE'}
+            onClick={() => runListTransition(() => setFilterType('BY_CODE'), 'Filter mode: search by customer code')}
             className={cn(
-              "h-7 px-2.5 rounded-lg text-[11px] font-black transition-all flex items-center gap-1",
+              "h-7 px-2.5 rounded-md text-[11px] font-black transition-colors flex items-center gap-1",
               filterType === 'BY_CODE'
                 ? "bg-amber-600 text-white shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
@@ -373,17 +394,24 @@ const Customers = () => {
         </div>
 
         {/* Sort Pills */}
-        <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border/60 shrink-0">
+        <div className="flex items-center gap-1 bg-muted p-1 rounded-lg border border-border shrink-0">
           <span className="text-[10px] font-bold text-muted-foreground px-1.5 flex items-center gap-1">
             <ArrowUpDown className="h-3 w-3" /> Sort:
           </span>
           <button
             type="button"
-            onClick={() => setSortBy(prev => prev === 'NAME_ASC' ? 'DEFAULT' : 'NAME_ASC')}
+            aria-pressed={sortBy === 'NAME_ASC'}
+            onClick={() => {
+              const next = sortBy === 'NAME_ASC' ? 'DEFAULT' : 'NAME_ASC';
+              runListTransition(
+                () => setSortBy(next),
+                next === 'NAME_ASC' ? 'Sorted by customer name A to Z' : 'Sorted by default order'
+              );
+            }}
             className={cn(
-              "h-7 px-2 text-[11px] font-bold rounded-lg transition-all",
+              "h-7 px-2 text-[11px] font-bold rounded-md transition-colors",
               sortBy === 'NAME_ASC'
-                ? "bg-background text-blue-600 dark:text-blue-400 font-black shadow-2xs border border-blue-500/30"
+                ? "bg-card text-blue-600 dark:text-blue-400 font-black border border-blue-500/30"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -391,11 +419,18 @@ const Customers = () => {
           </button>
           <button
             type="button"
-            onClick={() => setSortBy(prev => prev === 'CODE_ASC' ? 'DEFAULT' : 'CODE_ASC')}
+            aria-pressed={sortBy === 'CODE_ASC'}
+            onClick={() => {
+              const next = sortBy === 'CODE_ASC' ? 'DEFAULT' : 'CODE_ASC';
+              runListTransition(
+                () => setSortBy(next),
+                next === 'CODE_ASC' ? 'Sorted by customer code ascending' : 'Sorted by default order'
+              );
+            }}
             className={cn(
-              "h-7 px-2 text-[11px] font-bold rounded-lg transition-all",
+              "h-7 px-2 text-[11px] font-bold rounded-md transition-colors",
               sortBy === 'CODE_ASC'
-                ? "bg-background text-amber-600 dark:text-amber-400 font-black shadow-2xs border border-amber-500/30"
+                ? "bg-card text-amber-600 dark:text-amber-400 font-black border border-amber-500/30"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -403,11 +438,18 @@ const Customers = () => {
           </button>
           <button
             type="button"
-            onClick={() => setSortBy(prev => prev === 'BALANCE_DESC' ? 'DEFAULT' : 'BALANCE_DESC')}
+            aria-pressed={sortBy === 'BALANCE_DESC'}
+            onClick={() => {
+              const next = sortBy === 'BALANCE_DESC' ? 'DEFAULT' : 'BALANCE_DESC';
+              runListTransition(
+                () => setSortBy(next),
+                next === 'BALANCE_DESC' ? 'Sorted by highest outstanding balance' : 'Sorted by default order'
+              );
+            }}
             className={cn(
-              "h-7 px-2 text-[11px] font-bold rounded-lg transition-all",
+              "h-7 px-2 text-[11px] font-bold rounded-md transition-colors",
               sortBy === 'BALANCE_DESC'
-                ? "bg-background text-rose-600 dark:text-rose-400 font-black shadow-2xs border border-rose-500/30"
+                ? "bg-card text-rose-600 dark:text-rose-400 font-black border border-rose-500/30"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -419,7 +461,7 @@ const Customers = () => {
       {/* Compact, Sleek Customers Grid */}
       <ScrollArea className="flex-1 custom-scrollbar">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3 pb-6">
-          {filteredCustomers.slice(0, visibleCount).map((customer) => {
+          {filteredCustomers.slice(0, visibleCount).map((customer, idx) => {
             const outBal = Number(customer.outstanding_balance || 0);
             const credLim = Number(customer.credit_limit || 0);
             const usagePct = credLim > 0 ? Math.min(100, Math.round((outBal / credLim) * 100)) : (outBal > 0 ? 100 : 0);
@@ -432,123 +474,126 @@ const Customers = () => {
               .toUpperCase();
 
             return (
-              <Card
+              <article
                 key={customer.id}
                 className={cn(
-                  "bg-card/90 border transition-all duration-200 rounded-2xl overflow-hidden group hover:shadow-md flex flex-col justify-between",
+                  "customer-card bg-card border transition-colors duration-200 rounded-xl overflow-hidden group hover:shadow-sm p-3.5 flex flex-col justify-between gap-2.5",
+                  idx >= 8 && "customer-card-deferred",
                   outBal > 0
-                    ? "border-amber-500/25 hover:border-amber-500/50"
-                    : "border-border hover:border-primary/40"
+                    ? "border-amber-500/35 hover:border-amber-500/60"
+                    : "border-border hover:border-primary/45"
                 )}
               >
-                <CardContent className="p-3.5 flex flex-col h-full justify-between gap-2.5">
-                  {/* Top Section: Avatar + Name + Code + Quick Menu */}
-                  <div>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <div className={cn(
-                          "w-9 h-9 rounded-xl border flex items-center justify-center text-xs font-black shrink-0",
-                          outBal > 0
-                            ? "bg-amber-500/10 border-amber-500/25 text-amber-600 dark:text-amber-400"
-                            : "bg-primary/10 border-primary/20 text-primary"
-                        )}>
-                          {initials}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <h3 className="text-sm font-black text-foreground truncate leading-tight">
-                              {customer.name_en || customer.name_dv}
-                            </h3>
-                          </div>
-                          {customer.name_dv && (
-                            <p className="text-[11px] font-bold text-muted-foreground truncate leading-tight mt-0.5">
-                              {customer.name_dv}
-                            </p>
-                          )}
-                        </div>
-                      </div>
+                {/* Card Header: Avatar + Name + Code + Quick Menu */}
+                <header className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className={cn(
+                      "w-9 h-9 rounded-lg border flex items-center justify-center text-xs font-black shrink-0",
+                      outBal > 0
+                        ? "bg-amber-500/10 border-amber-500/25 text-amber-600 dark:text-amber-400"
+                        : "bg-primary/10 border-primary/20 text-primary"
+                    )}>
+                      {initials}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-black text-foreground truncate leading-tight">
+                        {customer.name_en || customer.name_dv}
+                      </h3>
+                      {customer.name_dv && (
+                        <p className="text-[11px] font-bold text-muted-foreground truncate leading-tight mt-0.5">
+                          {customer.name_dv}
+                        </p>
+                      )}
+                    </div>
+                  </div>
 
-                      {/* Code Badge + Actions Dropdown */}
-                      <div className="flex items-center gap-1 shrink-0">
-                        <span className={cn(
-                          "text-[10px] font-mono font-black px-2 py-0.5 rounded-md border",
-                          filterType === 'BY_CODE'
-                            ? "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/40"
-                            : "bg-muted text-foreground border-border"
-                        )}>
-                          #{customer.code}
-                        </span>
+                  {/* Code Badge + Actions Dropdown */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className={cn(
+                      "text-[10px] font-mono font-black tabular-nums px-2 py-0.5 rounded-md border",
+                      filterType === 'BY_CODE'
+                        ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/40"
+                        : "bg-muted text-foreground border-border"
+                    )}>
+                      #{customer.code}
+                    </span>
 
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground">
-                              <MoreVertical className="h-3.5 w-3.5" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-card border-border text-foreground rounded-xl">
-                            <DropdownMenuItem onClick={() => handleEditClick(customer)} className="gap-2 text-xs font-bold cursor-pointer">
-                              <PencilLine className="h-3.5 w-3.5 text-blue-500" />
-                              <span>{renderBoth('edit')}</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleOpenTelegramConnect(customer)} className="gap-2 text-xs font-bold cursor-pointer text-[#229ED9]">
-                              <QrCode className="h-3.5 w-3.5" />
-                              <span>Connect Telegram (QR)</span>
-                            </DropdownMenuItem>
-                            {outBal > 0 && customer.telegram_chat_id && (
-                              <DropdownMenuItem onClick={() => handleSendCustomerTelegram(customer)} className="gap-2 text-xs font-bold cursor-pointer text-emerald-500">
-                                <Send className="h-3.5 w-3.5" />
-                                <span>Send Telegram Statement</span>
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Actions for ${customer.name_en || customer.name_dv}`}
+                          className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground"
+                        >
+                          <MoreVertical className="h-3.5 w-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-card border-border text-foreground rounded-xl">
+                        <DropdownMenuItem onClick={() => handleEditClick(customer)} className="gap-2 text-xs font-bold cursor-pointer">
+                          <PencilLine className="h-3.5 w-3.5 text-blue-500" />
+                          <span>{renderBoth('edit')}</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleOpenTelegramConnect(customer)} className="gap-2 text-xs font-bold cursor-pointer text-[#229ED9]">
+                          <QrCode className="h-3.5 w-3.5" />
+                          <span>Connect Telegram (QR)</span>
+                        </DropdownMenuItem>
+                        {outBal > 0 && customer.telegram_chat_id && (
+                          <DropdownMenuItem onClick={() => handleSendCustomerTelegram(customer)} className="gap-2 text-xs font-bold cursor-pointer text-emerald-500">
+                            <Send className="h-3.5 w-3.5" />
+                            <span>Send Telegram Statement</span>
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </header>
+
+                {/* Card Body: Meta Strip + Credit Balance Box */}
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/60 text-[11px]">
+                    <div className="flex items-center gap-1.5 text-muted-foreground min-w-0">
+                      <Phone className="h-3 w-3 shrink-0 text-muted-foreground/70" />
+                      <span className="font-mono font-bold tabular-nums truncate">{customer.phone || 'No phone'}</span>
                     </div>
 
-                    {/* Meta Strip: Phone, Loyalty Points & Telegram Status */}
-                    <div className="flex items-center justify-between gap-2 mt-2.5 pt-2 border-t border-border/50 text-[11px]">
-                      <div className="flex items-center gap-1.5 text-muted-foreground min-w-0">
-                        <Phone className="h-3 w-3 shrink-0 text-muted-foreground/70" />
-                        <span className="font-mono font-bold truncate">{customer.phone || 'No phone'}</span>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {Number(customer.loyalty_points || 0) > 0 && (
-                          <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono font-black text-[10px]">
-                            {Number(customer.loyalty_points || 0).toFixed(0)} PTS
-                          </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {Number(customer.loyalty_points || 0) > 0 && (
+                        <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono font-black tabular-nums text-[10px]">
+                          {Number(customer.loyalty_points || 0).toFixed(0)} PTS
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        aria-pressed={Boolean(customer.telegram_chat_id)}
+                        onClick={() => handleOpenTelegramConnect(customer)}
+                        className={cn(
+                          "h-5 px-1.5 rounded text-[9px] font-black flex items-center gap-1 transition-colors",
+                          customer.telegram_chat_id
+                            ? "bg-[#229ED9]/15 text-[#229ED9] hover:bg-[#229ED9]/25"
+                            : "bg-muted text-muted-foreground hover:text-[#229ED9]"
                         )}
-                        <button
-                          type="button"
-                          onClick={() => handleOpenTelegramConnect(customer)}
-                          className={cn(
-                            "h-5 px-1.5 rounded text-[9px] font-black flex items-center gap-1 transition-colors",
-                            customer.telegram_chat_id
-                              ? "bg-[#229ED9]/15 text-[#229ED9] hover:bg-[#229ED9]/25"
-                              : "bg-muted text-muted-foreground hover:text-[#229ED9]"
-                          )}
-                          title={customer.telegram_chat_id ? `Telegram Linked (${customer.telegram_chat_id})` : "Connect Telegram Bot"}
-                        >
-                          <TelegramIcon className="h-2.5 w-2.5" />
-                          <span>{customer.telegram_chat_id ? 'Linked' : 'Link'}</span>
-                        </button>
-                      </div>
+                        title={customer.telegram_chat_id ? `Telegram Linked (${customer.telegram_chat_id})` : "Connect Telegram Bot"}
+                      >
+                        <TelegramIcon className="h-2.5 w-2.5" />
+                        <span>{customer.telegram_chat_id ? 'Linked' : 'Link'}</span>
+                      </button>
                     </div>
                   </div>
 
                   {/* Credit Balance & Limit Box */}
                   <div className={cn(
-                    "p-2.5 rounded-xl border",
+                    "p-2.5 rounded-lg border",
                     outBal > 0
-                      ? "bg-amber-500/5 border-amber-500/20"
-                      : "bg-muted/40 border-border/60"
+                      ? "bg-amber-500/5 border-amber-500/25"
+                      : "bg-muted/50 border-border"
                   )}>
                     <div className="flex items-baseline justify-between gap-2 mb-1">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                         Balance
                       </span>
                       <span className={cn(
-                        "font-mono font-black text-sm",
+                        "font-mono font-black text-sm tabular-nums",
                         outBal > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"
                       )}>
                         {settings.shop.currency} {outBal.toFixed(2)}
@@ -558,60 +603,60 @@ const Customers = () => {
                       value={usagePct}
                       className="h-1 bg-black/10 dark:bg-white/10"
                     />
-                    <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-1 font-mono">
+                    <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-1 font-mono tabular-nums">
                       <span>Limit: {settings.shop.currency} {credLim.toFixed(0)}</span>
                       <span>{usagePct}%</span>
                     </div>
                   </div>
+                </div>
 
-                  {/* Compact Bottom Action Row */}
-                  <div className="flex items-center gap-1.5 pt-0.5">
-                    {outBal > 0 && (
-                      <>
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() => handleSendCustomerTelegram(customer)}
-                          disabled={isSendingTelegram === customer.id}
-                          title={customer.telegram_chat_id ? 'Send Statement via Telegram' : 'Link Telegram to Send Statement'}
-                          className="h-8 px-2.5 flex-1 bg-[#229ED9]/15 hover:bg-[#229ED9] text-[#229ED9] hover:text-white border border-[#229ED9]/30 text-[10px] font-black rounded-lg transition-all gap-1"
-                        >
-                          {isSendingTelegram === customer.id ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <TelegramIcon className="h-3 w-3 fill-current" />
-                          )}
-                          <span>Telegram</span>
-                        </Button>
+                {/* Card Footer: Action Controls */}
+                <footer className="customer-card-footer flex items-center gap-1.5 pt-0.5">
+                  {outBal > 0 && (
+                    <div className="customer-card-footer-actions flex items-center gap-1.5 flex-1">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => handleSendCustomerTelegram(customer)}
+                        disabled={isSendingTelegram === customer.id}
+                        title={customer.telegram_chat_id ? 'Send Statement via Telegram' : 'Link Telegram to Send Statement'}
+                        className="h-8 px-2.5 flex-1 bg-[#229ED9]/15 hover:bg-[#229ED9] text-[#229ED9] hover:text-white border border-[#229ED9]/30 text-[10px] font-black rounded-lg transition-colors gap-1"
+                      >
+                        {isSendingTelegram === customer.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <TelegramIcon className="h-3 w-3 fill-current" />
+                        )}
+                        <span>Telegram</span>
+                      </Button>
 
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() => handleShareCustomerViber(customer)}
-                          title="Send Statement via Viber"
-                          className="h-8 px-2.5 flex-1 bg-[#7360F2]/15 hover:bg-[#7360F2] text-[#7360F2] hover:text-white border border-[#7360F2]/30 text-[10px] font-black rounded-lg transition-all gap-1"
-                        >
-                          <ViberIcon className="h-3 w-3 fill-current" />
-                          <span>Viber</span>
-                        </Button>
-                      </>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => handleShareCustomerViber(customer)}
+                        title="Send Statement via Viber"
+                        className="h-8 px-2.5 flex-1 bg-[#7360F2]/15 hover:bg-[#7360F2] text-[#7360F2] hover:text-white border border-[#7360F2]/30 text-[10px] font-black rounded-lg transition-colors gap-1"
+                      >
+                        <ViberIcon className="h-3 w-3 fill-current" />
+                        <span>Viber</span>
+                      </Button>
+                    </div>
+                  )}
+
+                  <Button 
+                    type="button"
+                    size="sm"
+                    onClick={() => handleEditClick(customer)}
+                    className={cn(
+                      "h-8 px-3 bg-muted hover:bg-primary hover:text-primary-foreground text-foreground text-[10px] font-black rounded-lg border border-border transition-colors gap-1",
+                      outBal > 0 ? "shrink-0" : "w-full"
                     )}
-
-                    <Button 
-                      type="button"
-                      size="sm"
-                      onClick={() => handleEditClick(customer)}
-                      className={cn(
-                        "h-8 px-3 bg-muted hover:bg-primary hover:text-primary-foreground text-foreground text-[10px] font-black rounded-lg border border-border transition-all gap-1",
-                        outBal > 0 ? "shrink-0" : "w-full"
-                      )}
-                    >
-                      <PencilLine className="h-3 w-3" />
-                      <span>{outBal > 0 ? 'Edit' : 'Edit Customer'}</span>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                  >
+                    <PencilLine className="h-3 w-3" />
+                    <span>{outBal > 0 ? 'Edit' : 'Edit Customer'}</span>
+                  </Button>
+                </footer>
+              </article>
             );
           })}
         </div>
@@ -630,7 +675,7 @@ const Customers = () => {
 
       {/* Edit Customer Dialog */}
       <Dialog open={isEditCustomerDialogOpen} onOpenChange={setIsEditCustomerDialogOpen}>
-        <DialogContent className="sm:max-w-[32rem] 2xl:max-w-[38rem] w-[calc(100vw-2rem)] font-faruma apple-glass-dialog border-white/20 dark:border-white/10 text-foreground shadow-2xl rounded-3xl p-6 sm:p-7" dir="rtl">
+        <DialogContent className="sm:max-w-[32rem] 2xl:max-w-[38rem] w-[calc(100vw-2rem)] font-faruma bg-card border border-border text-foreground shadow-xl rounded-xl p-6 sm:p-7" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-right text-2xl font-black">{renderBoth('edit_customer')}</DialogTitle>
             <DialogDescription className="text-right text-muted-foreground text-xs">
@@ -647,7 +692,7 @@ const Customers = () => {
                 dir="rtl"
                 value={editingCustomer?.name_dv || ''}
                 onChange={(e) => setEditingCustomer(prev => prev ? { ...prev, name_dv: e.target.value } : null)}
-                className="text-right h-12 apple-glass-input rounded-2xl font-faruma font-bold"
+                className="text-right h-11 bg-background border-border rounded-lg font-faruma font-bold"
               />
             </div>
             <div className="space-y-1.5">
@@ -659,7 +704,7 @@ const Customers = () => {
                 dir="ltr"
                 value={editingCustomer?.name_en || ''}
                 onChange={(e) => setEditingCustomer(prev => prev ? { ...prev, name_en: e.target.value } : null)}
-                className="text-left h-12 apple-glass-input rounded-2xl font-medium"
+                className="text-left h-11 bg-background border-border rounded-lg font-medium"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -672,7 +717,7 @@ const Customers = () => {
                   dir="ltr"
                   value={editingCustomer?.code || ''}
                   readOnly 
-                  className="text-left h-12 apple-glass-input rounded-2xl opacity-50 font-mono"
+                  className="text-left h-11 bg-muted border-border rounded-lg opacity-70 font-mono"
                 />
               </div>
               <div className="space-y-1.5">
@@ -684,7 +729,7 @@ const Customers = () => {
                   dir="ltr"
                   value={editingCustomer?.phone || ''}
                   onChange={(e) => setEditingCustomer(prev => prev ? { ...prev, phone: e.target.value } : null)}
-                  className="text-left h-12 apple-glass-input rounded-2xl font-mono font-medium"
+                  className="text-left h-11 bg-background border-border rounded-lg font-mono font-medium"
                 />
               </div>
             </div>
@@ -699,7 +744,7 @@ const Customers = () => {
                   dir="ltr"
                   value={editingCustomer?.email || ''}
                   onChange={(e) => setEditingCustomer(prev => prev ? { ...prev, email: e.target.value } : null)}
-                  className="text-left h-12 apple-glass-input rounded-2xl font-medium"
+                  className="text-left h-11 bg-background border-border rounded-lg font-medium"
                 />
               </div>
               <div className="space-y-1.5">
@@ -712,19 +757,19 @@ const Customers = () => {
                   dir="ltr"
                   value={editingCustomer?.credit_limit !== undefined ? editingCustomer.credit_limit : ''}
                   onChange={(e) => setEditingCustomer(prev => prev ? { ...prev, credit_limit: parseFloat(e.target.value) || 0 } : null)}
-                  className="text-left h-12 apple-glass-input rounded-2xl font-mono font-bold"
+                  className="text-left h-11 bg-background border-border rounded-lg font-mono font-bold tabular-nums"
                 />
               </div>
             </div>
 
-            <div className="space-y-2 pt-2 border-t border-white/10 dark:border-white/5">
+            <div className="space-y-2 pt-2 border-t border-border">
               <div className="flex justify-between items-center">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => editingCustomer && handleOpenTelegramConnect(editingCustomer)}
-                  className="text-xs h-8 gap-1.5 text-[#229ED9] border-[#229ED9]/30 hover:bg-[#229ED9]/15 rounded-xl apple-glass-pill transition-all active:scale-95"
+                  className="text-xs h-8 gap-1.5 text-[#229ED9] border-[#229ED9]/40 hover:bg-[#229ED9]/10 rounded-lg transition-colors"
                 >
                   <QrCode className="h-3.5 w-3.5" />
                   <span>Open Connect QR</span>
@@ -738,24 +783,24 @@ const Customers = () => {
                 placeholder="e.g. 123456789 (or scan QR to link)"
                 value={editingCustomer?.telegram_chat_id || ''}
                 onChange={(e) => setEditingCustomer(prev => prev ? { ...prev, telegram_chat_id: e.target.value ? Number(e.target.value) : null } : null)}
-                className="text-left h-12 apple-glass-input rounded-2xl font-mono text-sm"
+                className="text-left h-11 bg-background border-border rounded-lg font-mono text-sm"
                 dir="ltr"
               />
             </div>
           </div>
-          <DialogFooter className="gap-2.5 pt-4 border-t border-white/10 dark:border-white/5 flex flex-row">
+          <DialogFooter className="gap-2.5 pt-4 border-t border-border flex flex-row">
             <Button
               variant="outline"
               onClick={() => setIsEditCustomerDialogOpen(false)}
               disabled={isSavingCustomer}
-              className="flex-1 rounded-2xl h-11 border-white/20 dark:border-white/10 hover:bg-white/10 text-foreground font-bold active:scale-[0.98] transition-all"
+              className="flex-1 rounded-lg h-11 border-border hover:bg-muted text-foreground font-bold transition-colors"
             >
               {renderBoth('cancel')}
             </Button>
             <Button 
               onClick={handleSaveCustomer} 
               disabled={isSavingCustomer || !editingCustomer}
-              className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-black rounded-2xl shadow-lg shadow-primary/20 active:scale-[0.98] transition-all"
+              className="flex-1 h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-black rounded-lg shadow-sm transition-colors"
             >
               {isSavingCustomer ? (
                 <span className="flex items-center justify-center gap-2">

@@ -1,17 +1,17 @@
-# Graph Report - sleepymeerkatglow-main  (2026-11-12)
+# Graph Report - sleepymeerkatglow-main  (2026-11-14)
 
 ## Corpus Check
-- 175 files · ~207,058 words
+- 176 files · ~474,989 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 10 file(s) not represented in the graph (top: (none) 3, .ico 3, .css 2)
 
 ## Summary
-- 1093 nodes · 4480 edges · 70 communities (47 shown, 23 thin omitted)
+- 1093 nodes · 4479 edges · 70 communities (47 shown, 23 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `050bc1b7`
+- Built from commit: `af3f9eb1`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -308,7 +308,7 @@ Nodes (8): @supabase/supabase-js@^2.93.2, @supabase/supabase-js, backupDir, main
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `cn()` connect `cn` to `AddCreditSaleDialog.tsx`, `react`, `DailySales.tsx`, `AppContext.tsx`, `PosShortcutSettings.tsx`, `sidebar.tsx`, `hooks/use-toast.ts`, `App.tsx`, `Admin.tsx`, `pagination.tsx`, `drawer.tsx`, `carousel.tsx`, `form.tsx`, `chart.tsx`, `sheet.tsx`, `navigation-menu.tsx`, `class-variance-authority`, `POS.tsx`, `input-otp.tsx`?**
-  _High betweenness centrality (0.200) - this node is a cross-community bridge._
+  _High betweenness centrality (0.199) - this node is a cross-community bridge._
 - **Should `AddCreditSaleDialog.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.06462585034013606 - nodes in this community are weakly interconnected._
 - **Why does `react` connect `react` to `AddCreditSaleDialog.tsx`, `DailySales.tsx`, `cn`, `dependencies`, `AppContext.tsx`, `PosShortcutSettings.tsx`, `sidebar.tsx`, `package.json`, `hooks/use-toast.ts`, `App.tsx`, `Admin.tsx`, `pagination.tsx`, `drawer.tsx`, `carousel.tsx`, `main.tsx`, `form.tsx`, `chart.tsx`, `sheet.tsx`, `AppContextProvider`, `ErrorBoundary.tsx`, `navigation-menu.tsx`, `class-variance-authority`, `POS.tsx`, `input-otp.tsx`?**

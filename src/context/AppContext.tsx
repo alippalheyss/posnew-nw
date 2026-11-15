@@ -246,6 +246,9 @@ export interface ShopSettings {
   posShortcuts?: Partial<Record<string, string>>; // Custom POS keyboard shortcuts (synced to cloud)
   onlineShopEnabled?: boolean;
   onlineShopClosedMessage?: string;
+  onlineShopScheduleEnabled?: boolean;
+  onlineShopOpenTime?: string;
+  onlineShopCloseTime?: string;
 }
 
 interface AccountingSettings {

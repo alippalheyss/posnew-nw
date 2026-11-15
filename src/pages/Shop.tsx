@@ -43,6 +43,7 @@ import {
   completeShopPasswordSetup,
   fetchCustomerOrders,
   fetchPublicShopData,
+  isOnlineShopCurrentlyOpen,
   loginShopCustomerWithPassword,
   placeOnlineOrder,
   refreshShopCustomer,
@@ -133,9 +134,19 @@ const Shop: React.FC = () => {
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
   const [orders, setOrders] = useState<OnlineOrder[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  const [timeTick, setTimeTick] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => setTimeTick((t) => t + 1), 30000);
+    return () => clearInterval(timer);
+  }, []);
 
   const currency = shopSettings.currency || 'MVR';
-  const isStoreOpen = shopSettings.onlineShopEnabled !== false;
+  const storeOpenStatus = useMemo(
+    () => isOnlineShopCurrentlyOpen(shopSettings),
+    [shopSettings, timeTick]
+  );
+  const isStoreOpen = storeOpenStatus.isOpen;
 
   const loadShop = async () => {
     setIsLoading(true);
@@ -875,6 +886,11 @@ const Shop: React.FC = () => {
                 >
                   {isStoreOpen ? 'OPEN' : 'CLOSED'}
                 </span>
+                {storeOpenStatus.hoursLabel && (
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-muted-foreground">
+                    <Clock className="h-3 w-3" /> {storeOpenStatus.hoursLabel}
+                  </span>
+                )}
               </div>
               <p className="text-[11px] text-muted-foreground font-semibold">
                 #{customer.code} • {customer.name_en || customer.name_dv}
@@ -946,7 +962,8 @@ const Shop: React.FC = () => {
       {/* Store Closed Banner */}
       {!isStoreOpen && (
         <div className="bg-rose-500/10 border-b border-rose-500/30 px-4 py-2.5 text-center text-xs font-bold text-rose-600 dark:text-rose-400">
-          {shopSettings.onlineShopClosedMessage ||
+          {storeOpenStatus.reason ||
+            shopSettings.onlineShopClosedMessage ||
             'Online ordering is temporarily paused. Please check back later or contact the store.'}
         </div>
       )}

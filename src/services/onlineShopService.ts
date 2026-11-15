@@ -91,6 +91,82 @@ const codesMatch = (a: string, b: string): boolean => {
   return false;
 };
 
+const formatTime12h = (hhmm: string): string => {
+  const [hStr, mStr] = String(hhmm || '00:00').split(':');
+  const h = Number(hStr);
+  const m = Number(mStr);
+  if (Number.isNaN(h) || Number.isNaN(m)) return hhmm;
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${period}`;
+};
+
+const getMaldivesMinutesOfDay = (): number => {
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Indian/Maldives',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(new Date());
+    const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? 0);
+    const minute = Number(parts.find((p) => p.type === 'minute')?.value ?? 0);
+    return hour * 60 + minute;
+  } catch {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
+  }
+};
+
+/**
+ * Check whether the online shop is currently open based on master toggle + opening hours schedule
+ */
+export const isOnlineShopCurrentlyOpen = (
+  shopSettings?: Partial<ShopSettings>
+): { isOpen: boolean; reason?: string; hoursLabel?: string } => {
+  if (shopSettings?.onlineShopEnabled === false) {
+    return {
+      isOpen: false,
+      reason:
+        shopSettings.onlineShopClosedMessage ||
+        'Online ordering is temporarily paused. Please check back later or contact the store.',
+    };
+  }
+
+  if (
+    shopSettings?.onlineShopScheduleEnabled &&
+    shopSettings.onlineShopOpenTime &&
+    shopSettings.onlineShopCloseTime
+  ) {
+    const openTime = shopSettings.onlineShopOpenTime;
+    const closeTime = shopSettings.onlineShopCloseTime;
+    const hoursLabel = `${formatTime12h(openTime)} – ${formatTime12h(closeTime)}`;
+
+    const [openH, openM] = openTime.split(':').map(Number);
+    const [closeH, closeM] = closeTime.split(':').map(Number);
+    const openMin = openH * 60 + openM;
+    const closeMin = closeH * 60 + closeM;
+    const nowMin = getMaldivesMinutesOfDay();
+
+    const withinHours =
+      closeMin > openMin
+        ? nowMin >= openMin && nowMin < closeMin
+        : nowMin >= openMin || nowMin < closeMin;
+
+    if (!withinHours) {
+      return {
+        isOpen: false,
+        hoursLabel,
+        reason: `Store is currently closed for online orders. Ordering hours: ${hoursLabel}.`,
+      };
+    }
+
+    return { isOpen: true, hoursLabel };
+  }
+
+  return { isOpen: true };
+};
+
 /**
  * Load public storefront products and shop/bank/telegram settings from Supabase
  */
@@ -488,6 +564,11 @@ export const placeOnlineOrder = async ({
   botToken?: string;
 }): Promise<{ ok: boolean; order?: OnlineOrder; error?: string }> => {
   if (!supabase) return { ok: false, error: 'Database unavailable.' };
+
+  const openStatus = isOnlineShopCurrentlyOpen(shopSettings);
+  if (!openStatus.isOpen) {
+    return { ok: false, error: openStatus.reason || 'Online store is currently closed.' };
+  }
 
   if (!items || items.length === 0) {
     return { ok: false, error: 'Your cart is empty.' };

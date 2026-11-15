@@ -1709,42 +1709,6 @@ const POS = () => {
                 </span>
               )}
             </Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsOnlineOrdersDialogOpen(true)}
-              title="Online Shop Orders (shop.bback.store)"
-              className={cn(
-                "relative h-10 w-10 rounded-xl bg-muted border border-border hover:bg-primary/20 hover:text-primary text-muted-foreground transition-all",
-                newOnlineOrdersCount > 0 && "border-primary/60 bg-primary/10 text-primary"
-              )}
-            >
-              <ShoppingBag className="h-4 w-4" />
-              {newOnlineOrdersCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground rounded-full text-[10px] font-black flex items-center justify-center border-2 border-background animate-pulse">
-                  {newOnlineOrdersCount}
-                </span>
-              )}
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsPendingRegistrationsDialogOpen(true)}
-              title="Pending Customer Registrations (shop.bback.store)"
-              className={cn(
-                "relative h-10 w-10 rounded-xl bg-muted border border-border hover:bg-blue-500/20 hover:text-blue-500 text-muted-foreground transition-all",
-                pendingRegistrationsCount > 0 && "border-blue-500/60 bg-blue-500/10 text-blue-500"
-              )}
-            >
-              <UserPlus className="h-4 w-4" />
-              {pendingRegistrationsCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 text-white rounded-full text-[10px] font-black flex items-center justify-center border-2 border-background animate-pulse">
-                  {pendingRegistrationsCount}
-                </span>
-              )}
-            </Button>
           </div>
 
           {/* Right: Search Bar positioned directly next to the Cart panel */}
@@ -1906,6 +1870,44 @@ const POS = () => {
                 <span className="text-[9px] font-bold uppercase text-muted-foreground tracking-tight">(Add New Cart)</span>
               </div>
             </Button>
+
+            <div className="flex items-center gap-1.5 mr-auto pl-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsOnlineOrdersDialogOpen(true)}
+                title="Online Shop Orders (shop.bback.store)"
+                className={cn(
+                  "relative h-9 w-9 rounded-xl bg-background/80 border border-border hover:bg-primary/20 hover:text-primary text-muted-foreground transition-all",
+                  newOnlineOrdersCount > 0 && "border-primary/60 bg-primary/10 text-primary"
+                )}
+              >
+                <ShoppingBag className="h-4 w-4" />
+                {newOnlineOrdersCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground rounded-full text-[10px] font-black flex items-center justify-center border-2 border-background animate-pulse">
+                    {newOnlineOrdersCount}
+                  </span>
+                )}
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsPendingRegistrationsDialogOpen(true)}
+                title="Pending Customer Registrations (shop.bback.store)"
+                className={cn(
+                  "relative h-9 w-9 rounded-xl bg-background/80 border border-border hover:bg-blue-500/20 hover:text-blue-500 text-muted-foreground transition-all",
+                  pendingRegistrationsCount > 0 && "border-blue-500/60 bg-blue-500/10 text-blue-500"
+                )}
+              >
+                <UserPlus className="h-4 w-4" />
+                {pendingRegistrationsCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 text-white rounded-full text-[10px] font-black flex items-center justify-center border-2 border-background animate-pulse">
+                    {pendingRegistrationsCount}
+                  </span>
+                )}
+              </Button>
+            </div>
           </div>
           <TooltipProvider delayDuration={150}>
             <div className="flex flex-wrap gap-2 mb-3">

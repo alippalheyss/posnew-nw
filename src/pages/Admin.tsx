@@ -664,6 +664,52 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                             className="bg-background border-border h-9 rounded-lg text-xs"
                           />
                         )}
+                        <div className="pt-2.5 border-t border-border/60 space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <p className="text-xs font-bold text-foreground">Opening Hours Schedule</p>
+                              <p className="text-[11px] text-muted-foreground">Only allow orders during opened times</p>
+                            </div>
+                            <Switch
+                              checked={Boolean(shopSettings.onlineShopScheduleEnabled)}
+                              onCheckedChange={(checked) => {
+                                handleSettingsChange('shop', 'onlineShopScheduleEnabled', checked);
+                                if (checked && !shopSettings.onlineShopOpenTime) {
+                                  handleSettingsChange('shop', 'onlineShopOpenTime', '08:00');
+                                }
+                                if (checked && !shopSettings.onlineShopCloseTime) {
+                                  handleSettingsChange('shop', 'onlineShopCloseTime', '22:00');
+                                }
+                              }}
+                            />
+                          </div>
+                          {shopSettings.onlineShopScheduleEnabled && (
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="space-y-1">
+                                <Label className="text-[10px] font-black uppercase text-muted-foreground">
+                                  Open Time
+                                </Label>
+                                <Input
+                                  type="time"
+                                  value={shopSettings.onlineShopOpenTime || '08:00'}
+                                  onChange={(e) => handleSettingsChange('shop', 'onlineShopOpenTime', e.target.value)}
+                                  className="bg-background border-border h-9 rounded-lg font-mono text-xs"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-[10px] font-black uppercase text-muted-foreground">
+                                  Close Time
+                                </Label>
+                                <Input
+                                  type="time"
+                                  value={shopSettings.onlineShopCloseTime || '22:00'}
+                                  onChange={(e) => handleSettingsChange('shop', 'onlineShopCloseTime', e.target.value)}
+                                  className="bg-background border-border h-9 rounded-lg font-mono text-xs"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 

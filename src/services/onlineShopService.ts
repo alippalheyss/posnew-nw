@@ -1,5 +1,11 @@
 import { supabase, DEFAULT_SETTINGS_USER_ID } from '@/lib/supabase';
-import { Customer, Product, ShopSettings } from '@/context/AppContext';
+import {
+  Customer,
+  DayOfWeekKey,
+  Product,
+  ShopSettings,
+  WeeklyOpeningHours,
+} from '@/context/AppContext';
 import {
   sendTelegramOnlineOrderNotification,
   sendTelegramOnlineRegistrationAlert,
@@ -101,25 +107,78 @@ const formatTime12h = (hhmm: string): string => {
   return `${h12}:${String(m).padStart(2, '0')} ${period}`;
 };
 
-const getMaldivesMinutesOfDay = (): number => {
+export const DAY_ORDER: Array<{ key: DayOfWeekKey; label: string }> = [
+  { key: 'sunday', label: 'Sunday' },
+  { key: 'monday', label: 'Monday' },
+  { key: 'tuesday', label: 'Tuesday' },
+  { key: 'wednesday', label: 'Wednesday' },
+  { key: 'thursday', label: 'Thursday' },
+  { key: 'friday', label: 'Friday' },
+  { key: 'saturday', label: 'Saturday' },
+];
+
+export const DEFAULT_WEEKLY_OPENING_HOURS: WeeklyOpeningHours = {
+  sunday: { enabled: true, slots: [{ open: '07:00', close: '22:00' }] },
+  monday: { enabled: true, slots: [{ open: '07:00', close: '22:00' }] },
+  tuesday: { enabled: true, slots: [{ open: '07:00', close: '22:00' }] },
+  wednesday: { enabled: true, slots: [{ open: '07:00', close: '22:00' }] },
+  thursday: { enabled: true, slots: [{ open: '07:00', close: '22:00' }] },
+  friday: {
+    enabled: true,
+    slots: [
+      { open: '07:00', close: '11:00' },
+      { open: '14:00', close: '22:00' },
+    ],
+  },
+  saturday: { enabled: true, slots: [{ open: '07:00', close: '22:00' }] },
+};
+
+const getMaldivesTimeAndDay = (): { minutesOfDay: number; dayKey: DayOfWeekKey; dayLabel: string } => {
   try {
-    const parts = new Intl.DateTimeFormat('en-GB', {
+    const now = new Date();
+    const parts = new Intl.DateTimeFormat('en-US', {
       timeZone: 'Indian/Maldives',
+      weekday: 'long',
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
-    }).formatToParts(new Date());
-    const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? 0);
+    }).formatToParts(now);
+    const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? 0) % 24;
     const minute = Number(parts.find((p) => p.type === 'minute')?.value ?? 0);
-    return hour * 60 + minute;
+    const weekdayRaw = (parts.find((p) => p.type === 'weekday')?.value ?? 'sunday').toLowerCase();
+    const matched = DAY_ORDER.find((d) => d.key === weekdayRaw) || DAY_ORDER[now.getDay()];
+    return {
+      minutesOfDay: hour * 60 + minute,
+      dayKey: matched.key,
+      dayLabel: matched.label,
+    };
   } catch {
     const now = new Date();
-    return now.getHours() * 60 + now.getMinutes();
+    const matched = DAY_ORDER[now.getDay()];
+    return {
+      minutesOfDay: now.getHours() * 60 + now.getMinutes(),
+      dayKey: matched.key,
+      dayLabel: matched.label,
+    };
   }
 };
 
+const isMinutesInsideSlot = (nowMin: number, openTime: string, closeTime: string): boolean => {
+  const [openH, openM] = openTime.split(':').map(Number);
+  const [closeH, closeM] = closeTime.split(':').map(Number);
+  if (Number.isNaN(openH) || Number.isNaN(openM) || Number.isNaN(closeH) || Number.isNaN(closeM)) {
+    return false;
+  }
+  const openMin = openH * 60 + openM;
+  const closeMin = closeH * 60 + closeM;
+  if (closeMin > openMin) {
+    return nowMin >= openMin && nowMin < closeMin;
+  }
+  return nowMin >= openMin || nowMin < closeMin;
+};
+
 /**
- * Check whether the online shop is currently open based on master toggle + opening hours schedule
+ * Check whether the online shop is currently open based on master toggle + weekly multi-slot schedule
  */
 export const isOnlineShopCurrentlyOpen = (
   shopSettings?: Partial<ShopSettings>
@@ -133,35 +192,56 @@ export const isOnlineShopCurrentlyOpen = (
     };
   }
 
-  if (
-    shopSettings?.onlineShopScheduleEnabled &&
-    shopSettings.onlineShopOpenTime &&
-    shopSettings.onlineShopCloseTime
-  ) {
-    const openTime = shopSettings.onlineShopOpenTime;
-    const closeTime = shopSettings.onlineShopCloseTime;
-    const hoursLabel = `${formatTime12h(openTime)} – ${formatTime12h(closeTime)}`;
+  if (shopSettings?.onlineShopScheduleEnabled) {
+    const { minutesOfDay, dayKey, dayLabel } = getMaldivesTimeAndDay();
 
-    const [openH, openM] = openTime.split(':').map(Number);
-    const [closeH, closeM] = closeTime.split(':').map(Number);
-    const openMin = openH * 60 + openM;
-    const closeMin = closeH * 60 + closeM;
-    const nowMin = getMaldivesMinutesOfDay();
+    if (shopSettings.onlineShopWeeklyHours) {
+      const todaySchedule = shopSettings.onlineShopWeeklyHours[dayKey];
+      if (!todaySchedule || !todaySchedule.enabled || !todaySchedule.slots?.length) {
+        return {
+          isOpen: false,
+          reason: `Store is closed on ${dayLabel} for online orders.`,
+        };
+      }
 
-    const withinHours =
-      closeMin > openMin
-        ? nowMin >= openMin && nowMin < closeMin
-        : nowMin >= openMin || nowMin < closeMin;
+      const validSlots = todaySchedule.slots.filter((s) => s.open && s.close);
+      const hoursLabel = validSlots
+        .map((s) => `${formatTime12h(s.open)} – ${formatTime12h(s.close)}`)
+        .join(', ');
 
-    if (!withinHours) {
-      return {
-        isOpen: false,
-        hoursLabel,
-        reason: `Store is currently closed for online orders. Ordering hours: ${hoursLabel}.`,
-      };
+      const withinAnySlot = validSlots.some((s) =>
+        isMinutesInsideSlot(minutesOfDay, s.open, s.close)
+      );
+
+      if (!withinAnySlot) {
+        return {
+          isOpen: false,
+          hoursLabel,
+          reason: `Store is currently closed. ${dayLabel} ordering hours: ${hoursLabel}.`,
+        };
+      }
+
+      return { isOpen: true, hoursLabel };
     }
 
-    return { isOpen: true, hoursLabel };
+    if (shopSettings.onlineShopOpenTime && shopSettings.onlineShopCloseTime) {
+      const hoursLabel = `${formatTime12h(shopSettings.onlineShopOpenTime)} – ${formatTime12h(
+        shopSettings.onlineShopCloseTime
+      )}`;
+      const withinHours = isMinutesInsideSlot(
+        minutesOfDay,
+        shopSettings.onlineShopOpenTime,
+        shopSettings.onlineShopCloseTime
+      );
+      if (!withinHours) {
+        return {
+          isOpen: false,
+          hoursLabel,
+          reason: `Store is currently closed for online orders. Ordering hours: ${hoursLabel}.`,
+        };
+      }
+      return { isOpen: true, hoursLabel };
+    }
   }
 
   return { isOpen: true };

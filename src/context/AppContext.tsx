@@ -226,6 +226,28 @@ export interface Expense {
   createdAt?: string;
 }
 
+export interface ShopTimeSlot {
+  open: string;
+  close: string;
+}
+
+export type DayOfWeekKey =
+  | 'sunday'
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday';
+
+export type WeeklyOpeningHours = Record<
+  DayOfWeekKey,
+  {
+    enabled: boolean;
+    slots: ShopTimeSlot[];
+  }
+>;
+
 export interface ShopSettings {
   shopName: string;
   shopAddress: string;
@@ -249,6 +271,7 @@ export interface ShopSettings {
   onlineShopScheduleEnabled?: boolean;
   onlineShopOpenTime?: string;
   onlineShopCloseTime?: string;
+  onlineShopWeeklyHours?: WeeklyOpeningHours;
 }
 
 interface AccountingSettings {

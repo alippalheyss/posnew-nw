@@ -10,7 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { ChevronDown, ChevronUp, Upload, Download, Image as ImageIcon, Trash2, Settings, Landmark, Monitor, Layout, FileText, Printer, Building2, X, Edit, UserPlus, Shield, Database, Languages, Palette, Globe, CreditCard, Receipt, Percent, LogOut, Gift, Clock, Users, CheckCircle2, Copy, ExternalLink, RefreshCw, Loader2, Send, Moon, BellRing, Cloud } from 'lucide-react';
+import { ChevronDown, ChevronUp, Upload, Download, Image as ImageIcon, Trash2, Settings, Landmark, Monitor, Layout, FileText, Printer, Building2, X, Edit, UserPlus, Shield, Database, Languages, Palette, Globe, CreditCard, Receipt, Percent, LogOut, Gift, Clock, Users, CheckCircle2, Copy, ExternalLink, RefreshCw, Loader2, Send, Moon, BellRing, Cloud, Plus } from 'lucide-react';
+import { DAY_ORDER, DEFAULT_WEEKLY_OPENING_HOURS } from '@/services/onlineShopService';
 import { testTelegramBot, setTelegramWebhook, getTelegramWebhookInfo, deleteTelegramWebhook, setBotCommands, BOT_COMMANDS, TelegramBotInfo, DEFAULT_TELEGRAM_BOT_TOKEN, DEFAULT_TELEGRAM_BOT_USERNAME, sendTelegramMessage, sendNightlyExecutiveBriefing } from '@/services/telegramService';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
@@ -664,51 +665,131 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                             className="bg-background border-border h-9 rounded-lg text-xs"
                           />
                         )}
-                        <div className="pt-2.5 border-t border-border/60 space-y-2">
+                        <div className="pt-2.5 border-t border-border/60 space-y-2.5">
                           <div className="flex items-center justify-between gap-2">
                             <div>
                               <p className="text-xs font-bold text-foreground">Opening Hours Schedule</p>
-                              <p className="text-[11px] text-muted-foreground">Only allow orders during opened times</p>
+                              <p className="text-[11px] text-muted-foreground">Set daily opening & closing times (multiple slots supported)</p>
                             </div>
                             <Switch
                               checked={Boolean(shopSettings.onlineShopScheduleEnabled)}
                               onCheckedChange={(checked) => {
                                 handleSettingsChange('shop', 'onlineShopScheduleEnabled', checked);
-                                if (checked && !shopSettings.onlineShopOpenTime) {
-                                  handleSettingsChange('shop', 'onlineShopOpenTime', '08:00');
-                                }
-                                if (checked && !shopSettings.onlineShopCloseTime) {
-                                  handleSettingsChange('shop', 'onlineShopCloseTime', '22:00');
+                                if (checked && !shopSettings.onlineShopWeeklyHours) {
+                                  handleSettingsChange('shop', 'onlineShopWeeklyHours', DEFAULT_WEEKLY_OPENING_HOURS);
                                 }
                               }}
                             />
                           </div>
-                          {shopSettings.onlineShopScheduleEnabled && (
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="space-y-1">
-                                <Label className="text-[10px] font-black uppercase text-muted-foreground">
-                                  Open Time
-                                </Label>
-                                <Input
-                                  type="time"
-                                  value={shopSettings.onlineShopOpenTime || '08:00'}
-                                  onChange={(e) => handleSettingsChange('shop', 'onlineShopOpenTime', e.target.value)}
-                                  className="bg-background border-border h-9 rounded-lg font-mono text-xs"
-                                />
+                          {shopSettings.onlineShopScheduleEnabled && (() => {
+                            const weekly = shopSettings.onlineShopWeeklyHours || DEFAULT_WEEKLY_OPENING_HOURS;
+                            const updateWeekly = (nextWeekly: typeof weekly) => {
+                              handleSettingsChange('shop', 'onlineShopWeeklyHours', nextWeekly);
+                            };
+
+                            return (
+                              <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                                {DAY_ORDER.map(({ key, label }) => {
+                                  const dayData = weekly[key] || { enabled: true, slots: [{ open: '07:00', close: '22:00' }] };
+                                  return (
+                                    <div key={key} className="p-2.5 rounded-lg bg-background border border-border space-y-2">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2">
+                                          <Switch
+                                            checked={dayData.enabled}
+                                            onCheckedChange={(checked) => {
+                                              updateWeekly({
+                                                ...weekly,
+                                                [key]: { ...dayData, enabled: checked },
+                                              });
+                                            }}
+                                          />
+                                          <span className="text-xs font-black text-foreground">{label}</span>
+                                        </div>
+                                        {dayData.enabled && (
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => {
+                                              updateWeekly({
+                                                ...weekly,
+                                                [key]: {
+                                                  ...dayData,
+                                                  slots: [...dayData.slots, { open: '14:00', close: '22:00' }],
+                                                },
+                                              });
+                                            }}
+                                            className="h-6 px-2 text-[10px] font-bold text-primary gap-1"
+                                          >
+                                            <Plus className="h-3 w-3" /> Add Time
+                                          </Button>
+                                        )}
+                                      </div>
+
+                                      {dayData.enabled ? (
+                                        <div className="space-y-1.5">
+                                          {dayData.slots.map((slot, sIdx) => (
+                                            <div key={sIdx} className="flex items-center gap-1.5">
+                                              <Input
+                                                type="time"
+                                                value={slot.open}
+                                                onChange={(e) => {
+                                                  const nextSlots = dayData.slots.map((s, idx) =>
+                                                    idx === sIdx ? { ...s, open: e.target.value } : s
+                                                  );
+                                                  updateWeekly({
+                                                    ...weekly,
+                                                    [key]: { ...dayData, slots: nextSlots },
+                                                  });
+                                                }}
+                                                className="bg-muted/50 border-border h-8 rounded-md font-mono text-xs flex-1"
+                                              />
+                                              <span className="text-xs text-muted-foreground">–</span>
+                                              <Input
+                                                type="time"
+                                                value={slot.close}
+                                                onChange={(e) => {
+                                                  const nextSlots = dayData.slots.map((s, idx) =>
+                                                    idx === sIdx ? { ...s, close: e.target.value } : s
+                                                  );
+                                                  updateWeekly({
+                                                    ...weekly,
+                                                    [key]: { ...dayData, slots: nextSlots },
+                                                  });
+                                                }}
+                                                className="bg-muted/50 border-border h-8 rounded-md font-mono text-xs flex-1"
+                                              />
+                                              {dayData.slots.length > 1 && (
+                                                <Button
+                                                  type="button"
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  onClick={() => {
+                                                    const nextSlots = dayData.slots.filter((_, idx) => idx !== sIdx);
+                                                    updateWeekly({
+                                                      ...weekly,
+                                                      [key]: { ...dayData, slots: nextSlots },
+                                                    });
+                                                  }}
+                                                  className="h-8 w-8 text-rose-500 hover:text-rose-600 shrink-0"
+                                                  title="Remove time slot"
+                                                >
+                                                  <X className="h-3.5 w-3.5" />
+                                                </Button>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <p className="text-[11px] text-muted-foreground italic">Closed all day</p>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
-                              <div className="space-y-1">
-                                <Label className="text-[10px] font-black uppercase text-muted-foreground">
-                                  Close Time
-                                </Label>
-                                <Input
-                                  type="time"
-                                  value={shopSettings.onlineShopCloseTime || '22:00'}
-                                  onChange={(e) => handleSettingsChange('shop', 'onlineShopCloseTime', e.target.value)}
-                                  className="bg-background border-border h-9 rounded-lg font-mono text-xs"
-                                />
-                              </div>
-                            </div>
-                          )}
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>

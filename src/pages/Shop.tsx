@@ -162,6 +162,25 @@ const Shop: React.FC = () => {
 
   useEffect(() => {
     loadShop();
+
+    if (!supabase) return;
+    const settingsChannel = supabase
+      .channel('shop_public_settings_sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'settings' },
+        () => {
+          fetchPublicShopData().then((data) => {
+            setShopSettings(data.shopSettings);
+            setBotToken(data.telegramBotToken);
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(settingsChannel);
+    };
   }, []);
 
   // Refresh customer balance/limit & orders when logged in
@@ -545,6 +564,47 @@ const Shop: React.FC = () => {
       <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-6">
         <RefreshCw className="h-8 w-8 animate-spin text-primary mb-3" />
         <p className="text-sm font-bold text-muted-foreground">Loading {shopSettings.shopName || 'B BACK'} Shop...</p>
+      </div>
+    );
+  }
+
+  // ============================================================================
+  // MASTER SWITCH OFF: FULL-SCREEN STORE OFFLINE PAGE
+  // ============================================================================
+  if (shopSettings.onlineShopEnabled === false) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 sm:p-6 font-faruma" dir="ltr">
+        <div className="w-full max-w-md bg-card border border-border rounded-xl p-6 sm:p-8 text-center space-y-4 shadow-sm">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/25 flex items-center justify-center text-rose-500">
+            <Store className="h-7 w-7" />
+          </div>
+          <div className="space-y-1.5">
+            <span className="inline-block text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+              Store Offline
+            </span>
+            <h1 className="text-xl font-black text-foreground">
+              {shopSettings.shopName || 'B BACK'} Online Shop is Closed
+            </h1>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {shopSettings.onlineShopClosedMessage ||
+                'Online ordering is currently turned off by the store. Please check back later or contact us directly.'}
+            </p>
+          </div>
+          {shopSettings.shopPhone && (
+            <p className="text-xs font-mono font-bold text-foreground bg-muted rounded-lg py-2 px-3 border border-border">
+              Store Contact: {shopSettings.shopPhone}
+            </p>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => loadShop()}
+            className="h-10 px-5 rounded-lg text-xs font-black gap-1.5"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            <span>Check Again</span>
+          </Button>
+        </div>
       </div>
     );
   }

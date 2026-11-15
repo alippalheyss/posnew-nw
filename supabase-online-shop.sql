@@ -114,3 +114,7 @@ END $$;
 GRANT ALL ON public.customer_registrations TO anon, authenticated;
 GRANT ALL ON public.online_orders TO anon, authenticated;
 
+-- 6. Customer Shop Password Column (for shop.bback.store login security)
+ALTER TABLE public.customers
+ADD COLUMN IF NOT EXISTS shop_password_hash TEXT DEFAULT '';
+

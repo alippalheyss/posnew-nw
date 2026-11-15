@@ -24,6 +24,7 @@ import {
   RefreshCw,
   FileImage,
   X,
+  Lock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,18 +34,21 @@ import { cn } from '@/lib/utils';
 import { Customer, Product, ShopSettings } from '@/context/AppContext';
 import { supabase } from '@/lib/supabase';
 import { showError, showSuccess } from '@/utils/toast';
+import { getAdaptedImageUrl, generatePlaceholderImage } from '@/utils/imageUtils';
 import {
   MIN_DELIVERY_AMOUNT,
   OnlineOrder,
   OnlineOrderItem,
   checkRegistrationStatus,
+  completeShopPasswordSetup,
   fetchCustomerOrders,
   fetchPublicShopData,
-  loginShopCustomer,
+  loginShopCustomerWithPassword,
   placeOnlineOrder,
   refreshShopCustomer,
   submitCustomerRegistration,
   uploadOrderSlip,
+  verifyShopCustomerCredentials,
 } from '@/services/onlineShopService';
 
 interface CartEntry {
@@ -87,6 +91,11 @@ const Shop: React.FC = () => {
   const [authTab, setAuthTab] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
   const [loginCode, setLoginCode] = useState('');
   const [loginPhone, setLoginPhone] = useState('');
+  const [loginStep, setLoginStep] = useState<'CREDENTIALS' | 'SET_PASSWORD' | 'ENTER_PASSWORD'>('CREDENTIALS');
+  const [pendingLoginCustomer, setPendingLoginCustomer] = useState<Customer | null>(null);
+  const [loginPassword, setLoginPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const [regNameEn, setRegNameEn] = useState('');
@@ -234,13 +243,58 @@ const Shop: React.FC = () => {
     e.preventDefault();
     setIsLoggingIn(true);
     try {
-      const res = await loginShopCustomer(loginCode, loginPhone);
-      if (res.ok && res.customer) {
-        setCustomer(res.customer);
-        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(res.customer));
-        showSuccess(`Welcome back, ${res.customer.name_en || res.customer.name_dv}!`);
-      } else {
-        showError(res.error || 'Login failed');
+      if (loginStep === 'CREDENTIALS') {
+        const res = await verifyShopCustomerCredentials(loginCode, loginPhone);
+        if (!res.ok || !res.customer) {
+          showError(res.error || 'Login failed');
+          return;
+        }
+        setPendingLoginCustomer(res.customer);
+        if (res.needsPasswordSetup) {
+          setLoginStep('SET_PASSWORD');
+          setNewPassword('');
+          setConfirmPassword('');
+          showSuccess('Account verified! Please set a password to protect your account.');
+        } else {
+          setLoginStep('ENTER_PASSWORD');
+          setLoginPassword('');
+        }
+        return;
+      }
+
+      if (loginStep === 'SET_PASSWORD' && pendingLoginCustomer) {
+        if (newPassword.length < 4) {
+          showError('Password must be at least 4 characters.');
+          return;
+        }
+        if (newPassword !== confirmPassword) {
+          showError('Passwords do not match.');
+          return;
+        }
+        const res = await completeShopPasswordSetup(pendingLoginCustomer.id, newPassword);
+        if (res.ok && res.customer) {
+          setCustomer(res.customer);
+          localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(res.customer));
+          setLoginStep('CREDENTIALS');
+          setPendingLoginCustomer(null);
+          showSuccess(`Password saved! Welcome, ${res.customer.name_en || res.customer.name_dv}!`);
+        } else {
+          showError(res.error || 'Could not save password.');
+        }
+        return;
+      }
+
+      if (loginStep === 'ENTER_PASSWORD') {
+        const res = await loginShopCustomerWithPassword(loginCode, loginPhone, loginPassword);
+        if (res.ok && res.customer) {
+          setCustomer(res.customer);
+          localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(res.customer));
+          setLoginStep('CREDENTIALS');
+          setPendingLoginCustomer(null);
+          showSuccess(`Welcome back, ${res.customer.name_en || res.customer.name_dv}!`);
+        } else {
+          showError(res.error || 'Incorrect password.');
+        }
       }
     } finally {
       setIsLoggingIn(false);
@@ -513,40 +567,140 @@ const Shop: React.FC = () => {
 
             {authTab === 'LOGIN' ? (
               <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="shopLoginCode" className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
-                    Customer Code
-                  </Label>
-                  <Input
-                    id="shopLoginCode"
-                    placeholder="e.g. 001"
-                    value={loginCode}
-                    onChange={(e) => setLoginCode(e.target.value)}
-                    className="h-11 bg-background border-border rounded-lg font-mono font-bold"
-                    required
-                  />
+                {loginStep === 'CREDENTIALS' && (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="shopLoginCode" className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+                        Customer Code
+                      </Label>
+                      <Input
+                        id="shopLoginCode"
+                        placeholder="e.g. 001"
+                        value={loginCode}
+                        onChange={(e) => setLoginCode(e.target.value)}
+                        className="h-11 bg-background border-border rounded-lg font-mono font-bold"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="shopLoginPhone" className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+                        Mobile Number
+                      </Label>
+                      <Input
+                        id="shopLoginPhone"
+                        type="tel"
+                        placeholder="e.g. 7771234"
+                        value={loginPhone}
+                        onChange={(e) => setLoginPhone(e.target.value)}
+                        className="h-11 bg-background border-border rounded-lg font-mono font-bold"
+                        required
+                      />
+                    </div>
+                  </>
+                )}
+
+                {loginStep === 'SET_PASSWORD' && pendingLoginCustomer && (
+                  <div className="space-y-3">
+                    <div className="p-3 rounded-lg bg-primary/10 border border-primary/25 text-xs">
+                      <p className="font-black text-foreground flex items-center gap-1.5">
+                        <Lock className="h-3.5 w-3.5 text-primary" />
+                        Set Your Shop Password
+                      </p>
+                      <p className="text-muted-foreground mt-0.5">
+                        Hi <strong className="text-foreground">{pendingLoginCustomer.name_en || pendingLoginCustomer.name_dv}</strong> (#{pendingLoginCustomer.code}), create a password so others cannot access your account.
+                      </p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="newShopPass" className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+                        New Password (min 4 characters)
+                      </Label>
+                      <Input
+                        id="newShopPass"
+                        type="password"
+                        placeholder="Enter new password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="h-11 bg-background border-border rounded-lg"
+                        required
+                        autoFocus
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="confirmShopPass" className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+                        Confirm Password
+                      </Label>
+                      <Input
+                        id="confirmShopPass"
+                        type="password"
+                        placeholder="Re-enter new password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="h-11 bg-background border-border rounded-lg"
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {loginStep === 'ENTER_PASSWORD' && pendingLoginCustomer && (
+                  <div className="space-y-3">
+                    <div className="p-3 rounded-lg bg-muted border border-border text-xs">
+                      <p className="font-black text-foreground">
+                        {pendingLoginCustomer.name_en || pendingLoginCustomer.name_dv} (#{pendingLoginCustomer.code})
+                      </p>
+                      <p className="text-muted-foreground mt-0.5">
+                        Enter your shop password to continue.
+                      </p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="enterShopPass" className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+                        Password
+                      </Label>
+                      <Input
+                        id="enterShopPass"
+                        type="password"
+                        placeholder="Enter your password"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        className="h-11 bg-background border-border rounded-lg"
+                        required
+                        autoFocus
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Forgot your password? Contact store admin to reset it.
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  {loginStep !== 'CREDENTIALS' && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setLoginStep('CREDENTIALS');
+                        setPendingLoginCustomer(null);
+                      }}
+                      className="h-11 px-4 rounded-lg font-bold text-xs"
+                    >
+                      Back
+                    </Button>
+                  )}
+                  <Button
+                    type="submit"
+                    disabled={isLoggingIn}
+                    className="flex-1 h-11 rounded-lg font-black text-sm"
+                  >
+                    {isLoggingIn
+                      ? 'Please wait...'
+                      : loginStep === 'CREDENTIALS'
+                        ? 'Continue'
+                        : loginStep === 'SET_PASSWORD'
+                          ? 'Save Password & Start Shopping'
+                          : 'Sign In & Start Shopping'}
+                  </Button>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="shopLoginPhone" className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
-                    Mobile Number
-                  </Label>
-                  <Input
-                    id="shopLoginPhone"
-                    type="tel"
-                    placeholder="e.g. 7771234"
-                    value={loginPhone}
-                    onChange={(e) => setLoginPhone(e.target.value)}
-                    className="h-11 bg-background border-border rounded-lg font-mono font-bold"
-                    required
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  disabled={isLoggingIn}
-                  className="w-full h-11 rounded-lg font-black text-sm"
-                >
-                  {isLoggingIn ? 'Signing in...' : 'Sign In & Start Shopping'}
-                </Button>
               </form>
             ) : (
               <form onSubmit={handleRegister} className="space-y-3">
@@ -843,16 +997,19 @@ const Shop: React.FC = () => {
               >
                 <header className="space-y-2">
                   <div className="aspect-square rounded-lg bg-muted border border-border/60 overflow-hidden flex items-center justify-center relative">
-                    {product.image ? (
-                      <img
-                        src={product.image}
-                        alt={product.name_en || product.name_dv}
-                        loading="lazy"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <ShoppingBag className="h-8 w-8 text-muted-foreground/40" />
-                    )}
+                    <img
+                      src={getAdaptedImageUrl(product.image, product.name_en || product.name_dv, product.item_code)}
+                      alt={product.name_en || product.name_dv}
+                      loading="lazy"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        if (!target.dataset.fallbackApplied) {
+                          target.dataset.fallbackApplied = '1';
+                          target.src = generatePlaceholderImage(product.name_en || product.name_dv || 'Item', product.item_code);
+                        }
+                      }}
+                      className="w-full h-full object-cover"
+                    />
                     {outOfStock && (
                       <span className="absolute inset-0 bg-background/75 flex items-center justify-center text-[11px] font-black text-rose-600 dark:text-rose-400">
                         Out of Stock

@@ -103,10 +103,15 @@ export const fetchPublicShopData = async (): Promise<PublicShopData> => {
     supabase.from('products').select('*').order('name_en', { ascending: true }),
     supabase
       .from('settings')
-      .select('shop_settings, telegram_settings')
+      .select('shop_settings, telegram_settings, software_settings')
       .eq('user_id', DEFAULT_SETTINGS_USER_ID)
       .maybeSingle(),
   ]);
+
+  const storageCdnUrl = settingsRes.data?.software_settings?.storageCdnUrl;
+  if (typeof window !== 'undefined' && storageCdnUrl) {
+    (window as any).__STORAGE_CDN_URL__ = storageCdnUrl;
+  }
 
   const rawProducts = (productsRes.data || []) as Product[];
   const shopSettings: Partial<ShopSettings> = {
@@ -126,14 +131,36 @@ export const fetchPublicShopData = async (): Promise<PublicShopData> => {
 };
 
 /**
- * Authenticate a customer for shop.bback.store using Customer Code + Mobile Number
+ * Hash a shop password using SHA-256 (Web Crypto API)
  */
-export const loginShopCustomer = async (
+export const hashShopPassword = async (password: string): Promise<string> => {
+  const input = `bback_shop_${password}`;
+  if (typeof crypto !== 'undefined' && crypto.subtle) {
+    const encoded = new TextEncoder().encode(input);
+    const digest = await crypto.subtle.digest('SHA-256', encoded);
+    return Array.from(new Uint8Array(digest))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    hash = (hash << 5) - hash + input.charCodeAt(i);
+    hash |= 0;
+  }
+  return `fb_${Math.abs(hash).toString(16)}`;
+};
+
+/**
+ * Step 1 of shop login: verify Customer Code + Mobile Number and check whether a password is already set
+ */
+export const verifyShopCustomerCredentials = async (
   code: string,
   phone: string
 ): Promise<{
   ok: boolean;
-  customer?: Customer;
+  customer?: Customer & { shop_password_hash?: string };
+  needsPasswordSetup?: boolean;
+  requiresPassword?: boolean;
   pendingStatus?: 'PENDING' | 'REJECTED';
   error?: string;
 }> => {
@@ -148,21 +175,23 @@ export const loginShopCustomer = async (
     return { ok: false, error: 'Please enter both your Customer Code and Mobile Number.' };
   }
 
-  const { data: customers, error } = await supabase
-    .from('customers')
-    .select('*');
-
+  const { data: customers, error } = await supabase.from('customers').select('*');
   if (error) {
     return { ok: false, error: error.message };
   }
 
   const matched = (customers || []).find(
-    (c: Customer) =>
-      codesMatch(c.code, cleanCode) && normalizePhone(c.phone) === cleanPhone
-  );
+    (c: any) => codesMatch(c.code, cleanCode) && normalizePhone(c.phone) === cleanPhone
+  ) as (Customer & { shop_password_hash?: string }) | undefined;
 
   if (matched) {
-    return { ok: true, customer: matched as Customer };
+    const hasPassword = Boolean(matched.shop_password_hash && matched.shop_password_hash.trim());
+    return {
+      ok: true,
+      customer: matched,
+      needsPasswordSetup: !hasPassword,
+      requiresPassword: hasPassword,
+    };
   }
 
   // Check if customer has a pending registration
@@ -195,6 +224,69 @@ export const loginShopCustomer = async (
     ok: false,
     error: 'Invalid Customer Code or Mobile Number. New customers can register below.',
   };
+};
+
+/**
+ * Step 2A: First-time password setup for already-registered customers
+ */
+export const completeShopPasswordSetup = async (
+  customerId: string,
+  newPassword: string
+): Promise<{ ok: boolean; customer?: Customer; error?: string }> => {
+  if (!supabase) return { ok: false, error: 'Database unavailable.' };
+  if (!newPassword || newPassword.length < 4) {
+    return { ok: false, error: 'Password must be at least 4 characters.' };
+  }
+
+  const hash = await hashShopPassword(newPassword);
+  const { data, error } = await supabase
+    .from('customers')
+    .update({ shop_password_hash: hash, updated_at: new Date().toISOString() })
+    .eq('id', customerId)
+    .select('*')
+    .single();
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true, customer: data as Customer };
+};
+
+/**
+ * Step 2B: Verify password for returning customers
+ */
+export const loginShopCustomerWithPassword = async (
+  code: string,
+  phone: string,
+  password: string
+): Promise<{ ok: boolean; customer?: Customer; error?: string }> => {
+  const check = await verifyShopCustomerCredentials(code, phone);
+  if (!check.ok || !check.customer) {
+    return { ok: false, error: check.error };
+  }
+  if (!check.customer.shop_password_hash) {
+    return { ok: false, error: 'Please set a password first.' };
+  }
+  const enteredHash = await hashShopPassword(password);
+  if (enteredHash !== check.customer.shop_password_hash) {
+    return { ok: false, error: 'Incorrect password. Please try again.' };
+  }
+  return { ok: true, customer: check.customer };
+};
+
+/**
+ * Admin helper: reset a customer's shop password so they can set a new one on next login
+ */
+export const resetCustomerShopPassword = async (
+  customerId: string
+): Promise<{ ok: boolean; error?: string }> => {
+  if (!supabase) return { ok: false, error: 'Database unavailable.' };
+  const { error } = await supabase
+    .from('customers')
+    .update({ shop_password_hash: '', updated_at: new Date().toISOString() })
+    .eq('id', customerId);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
 };
 
 /**
@@ -438,7 +530,71 @@ export const placeOnlineOrder = async ({
 
   const randSuffix = Math.floor(1000 + Math.random() * 9000);
   const orderNumber = `ORD-${Date.now().toString().slice(-4)}${randSuffix}`;
+  const saleId = `sale_online_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const salePaymentMethod = payment_method === 'CREDIT' ? 'credit' : 'cash';
 
+  // 1. Save Sale directly to public.sales (Cash Sales or Credit Sales)
+  const saleItems = items.map((it) => ({
+    id: it.product_id,
+    name_en: it.name_en,
+    name_dv: it.name_dv || it.name_en,
+    price: Number(it.unit_price || 0),
+    qty: Number(it.quantity || 1),
+    image: it.image || '',
+    is_zero_tax: false,
+  }));
+
+  const { error: saleError } = await supabase.from('sales').insert([
+    {
+      id: saleId,
+      date: new Date().toISOString(),
+      customer_id: customer.id,
+      items: saleItems,
+      grand_total: total,
+      payment_method: salePaymentMethod,
+      paid_amount: salePaymentMethod === 'credit' ? 0 : total,
+      balance: salePaymentMethod === 'credit' ? total : 0,
+      invoice_number: orderNumber,
+      split_details: null,
+    },
+  ]);
+
+  if (saleError) {
+    console.warn('Could not save online order to sales table:', saleError.message);
+  }
+
+  // 2. Deduct product shop stock
+  await Promise.all(
+    items.map(async (it) => {
+      const { data: prod } = await supabase
+        .from('products')
+        .select('stock_shop')
+        .eq('id', it.product_id)
+        .maybeSingle();
+      if (prod) {
+        const nextStock = Math.round(Number(prod.stock_shop || 0) - Number(it.quantity || 0));
+        await supabase
+          .from('products')
+          .update({ stock_shop: nextStock, updated_at: new Date().toISOString() })
+          .eq('id', it.product_id);
+      }
+    })
+  ).catch(() => {});
+
+  // 3. Increment customer's outstanding_balance when Credit
+  if (payment_method === 'CREDIT') {
+    const latest = await refreshShopCustomer(customer.id);
+    const currentOut = Number((latest || customer).outstanding_balance || 0);
+    await supabase
+      .from('customers')
+      .update({
+        outstanding_balance: Number((currentOut + total).toFixed(2)),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', customer.id);
+  }
+
+  // 4. Insert online_orders record linked with pos_sale_id
   const { data, error } = await supabase
     .from('online_orders')
     .insert({
@@ -456,6 +612,7 @@ export const placeOnlineOrder = async ({
       subtotal,
       total,
       status: 'NEW',
+      pos_sale_id: saleError ? '' : saleId,
     })
     .select()
     .single();

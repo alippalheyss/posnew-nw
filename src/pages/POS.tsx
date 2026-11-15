@@ -274,6 +274,7 @@ const POS = () => {
             `New Online Order ${newOrder.order_number} from ${newOrder.customer_name} (${settings.shop.currency} ${Number(newOrder.total || 0).toFixed(2)})`
           );
           refreshOnlineShopQueues();
+          refreshCustomers(true);
         }
       )
       .on(

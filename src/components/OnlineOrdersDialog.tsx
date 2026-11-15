@@ -187,6 +187,11 @@ export const OnlineOrdersDialog: React.FC<OnlineOrdersDialogProps> = ({
                             </>
                           )}
                         </span>
+                        {order.pos_sale_id && (
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                            {order.payment_method === 'CREDIT' ? 'Saved to Credit Sales' : 'Saved to Cash Sales'}
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs font-bold mt-1">
                         {order.customer_name} <span className="font-mono text-muted-foreground">(#{order.customer_code})</span> •{' '}

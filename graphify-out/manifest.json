@@ -691,10 +691,10 @@
     "semantic_hash": "5daecb8f6317fa7bf1c79284dfb3773a"
   },
   "src/main.tsx": {
-    "mtime": 1790581696.3875313,
-    "seen": 1794238973.9894347,
-    "ast_hash": "b19bf63f2210616b3157188ac3940bb1",
-    "semantic_hash": "b19bf63f2210616b3157188ac3940bb1"
+    "mtime": 1794732626.6370797,
+    "seen": 1794732662.1959352,
+    "ast_hash": "5a3ae635a3660ff3c4f36c248d4c0034",
+    "semantic_hash": ""
   },
   "src/pages/Admin.tsx": {
     "mtime": 1794642277.727566,
@@ -775,9 +775,9 @@
     "semantic_hash": "a976bc2bdae4b91634d95b411e846b94"
   },
   "src/pages/POS.tsx": {
-    "mtime": 1794642300.2946968,
-    "seen": 1794642352.9161417,
-    "ast_hash": "b09dced7a5aa6d5ba6d5634a8b02f3f4",
+    "mtime": 1794732626.829439,
+    "seen": 1794732662.1976643,
+    "ast_hash": "acdbfc062939f8c95c2d88bfb7aee244",
     "semantic_hash": ""
   },
   "src/pages/Products.tsx": {
@@ -2383,9 +2383,9 @@
     "semantic_hash": ""
   },
   "src/components/OnlineOrdersDialog.tsx": {
-    "mtime": 1794642297.352062,
-    "seen": 1794642352.9023643,
-    "ast_hash": "2a3bfbb6e5d1abbdd20295dce13f998a",
+    "mtime": 1794732594.5946846,
+    "seen": 1794732662.184721,
+    "ast_hash": "585661dbd68d7da8889dc6ff3f7cec17",
     "semantic_hash": ""
   },
   "src/components/PendingRegistrationsDialog.tsx": {
@@ -2395,15 +2395,15 @@
     "semantic_hash": ""
   },
   "src/pages/Shop.tsx": {
-    "mtime": 1794642297.8144236,
-    "seen": 1794642352.9165325,
-    "ast_hash": "a281cbea9264e785183c492fdb41723b",
+    "mtime": 1794732626.8946824,
+    "seen": 1794732662.1980937,
+    "ast_hash": "e4c516aee5f8fe84c676900fb8975d59",
     "semantic_hash": ""
   },
   "src/services/onlineShopService.ts": {
-    "mtime": 1794642298.0739212,
-    "seen": 1794642352.9171965,
-    "ast_hash": "efe0b1f408f371ad0fae1f95a643dd82",
+    "mtime": 1794732626.9664528,
+    "seen": 1794732662.199429,
+    "ast_hash": "3e8d60807f510d259c163c60899c9191",
     "semantic_hash": ""
   },
   "package-lock.json": {

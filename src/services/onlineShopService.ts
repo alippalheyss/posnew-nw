@@ -528,9 +528,20 @@ export const placeOnlineOrder = async ({
     }
   }
 
+  const generateUuid = (): string => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  };
+
   const randSuffix = Math.floor(1000 + Math.random() * 9000);
   const orderNumber = `ORD-${Date.now().toString().slice(-4)}${randSuffix}`;
-  const saleId = `sale_online_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  const saleId = generateUuid();
   const salePaymentMethod = payment_method === 'CREDIT' ? 'credit' : 'cash';
 
   // 1. Save Sale directly to public.sales (Cash Sales or Credit Sales)

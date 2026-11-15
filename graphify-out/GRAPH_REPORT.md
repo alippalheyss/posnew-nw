@@ -1,7 +1,7 @@
 # Graph Report - sleepymeerkatglow-main  (2026-11-15)
 
 ## Corpus Check
-- 181 files · ~485,235 words
+- 181 files · ~485,701 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 10 file(s) not represented in the graph (top: (none) 3, .ico 3, .css 2)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5e20d24f`
+- Built from commit: `3e44d53d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -318,15 +318,15 @@ Nodes (7): initialState, Theme, ThemeProvider(), ThemeProviderContext, ThemeProv
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `cn()` connect `cn` to `react`, `command.tsx`, `AppContext.tsx`, `POS.tsx`, `PosShortcutSettings.tsx`, `sidebar.tsx`, `GSTReports.tsx`, `StockAudit.tsx`, `Admin.tsx`, `pagination.tsx`, `drawer.tsx`, `carousel.tsx`, `form.tsx`, `chart.tsx`, `sheet.tsx`, `breadcrumb.tsx`, `navigation-menu.tsx`, `class-variance-authority`, `toast.tsx`, `Button`?**
-  _High betweenness centrality (0.209) - this node is a cross-community bridge._
+  _High betweenness centrality (0.194) - this node is a cross-community bridge._
 - **Should `react` be split into smaller, more focused modules?**
   _Cohesion score 0.08735632183908046 - nodes in this community are weakly interconnected._
 - **Why does `react` connect `react` to `command.tsx`, `AppContext.tsx`, `cn`, `dependencies`, `POS.tsx`, `PosShortcutSettings.tsx`, `sidebar.tsx`, `package.json`, `hooks/use-toast.ts`, `GSTReports.tsx`, `StockAudit.tsx`, `Admin.tsx`, `pagination.tsx`, `drawer.tsx`, `carousel.tsx`, `form.tsx`, `chart.tsx`, `sheet.tsx`, `breadcrumb.tsx`, `ErrorBoundary.tsx`, `navigation-menu.tsx`, `App.tsx`, `class-variance-authority`, `toast.tsx`, `Button`, `ThemeProvider.tsx`?**
-  _High betweenness centrality (0.157) - this node is a cross-community bridge._
+  _High betweenness centrality (0.141) - this node is a cross-community bridge._
 - **Should `AppContext.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.07586206896551724 - nodes in this community are weakly interconnected._
 - **Why does `@supabase/supabase-js` connect `telegram-webhook.ts` to `build-vercel.mjs`, `package.json`, `StockAudit.tsx`, `POS.tsx`?**
-  _High betweenness centrality (0.047) - this node is a cross-community bridge._
+  _High betweenness centrality (0.050) - this node is a cross-community bridge._
 - **Should `cn` be split into smaller, more focused modules?**
   _Cohesion score 0.07624113475177305 - nodes in this community are weakly interconnected._
 - **Should `dependencies` be split into smaller, more focused modules?**

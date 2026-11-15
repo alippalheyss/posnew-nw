@@ -112,6 +112,10 @@ const Shop: React.FC = () => {
   // Catalog state
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
+  const [inStockOnly, setInStockOnly] = useState(false);
+  const [priceSort, setPriceSort] = useState<'DEFAULT' | 'LOW_TO_HIGH' | 'HIGH_TO_LOW'>('DEFAULT');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
   const [cart, setCart] = useState<Record<string, CartEntry>>({});
 
   // Checkout state
@@ -205,8 +209,16 @@ const Shop: React.FC = () => {
 
   const filteredProducts = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
-    return products.filter((p) => {
+    const minP = minPrice !== '' ? Number(minPrice) : null;
+    const maxP = maxPrice !== '' ? Number(maxPrice) : null;
+
+    const list = products.filter((p) => {
       if (selectedCategory !== 'ALL' && p.category !== selectedCategory) return false;
+      const stock = Number(p.stock_shop || 0);
+      if (inStockOnly && stock <= 0) return false;
+      const price = Number(p.price || 0);
+      if (minP !== null && !Number.isNaN(minP) && price < minP) return false;
+      if (maxP !== null && !Number.isNaN(maxP) && price > maxP) return false;
       if (!q) return true;
       return (
         (p.name_en || '').toLowerCase().includes(q) ||
@@ -215,7 +227,21 @@ const Shop: React.FC = () => {
         (p.barcode || '').toLowerCase().includes(q)
       );
     });
-  }, [products, searchTerm, selectedCategory]);
+
+    return [...list].sort((a, b) => {
+      const aAvail = Number(a.stock_shop || 0) > 0 ? 1 : 0;
+      const bAvail = Number(b.stock_shop || 0) > 0 ? 1 : 0;
+      if (aAvail !== bAvail) return bAvail - aAvail;
+
+      if (priceSort === 'LOW_TO_HIGH') {
+        return Number(a.price || 0) - Number(b.price || 0);
+      }
+      if (priceSort === 'HIGH_TO_LOW') {
+        return Number(b.price || 0) - Number(a.price || 0);
+      }
+      return 0;
+    });
+  }, [products, searchTerm, selectedCategory, inStockOnly, priceSort, minPrice, maxPrice]);
 
   const cartItems = useMemo(() => Object.values(cart), [cart]);
   const cartCount = useMemo(
@@ -943,43 +969,138 @@ const Shop: React.FC = () => {
           </div>
         </div>
 
-        {/* Search & Category Filter */}
-        <div className="flex flex-col sm:flex-row gap-2.5 bg-card border border-border rounded-xl p-2.5">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <Input
-              placeholder="Search products by name, Dhivehi, or code..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-9 pl-9 pr-8 bg-background border-border rounded-lg text-xs font-semibold"
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
+        {/* Search, Category, Availability & Price Filter */}
+        <div className="flex flex-col gap-2.5 bg-card border border-border rounded-xl p-2.5">
+          <div className="flex flex-col sm:flex-row gap-2.5">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="Search products by name, Dhivehi, or code..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-9 pl-9 pr-8 bg-background border-border rounded-lg text-xs font-semibold"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  aria-pressed={selectedCategory === cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={cn(
+                    'h-8 px-3 rounded-lg text-[11px] font-black whitespace-nowrap border transition-colors',
+                    selectedCategory === cat
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-muted text-muted-foreground border-border hover:text-foreground'
+                  )}
+                >
+                  {cat === 'ALL' ? 'All Items' : cat}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
-            {categories.map((cat) => (
+
+          {/* Availability & Price Filter Row */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/60">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <button
-                key={cat}
                 type="button"
-                aria-pressed={selectedCategory === cat}
-                onClick={() => setSelectedCategory(cat)}
+                aria-pressed={inStockOnly}
+                onClick={() => setInStockOnly((v) => !v)}
                 className={cn(
-                  'h-8 px-3 rounded-lg text-[11px] font-black whitespace-nowrap border transition-colors',
-                  selectedCategory === cat
-                    ? 'bg-primary text-primary-foreground border-primary'
+                  'h-8 px-3 rounded-lg text-[11px] font-black border transition-colors flex items-center gap-1.5',
+                  inStockOnly
+                    ? 'bg-emerald-600 text-white border-emerald-600'
                     : 'bg-muted text-muted-foreground border-border hover:text-foreground'
                 )}
               >
-                {cat === 'ALL' ? 'All Items' : cat}
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span>Available Only</span>
               </button>
-            ))}
+
+              <div className="flex items-center gap-1 bg-muted p-1 rounded-lg border border-border">
+                <button
+                  type="button"
+                  aria-pressed={priceSort === 'DEFAULT'}
+                  onClick={() => setPriceSort('DEFAULT')}
+                  className={cn(
+                    'h-6 px-2 rounded text-[11px] font-bold transition-colors',
+                    priceSort === 'DEFAULT' ? 'bg-card text-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  Default
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={priceSort === 'LOW_TO_HIGH'}
+                  onClick={() => setPriceSort('LOW_TO_HIGH')}
+                  className={cn(
+                    'h-6 px-2 rounded text-[11px] font-bold transition-colors',
+                    priceSort === 'LOW_TO_HIGH' ? 'bg-card text-primary font-black shadow-2xs' : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  Price: Low → High
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={priceSort === 'HIGH_TO_LOW'}
+                  onClick={() => setPriceSort('HIGH_TO_LOW')}
+                  className={cn(
+                    'h-6 px-2 rounded text-[11px] font-bold transition-colors',
+                    priceSort === 'HIGH_TO_LOW' ? 'bg-card text-primary font-black shadow-2xs' : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  Price: High → Low
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-bold text-muted-foreground">Price ({currency}):</span>
+              <Input
+                type="number"
+                min="0"
+                placeholder="Min"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+                className="h-8 w-20 bg-background border-border rounded-lg text-xs font-mono tabular-nums"
+              />
+              <span className="text-muted-foreground text-xs">–</span>
+              <Input
+                type="number"
+                min="0"
+                placeholder="Max"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                className="h-8 w-20 bg-background border-border rounded-lg text-xs font-mono tabular-nums"
+              />
+              {(minPrice || maxPrice || inStockOnly || priceSort !== 'DEFAULT') && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setMinPrice('');
+                    setMaxPrice('');
+                    setInStockOnly(false);
+                    setPriceSort('DEFAULT');
+                  }}
+                  className="h-8 px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground"
+                >
+                  Reset
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 

@@ -259,12 +259,21 @@ export const fetchPublicShopData = async (): Promise<PublicShopData> => {
     supabase.from('products').select('*').order('name_en', { ascending: true }),
     supabase
       .from('settings')
-      .select('shop_settings, telegram_settings, software_settings')
-      .eq('user_id', DEFAULT_SETTINGS_USER_ID)
-      .maybeSingle(),
+      .select('category, settings, updated_at')
+      .in('category', ['shop', 'telegram', 'software'])
+      .order('updated_at', { ascending: false }),
   ]);
 
-  const storageCdnUrl = settingsRes.data?.software_settings?.storageCdnUrl;
+  const settingsMap: Record<string, any> = {};
+  if (Array.isArray(settingsRes.data)) {
+    for (const row of settingsRes.data) {
+      if (row?.category && !settingsMap[row.category] && row.settings && typeof row.settings === 'object') {
+        settingsMap[row.category] = row.settings;
+      }
+    }
+  }
+
+  const storageCdnUrl = settingsMap.software?.storageCdnUrl;
   if (typeof window !== 'undefined' && storageCdnUrl) {
     (window as any).__STORAGE_CDN_URL__ = storageCdnUrl;
   }
@@ -274,10 +283,10 @@ export const fetchPublicShopData = async (): Promise<PublicShopData> => {
     currency: 'MVR',
     shopName: 'B BACK',
     onlineShopEnabled: true,
-    ...(settingsRes.data?.shop_settings || {}),
+    ...(settingsMap.shop || {}),
   };
 
-  const telegramBotToken = settingsRes.data?.telegram_settings?.botToken || undefined;
+  const telegramBotToken = settingsMap.telegram?.botToken || undefined;
 
   return {
     products: rawProducts,

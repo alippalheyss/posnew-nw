@@ -2401,9 +2401,9 @@
     "semantic_hash": ""
   },
   "src/services/onlineShopService.ts": {
-    "mtime": 1794734940.6098044,
-    "seen": 1794734949.7731626,
-    "ast_hash": "3b56b0aa20da321383426c5321746b12",
+    "mtime": 1794738910.3566153,
+    "seen": 1794738943.4646583,
+    "ast_hash": "efab50c54e8157f7a06036ab11fbe96b",
     "semantic_hash": ""
   },
   "package-lock.json": {

@@ -1,7 +1,7 @@
 # Graph Report - sleepymeerkatglow-main  (2026-11-15)
 
 ## Corpus Check
-- 181 files · ~487,136 words
+- 181 files · ~487,175 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 10 file(s) not represented in the graph (top: (none) 3, .ico 3, .css 2)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c6f5da63`
+- Built from commit: `ed99901c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -314,15 +314,15 @@ Nodes (3): @radix-ui/react-slider@^1.2.0, @radix-ui/react-slider, Slider
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `cn()` connect `cn` to `ProductDialog.tsx`, `Shop.tsx`, `PosShortcutSettings.tsx`, `sidebar.tsx`, `react`, `Admin.tsx`, `pagination.tsx`, `drawer.tsx`, `carousel.tsx`, `form.tsx`, `chart.tsx`, `sheet.tsx`, `AuthContext.tsx`, `breadcrumb.tsx`, `DailySales.tsx`, `command.tsx`, `navigation-menu.tsx`, `hooks/use-toast.ts`, `class-variance-authority`, `Button`, `slider.tsx`?**
-  _High betweenness centrality (0.198) - this node is a cross-community bridge._
+  _High betweenness centrality (0.206) - this node is a cross-community bridge._
 - **Should `AppContext.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.08143939393939394 - nodes in this community are weakly interconnected._
 - **Why does `react` connect `Button` to `Layout.tsx`, `ProductDialog.tsx`, `AppContext.tsx`, `cn`, `dependencies`, `Shop.tsx`, `PosShortcutSettings.tsx`, `sidebar.tsx`, `package.json`, `main.tsx`, `react`, `Admin.tsx`, `pagination.tsx`, `drawer.tsx`, `carousel.tsx`, `form.tsx`, `chart.tsx`, `sheet.tsx`, `AuthContext.tsx`, `breadcrumb.tsx`, `DailySales.tsx`, `command.tsx`, `navigation-menu.tsx`, `hooks/use-toast.ts`, `class-variance-authority`, `slider.tsx`?**
-  _High betweenness centrality (0.151) - this node is a cross-community bridge._
+  _High betweenness centrality (0.129) - this node is a cross-community bridge._
 - **Should `cn` be split into smaller, more focused modules?**
   _Cohesion score 0.05552617662612375 - nodes in this community are weakly interconnected._
 - **Why does `lucide-react` connect `Button` to `Layout.tsx`, `ProductDialog.tsx`, `cn`, `dependencies`, `Shop.tsx`, `PosShortcutSettings.tsx`, `sidebar.tsx`, `package.json`, `react`, `Admin.tsx`, `pagination.tsx`, `carousel.tsx`, `sheet.tsx`, `AuthContext.tsx`, `breadcrumb.tsx`, `DailySales.tsx`, `command.tsx`, `navigation-menu.tsx`, `hooks/use-toast.ts`?**
-  _High betweenness centrality (0.045) - this node is a cross-community bridge._
+  _High betweenness centrality (0.042) - this node is a cross-community bridge._
 - **Should `dependencies` be split into smaller, more focused modules?**
   _Cohesion score 0.045454545454545456 - nodes in this community are weakly interconnected._
 - **Should `devDependencies` be split into smaller, more focused modules?**

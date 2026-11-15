@@ -97,7 +97,7 @@ const codesMatch = (a: string, b: string): boolean => {
   return false;
 };
 
-const formatTime12h = (hhmm: string): string => {
+export const formatTime12h = (hhmm: string): string => {
   const [hStr, mStr] = String(hhmm || '00:00').split(':');
   const h = Number(hStr);
   const m = Number(mStr);

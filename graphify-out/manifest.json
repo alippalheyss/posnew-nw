@@ -2395,15 +2395,15 @@
     "semantic_hash": ""
   },
   "src/pages/Shop.tsx": {
-    "mtime": 1794734409.1551666,
-    "seen": 1794734468.2083652,
-    "ast_hash": "7e59d9e9e1f8f60417eeb2f98dddbf07",
+    "mtime": 1794734940.5503414,
+    "seen": 1794734949.77232,
+    "ast_hash": "984d9279abfabfadd7d79fad32b8b939",
     "semantic_hash": ""
   },
   "src/services/onlineShopService.ts": {
-    "mtime": 1794734277.107118,
-    "seen": 1794734301.9106526,
-    "ast_hash": "fb47b67ce325b59fabe78c820acd753b",
+    "mtime": 1794734940.6098044,
+    "seen": 1794734949.7731626,
+    "ast_hash": "3b56b0aa20da321383426c5321746b12",
     "semantic_hash": ""
   },
   "package-lock.json": {

@@ -1,7 +1,7 @@
 # Graph Report - sleepymeerkatglow-main  (2026-11-16)
 
 ## Corpus Check
-- 182 files · ~491,106 words
+- 182 files · ~491,242 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 10 file(s) not represented in the graph (top: (none) 3, .ico 3, .css 2)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `6fa00c1a`
+- Built from commit: `705440a0`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -98,6 +98,8 @@
 10. `showSuccess()` - 78 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `CommandShortcut()` --calls--> `cn()`  [EXTRACTED]
+  src/components/ui/command.tsx → src/lib/utils.ts
 - `AlertDialogFooter()` --calls--> `cn()`  [EXTRACTED]
   src/components/ui/alert-dialog.tsx → src/lib/utils.ts
 - `AlertDialogHeader()` --calls--> `cn()`  [EXTRACTED]
@@ -106,8 +108,6 @@
   src/components/ui/pagination.tsx → src/lib/utils.ts
 - `PaginationEllipsis()` --calls--> `cn()`  [EXTRACTED]
   src/components/ui/pagination.tsx → src/lib/utils.ts
-- `DrawerFooter()` --calls--> `cn()`  [EXTRACTED]
-  src/components/ui/drawer.tsx → src/lib/utils.ts
 
 ## Import Cycles
 - 2-file cycle: `src/context/AppContext.tsx -> src/services/telegramService.ts -> src/context/AppContext.tsx`
@@ -310,15 +310,15 @@ Nodes (7): { app, BrowserWindow, ipcMain, globalShortcut, Menu }, gotTheLock, pa
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `cn()` connect `cn` to `Layout.tsx`, `AddCreditSaleDialog.tsx`, `Shop.tsx`, `PosShortcutSettings.tsx`, `sidebar.tsx`, `pagination.tsx`, `drawer.tsx`, `carousel.tsx`, `form.tsx`, `chart.tsx`, `sheet.tsx`, `input-otp.tsx`, `breadcrumb.tsx`, `DailySales.tsx`, `navigation-menu.tsx`, `telegramService.ts`, `hooks/use-toast.ts`, `class-variance-authority`, `Button`?**
-  _High betweenness centrality (0.178) - this node is a cross-community bridge._
+  _High betweenness centrality (0.185) - this node is a cross-community bridge._
 - **Should `Layout.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.11724137931034483 - nodes in this community are weakly interconnected._
 - **Why does `react` connect `DailySales.tsx` to `Layout.tsx`, `AddCreditSaleDialog.tsx`, `AppContext.tsx`, `cn`, `dependencies`, `Shop.tsx`, `PosShortcutSettings.tsx`, `sidebar.tsx`, `package.json`, `main.tsx`, `AppContextProvider`, `pagination.tsx`, `drawer.tsx`, `carousel.tsx`, `form.tsx`, `chart.tsx`, `sheet.tsx`, `input-otp.tsx`, `breadcrumb.tsx`, `navigation-menu.tsx`, `hooks/use-toast.ts`, `class-variance-authority`, `ErrorBoundary`, `Button`?**
-  _High betweenness centrality (0.138) - this node is a cross-community bridge._
+  _High betweenness centrality (0.127) - this node is a cross-community bridge._
 - **Should `AppContext.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.07526881720430108 - nodes in this community are weakly interconnected._
-- **Why does `@supabase/supabase-js` connect `restore-to-new-supabase.mjs` to `Layout.tsx`, `package.json`, `telegram-webhook.ts`, `Shop.tsx`?**
-  _High betweenness centrality (0.063) - this node is a cross-community bridge._
+- **Why does `lucide-react` connect `Button` to `Layout.tsx`, `AddCreditSaleDialog.tsx`, `DailySales.tsx`, `dependencies`, `cn`, `Shop.tsx`, `PosShortcutSettings.tsx`, `navigation-menu.tsx`, `package.json`, `sidebar.tsx`, `hooks/use-toast.ts`, `ErrorBoundary`, `pagination.tsx`, `carousel.tsx`, `sheet.tsx`, `input-otp.tsx`, `breadcrumb.tsx`?**
+  _High betweenness centrality (0.045) - this node is a cross-community bridge._
 - **Should `cn` be split into smaller, more focused modules?**
   _Cohesion score 0.05989110707803993 - nodes in this community are weakly interconnected._
 - **Should `dependencies` be split into smaller, more focused modules?**

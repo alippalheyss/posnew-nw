@@ -1032,7 +1032,8 @@ export const sendTelegramSlipApprovedMessage = async ({
 
 ✅ Your bank transfer slip has been verified by the cashier and applied to your account.
 
-_Thank you for your payment!_ 🙏`;
+_Thank you for your payment!_ 🙏
+🛒 Shop Online: https://shop.bback.store`;
 
   return sendTelegramMessage(chatId, msg, token);
 };
@@ -1071,7 +1072,8 @@ export const sendTelegramSlipDeclinedMessage = async ({
 Please check your bank transfer details or contact the shop:
 📞 *Phone:* ${shopPhone}
 
-_You can also attach a clear copy of the slip again in this chat._`;
+_You can also attach a clear copy of the slip again in this chat._
+🛒 Shop Online: https://shop.bback.store`;
 
   return sendTelegramMessage(chatId, msg, token);
 };
@@ -1122,8 +1124,9 @@ export const sendTelegramPaymentReceipt = async ({
   msg += `━━━━━━━━━━━━━━━━━━━━\n`;
   msg += `_Thank you for your payment!_ 🙏\n`;
   if (shopSettings?.shopPhone) {
-    msg += `📞 Support: ${shopSettings.shopPhone}`;
+    msg += `📞 Support: ${shopSettings.shopPhone}\n`;
   }
+  msg += `🛒 Shop Online: https://shop.bback.store`;
 
   return await sendTelegramMessage(chatId, msg, token);
 };
@@ -1174,7 +1177,8 @@ export const sendTelegramOutstandingStatement = async ({
   msg += `Bank of Maldives (BML)\n`;
   msg += `Account: \`7730000442060\` (${shopName})\n`;
   msg += `━━━━━━━━━━━━━━━━━━━━\n`;
-  msg += `_Please transfer and send the payment slip. Thank you!_ 🙏`;
+  msg += `_Please transfer and send the payment slip. Thank you!_ 🙏\n`;
+  msg += `🛒 Shop Online: https://shop.bback.store`;
 
   return await sendTelegramMessage(chatId, msg, token, 'Markdown');
 };
@@ -1229,7 +1233,8 @@ export const sendTelegramSaleReceipt = async ({
     msg += `*Change / Balance:* ${currency} ${sale.balance.toFixed(2)}\n`;
   }
   msg += `━━━━━━━━━━━━━━━━━━━━\n`;
-  msg += `_Thank you for shopping with us!_ 🙏`;
+  msg += `_Thank you for shopping with us!_ 🙏\n`;
+  msg += `🛒 Shop Online: https://shop.bback.store`;
 
   return await sendTelegramMessage(chatId, msg, token);
 };
@@ -1498,7 +1503,8 @@ export const formatPoliteCreditReminderMessage = ({
   msg += `💳 *Account Number:* \`${accountNumber}\`\n`;
   msg += `━━━━━━━━━━━━━━━━━━━━\n`;
   msg += `Once transferred, please send your transfer slip photo directly in this chat (or to the cashier), and our team will verify and settle your account immediately.\n\n`;
-  msg += `_JazakAllahu Khayran for your continued trust and support!_ 🙏`;
+  msg += `_JazakAllahu Khayran for your continued trust and support!_ 🙏\n`;
+  msg += `🛒 Shop Online: https://shop.bback.store`;
 
   return msg;
 };
@@ -1568,7 +1574,8 @@ export const formatAutoTransferToCreditMessage = ({
   
   msg += `━━━━━━━━━━━━━━━━━━━━\n`;
   msg += `If you have already made the transfer to our BML account (\`${accountNumber}\`), please send your transfer receipt photo directly in this chat so our cashier can verify and settle your tab.\n\n`;
-  msg += `_JazakAllahu Khayran for your continued trust and support!_ 🙏`;
+  msg += `_JazakAllahu Khayran for your continued trust and support!_ 🙏\n`;
+  msg += `🛒 Shop Online: https://shop.bback.store`;
 
   return msg;
 };
@@ -1669,7 +1676,8 @@ export const formatNearExpiryClearanceBroadcastMessage = ({
   if (shopPhone) {
     msg += `📞 *Contact:* ${shopPhone}\n\n`;
   }
-  msg += `_Don't miss out on these limited special price drops!_ ✨`;
+  msg += `_Don't miss out on these limited special price drops!_ ✨\n`;
+  msg += `🛒 Order Online: https://shop.bback.store`;
 
   return msg;
 };

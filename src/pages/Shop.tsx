@@ -27,6 +27,8 @@ import {
   Lock,
   ExternalLink,
   Send,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
@@ -127,6 +129,7 @@ const Shop: React.FC = () => {
   const [priceSort, setPriceSort] = useState<'DEFAULT' | 'LOW_TO_HIGH' | 'HIGH_TO_LOW'>('DEFAULT');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  const [viewMode, setViewMode] = useState<'GRID' | 'LIST'>('GRID');
   const [cart, setCart] = useState<Record<string, CartEntry>>({});
 
   // Checkout state
@@ -628,7 +631,29 @@ const Shop: React.FC = () => {
   // ============================================================================
   if (!isStoreOpen) {
     const isMasterDisabled = shopSettings.onlineShopEnabled === false;
+    const customClosedMessage = (shopSettings.onlineShopClosedMessage || '').trim();
     const weekly = shopSettings.onlineShopWeeklyHours || DEFAULT_WEEKLY_OPENING_HOURS;
+
+    if (isMasterDisabled && customClosedMessage) {
+      return (
+        <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 sm:p-6 font-faruma" dir="ltr">
+          <div className="w-full max-w-md bg-card border border-border rounded-xl p-6 sm:p-8 text-center space-y-4 shadow-sm">
+            <p className="text-sm sm:text-base font-bold text-foreground leading-relaxed whitespace-pre-line">
+              {customClosedMessage}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => loadShop()}
+              className="h-9 px-4 rounded-lg text-xs font-black gap-1.5"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              <span>Check Again</span>
+            </Button>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 sm:p-6 font-faruma" dir="ltr">
@@ -645,8 +670,7 @@ const Shop: React.FC = () => {
             </h1>
             <p className="text-xs text-muted-foreground leading-relaxed">
               {isMasterDisabled
-                ? (shopSettings.onlineShopClosedMessage ||
-                    'Online shopping is currently disabled. You cannot access the store right now.')
+                ? 'Online shopping is currently disabled. You cannot access the store right now.'
                 : (storeOpenStatus.reason || 'Online ordering is only available during our opening hours.')}
             </p>
           </div>
@@ -698,27 +722,193 @@ const Shop: React.FC = () => {
   }
 
   // ============================================================================
-  // UNAUTHENTICATED VIEW: LOGIN / REGISTER
+  // UNAUTHENTICATED VIEW: STORE ADVERTISING LANDING PAGE + LOGIN / REGISTER
   // ============================================================================
   if (!customer) {
-    return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 sm:p-6 font-faruma" dir="ltr">
-        <div className="w-full max-w-md space-y-4">
-          {/* Store Branding */}
-          <div className="text-center space-y-2">
-            <div className="mx-auto w-14 h-14 rounded-2xl bg-primary/10 border border-primary/25 flex items-center justify-center text-primary">
-              <ShoppingBag className="h-7 w-7" />
-            </div>
-            <h1 className="text-2xl font-black tracking-tight text-foreground">
-              {shopSettings.shopName || 'B BACK'} Online Shop
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              shop.bback.store • Login with your Customer Code & Mobile Number
-            </p>
-          </div>
+    const showcaseProducts = products
+      .filter((p) => Number(p.stock_shop || 0) > 0)
+      .slice(0, 6);
+    const weekly = shopSettings.onlineShopWeeklyHours || DEFAULT_WEEKLY_OPENING_HOURS;
 
-          <div className="bg-card border border-border rounded-xl p-5 sm:p-6 shadow-sm space-y-5">
-            {/* Tabs */}
+    return (
+      <div className="min-h-screen bg-background text-foreground flex flex-col font-faruma" dir="ltr">
+        {/* Top Landing Bar */}
+        <header className="bg-card border-b border-border px-4 sm:px-6 py-3">
+          <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              {shopSettings.logo ? (
+                <img
+                  src={shopSettings.logo}
+                  alt={shopSettings.shopName || 'B BACK'}
+                  className="h-9 w-9 rounded-lg object-contain bg-muted border border-border p-0.5"
+                />
+              ) : (
+                <div className="h-9 w-9 rounded-lg bg-primary/10 border border-primary/25 flex items-center justify-center text-primary">
+                  <ShoppingBag className="h-5 w-5" />
+                </div>
+              )}
+              <div>
+                <p className="text-sm sm:text-base font-black tracking-tight text-foreground">
+                  {shopSettings.shopName || 'B BACK'}
+                </p>
+                <p className="text-[11px] text-muted-foreground">shop.bback.store</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                OPEN FOR ORDERS
+              </span>
+              <a
+                href="https://share.google/gerUMwgJN9slyLju8"
+                target="_blank"
+                rel="noreferrer"
+                className="hidden sm:inline-flex items-center gap-1 h-8 px-3 rounded-lg border border-border bg-muted hover:bg-muted/80 text-xs font-bold text-foreground transition-colors"
+              >
+                <ExternalLink className="h-3.5 w-3.5 text-primary" />
+                <span>Find Us on Google</span>
+              </a>
+            </div>
+          </div>
+        </header>
+
+        {/* Main 2-Column Landing + Login Layout */}
+        <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Column: Store Showcase & Advertising */}
+          <section className="lg:col-span-7 space-y-5">
+            <div className="bg-card border border-border rounded-xl p-5 sm:p-6 space-y-4">
+              <div className="space-y-2">
+                <span className="inline-block text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/25">
+                  Official Online Store
+                </span>
+                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+                  Shop Fresh &amp; Daily Essentials at {shopSettings.shopName || 'B BACK'}
+                </h1>
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  Order directly online from your phone for fast doorstep delivery or quick store pickup — with instant bank transfer slip upload or your store credit account.
+                </p>
+              </div>
+
+              {/* Store Highlights */}
+              <div className="grid grid-cols-2 gap-2.5 pt-1">
+                <div className="p-3 rounded-lg bg-muted/60 border border-border space-y-1">
+                  <p className="text-xs font-black text-foreground flex items-center gap-1.5">
+                    <Truck className="h-4 w-4 text-primary" /> Fast Delivery
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">Min. {currency} {MIN_DELIVERY_AMOUNT} for delivery</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/60 border border-border space-y-1">
+                  <p className="text-xs font-black text-foreground flex items-center gap-1.5">
+                    <Store className="h-4 w-4 text-emerald-500" /> Store Pickup
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">No minimum order limit</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/60 border border-border space-y-1">
+                  <p className="text-xs font-black text-foreground flex items-center gap-1.5">
+                    <CreditCard className="h-4 w-4 text-amber-500" /> Credit &amp; Transfer
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">Pay via credit or upload slip</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/60 border border-border space-y-1">
+                  <p className="text-xs font-black text-foreground flex items-center gap-1.5">
+                    <Send className="h-4 w-4 text-[#229ED9]" /> Live Telegram Updates
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">Instant order &amp; balance alerts</p>
+                </div>
+              </div>
+
+              {/* Store Contact & Location */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-border text-xs text-muted-foreground">
+                <div className="space-y-0.5">
+                  {shopSettings.shopAddress && (
+                    <p className="font-semibold text-foreground">{shopSettings.shopAddress}</p>
+                  )}
+                  {shopSettings.shopPhone && (
+                    <p className="font-mono">Tel: {shopSettings.shopPhone}</p>
+                  )}
+                </div>
+                <a
+                  href="https://share.google/gerUMwgJN9slyLju8"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-black text-primary hover:underline"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  <span>View Store Info &amp; Photos</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Popular Products Preview */}
+            {showcaseProducts.length > 0 && (
+              <div className="bg-card border border-border rounded-xl p-4 sm:p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-black text-foreground">Available In Store Now</h2>
+                  <span className="text-[11px] font-bold text-muted-foreground">Sign in to order</span>
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                  {showcaseProducts.map((prod) => (
+                    <div key={prod.id} className="rounded-lg border border-border bg-background p-1.5 space-y-1">
+                      <div className="h-16 w-full rounded bg-muted overflow-hidden">
+                        <img
+                          src={getAdaptedImageUrl(prod.image, prod.name_en || prod.name_dv, prod.item_code)}
+                          alt={prod.name_en || prod.name_dv}
+                          loading="lazy"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            if (!target.dataset.fallbackApplied) {
+                              target.dataset.fallbackApplied = '1';
+                              target.src = generatePlaceholderImage(prod.name_en || prod.name_dv || 'Item', prod.item_code);
+                            }
+                          }}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <p className="text-[10px] font-bold text-foreground truncate">
+                        {prod.name_en || prod.name_dv}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Opening Hours Summary (if scheduled) */}
+            {shopSettings.onlineShopScheduleEnabled && (
+              <div className="bg-card border border-border rounded-xl p-4 space-y-2">
+                <p className="text-xs font-black text-foreground flex items-center gap-1.5">
+                  <Clock className="h-4 w-4 text-primary" />
+                  <span>Store Opening Hours</span>
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                  {DAY_ORDER.map(({ key, label }) => {
+                    const dayData = weekly[key];
+                    const slotsText =
+                      dayData?.enabled && dayData.slots?.length
+                        ? dayData.slots.map((s) => `${formatTime12h(s.open)} – ${formatTime12h(s.close)}`).join(', ')
+                        : 'Closed';
+                    return (
+                      <div key={key} className="flex items-center justify-between gap-2 py-0.5">
+                        <span className="font-bold text-foreground">{label}</span>
+                        <span className="font-mono text-[11px] text-muted-foreground tabular-nums">{slotsText}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* Right Column: Customer Login / Register */}
+          <section className="lg:col-span-5 w-full">
+            <div className="bg-card border border-border rounded-xl p-5 sm:p-6 shadow-sm space-y-5">
+              <div className="space-y-1">
+                <h2 className="text-lg font-black text-foreground">Customer Access</h2>
+                <p className="text-xs text-muted-foreground">
+                  Sign in with your Customer Code &amp; Mobile Number, or register a new account.
+                </p>
+              </div>
+              {/* Tabs */}
             <div className="grid grid-cols-2 gap-1 bg-muted p-1 rounded-lg border border-border">
               <button
                 type="button"
@@ -1002,7 +1192,8 @@ const Shop: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
+          </section>
+        </main>
       </div>
     );
   }
@@ -1286,24 +1477,151 @@ const Shop: React.FC = () => {
                   Reset
                 </Button>
               )}
+
+              {/* Grid / List View Toggle */}
+              <div className="flex items-center gap-0.5 bg-muted p-0.5 rounded-lg border border-border ml-1">
+                <button
+                  type="button"
+                  aria-pressed={viewMode === 'GRID'}
+                  onClick={() => setViewMode('GRID')}
+                  title="Grid View"
+                  className={cn(
+                    'h-7 w-7 rounded flex items-center justify-center transition-colors',
+                    viewMode === 'GRID'
+                      ? 'bg-card text-primary shadow-2xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={viewMode === 'LIST'}
+                  onClick={() => setViewMode('LIST')}
+                  title="List View"
+                  className={cn(
+                    'h-7 w-7 rounded flex items-center justify-center transition-colors',
+                    viewMode === 'LIST'
+                      ? 'bg-card text-primary shadow-2xs'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  <List className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Product Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-          {filteredProducts.map((product) => {
-            const stock = Number(product.stock_shop || 0);
-            const inCartQty = cart[product.id]?.quantity || 0;
-            const outOfStock = stock <= 0;
+        {/* Product Grid or List */}
+        {viewMode === 'GRID' ? (
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-2.5">
+            {filteredProducts.map((product) => {
+              const stock = Number(product.stock_shop || 0);
+              const inCartQty = cart[product.id]?.quantity || 0;
+              const outOfStock = stock <= 0;
 
-            return (
-              <article
-                key={product.id}
-                className="bg-card border border-border rounded-xl overflow-hidden flex flex-col justify-between p-3 gap-2.5 hover:border-primary/40 transition-colors"
-              >
-                <header className="space-y-2">
-                  <div className="aspect-square rounded-lg bg-muted border border-border/60 overflow-hidden flex items-center justify-center relative">
+              return (
+                <article
+                  key={product.id}
+                  className="bg-card border border-border rounded-xl overflow-hidden flex flex-col justify-between p-2 sm:p-2.5 gap-1.5 hover:border-primary/40 transition-colors"
+                >
+                  <header className="space-y-1.5">
+                    <div className="h-20 sm:h-28 w-full rounded-lg bg-muted border border-border/60 overflow-hidden flex items-center justify-center relative">
+                      <img
+                        src={getAdaptedImageUrl(product.image, product.name_en || product.name_dv, product.item_code)}
+                        alt={product.name_en || product.name_dv}
+                        loading="lazy"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          if (!target.dataset.fallbackApplied) {
+                            target.dataset.fallbackApplied = '1';
+                            target.src = generatePlaceholderImage(product.name_en || product.name_dv || 'Item', product.item_code);
+                          }
+                        }}
+                        className="w-full h-full object-cover"
+                      />
+                      {outOfStock && (
+                        <span className="absolute inset-0 bg-background/75 flex items-center justify-center text-[10px] font-black text-rose-600 dark:text-rose-400">
+                          Out of Stock
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-[11px] sm:text-xs font-black text-foreground line-clamp-2 leading-tight">
+                        {product.name_en || product.name_dv}
+                      </h3>
+                      {product.name_dv && (
+                        <p className="text-[10px] text-muted-foreground font-bold truncate mt-0.5">
+                          {product.name_dv}
+                        </p>
+                      )}
+                    </div>
+                  </header>
+
+                  <footer className="space-y-1.5 pt-1 border-t border-border/60">
+                    <div className="flex items-baseline justify-between gap-1">
+                      <span className="font-mono font-black text-xs sm:text-sm tabular-nums text-primary truncate">
+                        {currency} {Number(product.price || 0).toFixed(2)}
+                      </span>
+                      <span className="text-[9px] text-muted-foreground font-mono tabular-nums shrink-0">
+                        {outOfStock ? '0' : `${stock}`}
+                      </span>
+                    </div>
+
+                    {inCartQty > 0 ? (
+                      <div className="flex items-center justify-between gap-0.5 bg-muted rounded-lg p-0.5 border border-border">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => updateCartQty(product, -1)}
+                          className="h-6 w-6 rounded-md"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <span className="font-mono font-black text-[11px] tabular-nums">{inCartQty}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          disabled={inCartQty >= stock}
+                          onClick={() => updateCartQty(product, 1)}
+                          className="h-6 w-6 rounded-md"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={outOfStock || !isStoreOpen}
+                        onClick={() => updateCartQty(product, 1)}
+                        className="w-full h-7 rounded-lg text-[11px] font-black gap-1"
+                      >
+                        <Plus className="h-3 w-3" />
+                        <span>Add</span>
+                      </Button>
+                    )}
+                  </footer>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {filteredProducts.map((product) => {
+              const stock = Number(product.stock_shop || 0);
+              const inCartQty = cart[product.id]?.quantity || 0;
+              const outOfStock = stock <= 0;
+
+              return (
+                <article
+                  key={product.id}
+                  className="bg-card border border-border rounded-xl p-2 sm:p-2.5 flex items-center gap-2.5 hover:border-primary/40 transition-colors"
+                >
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg bg-muted border border-border/60 overflow-hidden flex items-center justify-center relative shrink-0">
                     <img
                       src={getAdaptedImageUrl(product.image, product.name_en || product.name_dv, product.item_code)}
                       alt={product.name_en || product.name_dv}
@@ -1318,73 +1636,73 @@ const Shop: React.FC = () => {
                       className="w-full h-full object-cover"
                     />
                     {outOfStock && (
-                      <span className="absolute inset-0 bg-background/75 flex items-center justify-center text-[11px] font-black text-rose-600 dark:text-rose-400">
-                        Out of Stock
+                      <span className="absolute inset-0 bg-background/80 flex items-center justify-center text-[9px] font-black text-rose-600 dark:text-rose-400 text-center leading-tight px-1">
+                        Out
                       </span>
                     )}
                   </div>
-                  <div>
-                    <h3 className="text-xs sm:text-sm font-black text-foreground line-clamp-2 leading-snug">
+
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-xs sm:text-sm font-black text-foreground truncate leading-snug">
                       {product.name_en || product.name_dv}
                     </h3>
                     {product.name_dv && (
-                      <p className="text-[11px] text-muted-foreground font-bold truncate mt-0.5">
+                      <p className="text-[11px] text-muted-foreground font-bold truncate">
                         {product.name_dv}
                       </p>
                     )}
-                  </div>
-                </header>
-
-                <footer className="space-y-2 pt-1 border-t border-border/60">
-                  <div className="flex items-baseline justify-between gap-1">
-                    <span className="font-mono font-black text-sm tabular-nums text-primary">
-                      {currency} {Number(product.price || 0).toFixed(2)}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground font-mono tabular-nums">
-                      {outOfStock ? '0 left' : `${stock} left`}
-                    </span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="font-mono font-black text-xs sm:text-sm tabular-nums text-primary">
+                        {currency} {Number(product.price || 0).toFixed(2)}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground font-mono tabular-nums">
+                        • {outOfStock ? 'Out of stock' : `${stock} left`}
+                      </span>
+                    </div>
                   </div>
 
-                  {inCartQty > 0 ? (
-                    <div className="flex items-center justify-between gap-1 bg-muted rounded-lg p-1 border border-border">
+                  <div className="shrink-0">
+                    {inCartQty > 0 ? (
+                      <div className="flex items-center gap-1 bg-muted rounded-lg p-1 border border-border">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => updateCartQty(product, -1)}
+                          className="h-7 w-7 rounded-md"
+                        >
+                          <Minus className="h-3.5 w-3.5" />
+                        </Button>
+                        <span className="w-5 text-center font-mono font-black text-xs tabular-nums">{inCartQty}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          disabled={inCartQty >= stock}
+                          onClick={() => updateCartQty(product, 1)}
+                          className="h-7 w-7 rounded-md"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
                       <Button
                         type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => updateCartQty(product, -1)}
-                        className="h-7 w-7 rounded-md"
-                      >
-                        <Minus className="h-3.5 w-3.5" />
-                      </Button>
-                      <span className="font-mono font-black text-xs tabular-nums">{inCartQty}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        disabled={inCartQty >= stock}
+                        size="sm"
+                        disabled={outOfStock || !isStoreOpen}
                         onClick={() => updateCartQty(product, 1)}
-                        className="h-7 w-7 rounded-md"
+                        className="h-8 px-3 rounded-lg text-xs font-black gap-1"
                       >
                         <Plus className="h-3.5 w-3.5" />
+                        <span>Add</span>
                       </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={outOfStock || !isStoreOpen}
-                      onClick={() => updateCartQty(product, 1)}
-                      className="w-full h-8 rounded-lg text-xs font-black gap-1"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      <span>Add</span>
-                    </Button>
-                  )}
-                </footer>
-              </article>
-            );
-          })}
-        </div>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
 
         {filteredProducts.length === 0 && (
           <div className="text-center py-12 text-sm text-muted-foreground">

@@ -55,6 +55,14 @@ const Admin = () => {
   const [botInfo, setBotInfo] = useState<TelegramBotInfo | null>(null);
   const [isTestingBot, setIsTestingBot] = useState(false);
   const [isSendingTestBriefing, setIsSendingTestBriefing] = useState(false);
+  const [closedMessageDraft, setClosedMessageDraft] = useState(shopSettings.onlineShopClosedMessage || '');
+  const [isEditingClosedMsg, setIsEditingClosedMsg] = useState(false);
+
+  useEffect(() => {
+    if (!isEditingClosedMsg) {
+      setClosedMessageDraft(shopSettings.onlineShopClosedMessage || '');
+    }
+  }, [shopSettings.onlineShopClosedMessage, isEditingClosedMsg]);
   const [webhookUrlInput, setWebhookUrlInput] = useState(telegramSettings.webhookUrl || 'https://uooqzukgdzxlvhqggmwa.supabase.co/functions/v1/telegram-webhook');
   const [isRegisteringWebhook, setIsRegisteringWebhook] = useState(false);
 
@@ -658,12 +666,33 @@ ALTER TABLE public.expenses REPLICA IDENTITY FULL;`;
                           />
                         </div>
                         {shopSettings.onlineShopEnabled === false && (
-                          <Input
-                            placeholder="Optional closed message for customers..."
-                            value={shopSettings.onlineShopClosedMessage || ''}
-                            onChange={(e) => handleSettingsChange('shop', 'onlineShopClosedMessage', e.target.value)}
-                            className="bg-background border-border h-9 rounded-lg text-xs"
-                          />
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Optional closed message for customers..."
+                              value={closedMessageDraft}
+                              onFocus={() => setIsEditingClosedMsg(true)}
+                              onChange={(e) => setClosedMessageDraft(e.target.value)}
+                              onBlur={() => {
+                                setIsEditingClosedMsg(false);
+                                if (closedMessageDraft !== (shopSettings.onlineShopClosedMessage || '')) {
+                                  handleSettingsChange('shop', 'onlineShopClosedMessage', closedMessageDraft);
+                                }
+                              }}
+                              className="bg-background border-border h-9 rounded-lg text-xs flex-1"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => {
+                                setIsEditingClosedMsg(false);
+                                handleSettingsChange('shop', 'onlineShopClosedMessage', closedMessageDraft);
+                                showSuccess('Closed message saved!');
+                              }}
+                              className="h-9 px-3 rounded-lg text-xs font-bold shrink-0"
+                            >
+                              Save
+                            </Button>
+                          </div>
                         )}
                         <div className="pt-2.5 border-t border-border/60 space-y-2.5">
                           <div className="flex items-center justify-between gap-2">

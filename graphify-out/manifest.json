@@ -697,9 +697,9 @@
     "semantic_hash": ""
   },
   "src/pages/Admin.tsx": {
-    "mtime": 1794734277.0306768,
-    "seen": 1794734301.903747,
-    "ast_hash": "ac2c242607bf04f874a72f9028887cf2",
+    "mtime": 1794808411.8791304,
+    "seen": 1794808540.7274117,
+    "ast_hash": "90574a4fdbdabbb3d3ab899ccdb4819d",
     "semantic_hash": ""
   },
   "src/pages/CreditInvoices.tsx": {
@@ -841,9 +841,9 @@
     "semantic_hash": "0d2681440097910f32c63946f6c4f54d"
   },
   "src/services/telegramService.ts": {
-    "mtime": 1794642075.2817159,
-    "seen": 1794642352.9174678,
-    "ast_hash": "199a5bcc8926de90b403636a7665db0c",
+    "mtime": 1794808456.0053196,
+    "seen": 1794808540.7306764,
+    "ast_hash": "657fd43fc204b58be4eb553cec5437f7",
     "semantic_hash": ""
   },
   "src/types/jspdf-autotable.d.ts": {
@@ -2395,9 +2395,9 @@
     "semantic_hash": ""
   },
   "src/pages/Shop.tsx": {
-    "mtime": 1794807416.972922,
-    "seen": 1794807462.611997,
-    "ast_hash": "c44f96d980c6ed6d0686e4aa63c66c35",
+    "mtime": 1794808498.3376746,
+    "seen": 1794808540.729571,
+    "ast_hash": "4dbe7e78b70bd943db8a3b6b2a6852a3",
     "semantic_hash": ""
   },
   "src/services/onlineShopService.ts": {

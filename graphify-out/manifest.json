@@ -2395,9 +2395,9 @@
     "semantic_hash": ""
   },
   "src/pages/Shop.tsx": {
-    "mtime": 1794838253.000086,
-    "seen": 1794838291.963759,
-    "ast_hash": "588405089ec05e28239b8379c65143e7",
+    "mtime": 1794838895.6392083,
+    "seen": 1794838944.158381,
+    "ast_hash": "f8f2793c5f5d508b641484f6bbbeb9bf",
     "semantic_hash": ""
   },
   "src/services/onlineShopService.ts": {
@@ -2416,6 +2416,12 @@
     "mtime": 1794810163.1162865,
     "seen": 1794810257.0218635,
     "ast_hash": "77a2beeabe40f7c66a21964dff3d4283",
+    "semantic_hash": ""
+  },
+  "public/coming-soon-groceries.png": {
+    "mtime": 1794838863.6534133,
+    "seen": 1794838944.2604976,
+    "ast_hash": "0b533aa89159954926929c033cd9b7b1",
     "semantic_hash": ""
   },
   "package-lock.json": {

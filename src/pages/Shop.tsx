@@ -690,79 +690,32 @@ const Shop: React.FC = () => {
     const weekly = shopSettings.onlineShopWeeklyHours || DEFAULT_WEEKLY_OPENING_HOURS;
 
     if (isMasterDisabled) {
-      const topGroceryItems = products
-        .filter((p) => p.image && Number(p.stock_shop || 0) > 0)
-        .slice(0, 7);
-
-      const rotations = [
-        '-rotate-12 -translate-y-3',
-        'rotate-6 -translate-y-1',
-        '-rotate-6 -translate-y-4',
-        'rotate-12 -translate-y-2',
-        '-rotate-3 -translate-y-3',
-        'rotate-6 -translate-y-1',
-        '-rotate-12 -translate-y-4',
-      ];
-
       return (
         <div
-          className="relative min-h-screen w-full bg-gradient-to-b from-emerald-50 via-teal-50/70 to-amber-50/50 text-slate-900 flex flex-col items-center justify-center p-5 pt-28 sm:p-10 sm:pt-36 overflow-hidden font-faruma"
+          className="relative min-h-screen w-full bg-gradient-to-br from-white via-emerald-50/60 to-teal-50/80 text-slate-900 flex flex-col items-center justify-center p-5 sm:p-10 overflow-hidden font-faruma"
           dir="ltr"
         >
-          {/* Soft Light-Theme Store Photo Backdrop */}
+          {/* Store Photo Subtle Watermark */}
           <img
             src={SHOP_STORE_BG_URL}
             alt=""
             aria-hidden="true"
             referrerPolicy="no-referrer"
             onError={(e) => {
-              const target = e.currentTarget;
-              if (!target.dataset.fallbackApplied) {
-                target.dataset.fallbackApplied = '1';
-                target.src = '/shop-hero.jpg';
-              }
+              e.currentTarget.style.display = 'none';
             }}
-            className="shop-hero-pan absolute inset-0 w-full h-full object-cover opacity-15 pointer-events-none"
+            className="absolute inset-0 w-full h-full object-cover opacity-10 pointer-events-none"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-white/80 via-emerald-50/75 to-teal-50/90 pointer-events-none" />
 
-          {/* Top-Edge Flat-Lay Grocery Items Strip */}
-          <div
+          {/* User's Grocery Cart & Bag Illustration anchored at bottom */}
+          <img
+            src="/coming-soon-groceries.png"
+            alt=""
             aria-hidden="true"
-            className="absolute top-0 left-0 right-0 z-10 flex items-start justify-center gap-2.5 sm:gap-5 px-2 pointer-events-none overflow-hidden"
-          >
-            {topGroceryItems.length > 0 ? (
-              topGroceryItems.map((item, idx) => (
-                <div
-                  key={item.id}
-                  className={cn(
-                    'w-16 h-20 sm:w-28 sm:h-32 rounded-b-3xl bg-white border-2 border-teal-500/25 shadow-md overflow-hidden shrink-0 transition-transform',
-                    rotations[idx % rotations.length],
-                    idx >= 5 && 'hidden sm:block'
-                  )}
-                >
-                  <img
-                    src={getAdaptedImageUrl(item.image, item.name_en || item.name_dv, item.item_code)}
-                    alt=""
-                    onError={(e) => {
-                      const target = e.currentTarget;
-                      if (!target.dataset.fallbackApplied) {
-                        target.dataset.fallbackApplied = '1';
-                        target.src = '/shop-hero.jpg';
-                      }
-                    }}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ))
-            ) : (
-              <div className="w-full max-w-4xl h-20 sm:h-28 rounded-b-3xl overflow-hidden border-b-2 border-x-2 border-teal-500/20 shadow-md">
-                <img src="/shop-hero.jpg" alt="" className="w-full h-full object-cover" />
-              </div>
-            )}
-          </div>
+            className="pointer-events-none select-none absolute bottom-0 inset-x-0 w-full max-h-[48vh] sm:max-h-[72vh] object-contain object-bottom opacity-35 md:opacity-95 transition-opacity"
+          />
 
-          <div className="relative z-10 w-full max-w-2xl flex flex-col items-center text-center space-y-6">
+          <div className="relative z-10 w-full max-w-xl bg-white/85 md:bg-white/80 backdrop-blur-xs border border-teal-500/20 rounded-3xl p-6 sm:p-9 flex flex-col items-center text-center space-y-5 shadow-lg">
             {/* Store Logo + Brand */}
             <div className="flex flex-col items-center gap-2.5">
               {shopSettings.logo ? (

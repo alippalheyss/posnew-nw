@@ -697,8 +697,8 @@
     "semantic_hash": ""
   },
   "src/pages/Admin.tsx": {
-    "mtime": 1794808411.8791304,
-    "seen": 1794808540.7274117,
+    "mtime": 1794808594.9412048,
+    "seen": 1794809238.9703755,
     "ast_hash": "90574a4fdbdabbb3d3ab899ccdb4819d",
     "semantic_hash": ""
   },
@@ -841,9 +841,9 @@
     "semantic_hash": "0d2681440097910f32c63946f6c4f54d"
   },
   "src/services/telegramService.ts": {
-    "mtime": 1794808456.0053196,
-    "seen": 1794808540.7306764,
-    "ast_hash": "657fd43fc204b58be4eb553cec5437f7",
+    "mtime": 1794809249.4809377,
+    "seen": 1794809422.2573,
+    "ast_hash": "4acddd0957b78b5075ee06bda1d60f38",
     "semantic_hash": ""
   },
   "src/types/jspdf-autotable.d.ts": {
@@ -2395,15 +2395,21 @@
     "semantic_hash": ""
   },
   "src/pages/Shop.tsx": {
-    "mtime": 1794808498.3376746,
-    "seen": 1794808540.729571,
-    "ast_hash": "4dbe7e78b70bd943db8a3b6b2a6852a3",
+    "mtime": 1794809408.5600247,
+    "seen": 1794809422.2562804,
+    "ast_hash": "a250632f17958bf6e7b6f62191a784a1",
     "semantic_hash": ""
   },
   "src/services/onlineShopService.ts": {
     "mtime": 1794807417.073991,
     "seen": 1794807462.6128457,
     "ast_hash": "20369b8d5679656759afe11d65af3d95",
+    "semantic_hash": ""
+  },
+  "public/shop-hero.jpg": {
+    "mtime": 1794809148.9529903,
+    "seen": 1794809239.0153923,
+    "ast_hash": "37e8fa000ad5671cdaf2fd46da089a46",
     "semantic_hash": ""
   },
   "package-lock.json": {

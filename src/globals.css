@@ -581,3 +581,78 @@ textarea:not([dir="rtl"]):not(.font-faruma):not([name*="_dv"]):not([id*="_dv"]) 
     animation-delay: 0ms !important;
   }
 }
+
+/* shop.bback.store Motion Graphics */
+@keyframes shopHeroPan {
+  0% {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: scale(1.06) translate3d(-1%, -1%, 0);
+  }
+  100% {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+}
+
+@keyframes shopFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes shopMarquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.shop-hero-pan {
+  animation: shopHeroPan 22s ease-in-out infinite;
+  will-change: transform;
+}
+
+.shop-float-slow {
+  animation: shopFloat 4.2s ease-in-out infinite;
+}
+
+.shop-float-delayed {
+  animation: shopFloat 4.8s ease-in-out 1.4s infinite;
+}
+
+.shop-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: shopMarquee 26s linear infinite;
+}
+
+.shop-marquee-wrap:hover .shop-marquee-track {
+  animation-play-state: paused;
+}
+
+.shop-card-hover {
+  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.shop-card-hover:hover {
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shop-hero-pan,
+  .shop-float-slow,
+  .shop-float-delayed,
+  .shop-marquee-track {
+    animation: none !important;
+  }
+
+  .shop-card-hover:hover {
+    transform: none;
+  }
+}

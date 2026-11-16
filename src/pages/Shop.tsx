@@ -29,6 +29,8 @@ import {
   Send,
   LayoutGrid,
   List,
+  MapPin,
+  Sparkles,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
@@ -760,82 +762,129 @@ const Shop: React.FC = () => {
                 OPEN FOR ORDERS
               </span>
               <a
-                href="https://share.google/gerUMwgJN9slyLju8"
+                href="https://maps.app.goo.gl/qXnbomJZLFY3BLiUA"
                 target="_blank"
                 rel="noreferrer"
-                className="hidden sm:inline-flex items-center gap-1 h-8 px-3 rounded-lg border border-border bg-muted hover:bg-muted/80 text-xs font-bold text-foreground transition-colors"
+                className="hidden sm:inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-muted hover:bg-muted/80 text-xs font-bold text-foreground transition-colors"
               >
-                <ExternalLink className="h-3.5 w-3.5 text-primary" />
-                <span>Find Us on Google</span>
+                <MapPin className="h-3.5 w-3.5 text-rose-500" />
+                <span>Find Us on Maps</span>
               </a>
             </div>
           </div>
         </header>
 
+        {/* Animated Store Perks Marquee */}
+        <div className="shop-marquee-wrap bg-primary/10 border-b border-primary/20 overflow-hidden py-1.5">
+          <div className="shop-marquee-track text-[11px] font-black text-primary whitespace-nowrap">
+            <span className="px-6">🚚 Doorstep Delivery from {currency} {MIN_DELIVERY_AMOUNT}</span>
+            <span className="px-6">🏪 Free Store Pickup (No Minimum)</span>
+            <span className="px-6">💳 Store Credit &amp; Instant Bank Transfer Slip</span>
+            <span className="px-6">📲 Live Telegram Order Status Updates</span>
+            <span className="px-6">✨ Fresh Essentials &amp; Daily Groceries</span>
+            <span className="px-6" aria-hidden="true">🚚 Doorstep Delivery from {currency} {MIN_DELIVERY_AMOUNT}</span>
+            <span className="px-6" aria-hidden="true">🏪 Free Store Pickup (No Minimum)</span>
+            <span className="px-6" aria-hidden="true">💳 Store Credit &amp; Instant Bank Transfer Slip</span>
+            <span className="px-6" aria-hidden="true">📲 Live Telegram Order Status Updates</span>
+            <span className="px-6" aria-hidden="true">✨ Fresh Essentials &amp; Daily Groceries</span>
+          </div>
+        </div>
+
         {/* Main 2-Column Landing + Login Layout */}
-        <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column: Store Showcase & Advertising */}
+        <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Column: Visual Hero Art + Store Showcase */}
           <section className="lg:col-span-7 space-y-5">
-            <div className="bg-card border border-border rounded-xl p-5 sm:p-6 space-y-4">
-              <div className="space-y-2">
-                <span className="inline-block text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/25">
-                  Official Online Store
-                </span>
-                <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
-                  Shop Fresh &amp; Daily Essentials at {shopSettings.shopName || 'B BACK'}
-                </h1>
-                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  Order directly online from your phone for fast doorstep delivery or quick store pickup — with instant bank transfer slip upload or your store credit account.
-                </p>
-              </div>
-
-              {/* Store Highlights */}
-              <div className="grid grid-cols-2 gap-2.5 pt-1">
-                <div className="p-3 rounded-lg bg-muted/60 border border-border space-y-1">
-                  <p className="text-xs font-black text-foreground flex items-center gap-1.5">
-                    <Truck className="h-4 w-4 text-primary" /> Fast Delivery
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">Min. {currency} {MIN_DELIVERY_AMOUNT} for delivery</p>
+            {/* Hero Visual Banner Card */}
+            <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+              <div className="relative aspect-[16/9] w-full bg-slate-900 overflow-hidden">
+                <img
+                  src="/shop-hero.jpg"
+                  alt={`${shopSettings.shopName || 'B BACK'} Online Store`}
+                  className="shop-hero-pan w-full h-full object-cover"
+                />
+                {/* Floating Motion Badges */}
+                <div className="absolute top-3 right-3 flex flex-col items-end gap-2 pointer-events-none">
+                  <span className="shop-float-slow inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-950/75 text-white border border-white/15 text-[10px] font-black shadow-md backdrop-blur-xs">
+                    <Truck className="h-3 w-3 text-emerald-400" /> Delivery from {currency} {MIN_DELIVERY_AMOUNT}
+                  </span>
+                  <span className="shop-float-delayed inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-950/75 text-white border border-white/15 text-[10px] font-black shadow-md backdrop-blur-xs">
+                    <Store className="h-3 w-3 text-amber-400" /> Free Store Pickup
+                  </span>
                 </div>
-                <div className="p-3 rounded-lg bg-muted/60 border border-border space-y-1">
-                  <p className="text-xs font-black text-foreground flex items-center gap-1.5">
-                    <Store className="h-4 w-4 text-emerald-500" /> Store Pickup
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/35 to-transparent flex flex-col justify-end p-5 sm:p-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500 text-white shadow-sm">
+                      <Sparkles className="h-3 w-3" /> Official Online Store
+                    </span>
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-white/15 text-white backdrop-blur-xs">
+                      Maldives • {currency}
+                    </span>
+                  </div>
+                  <h1 className="text-xl sm:text-3xl font-black tracking-tight text-white leading-tight">
+                    Fresh Essentials &amp; Daily Needs at {shopSettings.shopName || 'B BACK'}
+                  </h1>
+                  <p className="text-xs sm:text-sm text-slate-200 mt-1.5 max-w-xl leading-relaxed">
+                    Order straight from your phone for fast doorstep delivery or quick store pickup — pay via store credit or instant bank transfer slip.
                   </p>
-                  <p className="text-[11px] text-muted-foreground">No minimum order limit</p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/60 border border-border space-y-1">
-                  <p className="text-xs font-black text-foreground flex items-center gap-1.5">
-                    <CreditCard className="h-4 w-4 text-amber-500" /> Credit &amp; Transfer
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">Pay via credit or upload slip</p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/60 border border-border space-y-1">
-                  <p className="text-xs font-black text-foreground flex items-center gap-1.5">
-                    <Send className="h-4 w-4 text-[#229ED9]" /> Live Telegram Updates
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">Instant order &amp; balance alerts</p>
                 </div>
               </div>
 
-              {/* Store Contact & Location */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-border text-xs text-muted-foreground">
-                <div className="space-y-0.5">
-                  {shopSettings.shopAddress && (
-                    <p className="font-semibold text-foreground">{shopSettings.shopAddress}</p>
-                  )}
-                  {shopSettings.shopPhone && (
-                    <p className="font-mono">Tel: {shopSettings.shopPhone}</p>
-                  )}
+              <div className="p-4 sm:p-5 space-y-4">
+                {/* Store Highlights */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div className="shop-card-hover p-3 rounded-xl bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 space-y-1">
+                    <div className="h-7 w-7 rounded-lg bg-primary/15 text-primary flex items-center justify-center">
+                      <Truck className="h-4 w-4" />
+                    </div>
+                    <p className="text-xs font-black text-foreground">Fast Delivery</p>
+                    <p className="text-[10px] text-muted-foreground">Min. {currency} {MIN_DELIVERY_AMOUNT}</p>
+                  </div>
+                  <div className="shop-card-hover p-3 rounded-xl bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20 space-y-1">
+                    <div className="h-7 w-7 rounded-lg bg-emerald-500/15 text-emerald-500 flex items-center justify-center">
+                      <Store className="h-4 w-4" />
+                    </div>
+                    <p className="text-xs font-black text-foreground">Store Pickup</p>
+                    <p className="text-[10px] text-muted-foreground">No min. limit</p>
+                  </div>
+                  <div className="shop-card-hover p-3 rounded-xl bg-gradient-to-br from-amber-500/10 to-transparent border border-amber-500/20 space-y-1">
+                    <div className="h-7 w-7 rounded-lg bg-amber-500/15 text-amber-500 flex items-center justify-center">
+                      <CreditCard className="h-4 w-4" />
+                    </div>
+                    <p className="text-xs font-black text-foreground">Credit &amp; Slip</p>
+                    <p className="text-[10px] text-muted-foreground">Flexible payment</p>
+                  </div>
+                  <div className="shop-card-hover p-3 rounded-xl bg-gradient-to-br from-[#229ED9]/10 to-transparent border-[#229ED9]/25 border space-y-1">
+                    <div className="h-7 w-7 rounded-lg bg-[#229ED9]/15 text-[#229ED9] flex items-center justify-center">
+                      <Send className="h-4 w-4" />
+                    </div>
+                    <p className="text-xs font-black text-foreground">Telegram Alerts</p>
+                    <p className="text-[10px] text-muted-foreground">Live order updates</p>
+                  </div>
                 </div>
-                <a
-                  href="https://share.google/gerUMwgJN9slyLju8"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-xs font-black text-primary hover:underline"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  <span>View Store Info &amp; Photos</span>
-                </a>
+
+                {/* Store Contact & Google Maps Location */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border text-xs">
+                  <div className="space-y-0.5 text-muted-foreground">
+                    {shopSettings.shopAddress && (
+                      <p className="font-bold text-foreground flex items-center gap-1.5">
+                        <MapPin className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                        <span>{shopSettings.shopAddress}</span>
+                      </p>
+                    )}
+                    {shopSettings.shopPhone && (
+                      <p className="font-mono pl-5">Tel: {shopSettings.shopPhone}</p>
+                    )}
+                  </div>
+                  <a
+                    href="https://maps.app.goo.gl/qXnbomJZLFY3BLiUA"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 text-xs font-black text-rose-600 dark:text-rose-400 transition-colors"
+                  >
+                    <MapPin className="h-3.5 w-3.5" />
+                    <span>Open in Google Maps</span>
+                  </a>
+                </div>
               </div>
             </div>
 
@@ -848,7 +897,7 @@ const Shop: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                   {showcaseProducts.map((prod) => (
-                    <div key={prod.id} className="rounded-lg border border-border bg-background p-1.5 space-y-1">
+                    <div key={prod.id} className="shop-card-hover rounded-lg border border-border bg-background p-1.5 space-y-1">
                       <div className="h-16 w-full rounded bg-muted overflow-hidden">
                         <img
                           src={getAdaptedImageUrl(prod.image, prod.name_en || prod.name_dv, prod.item_code)}

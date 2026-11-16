@@ -1935,7 +1935,8 @@ export const sendTelegramOnlineOrderStatusToCustomer = async ({
     `🧾 *Order:* ${orderNumber}\n` +
     `📌 *Status:* ${label}\n` +
     `💰 *Total:* ${currency} ${Number(total).toFixed(2)}\n\n` +
-    `Track anytime at https://shop.bback.store`;
+    `🛒 Shop Online: https://shop.bback.store\n` +
+    `📍 Location: https://maps.app.goo.gl/qXnbomJZLFY3BLiUA`;
 
   const res = await sendTelegramMessage(customerChatId, msg, activeToken, 'Markdown');
   return { ok: !!res.ok };

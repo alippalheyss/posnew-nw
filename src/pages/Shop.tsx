@@ -31,6 +31,7 @@ import {
   List,
   MapPin,
   Sparkles,
+  Phone,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
@@ -63,8 +64,10 @@ import {
   loginShopCustomerWithPassword,
   placeOnlineOrder,
   refreshShopCustomer,
+  requestTelegramPasswordReset,
   submitCustomerRegistration,
   uploadOrderSlip,
+  verifyAndResetTelegramPassword,
   verifyShopCustomerCredentials,
 } from '@/services/onlineShopService';
 
@@ -110,9 +113,11 @@ const Shop: React.FC = () => {
   const [authTab, setAuthTab] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
   const [loginCode, setLoginCode] = useState('');
   const [loginPhone, setLoginPhone] = useState('');
-  const [loginStep, setLoginStep] = useState<'CREDENTIALS' | 'SET_PASSWORD' | 'ENTER_PASSWORD'>('CREDENTIALS');
+  const [loginStep, setLoginStep] = useState<'CREDENTIALS' | 'SET_PASSWORD' | 'ENTER_PASSWORD' | 'RESET_PASSWORD'>('CREDENTIALS');
   const [pendingLoginCustomer, setPendingLoginCustomer] = useState<Customer | null>(null);
   const [loginPassword, setLoginPassword] = useState('');
+  const [resetOtp, setResetOtp] = useState('');
+  const [isSendingResetOtp, setIsSendingResetOtp] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -375,9 +380,52 @@ const Shop: React.FC = () => {
         } else {
           showError(res.error || 'Incorrect password.');
         }
+        return;
+      }
+
+      if (loginStep === 'RESET_PASSWORD') {
+        if (newPassword.length < 4) {
+          showError('New password must be at least 4 characters.');
+          return;
+        }
+        if (newPassword !== confirmPassword) {
+          showError('Passwords do not match.');
+          return;
+        }
+        const res = await verifyAndResetTelegramPassword(loginCode, loginPhone, resetOtp, newPassword);
+        if (res.ok && res.customer) {
+          setCustomer(res.customer);
+          localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(res.customer));
+          setLoginStep('CREDENTIALS');
+          setPendingLoginCustomer(null);
+          setResetOtp('');
+          setNewPassword('');
+          setConfirmPassword('');
+          showSuccess('Password reset successfully!');
+        } else {
+          showError(res.error || 'Could not reset password.');
+        }
       }
     } finally {
       setIsLoggingIn(false);
+    }
+  };
+
+  const handleSendTelegramResetOtp = async () => {
+    setIsSendingResetOtp(true);
+    try {
+      const res = await requestTelegramPasswordReset(loginCode, loginPhone, botToken);
+      if (res.ok) {
+        setResetOtp('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setLoginStep('RESET_PASSWORD');
+        showSuccess('6-digit reset code sent to your Telegram!');
+      } else {
+        showError(res.error || 'Could not send reset code.');
+      }
+    } finally {
+      setIsSendingResetOtp(false);
     }
   };
 
@@ -644,10 +692,10 @@ const Shop: React.FC = () => {
     if (isMasterDisabled) {
       return (
         <div
-          className="relative min-h-screen w-full bg-slate-950 text-white flex flex-col items-center justify-center p-4 sm:p-8 overflow-hidden font-faruma"
+          className="relative min-h-screen w-full bg-gradient-to-b from-emerald-50 via-teal-50/70 to-amber-50/50 text-slate-900 flex flex-col items-center justify-center p-5 sm:p-10 overflow-hidden font-faruma"
           dir="ltr"
         >
-          {/* Full-screen store photo backdrop */}
+          {/* Soft Light-Theme Store Photo Backdrop */}
           <img
             src={SHOP_STORE_BG_URL}
             alt=""
@@ -660,81 +708,98 @@ const Shop: React.FC = () => {
                 target.src = '/shop-hero.jpg';
               }
             }}
-            className="shop-hero-pan absolute inset-0 w-full h-full object-cover opacity-35 pointer-events-none"
+            className="shop-hero-pan absolute inset-0 w-full h-full object-cover opacity-15 pointer-events-none"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/75 via-slate-950/80 to-slate-950/95 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-b from-white/80 via-emerald-50/75 to-teal-50/90 pointer-events-none" />
 
-          <div className="relative z-10 w-full max-w-xl bg-slate-900/90 border border-white/15 rounded-2xl p-6 sm:p-10 text-center space-y-6 shadow-2xl">
-            {/* Store Logo */}
-            <div className="flex flex-col items-center gap-3">
+          {/* Decorative Top Flat-Lay Grocery Strip (inspired by clean editorial Coming Soon) */}
+          <div className="relative z-10 w-full max-w-2xl flex flex-col items-center text-center space-y-6">
+            {/* Store Logo + Brand */}
+            <div className="flex flex-col items-center gap-2.5">
               {shopSettings.logo ? (
                 <img
                   src={shopSettings.logo}
                   alt={shopSettings.shopName || 'B BACK'}
-                  className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl object-contain bg-white/95 p-2 shadow-md"
+                  className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl object-contain bg-white p-2 border border-teal-200 shadow-md"
                 />
               ) : (
-                <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
+                <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-teal-600 text-white flex items-center justify-center shadow-md">
                   <ShoppingBag className="h-10 w-10 sm:h-12 sm:w-12" />
                 </div>
               )}
-              <p className="text-sm sm:text-base font-black tracking-wide uppercase text-emerald-300">
+              <span className="text-xs sm:text-sm font-black tracking-widest uppercase text-teal-800">
                 {shopSettings.shopName || 'B BACK'} • shop.bback.store
-              </p>
-            </div>
-
-            {/* Coming Soon Headline & Message */}
-            <div className="space-y-3">
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest px-3.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                <Sparkles className="h-3.5 w-3.5" /> Coming Soon
               </span>
-              <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white">
-                Coming Soon
+            </div>
+
+            {/* Bold Centered COMING SOON Headline */}
+            <div className="space-y-2.5">
+              <h1 className="text-4xl sm:text-6xl font-black tracking-tight uppercase text-slate-900 leading-none">
+                COMING SOON
               </h1>
-              <p className="text-sm sm:text-base text-slate-200 leading-relaxed max-w-md mx-auto whitespace-pre-line">
+              <p className="text-sm sm:text-lg font-bold text-teal-900/80 max-w-lg mx-auto leading-relaxed whitespace-pre-line">
                 {customClosedMessage ||
-                  'Our online store is launching soon! Stay tuned for fresh essentials, fast doorstep delivery, and easy store pickup.'}
+                  'Fresh groceries, daily essentials & fast doorstep delivery — launching soon!'}
               </p>
             </div>
 
-            {/* Store Details & Phone */}
-            <div className="bg-slate-950/70 border border-white/10 rounded-xl p-4 sm:p-5 space-y-2.5 text-xs sm:text-sm">
-              {shopSettings.shopAddress && (
-                <p className="text-slate-200 font-semibold flex items-center justify-center gap-2">
-                  <MapPin className="h-4 w-4 text-rose-400 shrink-0" />
-                  <span>{shopSettings.shopAddress}</span>
+            {/* Clean Pill-Shaped Store Contact & Action Bar */}
+            <div className="w-full max-w-md bg-white/95 border-2 border-teal-500/30 rounded-full p-1.5 pl-4 flex items-center justify-between gap-2 shadow-sm">
+              <div className="min-w-0 text-left">
+                <p className="text-[11px] sm:text-xs font-black text-slate-800 truncate">
+                  {shopSettings.shopPhone ? `Call Us: ${shopSettings.shopPhone}` : (shopSettings.shopAddress || 'B BACK Store')}
                 </p>
-              )}
-              {shopSettings.shopPhone && (
-                <p className="font-mono font-black text-emerald-300 text-sm sm:text-base">
-                  <a href={`tel:${shopSettings.shopPhone}`} className="hover:underline">
-                    Tel: {shopSettings.shopPhone}
-                  </a>
-                </p>
-              )}
-              {shopSettings.shopEmail && (
-                <p className="text-slate-400 text-xs">{shopSettings.shopEmail}</p>
-              )}
-              <div className="pt-1 flex flex-wrap items-center justify-center gap-2.5">
+                {shopSettings.shopAddress && shopSettings.shopPhone && (
+                  <p className="text-[10px] text-slate-500 truncate">{shopSettings.shopAddress}</p>
+                )}
+              </div>
+              {shopSettings.shopPhone ? (
                 <a
-                  href="https://maps.app.goo.gl/qXnbomJZLFY3BLiUA"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 text-xs font-bold text-white transition-colors"
+                  href={`tel:${shopSettings.shopPhone}`}
+                  className="h-9 px-4 rounded-full bg-teal-600 hover:bg-teal-700 text-white text-xs font-black inline-flex items-center gap-1.5 shrink-0 transition-colors"
                 >
-                  <MapPin className="h-3.5 w-3.5 text-rose-400" />
-                  <span>Find Us on Google Maps</span>
+                  <Phone className="h-3.5 w-3.5" />
+                  <span>CALL</span>
                 </a>
+              ) : (
                 <Button
                   type="button"
-                  variant="outline"
                   onClick={() => loadShop()}
-                  className="h-9 px-4 rounded-lg bg-transparent border-white/20 hover:bg-white/10 text-white text-xs font-bold gap-1.5"
+                  className="h-9 px-4 rounded-full bg-teal-600 hover:bg-teal-700 text-white text-xs font-black shrink-0"
                 >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  <span>Refresh</span>
+                  REFRESH
                 </Button>
-              </div>
+              )}
+            </div>
+
+            {/* Circular Quick Action Icons (Maps, Phone, Refresh) */}
+            <div className="flex items-center justify-center gap-3 pt-1">
+              <a
+                href="https://maps.app.goo.gl/qXnbomJZLFY3BLiUA"
+                target="_blank"
+                rel="noreferrer"
+                title="Open in Google Maps"
+                className="h-11 w-11 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center shadow-sm transition-transform hover:scale-105"
+              >
+                <MapPin className="h-5 w-5" />
+              </a>
+              {shopSettings.shopPhone && (
+                <a
+                  href={`tel:${shopSettings.shopPhone}`}
+                  title={`Call ${shopSettings.shopPhone}`}
+                  className="h-11 w-11 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-sm transition-transform hover:scale-105"
+                >
+                  <Phone className="h-5 w-5" />
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={() => loadShop()}
+                title="Refresh Store Status"
+                className="h-11 w-11 rounded-full bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center shadow-sm transition-transform hover:scale-105"
+              >
+                <RefreshCw className="h-5 w-5" />
+              </button>
             </div>
           </div>
         </div>
@@ -1192,9 +1257,75 @@ const Shop: React.FC = () => {
                         autoFocus
                       />
                     </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      Forgot your password? Contact store admin to reset it.
-                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        disabled={isSendingResetOtp}
+                        onClick={handleSendTelegramResetOtp}
+                        className="text-[11px] font-bold text-[#229ED9] hover:underline flex items-center gap-1"
+                      >
+                        <Send className="h-3 w-3" />
+                        <span>{isSendingResetOtp ? 'Sending code to Telegram...' : 'Forgot Password? Reset via Telegram'}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {loginStep === 'RESET_PASSWORD' && pendingLoginCustomer && (
+                  <div className="space-y-3">
+                    <div className="p-3 rounded-lg bg-[#229ED9]/10 border border-[#229ED9]/30 text-xs">
+                      <p className="font-black text-foreground flex items-center gap-1.5">
+                        <Send className="h-3.5 w-3.5 text-[#229ED9]" />
+                        Check Your Telegram
+                      </p>
+                      <p className="text-muted-foreground mt-0.5">
+                        Enter the 6-digit reset code sent to your Telegram and choose a new password.
+                      </p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="resetOtpInput" className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+                        6-Digit Telegram Code
+                      </Label>
+                      <Input
+                        id="resetOtpInput"
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="123456"
+                        value={resetOtp}
+                        onChange={(e) => setResetOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        className="h-11 bg-background border-border rounded-lg font-mono font-bold tracking-widest"
+                        required
+                        autoFocus
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="resetNewPass" className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+                        New Password (min 4 characters)
+                      </Label>
+                      <Input
+                        id="resetNewPass"
+                        type="password"
+                        placeholder="Enter new password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="h-11 bg-background border-border rounded-lg"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="resetConfirmPass" className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">
+                        Confirm Password
+                      </Label>
+                      <Input
+                        id="resetConfirmPass"
+                        type="password"
+                        placeholder="Re-enter new password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="h-11 bg-background border-border rounded-lg"
+                        required
+                      />
+                    </div>
                   </div>
                 )}
 
@@ -1223,7 +1354,9 @@ const Shop: React.FC = () => {
                         ? 'Continue'
                         : loginStep === 'SET_PASSWORD'
                           ? 'Save Password & Start Shopping'
-                          : 'Sign In & Start Shopping'}
+                          : loginStep === 'RESET_PASSWORD'
+                            ? 'Reset Password & Sign In'
+                            : 'Sign In & Start Shopping'}
                   </Button>
                 </div>
               </form>

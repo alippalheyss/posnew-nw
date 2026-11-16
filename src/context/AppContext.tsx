@@ -1199,7 +1199,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode }> = ({ children
 
       const freshNotification: BankNotification = {
         ...parsed,
-        receivedAt: new Date(nowMs).toISOString(),
+        receivedAt: parsed.receivedAt || new Date(nowMs).toISOString(),
         status: 'unclaimed',
       };
 

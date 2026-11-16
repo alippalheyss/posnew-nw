@@ -7,6 +7,7 @@ import {
   WeeklyOpeningHours,
 } from '@/context/AppContext';
 import {
+  sendTelegramMessage,
   sendTelegramOnlineOrderNotification,
   sendTelegramOnlineRegistrationAlert,
   sendTelegramOnlineOrderStatusToCustomer,
@@ -479,6 +480,121 @@ export const loginShopCustomerWithPassword = async (
     return { ok: false, error: 'Incorrect password. Please try again.' };
   }
   return { ok: true, customer: check.customer };
+};
+
+/**
+ * Method 1: Send a 6-digit password reset OTP to the customer's linked Telegram account
+ */
+export const requestTelegramPasswordReset = async (
+  code: string,
+  phone: string,
+  botToken?: string
+): Promise<{ ok: boolean; error?: string }> => {
+  if (!supabase) return { ok: false, error: 'Database unavailable.' };
+
+  const check = await verifyShopCustomerCredentials(code, phone);
+  if (!check.ok || !check.customer) {
+    return { ok: false, error: check.error || 'Customer not found.' };
+  }
+
+  if (!check.customer.telegram_chat_id) {
+    return {
+      ok: false,
+      error: 'Telegram is not linked to this account yet. Please contact the store to reset your password.',
+    };
+  }
+
+  const otp = String(Math.floor(100000 + Math.random() * 900000));
+  const otpHash = await hashShopPassword(otp);
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+  const { error: updateErr } = await supabase
+    .from('customers')
+    .update({
+      shop_reset_code_hash: otpHash,
+      shop_reset_expires_at: expiresAt,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', check.customer.id);
+
+  if (updateErr) {
+    return { ok: false, error: updateErr.message };
+  }
+
+  const msg =
+    `🔐 *B BACK Shop — Password Reset Code*\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `👤 *Customer:* ${check.customer.name_en || check.customer.name_dv} (#${check.customer.code})\n` +
+    `🔢 *Reset Code:* \`${otp}\`\n\n` +
+    `Enter this 6-digit code on https://shop.bback.store to set a new password.\n` +
+    `_Valid for 10 minutes._`;
+
+  const tgRes = await sendTelegramMessage(check.customer.telegram_chat_id, msg, botToken, 'Markdown');
+  if (!tgRes.ok) {
+    return { ok: false, error: tgRes.description || 'Could not send reset code to Telegram.' };
+  }
+
+  return { ok: true };
+};
+
+/**
+ * Verify Telegram OTP and set a new password for the customer
+ */
+export const verifyAndResetTelegramPassword = async (
+  code: string,
+  phone: string,
+  otp: string,
+  newPassword: string
+): Promise<{ ok: boolean; customer?: Customer; error?: string }> => {
+  if (!supabase) return { ok: false, error: 'Database unavailable.' };
+  if (!otp || otp.trim().length !== 6) {
+    return { ok: false, error: 'Please enter the 6-digit code sent to your Telegram.' };
+  }
+  if (!newPassword || newPassword.length < 4) {
+    return { ok: false, error: 'New password must be at least 4 characters.' };
+  }
+
+  const check = await verifyShopCustomerCredentials(code, phone);
+  if (!check.ok || !check.customer) {
+    return { ok: false, error: check.error || 'Customer not found.' };
+  }
+
+  const custAny = check.customer as Customer & {
+    shop_reset_code_hash?: string;
+    shop_reset_expires_at?: string;
+  };
+
+  if (!custAny.shop_reset_code_hash || !custAny.shop_reset_expires_at) {
+    return { ok: false, error: 'No active reset code found. Please request a new code.' };
+  }
+
+  if (new Date(custAny.shop_reset_expires_at).getTime() < Date.now()) {
+    return { ok: false, error: 'Reset code has expired. Please request a new code.' };
+  }
+
+  const enteredOtpHash = await hashShopPassword(otp.trim());
+  if (enteredOtpHash !== custAny.shop_reset_code_hash) {
+    return { ok: false, error: 'Invalid reset code. Please check your Telegram message and try again.' };
+  }
+
+  const newPassHash = await hashShopPassword(newPassword);
+  const { data, error } = await supabase
+    .from('customers')
+    .update({
+      shop_password_hash: newPassHash,
+      shop_reset_code_hash: '',
+      shop_reset_expires_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', check.customer.id)
+    .select('*')
+    .single();
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  return { ok: true, customer: data as Customer };
 };
 
 /**

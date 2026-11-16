@@ -625,9 +625,9 @@
     "semantic_hash": "5bff9ea3904b15a9e1908b128c88e75f"
   },
   "src/context/AppContext.tsx": {
-    "mtime": 1794734202.9133985,
-    "seen": 1794734301.9007962,
-    "ast_hash": "95862a71878238a5d8c7885e5cca39fd",
+    "mtime": 1794837253.889387,
+    "seen": 1794837296.219902,
+    "ast_hash": "868d1a3c9f2763a12e0d09006431004e",
     "semantic_hash": ""
   },
   "src/context/AppProviderWithPriceDialog.tsx": {
@@ -2395,15 +2395,15 @@
     "semantic_hash": ""
   },
   "src/pages/Shop.tsx": {
-    "mtime": 1794810964.2285626,
-    "seen": 1794811010.2604244,
-    "ast_hash": "2847def8dfd216e4ee458f69be7f41c5",
+    "mtime": 1794837254.0147846,
+    "seen": 1794837296.22397,
+    "ast_hash": "1f118f9aca7f49f64d85e8c20ecb801a",
     "semantic_hash": ""
   },
   "src/services/onlineShopService.ts": {
-    "mtime": 1794810271.2652922,
-    "seen": 1794810643.5528479,
-    "ast_hash": "b58666e37ef2d3e5b81b254290f55730",
+    "mtime": 1794837152.121114,
+    "seen": 1794837296.2246633,
+    "ast_hash": "994bb99f96eb9f6a9f761ac4c721f94a",
     "semantic_hash": ""
   },
   "public/shop-hero.jpg": {

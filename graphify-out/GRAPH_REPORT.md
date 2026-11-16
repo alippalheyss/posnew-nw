@@ -1,23 +1,23 @@
 # Graph Report - sleepymeerkatglow-main  (2026-11-16)
 
 ## Corpus Check
-- 182 files · ~490,224 words
+- 182 files · ~491,106 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 10 file(s) not represented in the graph (top: (none) 3, .ico 3, .css 2)
 
 ## Summary
-- 1149 nodes · 4728 edges · 81 communities (48 shown, 33 thin omitted)
+- 1151 nodes · 4740 edges · 72 communities (47 shown, 25 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `d20d57d1`
+- Built from commit: `6fa00c1a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - Layout.tsx
-- toast.tsx
+- AddCreditSaleDialog.tsx
 - AppContext.tsx
 - cn
 - dependencies
@@ -27,7 +27,7 @@
 - sidebar.tsx
 - package.json
 - main.tsx
-- utils.ts
+- dhivehiTranslator.ts
 - build-vercel.mjs
 - AppContextProvider
 - compilerOptions
@@ -46,52 +46,43 @@
 - scripts
 - chart.tsx
 - sheet.tsx
-- AuthContext.tsx
+- input-otp.tsx
 - breadcrumb.tsx
 - generate-pwa-icons.mjs
 - indexedDb.ts
 - telegram-webhook.ts
 - DailySales.tsx
-- ThemeProvider.tsx
+- axios@^1.13.2
 - navigation-menu.tsx
 - telegramService.ts
 - hooks/use-toast.ts
 - class-variance-authority
 - restore-to-new-supabase.mjs
-- tailwindcss
+- clsx
 - llamaService.ts
 - vercel.json
 - refactor.cjs
 - ErrorBoundary
 - framer-motion
 - Button
-- @radix-ui/react-dropdown-menu
+- @radix-ui/react-progress
 - main.cjs
 - auth.ts
 - @radix-ui/react-slider
-- next-themes
+- @radix-ui/react-radio-group
 - qrcode.react
 - @radix-ui/react-aspect-ratio
 - @radix-ui/react-collapsible
-- @radix-ui/react-navigation-menu
-- cmdk
-- @radix-ui/react-scroll-area
-- @radix-ui/react-switch
-- recharts
+- @radix-ui/react-select
+- @radix-ui/react-toast
+- @radix-ui/react-toggle
+- react-dom
+- react-resizable-panels
 - html5-qrcode
-- i18next
+- tailwindcss-animate@^1.0.7
 - input-otp
-- @radix-ui/react-alert-dialog
-- @radix-ui/react-checkbox
-- @radix-ui/react-context-menu
-- @radix-ui/react-dialog
-- @radix-ui/react-label
 - @radix-ui/react-menubar
-- @radix-ui/react-popover
-- @radix-ui/react-toggle-group
-- @radix-ui/react-tooltip
 - sonner
-- @types/jsbarcode@^3.11.4
 - jspdf-autotable.d.ts
 
 ## God Nodes (most connected - your core abstractions)
@@ -107,8 +98,6 @@
 10. `showSuccess()` - 78 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `App()` --calls--> `NotFound()`  [EXTRACTED]
-  src/App.tsx → src/pages/NotFound.tsx
 - `AlertDialogFooter()` --calls--> `cn()`  [EXTRACTED]
   src/components/ui/alert-dialog.tsx → src/lib/utils.ts
 - `AlertDialogHeader()` --calls--> `cn()`  [EXTRACTED]
@@ -117,40 +106,42 @@
   src/components/ui/pagination.tsx → src/lib/utils.ts
 - `PaginationEllipsis()` --calls--> `cn()`  [EXTRACTED]
   src/components/ui/pagination.tsx → src/lib/utils.ts
+- `DrawerFooter()` --calls--> `cn()`  [EXTRACTED]
+  src/components/ui/drawer.tsx → src/lib/utils.ts
 
 ## Import Cycles
 - 2-file cycle: `src/context/AppContext.tsx -> src/services/telegramService.ts -> src/context/AppContext.tsx`
 - 2-file cycle: `src/components/BankNotificationsDialog.tsx -> src/context/AppContext.tsx -> src/components/BankNotificationsDialog.tsx`
 
-## Communities (81 total, 33 thin omitted)
+## Communities (72 total, 25 thin omitted)
 
 ### Community 0 - "Layout.tsx"
-Cohesion: 0.26
-Nodes (10): react, AmbientBackground, BankAlertPill(), Layout(), LayoutProps, ProtectedRoute(), ProtectedRouteProps, PulsatingDots() (+2 more)
+Cohesion: 0.12
+Nodes (21): AmbientBackground, BankAlertPill(), Layout(), LayoutProps, ProtectedRoute(), ProtectedRouteProps, PulsatingDots(), PulsatingDotsProps (+13 more)
 
-### Community 1 - "toast.tsx"
-Cohesion: 0.35
-Nodes (9): Toast, ToastAction, ToastClose, ToastDescription, ToastTitle, toastVariants, ToastViewport, Toaster() (+1 more)
+### Community 1 - "AddCreditSaleDialog.tsx"
+Cohesion: 0.21
+Nodes (15): AddCreditSaleDialog(), AddCreditSaleDialogProps, NewCreditSale, Command, CommandDialog(), CommandDialogProps, CommandEmpty, CommandGroup (+7 more)
 
 ### Community 2 - "AppContext.tsx"
-Cohesion: 0.10
-Nodes (23): BANK_WEBHOOK_ROW_ID, BankNotificationsDialogProps, AccountingSettings, AppContext, AppContextType, Cart, Expense, ExpenseCategory (+15 more)
+Cohesion: 0.08
+Nodes (29): BANK_WEBHOOK_ROW_ID, BankNotificationsDialogProps, Props, AccountingSettings, AppContext, AppContextType, Cart, CustomerDisplayOffer (+21 more)
 
 ### Community 3 - "cn"
 Cohesion: 0.06
-Nodes (50): AccordionContent, AccordionItem, AccordionTrigger, Avatar, AvatarFallback, AvatarImage, CardFooter, ContextMenuCheckboxItem (+42 more)
+Nodes (48): AccordionContent, AccordionItem, AccordionTrigger, Avatar, AvatarFallback, AvatarImage, CardFooter, ContextMenuCheckboxItem (+40 more)
 
 ### Community 4 - "dependencies"
 Cohesion: 0.05
-Nodes (38): dependencies, date-fns@^3.6.0, embla-carousel-react@^8.3.0, jsbarcode@^3.12.3, jspdf@^4.0.0, jspdf-autotable@^5.0.7, lucide-react@^0.462.0, @radix-ui/react-accordion@^1.2.0 (+30 more)
+Nodes (44): dependencies, date-fns@^3.6.0, jsbarcode@^3.12.3, jspdf@^4.0.0, jspdf-autotable@^5.0.7, lucide-react@^0.462.0, next-themes@^0.3.0, @radix-ui/react-alert-dialog@^1.1.1 (+36 more)
 
 ### Community 5 - "devDependencies"
-Cohesion: 0.08
-Nodes (29): devDependencies, autoprefixer@^10.4.20, electron-builder@^26.15.3, eslint@^9.9.0, @eslint/js@^9.9.0, eslint-plugin-react-hooks@^5.1.0-rc.0, eslint-plugin-react-refresh@^0.4.9, globals@^15.9.0 (+21 more)
+Cohesion: 0.07
+Nodes (31): devDependencies, autoprefixer@^10.4.20, electron-builder@^26.15.3, eslint@^9.9.0, @eslint/js@^9.9.0, eslint-plugin-react-hooks@^5.1.0-rc.0, eslint-plugin-react-refresh@^0.4.9, globals@^15.9.0 (+23 more)
 
 ### Community 6 - "Shop.tsx"
 Cohesion: 0.05
-Nodes (72): AddCreditSaleDialog(), AddCreditSaleDialogProps, NewCreditSale, CustomerAddDialogProps, NearExpiryBroadcastDialogProps, OnlineOrdersDialogProps, PendingRegistrationsDialogProps, ShopHelperMascot() (+64 more)
+Nodes (68): ExcelImportDialogProps, ParsedProduct, SelectedItem, FlavourSelectionDialogProps, OnlineOrdersDialogProps, ProductDialogProps, ProductPickerDialogProps, SelectedItem (+60 more)
 
 ### Community 7 - "PosShortcutSettings.tsx"
 Cohesion: 0.26
@@ -158,19 +149,19 @@ Nodes (13): PosShortcutSettings(), PosShortcutSettingsProps, RESERVED_COMBOS, DE
 
 ### Community 8 - "sidebar.tsx"
 Cohesion: 0.07
-Nodes (30): Separator, Sidebar, SidebarContent, SidebarContext, SidebarFooter, SidebarGroup, SidebarGroupAction, SidebarGroupContent (+22 more)
+Nodes (29): Separator, SidebarContent, SidebarContext, SidebarFooter, SidebarGroup, SidebarGroupAction, SidebarGroupContent, SidebarGroupLabel (+21 more)
 
 ### Community 9 - "package.json"
-Cohesion: 0.07
-Nodes (27): author, axios@^1.13.2, clsx@^2.1.1, @hookform/resolvers@^3.9.0, html2pdf.js@^0.14.0, @radix-ui/react-avatar@^1.1.0, @radix-ui/react-toggle@^1.1.0, react-resizable-panels@^2.1.3 (+19 more)
+Cohesion: 0.06
+Nodes (31): author, cmdk@^1.0.0, embla-carousel-react@^8.3.0, @hookform/resolvers@^3.9.0, html2pdf.js@^0.14.0, i18next@^25.7.4, @radix-ui/react-accordion@^1.2.0, @radix-ui/react-hover-card@^1.1.1 (+23 more)
 
 ### Community 10 - "main.tsx"
-Cohesion: 0.21
-Nodes (6): queryClient, Toaster(), ToasterProps, AuthProvider(), resources, updateSW
+Cohesion: 0.12
+Nodes (11): initialState, Theme, ThemeProvider(), ThemeProviderContext, ThemeProviderProps, ThemeProviderState, useTheme(), Toaster() (+3 more)
 
-### Community 11 - "utils.ts"
-Cohesion: 0.07
-Nodes (65): react-router-dom, Props, ExcelImportDialog(), ExcelImportDialogProps, ParsedProduct, SelectedItem, FlavourSelectionDialogProps, DraftPurchaseItem (+57 more)
+### Community 11 - "dhivehiTranslator.ts"
+Cohesion: 0.47
+Nodes (5): DICTIONARY, PHONETIC_MAP, translateEnglishToDhivehi(), translateToken(), transliterateEnglishToThaana()
 
 ### Community 12 - "build-vercel.mjs"
 Cohesion: 0.18
@@ -229,8 +220,8 @@ Cohesion: 0.18
 Nodes (4): corsHeaders, getGroupOrOwnerChatId(), getTelegramGroupConfig(), supabase
 
 ### Community 26 - "form.tsx"
-Cohesion: 0.23
-Nodes (10): FormControl, FormDescription, FormFieldContext, FormFieldContextValue, FormItem, FormItemContext, FormItemContextValue, FormLabel (+2 more)
+Cohesion: 0.14
+Nodes (16): @radix-ui/react-label@^2.1.0, @radix-ui/react-slot@^1.1.0, react-hook-form@^7.53.0, @radix-ui/react-label, @radix-ui/react-slot, react-hook-form, FormControl, FormDescription (+8 more)
 
 ### Community 27 - "scripts"
 Cohesion: 0.17
@@ -241,16 +232,16 @@ Cohesion: 0.27
 Nodes (10): ChartConfig, ChartContainer, ChartContext, ChartContextProps, ChartLegendContent, ChartStyle(), ChartTooltipContent, getPayloadConfigFromPayload() (+2 more)
 
 ### Community 29 - "sheet.tsx"
-Cohesion: 0.28
-Nodes (8): SheetContent, SheetContentProps, SheetDescription, SheetFooter(), SheetHeader(), SheetOverlay, SheetTitle, sheetVariants
+Cohesion: 0.24
+Nodes (9): SheetContent, SheetContentProps, SheetDescription, SheetFooter(), SheetHeader(), SheetOverlay, SheetTitle, sheetVariants (+1 more)
 
-### Community 30 - "AuthContext.tsx"
-Cohesion: 0.19
-Nodes (11): UserDialogProps, adminPermissions, AuthContext, AuthContextType, cashierPermissions, pendingUserRequests, useAuth(), User (+3 more)
+### Community 30 - "input-otp.tsx"
+Cohesion: 0.40
+Nodes (4): InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot
 
 ### Community 31 - "breadcrumb.tsx"
-Cohesion: 0.20
-Nodes (9): @radix-ui/react-slot@^1.1.0, @radix-ui/react-slot, Breadcrumb, BreadcrumbEllipsis(), BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage (+1 more)
+Cohesion: 0.25
+Nodes (7): Breadcrumb, BreadcrumbEllipsis(), BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator()
 
 ### Community 32 - "generate-pwa-icons.mjs"
 Cohesion: 0.28
@@ -265,24 +256,20 @@ Cohesion: 0.43
 Nodes (7): forwardSlipToGroup(), getTelegramFileUrl(), getTelegramGroupConfig(), handler(), saveTelegramGroupConfig(), sendTelegramMessage(), supabase
 
 ### Community 35 - "DailySales.tsx"
-Cohesion: 0.10
-Nodes (64): date-fns, jspdf, jspdf-autotable, react-day-picker, xlsx, App(), InvoiceViewDialog(), InvoiceViewDialogProps (+56 more)
-
-### Community 36 - "ThemeProvider.tsx"
-Cohesion: 0.25
-Nodes (7): initialState, Theme, ThemeProvider(), ThemeProviderContext, ThemeProviderProps, ThemeProviderState, useTheme()
+Cohesion: 0.08
+Nodes (93): date-fns, jspdf, jspdf-autotable, react, react-day-picker, react-i18next, react-router-dom, xlsx (+85 more)
 
 ### Community 37 - "navigation-menu.tsx"
 Cohesion: 0.32
 Nodes (7): NavigationMenu, NavigationMenuContent, NavigationMenuIndicator, NavigationMenuList, NavigationMenuTrigger, navigationMenuTriggerStyle, NavigationMenuViewport
 
 ### Community 38 - "telegramService.ts"
-Cohesion: 0.15
-Nodes (31): answerCallbackQuery(), BOT_COMMANDS, calculateExecutiveBriefingData(), checkAndLinkCustomerLive(), DEFAULT_TELEGRAM_BOT_TOKEN, DEFAULT_TELEGRAM_BOT_USERNAME, deleteTelegramWebhook(), ExecutiveBriefingData (+23 more)
+Cohesion: 0.13
+Nodes (35): Admin(), answerCallbackQuery(), BOT_COMMANDS, calculateExecutiveBriefingData(), checkAndLinkCustomerLive(), DEFAULT_TELEGRAM_BOT_TOKEN, DEFAULT_TELEGRAM_BOT_USERNAME, deleteTelegramWebhook() (+27 more)
 
 ### Community 39 - "hooks/use-toast.ts"
-Cohesion: 0.16
-Nodes (16): ToastActionElement, ToastProps, Action, ActionType, _actionTypes, addToRemoveQueue(), dispatch(), genId() (+8 more)
+Cohesion: 0.13
+Nodes (25): Toast, ToastAction, ToastActionElement, ToastClose, ToastDescription, ToastProps, ToastTitle, toastVariants (+17 more)
 
 ### Community 40 - "class-variance-authority"
 Cohesion: 0.20
@@ -309,30 +296,30 @@ Cohesion: 0.25
 Nodes (3): ErrorBoundary, Props, State
 
 ### Community 48 - "Button"
-Cohesion: 0.12
-Nodes (82): lucide-react, react-i18next, AppCloseConfirmDialog(), BankNotificationsDialog(), CustomerAddDialog(), CustomerDisplayOfferDialog(), ExpiryUpdateDialog(), ExpiryUpdateDialogProps (+74 more)
+Cohesion: 0.11
+Nodes (94): lucide-react, AppCloseConfirmDialog(), BankNotificationsDialog(), CustomerAddDialog(), CustomerAddDialogProps, CustomerDisplayOfferDialog(), ExcelImportDialog(), ExpiryUpdateDialog() (+86 more)
 
 ### Community 50 - "main.cjs"
 Cohesion: 0.18
 Nodes (7): { app, BrowserWindow, ipcMain, globalShortcut, Menu }, gotTheLock, path, url, { contextBridge, ipcRenderer }, electron@^45.0.0, electron
 
 ## Knowledge Gaps
-- **33 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **25 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `cn()` connect `cn` to `Layout.tsx`, `toast.tsx`, `DailySales.tsx`, `navigation-menu.tsx`, `Shop.tsx`, `PosShortcutSettings.tsx`, `class-variance-authority`, `sidebar.tsx`, `utils.ts`, `pagination.tsx`, `Button`, `drawer.tsx`, `carousel.tsx`, `form.tsx`, `chart.tsx`, `sheet.tsx`, `breadcrumb.tsx`?**
-  _High betweenness centrality (0.192) - this node is a cross-community bridge._
+- **Why does `cn()` connect `cn` to `Layout.tsx`, `AddCreditSaleDialog.tsx`, `Shop.tsx`, `PosShortcutSettings.tsx`, `sidebar.tsx`, `pagination.tsx`, `drawer.tsx`, `carousel.tsx`, `form.tsx`, `chart.tsx`, `sheet.tsx`, `input-otp.tsx`, `breadcrumb.tsx`, `DailySales.tsx`, `navigation-menu.tsx`, `telegramService.ts`, `hooks/use-toast.ts`, `class-variance-authority`, `Button`?**
+  _High betweenness centrality (0.178) - this node is a cross-community bridge._
+- **Should `Layout.tsx` be split into smaller, more focused modules?**
+  _Cohesion score 0.11724137931034483 - nodes in this community are weakly interconnected._
+- **Why does `react` connect `DailySales.tsx` to `Layout.tsx`, `AddCreditSaleDialog.tsx`, `AppContext.tsx`, `cn`, `dependencies`, `Shop.tsx`, `PosShortcutSettings.tsx`, `sidebar.tsx`, `package.json`, `main.tsx`, `AppContextProvider`, `pagination.tsx`, `drawer.tsx`, `carousel.tsx`, `form.tsx`, `chart.tsx`, `sheet.tsx`, `input-otp.tsx`, `breadcrumb.tsx`, `navigation-menu.tsx`, `hooks/use-toast.ts`, `class-variance-authority`, `ErrorBoundary`, `Button`?**
+  _High betweenness centrality (0.138) - this node is a cross-community bridge._
 - **Should `AppContext.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.09666666666666666 - nodes in this community are weakly interconnected._
-- **Why does `react` connect `Layout.tsx` to `toast.tsx`, `AppContext.tsx`, `cn`, `dependencies`, `Shop.tsx`, `PosShortcutSettings.tsx`, `sidebar.tsx`, `package.json`, `utils.ts`, `AppContextProvider`, `pagination.tsx`, `drawer.tsx`, `carousel.tsx`, `form.tsx`, `chart.tsx`, `sheet.tsx`, `AuthContext.tsx`, `breadcrumb.tsx`, `DailySales.tsx`, `ThemeProvider.tsx`, `navigation-menu.tsx`, `hooks/use-toast.ts`, `class-variance-authority`, `ErrorBoundary`, `Button`?**
-  _High betweenness centrality (0.143) - this node is a cross-community bridge._
+  _Cohesion score 0.07526881720430108 - nodes in this community are weakly interconnected._
+- **Why does `@supabase/supabase-js` connect `restore-to-new-supabase.mjs` to `Layout.tsx`, `package.json`, `telegram-webhook.ts`, `Shop.tsx`?**
+  _High betweenness centrality (0.063) - this node is a cross-community bridge._
 - **Should `cn` be split into smaller, more focused modules?**
-  _Cohesion score 0.05737704918032787 - nodes in this community are weakly interconnected._
-- **Why does `@supabase/supabase-js` connect `restore-to-new-supabase.mjs` to `package.json`, `telegram-webhook.ts`, `AuthContext.tsx`, `Shop.tsx`?**
-  _High betweenness centrality (0.054) - this node is a cross-community bridge._
+  _Cohesion score 0.05989110707803993 - nodes in this community are weakly interconnected._
 - **Should `dependencies` be split into smaller, more focused modules?**
-  _Cohesion score 0.05263157894736842 - nodes in this community are weakly interconnected._
-- **Should `devDependencies` be split into smaller, more focused modules?**
-  _Cohesion score 0.07586206896551724 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.045454545454545456 - nodes in this community are weakly interconnected._

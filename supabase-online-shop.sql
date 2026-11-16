@@ -114,7 +114,13 @@ END $$;
 GRANT ALL ON public.customer_registrations TO anon, authenticated;
 GRANT ALL ON public.online_orders TO anon, authenticated;
 
--- 6. Customer Shop Password Column (for shop.bback.store login security)
+-- 6. Customer Shop Password & Telegram OTP Reset Columns
 ALTER TABLE public.customers
 ADD COLUMN IF NOT EXISTS shop_password_hash TEXT DEFAULT '';
+
+ALTER TABLE public.customers
+ADD COLUMN IF NOT EXISTS shop_reset_code_hash TEXT DEFAULT '';
+
+ALTER TABLE public.customers
+ADD COLUMN IF NOT EXISTS shop_reset_expires_at TIMESTAMP WITH TIME ZONE;
 

@@ -2395,21 +2395,27 @@
     "semantic_hash": ""
   },
   "src/pages/Shop.tsx": {
-    "mtime": 1794809408.5600247,
-    "seen": 1794809422.2562804,
-    "ast_hash": "a250632f17958bf6e7b6f62191a784a1",
+    "mtime": 1794810215.0684488,
+    "seen": 1794810257.033731,
+    "ast_hash": "952e3642ae62545060d84568824e3072",
     "semantic_hash": ""
   },
   "src/services/onlineShopService.ts": {
-    "mtime": 1794807417.073991,
-    "seen": 1794807462.6128457,
-    "ast_hash": "20369b8d5679656759afe11d65af3d95",
+    "mtime": 1794810145.0675259,
+    "seen": 1794810257.0343769,
+    "ast_hash": "b58666e37ef2d3e5b81b254290f55730",
     "semantic_hash": ""
   },
   "public/shop-hero.jpg": {
     "mtime": 1794809148.9529903,
     "seen": 1794809239.0153923,
     "ast_hash": "37e8fa000ad5671cdaf2fd46da089a46",
+    "semantic_hash": ""
+  },
+  "src/components/ShopHelperMascot.tsx": {
+    "mtime": 1794810163.1162865,
+    "seen": 1794810257.0218635,
+    "ast_hash": "77a2beeabe40f7c66a21964dff3d4283",
     "semantic_hash": ""
   },
   "package-lock.json": {

@@ -42,6 +42,7 @@ import { Customer, Product, ShopSettings } from '@/context/AppContext';
 import { supabase } from '@/lib/supabase';
 import { showError, showSuccess } from '@/utils/toast';
 import { getAdaptedImageUrl, generatePlaceholderImage } from '@/utils/imageUtils';
+import { ShopHelperMascot } from '@/components/ShopHelperMascot';
 import {
   generateTelegramConnectLink,
   checkAndLinkCustomerLive,
@@ -57,6 +58,7 @@ import {
   fetchCustomerOrders,
   fetchPublicShopData,
   formatTime12h,
+  isMaldivesDailyEssential,
   isOnlineShopCurrentlyOpen,
   loginShopCustomerWithPassword,
   placeOnlineOrder,
@@ -253,28 +255,29 @@ const Shop: React.FC = () => {
     products.forEach((p) => {
       if (p.category) cats.add(p.category);
     });
-    return ['ALL', ...Array.from(cats).sort()];
+    return ['ALL', 'ESSENTIALS', ...Array.from(cats).sort()];
   }, [products]);
 
   const filteredProducts = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
+    const tokens = q ? q.split(/\s+/).filter(Boolean) : [];
     const minP = minPrice !== '' ? Number(minPrice) : null;
     const maxP = maxPrice !== '' ? Number(maxPrice) : null;
 
     const list = products.filter((p) => {
-      if (selectedCategory !== 'ALL' && p.category !== selectedCategory) return false;
+      if (selectedCategory === 'ESSENTIALS') {
+        if (!isMaldivesDailyEssential(p)) return false;
+      } else if (selectedCategory !== 'ALL' && p.category !== selectedCategory) {
+        return false;
+      }
       const stock = Number(p.stock_shop || 0);
       if (inStockOnly && stock <= 0) return false;
       const price = Number(p.price || 0);
       if (minP !== null && !Number.isNaN(minP) && price < minP) return false;
       if (maxP !== null && !Number.isNaN(maxP) && price > maxP) return false;
-      if (!q) return true;
-      return (
-        (p.name_en || '').toLowerCase().includes(q) ||
-        (p.name_dv || '').toLowerCase().includes(q) ||
-        (p.item_code || '').toLowerCase().includes(q) ||
-        (p.barcode || '').toLowerCase().includes(q)
-      );
+      if (tokens.length === 0) return true;
+      const searchable = `${p.name_en || ''} ${p.name_dv || ''} ${p.category || ''} ${p.item_code || ''} ${p.barcode || ''}`.toLowerCase();
+      return tokens.every((tok) => searchable.includes(tok));
     });
 
     return [...list].sort((a, b) => {
@@ -1243,6 +1246,7 @@ const Shop: React.FC = () => {
           </div>
           </section>
         </main>
+        <ShopHelperMascot isLoggedIn={false} />
       </div>
     );
   }
@@ -1427,10 +1431,12 @@ const Shop: React.FC = () => {
                     'h-8 px-3 rounded-lg text-[11px] font-black whitespace-nowrap border transition-colors',
                     selectedCategory === cat
                       ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-muted text-muted-foreground border-border hover:text-foreground'
+                      : cat === 'ESSENTIALS'
+                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
+                        : 'bg-muted text-muted-foreground border-border hover:text-foreground'
                   )}
                 >
-                  {cat === 'ALL' ? 'All Items' : cat}
+                  {cat === 'ALL' ? 'All Items' : cat === 'ESSENTIALS' ? '🇲🇻 Daily Essentials' : cat}
                 </button>
               ))}
             </div>
@@ -2176,6 +2182,12 @@ const Shop: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ShopHelperMascot
+        isLoggedIn={true}
+        onSelectEssentials={() => setSelectedCategory('ESSENTIALS')}
+        onOpenCart={() => setIsCartOpen(true)}
+      />
     </div>
   );
 };

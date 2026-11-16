@@ -248,6 +248,46 @@ export const isOnlineShopCurrentlyOpen = (
   return { isOpen: true };
 };
 
+const MALDIVES_ESSENTIAL_KEYWORDS = [
+  'rice', 'handoo', 'basmati', 'flour', 'fuh', 'atta', 'sugar', 'hakuru',
+  'oil', 'theyo', 'cooking oil', 'sunflower', 'coconut oil', 'onion', 'fiyaa',
+  'garlic', 'lonumedu', 'potato', 'alubee', 'egg', 'bis', 'milk', 'kiru',
+  'condensed', 'tea', 'sai', 'coffee', 'water', 'fen', 'salt', 'lonu',
+  'chilli', 'mirus', 'tuna', 'mas', 'rihaakuru', 'valhomas', 'noodle',
+  'bread', 'paan', 'biscuit', 'cracker', 'butter', 'cheese', 'ghee',
+  'chicken', 'kukulhu', 'dhal', 'lentil', 'mug', 'tomato', 'lemon', 'lunbo',
+  'curry', 'coconut', 'kaashi', 'soap', 'sabooni', 'detergent', 'washing',
+  'tissue', 'diaper', 'pampers', 'toothpaste', 'shampoo', 'pasta', 'spaghetti',
+  'ބަތް', 'ހަނޑޫ', 'ފުށް', 'ހަކުރު', 'ތެޔޮ', 'ފިޔާ', 'ލޮނުމެދު', 'އަލުބީ', 'ބިސް', 'ކިރު', 'ސައި', 'ފެން', 'ލޮނު', 'މިރުސް', 'މަސް', 'ރިހާކުރު', 'ޕާން', 'ސައިބޯނި',
+];
+
+export const isMaldivesDailyEssential = (product: Product): boolean => {
+  const haystack = `${product.name_en || ''} ${product.name_dv || ''} ${product.category || ''}`.toLowerCase();
+  return MALDIVES_ESSENTIAL_KEYWORDS.some((kw) => haystack.includes(kw));
+};
+
+const fetchAllProductsPaginated = async (): Promise<Product[]> => {
+  if (!supabase) return [];
+  const pageSize = 1000;
+  let from = 0;
+  const all: Product[] = [];
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('name_en', { ascending: true })
+      .range(from, from + pageSize - 1);
+
+    if (error || !data || data.length === 0) break;
+    all.push(...(data as Product[]));
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+
+  return all;
+};
+
 /**
  * Load public storefront products and shop/bank/telegram settings from Supabase
  */
@@ -256,8 +296,8 @@ export const fetchPublicShopData = async (): Promise<PublicShopData> => {
     return { products: [], shopSettings: { currency: 'MVR', shopName: 'B BACK', onlineShopEnabled: true } };
   }
 
-  const [productsRes, settingsRes] = await Promise.all([
-    supabase.from('products').select('*').order('name_en', { ascending: true }),
+  const [rawProducts, settingsRes] = await Promise.all([
+    fetchAllProductsPaginated(),
     supabase
       .from('settings')
       .select('category, settings, updated_at')
@@ -279,7 +319,6 @@ export const fetchPublicShopData = async (): Promise<PublicShopData> => {
     (window as any).__STORAGE_CDN_URL__ = storageCdnUrl;
   }
 
-  const rawProducts = (productsRes.data || []) as Product[];
   const shopSettings: Partial<ShopSettings> = {
     currency: 'MVR',
     shopName: 'B BACK',

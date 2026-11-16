@@ -648,11 +648,99 @@ textarea:not([dir="rtl"]):not(.font-faruma):not([name*="_dv"]):not([id*="_dv"]) 
   .shop-hero-pan,
   .shop-float-slow,
   .shop-float-delayed,
-  .shop-marquee-track {
+  .shop-marquee-track,
+  .shop-mascot-wave,
+  .shop-mascot-blink,
+  .shop-mascot-peek,
+  .shop-mascot-jump,
+  .shop-sparkle-pop {
     animation: none !important;
   }
 
   .shop-card-hover:hover {
     transform: none;
   }
+}
+
+/* Custom Shop Mascot Motion Graphics */
+@keyframes shopMascotWave {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(-18deg);
+  }
+  40% {
+    transform: rotate(12deg);
+  }
+  60% {
+    transform: rotate(-14deg);
+  }
+  80% {
+    transform: rotate(8deg);
+  }
+}
+
+@keyframes shopMascotBlink {
+  0%, 92%, 100% {
+    transform: scaleY(1);
+  }
+  96% {
+    transform: scaleY(0.1);
+  }
+}
+
+@keyframes shopMascotPeek {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes shopMascotJump {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  30% {
+    transform: translateY(-16px) scale(1.08);
+  }
+  60% {
+    transform: translateY(2px) scale(0.95);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes shopSparklePop {
+  0% {
+    opacity: 1;
+    transform: translateY(4px) scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-18px) scale(1.25);
+  }
+}
+
+.shop-mascot-wave {
+  animation: shopMascotWave 2.4s ease-in-out infinite;
+}
+
+.shop-mascot-blink {
+  animation: shopMascotBlink 4.2s ease-in-out infinite;
+}
+
+.shop-mascot-peek {
+  animation: shopMascotPeek 3.4s ease-in-out infinite;
+}
+
+.shop-mascot-jump {
+  animation: shopMascotJump 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.shop-sparkle-pop {
+  animation: shopSparklePop 0.6s ease-out forwards;
 }

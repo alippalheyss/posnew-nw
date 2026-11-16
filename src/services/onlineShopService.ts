@@ -72,6 +72,7 @@ export interface PublicShopData {
   products: Product[];
   shopSettings: Partial<ShopSettings>;
   telegramBotToken?: string;
+  telegramBotUsername?: string;
 }
 
 export const normalizePhone = (phone: string): string => {
@@ -287,11 +288,13 @@ export const fetchPublicShopData = async (): Promise<PublicShopData> => {
   };
 
   const telegramBotToken = settingsMap.telegram?.botToken || undefined;
+  const telegramBotUsername = settingsMap.telegram?.botUsername || undefined;
 
   return {
     products: rawProducts,
     shopSettings,
     telegramBotToken,
+    telegramBotUsername,
   };
 };
 
@@ -497,7 +500,7 @@ export const submitCustomerRegistration = async (
   if (existingCustomer) {
     return {
       ok: false,
-      error: `This mobile number is already registered! Please login using Customer Code #${existingCustomer.code}.`,
+      error: 'This mobile number is already registered! Please sign in using the Customer Code provided by the store.',
     };
   }
 
@@ -558,37 +561,31 @@ export const checkRegistrationStatus = async (
 ): Promise<{
   found: boolean;
   status?: 'PENDING' | 'APPROVED' | 'REJECTED';
-  assigned_code?: string;
-  name_en?: string;
 }> => {
   if (!supabase) return { found: false };
   const cleanPhone = normalizePhone(phone);
   if (!cleanPhone) return { found: false };
 
-  const { data: customers } = await supabase.from('customers').select('code, name_en, phone');
+  const { data: customers } = await supabase.from('customers').select('phone');
   const approvedCust = (customers || []).find((c: any) => normalizePhone(c.phone) === cleanPhone);
   if (approvedCust) {
     return {
       found: true,
       status: 'APPROVED',
-      assigned_code: approvedCust.code,
-      name_en: approvedCust.name_en,
     };
   }
 
   const { data: regs } = await supabase
     .from('customer_registrations')
-    .select('*')
+    .select('phone, status, created_at')
     .order('created_at', { ascending: false });
 
-  const matched = (regs || []).find((r: CustomerRegistration) => normalizePhone(r.phone) === cleanPhone);
+  const matched = (regs || []).find((r: any) => normalizePhone(r.phone) === cleanPhone);
   if (!matched) return { found: false };
 
   return {
     found: true,
     status: matched.status,
-    assigned_code: matched.assigned_code,
-    name_en: matched.name_en,
   };
 };
 

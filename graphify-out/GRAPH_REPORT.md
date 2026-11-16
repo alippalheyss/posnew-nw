@@ -1,17 +1,17 @@
-# Graph Report - sleepymeerkatglow-main  (2026-11-15)
+# Graph Report - sleepymeerkatglow-main  (2026-11-16)
 
 ## Corpus Check
-- 181 files · ~487,175 words
+- 181 files · ~487,547 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 10 file(s) not represented in the graph (top: (none) 3, .ico 3, .css 2)
 
 ## Summary
-- 1141 nodes · 4704 edges · 72 communities (48 shown, 24 thin omitted)
+- 1141 nodes · 4710 edges · 72 communities (48 shown, 24 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ed99901c`
+- Built from commit: `1f9969ab`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -140,8 +140,8 @@ Cohesion: 0.07
 Nodes (31): devDependencies, autoprefixer@^10.4.20, electron-builder@^26.15.3, eslint@^9.9.0, @eslint/js@^9.9.0, eslint-plugin-react-hooks@^5.1.0-rc.0, eslint-plugin-react-refresh@^0.4.9, globals@^15.9.0 (+23 more)
 
 ### Community 6 - "Shop.tsx"
-Cohesion: 0.16
-Nodes (29): ShopSettings, Shop(), STATUS_BADGE_MAP, checkRegistrationStatus(), codesMatch(), completeShopPasswordSetup(), DAY_ORDER, DEFAULT_WEEKLY_OPENING_HOURS (+21 more)
+Cohesion: 0.17
+Nodes (27): ShopSettings, Shop(), STATUS_BADGE_MAP, checkRegistrationStatus(), codesMatch(), completeShopPasswordSetup(), fetchCustomerOrders(), fetchPublicShopData() (+19 more)
 
 ### Community 7 - "PosShortcutSettings.tsx"
 Cohesion: 0.26
@@ -168,8 +168,8 @@ Cohesion: 0.18
 Nodes (7): { privateKey, publicKey }, __dirname, indexPath, mainPath, modifiedHtml, originalHtml, rootDir
 
 ### Community 13 - "Admin.tsx"
-Cohesion: 0.16
-Nodes (16): Props, Switch, UserDialogProps, CustomerDisplayOffer, User, Admin(), BOT_COMMANDS, DEFAULT_TELEGRAM_BOT_TOKEN (+8 more)
+Cohesion: 0.15
+Nodes (16): Props, Switch, UserDialogProps, CustomerDisplayOffer, User, Admin(), DAY_ORDER, DEFAULT_WEEKLY_OPENING_HOURS (+8 more)
 
 ### Community 14 - "compilerOptions"
 Cohesion: 0.10
@@ -268,8 +268,8 @@ Cohesion: 0.32
 Nodes (7): NavigationMenu, NavigationMenuContent, NavigationMenuIndicator, NavigationMenuList, NavigationMenuTrigger, navigationMenuTriggerStyle, NavigationMenuViewport
 
 ### Community 38 - "telegramService.ts"
-Cohesion: 0.17
-Nodes (28): answerCallbackQuery(), calculateExecutiveBriefingData(), checkAndLinkCustomerLive(), ExecutiveBriefingData, formatAutoTransferToCreditMessage(), formatExecutiveBriefingMessage(), formatNearExpiryClearanceBroadcastMessage(), formatPoliteCreditReminderMessage() (+20 more)
+Cohesion: 0.16
+Nodes (30): answerCallbackQuery(), calculateExecutiveBriefingData(), checkAndLinkCustomerLive(), deleteTelegramWebhook(), ExecutiveBriefingData, formatAutoTransferToCreditMessage(), formatExecutiveBriefingMessage(), formatNearExpiryClearanceBroadcastMessage() (+22 more)
 
 ### Community 39 - "hooks/use-toast.ts"
 Cohesion: 0.13
@@ -314,15 +314,15 @@ Nodes (3): @radix-ui/react-slider@^1.2.0, @radix-ui/react-slider, Slider
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `cn()` connect `cn` to `ProductDialog.tsx`, `Shop.tsx`, `PosShortcutSettings.tsx`, `sidebar.tsx`, `react`, `Admin.tsx`, `pagination.tsx`, `drawer.tsx`, `carousel.tsx`, `form.tsx`, `chart.tsx`, `sheet.tsx`, `AuthContext.tsx`, `breadcrumb.tsx`, `DailySales.tsx`, `command.tsx`, `navigation-menu.tsx`, `hooks/use-toast.ts`, `class-variance-authority`, `Button`, `slider.tsx`?**
-  _High betweenness centrality (0.206) - this node is a cross-community bridge._
+  _High betweenness centrality (0.188) - this node is a cross-community bridge._
 - **Should `AppContext.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.08143939393939394 - nodes in this community are weakly interconnected._
 - **Why does `react` connect `Button` to `Layout.tsx`, `ProductDialog.tsx`, `AppContext.tsx`, `cn`, `dependencies`, `Shop.tsx`, `PosShortcutSettings.tsx`, `sidebar.tsx`, `package.json`, `main.tsx`, `react`, `Admin.tsx`, `pagination.tsx`, `drawer.tsx`, `carousel.tsx`, `form.tsx`, `chart.tsx`, `sheet.tsx`, `AuthContext.tsx`, `breadcrumb.tsx`, `DailySales.tsx`, `command.tsx`, `navigation-menu.tsx`, `hooks/use-toast.ts`, `class-variance-authority`, `slider.tsx`?**
-  _High betweenness centrality (0.129) - this node is a cross-community bridge._
+  _High betweenness centrality (0.145) - this node is a cross-community bridge._
 - **Should `cn` be split into smaller, more focused modules?**
   _Cohesion score 0.05552617662612375 - nodes in this community are weakly interconnected._
 - **Why does `lucide-react` connect `Button` to `Layout.tsx`, `ProductDialog.tsx`, `cn`, `dependencies`, `Shop.tsx`, `PosShortcutSettings.tsx`, `sidebar.tsx`, `package.json`, `react`, `Admin.tsx`, `pagination.tsx`, `carousel.tsx`, `sheet.tsx`, `AuthContext.tsx`, `breadcrumb.tsx`, `DailySales.tsx`, `command.tsx`, `navigation-menu.tsx`, `hooks/use-toast.ts`?**
-  _High betweenness centrality (0.042) - this node is a cross-community bridge._
+  _High betweenness centrality (0.045) - this node is a cross-community bridge._
 - **Should `dependencies` be split into smaller, more focused modules?**
   _Cohesion score 0.045454545454545456 - nodes in this community are weakly interconnected._
 - **Should `devDependencies` be split into smaller, more focused modules?**

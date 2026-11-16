@@ -25,7 +25,10 @@ import {
   FileImage,
   X,
   Lock,
+  ExternalLink,
+  Send,
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,6 +38,10 @@ import { Customer, Product, ShopSettings } from '@/context/AppContext';
 import { supabase } from '@/lib/supabase';
 import { showError, showSuccess } from '@/utils/toast';
 import { getAdaptedImageUrl, generatePlaceholderImage } from '@/utils/imageUtils';
+import {
+  generateTelegramConnectLink,
+  checkAndLinkCustomerLive,
+} from '@/services/telegramService';
 import {
   DAY_ORDER,
   DEFAULT_WEEKLY_OPENING_HOURS,
@@ -138,6 +145,9 @@ const Shop: React.FC = () => {
   const [orders, setOrders] = useState<OnlineOrder[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [timeTick, setTimeTick] = useState(0);
+  const [botUsername, setBotUsername] = useState<string | undefined>(undefined);
+  const [isTelegramConnectOpen, setIsTelegramConnectOpen] = useState(false);
+  const [isCheckingTelegram, setIsCheckingTelegram] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setTimeTick((t) => t + 1), 30000);
@@ -158,6 +168,7 @@ const Shop: React.FC = () => {
       setProducts(data.products);
       setShopSettings(data.shopSettings);
       setBotToken(data.telegramBotToken);
+      setBotUsername(data.telegramBotUsername);
     } finally {
       setIsLoading(false);
     }
@@ -402,14 +413,55 @@ const Shop: React.FC = () => {
       setStatusCheckResult('No registration found for this mobile number.');
     } else if (res.status === 'APPROVED') {
       setStatusCheckResult(
-        `Approved! ${res.name_en} — Your Customer Code is #${res.assigned_code}. You can login now!`
+        'This mobile number is registered and approved! Please sign in using the Customer Code provided by the store.'
       );
-      setLoginCode(res.assigned_code || '');
       setLoginPhone(statusCheckPhone);
     } else if (res.status === 'REJECTED') {
       setStatusCheckResult('Registration was declined. Please contact the store.');
     } else {
       setStatusCheckResult('Still pending Admin approval. Please check again shortly.');
+    }
+  };
+
+  const handleCheckTelegramLink = async () => {
+    if (!customer) return;
+    setIsCheckingTelegram(true);
+    try {
+      // 1. Check DB first (in case Telegram webhook already linked it)
+      const fresh = await refreshShopCustomer(customer.id);
+      if (fresh?.telegram_chat_id) {
+        setCustomer(fresh);
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(fresh));
+        setIsTelegramConnectOpen(false);
+        showSuccess('Telegram connected successfully!');
+        return;
+      }
+
+      // 2. Fallback: poll Telegram bot updates directly
+      const res = await checkAndLinkCustomerLive({
+        customer,
+        botToken,
+        onLinked: async (chatId) => {
+          const updated = { ...customer, telegram_chat_id: chatId };
+          setCustomer(updated);
+          localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(updated));
+          if (supabase) {
+            await supabase
+              .from('customers')
+              .update({ telegram_chat_id: chatId, updated_at: new Date().toISOString() })
+              .eq('id', customer.id);
+          }
+        },
+      });
+
+      if (res.linked) {
+        setIsTelegramConnectOpen(false);
+        showSuccess('Telegram connected successfully!');
+      } else {
+        showError('Not linked yet. Tap "Open Telegram & Connect" and press Start in the bot, then click Verify.');
+      }
+    } finally {
+      setIsCheckingTelegram(false);
     }
   };
 
@@ -1011,6 +1063,27 @@ const Shop: React.FC = () => {
                 </span>
               </div>
             </div>
+
+            {customer.telegram_chat_id ? (
+              <span
+                title="Telegram notifications linked"
+                className="hidden sm:inline-flex items-center gap-1 h-9 px-2.5 rounded-xl bg-[#229ED9]/10 border border-[#229ED9]/25 text-[#229ED9] text-[11px] font-black"
+              >
+                <Send className="h-3.5 w-3.5" />
+                <span>Telegram ✓</span>
+              </span>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsTelegramConnectOpen(true)}
+                className="h-9 px-3 rounded-xl border-[#229ED9]/40 bg-[#229ED9]/10 hover:bg-[#229ED9]/20 text-[#229ED9] text-xs font-black gap-1.5"
+              >
+                <Send className="h-3.5 w-3.5" />
+                <span>Connect Telegram</span>
+              </Button>
+            )}
 
             <Button
               type="button"
@@ -1683,6 +1756,57 @@ const Shop: React.FC = () => {
               })}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Connect Telegram Dialog */}
+      <Dialog open={isTelegramConnectOpen} onOpenChange={setIsTelegramConnectOpen}>
+        <DialogContent className="sm:max-w-md w-[calc(100vw-1.5rem)] bg-card border-border rounded-xl p-5 font-faruma" dir="ltr">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black flex items-center gap-2">
+              <Send className="h-5 w-5 text-[#229ED9]" />
+              <span>Connect Telegram</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Link your Telegram account to receive instant order status updates and credit receipts.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2 text-center">
+            <div className="mx-auto w-fit p-3 rounded-xl bg-white border border-border">
+              <QRCodeSVG
+                value={generateTelegramConnectLink(customer.id, botUsername)}
+                size={168}
+                level="M"
+              />
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Tap the button below (or scan the QR code), then press <strong className="text-foreground">Start</strong> in Telegram.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <a
+                href={generateTelegramConnectLink(customer.id, botUsername)}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-lg bg-[#229ED9] hover:bg-[#1e8cc2] text-white text-xs font-black transition-colors"
+              >
+                <ExternalLink className="h-4 w-4" />
+                <span>Open Telegram &amp; Connect</span>
+              </a>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isCheckingTelegram}
+                onClick={handleCheckTelegramLink}
+                className="h-10 px-4 rounded-lg text-xs font-black gap-1.5"
+              >
+                <RefreshCw className={cn('h-3.5 w-3.5', isCheckingTelegram && 'animate-spin')} />
+                <span>{isCheckingTelegram ? 'Checking...' : 'Verify Link'}</span>
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

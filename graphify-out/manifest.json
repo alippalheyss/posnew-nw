@@ -2395,9 +2395,9 @@
     "semantic_hash": ""
   },
   "src/pages/Shop.tsx": {
-    "mtime": 1794810598.615516,
-    "seen": 1794810643.5521867,
-    "ast_hash": "ee49294ddeca2904ded19d121a92b37f",
+    "mtime": 1794810964.2285626,
+    "seen": 1794811010.2604244,
+    "ast_hash": "2847def8dfd216e4ee458f69be7f41c5",
     "semantic_hash": ""
   },
   "src/services/onlineShopService.ts": {

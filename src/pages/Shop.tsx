@@ -74,6 +74,8 @@ interface CartEntry {
 }
 
 const SESSION_STORAGE_KEY = 'bback_shop_customer_session_v1';
+const SHOP_STORE_BG_URL =
+  'https://lh3.googleusercontent.com/gps-cs-s/ANWiy9T_skQvKv3lrCq1mRsdnU1o3aKCe1qi8YOGMR32FDo5hkobeq52OkKCv9m4gRvWPAUiHisRlw1wyiWzkgdNiOdDXAW-4TV7zS7urNx1oMzMOsrZ_wepFFE1-omhVxlZKTo4mNPa=w293-h209-n-k-no';
 
 const STATUS_BADGE_MAP: Record<string, { label: string; className: string }> = {
   NEW: { label: 'Order Placed', className: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30' },
@@ -645,12 +647,20 @@ const Shop: React.FC = () => {
           className="relative min-h-screen w-full bg-slate-950 text-white flex flex-col items-center justify-center p-4 sm:p-8 overflow-hidden font-faruma"
           dir="ltr"
         >
-          {/* Full-screen subtle hero backdrop */}
+          {/* Full-screen store photo backdrop */}
           <img
-            src="/shop-hero.jpg"
+            src={SHOP_STORE_BG_URL}
             alt=""
             aria-hidden="true"
-            className="shop-hero-pan absolute inset-0 w-full h-full object-cover opacity-25 pointer-events-none"
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              const target = e.currentTarget;
+              if (!target.dataset.fallbackApplied) {
+                target.dataset.fallbackApplied = '1';
+                target.src = '/shop-hero.jpg';
+              }
+            }}
+            className="shop-hero-pan absolute inset-0 w-full h-full object-cover opacity-35 pointer-events-none"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-slate-950/75 via-slate-950/80 to-slate-950/95 pointer-events-none" />
 
@@ -805,9 +815,28 @@ const Shop: React.FC = () => {
     const weekly = shopSettings.onlineShopWeeklyHours || DEFAULT_WEEKLY_OPENING_HOURS;
 
     return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col font-faruma" dir="ltr">
+      <div className="relative min-h-screen bg-background text-foreground flex flex-col font-faruma overflow-x-hidden" dir="ltr">
+        {/* Store Photo Background */}
+        <div className="fixed inset-0 z-0 pointer-events-none">
+          <img
+            src={SHOP_STORE_BG_URL}
+            alt=""
+            aria-hidden="true"
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              const target = e.currentTarget;
+              if (!target.dataset.fallbackApplied) {
+                target.dataset.fallbackApplied = '1';
+                target.src = '/shop-hero.jpg';
+              }
+            }}
+            className="w-full h-full object-cover opacity-20 dark:opacity-25"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/85 to-background/95" />
+        </div>
+
         {/* Top Landing Bar */}
-        <header className="bg-card border-b border-border px-4 sm:px-6 py-3">
+        <header className="relative z-10 bg-card/95 border-b border-border px-4 sm:px-6 py-3">
           <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               {shopSettings.logo ? (
@@ -847,7 +876,7 @@ const Shop: React.FC = () => {
         </header>
 
         {/* Animated Store Perks Marquee */}
-        <div className="shop-marquee-wrap bg-primary/10 border-b border-primary/20 overflow-hidden py-1.5">
+        <div className="relative z-10 shop-marquee-wrap bg-primary/10 border-b border-primary/20 overflow-hidden py-1.5">
           <div className="shop-marquee-track text-[11px] font-black text-primary whitespace-nowrap">
             <span className="px-6">🚚 Doorstep Delivery from {currency} {MIN_DELIVERY_AMOUNT}</span>
             <span className="px-6">🏪 Free Store Pickup (No Minimum)</span>
@@ -863,7 +892,7 @@ const Shop: React.FC = () => {
         </div>
 
         {/* Main 2-Column Landing + Login Layout */}
-        <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <main className="relative z-10 flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Column: Visual Hero Art + Store Showcase */}
           <section className="lg:col-span-7 space-y-5">
             {/* Hero Visual Banner Card */}

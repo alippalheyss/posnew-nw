@@ -1,7 +1,7 @@
 # Graph Report - sleepymeerkatglow-main  (2026-11-16)
 
 ## Corpus Check
-- 182 files · ~489,911 words
+- 182 files · ~490,145 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 10 file(s) not represented in the graph (top: (none) 3, .ico 3, .css 2)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `a590c07f`
+- Built from commit: `0c4fc145`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -96,8 +96,8 @@
 
 ## God Nodes (most connected - your core abstractions)
 1. `cn()` - 299 edges
-2. `Button` - 112 edges
-3. `react` - 112 edges
+2. `react` - 112 edges
+3. `Button` - 112 edges
 4. `DialogContent` - 97 edges
 5. `DialogTitle` - 94 edges
 6. `DialogHeader()` - 92 edges
@@ -323,11 +323,11 @@ Nodes (7): { app, BrowserWindow, ipcMain, globalShortcut, Menu }, gotTheLock, pa
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `cn()` connect `cn` to `Layout.tsx`, `toast.tsx`, `DailySales.tsx`, `navigation-menu.tsx`, `Shop.tsx`, `PosShortcutSettings.tsx`, `class-variance-authority`, `sidebar.tsx`, `utils.ts`, `pagination.tsx`, `Button`, `drawer.tsx`, `carousel.tsx`, `form.tsx`, `chart.tsx`, `sheet.tsx`, `breadcrumb.tsx`?**
-  _High betweenness centrality (0.200) - this node is a cross-community bridge._
+  _High betweenness centrality (0.192) - this node is a cross-community bridge._
 - **Should `AppContext.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.09666666666666666 - nodes in this community are weakly interconnected._
 - **Why does `react` connect `Layout.tsx` to `toast.tsx`, `AppContext.tsx`, `cn`, `dependencies`, `Shop.tsx`, `PosShortcutSettings.tsx`, `sidebar.tsx`, `package.json`, `utils.ts`, `AppContextProvider`, `pagination.tsx`, `drawer.tsx`, `carousel.tsx`, `form.tsx`, `chart.tsx`, `sheet.tsx`, `AuthContext.tsx`, `breadcrumb.tsx`, `DailySales.tsx`, `ThemeProvider.tsx`, `navigation-menu.tsx`, `hooks/use-toast.ts`, `class-variance-authority`, `ErrorBoundary`, `Button`?**
-  _High betweenness centrality (0.128) - this node is a cross-community bridge._
+  _High betweenness centrality (0.143) - this node is a cross-community bridge._
 - **Should `cn` be split into smaller, more focused modules?**
   _Cohesion score 0.05737704918032787 - nodes in this community are weakly interconnected._
 - **Why does `@supabase/supabase-js` connect `restore-to-new-supabase.mjs` to `package.json`, `telegram-webhook.ts`, `AuthContext.tsx`, `Shop.tsx`?**

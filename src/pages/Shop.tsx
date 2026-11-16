@@ -639,22 +639,93 @@ const Shop: React.FC = () => {
     const customClosedMessage = (shopSettings.onlineShopClosedMessage || '').trim();
     const weekly = shopSettings.onlineShopWeeklyHours || DEFAULT_WEEKLY_OPENING_HOURS;
 
-    if (isMasterDisabled && customClosedMessage) {
+    if (isMasterDisabled) {
       return (
-        <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 sm:p-6 font-faruma" dir="ltr">
-          <div className="w-full max-w-md bg-card border border-border rounded-xl p-6 sm:p-8 text-center space-y-4 shadow-sm">
-            <p className="text-sm sm:text-base font-bold text-foreground leading-relaxed whitespace-pre-line">
-              {customClosedMessage}
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => loadShop()}
-              className="h-9 px-4 rounded-lg text-xs font-black gap-1.5"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              <span>Check Again</span>
-            </Button>
+        <div
+          className="relative min-h-screen w-full bg-slate-950 text-white flex flex-col items-center justify-center p-4 sm:p-8 overflow-hidden font-faruma"
+          dir="ltr"
+        >
+          {/* Full-screen subtle hero backdrop */}
+          <img
+            src="/shop-hero.jpg"
+            alt=""
+            aria-hidden="true"
+            className="shop-hero-pan absolute inset-0 w-full h-full object-cover opacity-25 pointer-events-none"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/75 via-slate-950/80 to-slate-950/95 pointer-events-none" />
+
+          <div className="relative z-10 w-full max-w-xl bg-slate-900/90 border border-white/15 rounded-2xl p-6 sm:p-10 text-center space-y-6 shadow-2xl">
+            {/* Store Logo */}
+            <div className="flex flex-col items-center gap-3">
+              {shopSettings.logo ? (
+                <img
+                  src={shopSettings.logo}
+                  alt={shopSettings.shopName || 'B BACK'}
+                  className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl object-contain bg-white/95 p-2 shadow-md"
+                />
+              ) : (
+                <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
+                  <ShoppingBag className="h-10 w-10 sm:h-12 sm:w-12" />
+                </div>
+              )}
+              <p className="text-sm sm:text-base font-black tracking-wide uppercase text-emerald-300">
+                {shopSettings.shopName || 'B BACK'} • shop.bback.store
+              </p>
+            </div>
+
+            {/* Coming Soon Headline & Message */}
+            <div className="space-y-3">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest px-3.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                <Sparkles className="h-3.5 w-3.5" /> Coming Soon
+              </span>
+              <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white">
+                Coming Soon
+              </h1>
+              <p className="text-sm sm:text-base text-slate-200 leading-relaxed max-w-md mx-auto whitespace-pre-line">
+                {customClosedMessage ||
+                  'Our online store is launching soon! Stay tuned for fresh essentials, fast doorstep delivery, and easy store pickup.'}
+              </p>
+            </div>
+
+            {/* Store Details & Phone */}
+            <div className="bg-slate-950/70 border border-white/10 rounded-xl p-4 sm:p-5 space-y-2.5 text-xs sm:text-sm">
+              {shopSettings.shopAddress && (
+                <p className="text-slate-200 font-semibold flex items-center justify-center gap-2">
+                  <MapPin className="h-4 w-4 text-rose-400 shrink-0" />
+                  <span>{shopSettings.shopAddress}</span>
+                </p>
+              )}
+              {shopSettings.shopPhone && (
+                <p className="font-mono font-black text-emerald-300 text-sm sm:text-base">
+                  <a href={`tel:${shopSettings.shopPhone}`} className="hover:underline">
+                    Tel: {shopSettings.shopPhone}
+                  </a>
+                </p>
+              )}
+              {shopSettings.shopEmail && (
+                <p className="text-slate-400 text-xs">{shopSettings.shopEmail}</p>
+              )}
+              <div className="pt-1 flex flex-wrap items-center justify-center gap-2.5">
+                <a
+                  href="https://maps.app.goo.gl/qXnbomJZLFY3BLiUA"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 text-xs font-bold text-white transition-colors"
+                >
+                  <MapPin className="h-3.5 w-3.5 text-rose-400" />
+                  <span>Find Us on Google Maps</span>
+                </a>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => loadShop()}
+                  className="h-9 px-4 rounded-lg bg-transparent border-white/20 hover:bg-white/10 text-white text-xs font-bold gap-1.5"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  <span>Refresh</span>
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       );
@@ -664,19 +735,17 @@ const Shop: React.FC = () => {
       <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 sm:p-6 font-faruma" dir="ltr">
         <div className="w-full max-w-md bg-card border border-border rounded-xl p-6 sm:p-8 text-center space-y-4 shadow-sm">
           <div className="mx-auto w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/25 flex items-center justify-center text-rose-500">
-            {isMasterDisabled ? <Store className="h-7 w-7" /> : <Clock className="h-7 w-7" />}
+            <Clock className="h-7 w-7" />
           </div>
           <div className="space-y-1.5">
             <span className="inline-block text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
-              {isMasterDisabled ? 'Access Unavailable' : 'Shop Closed'}
+              Shop Closed
             </span>
             <h1 className="text-xl font-black text-foreground">
               {shopSettings.shopName || 'B BACK'} Online Shop is Closed
             </h1>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              {isMasterDisabled
-                ? 'Online shopping is currently disabled. You cannot access the store right now.'
-                : (storeOpenStatus.reason || 'Online ordering is only available during our opening hours.')}
+              {storeOpenStatus.reason || 'Online ordering is only available during our opening hours.'}
             </p>
           </div>
 
